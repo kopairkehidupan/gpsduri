@@ -126,13 +126,12 @@
   const trackUrls = urlParams.getAll('tracks');
 
   // Fungsi untuk mendapatkan nama file yang benar dari URL
-  function getFileName(url) {
+  ffunction getFileName(url) {
     try {
-      // Cek jika URL mengandung parameter view?usp=drivesdk
-      if (url.includes('view?usp=drivesdk')) {
-        // Ambil ID file dan kembalikan sebagai nama sementara
-        const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-        return fileId ? `file_${fileId.substring(0, 6)}.gpx` : 'unknown.gpx';
+      // Jika URL Google Drive, kita tidak bisa dapatkan nama asli dari URL saja
+      // Jadi kita akan menggunakan nama default
+      if (url.includes('drive.google.com')) {
+        return 'Waypoints.gpx'; // atau nama default lainnya
       }
       return url.split('/').pop() || 'data.gpx';
     } catch (e) {
@@ -143,10 +142,11 @@
   // Fungsi untuk mendapatkan URL download yang benar dari Google Drive
   function getDownloadUrl(url) {
     try {
-      const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-      if (!fileId) throw new Error('Invalid Google Drive URL');
+      // Ekstrak ID file dari URL Google Drive
+      const match = url.match(/\/file\/d\/([^\/]+)/);
+      if (!match) throw new Error('Invalid Google Drive URL');
       
-      // Format direct download link
+      const fileId = match[1];
       return `https://drive.google.com/uc?export=download&id=${fileId}`;
     } catch (e) {
       console.error('Error parsing download URL:', e);
@@ -189,46 +189,21 @@
 
   // Modifikasi fungsi fetchFile untuk menangani Google Drive links
   async function fetchFile(url) {
+    const fileName = getFileName(url);
+    document.getElementById('progress').textContent = `Memuat: ${fileName}`;
+    
     try {
-      const fileName = getFileName(url);
-      document.getElementById('progress').textContent = `Memuat: ${fileName}`;
+      const downloadUrl = getDownloadUrl(url);
+      const response = await fetch(downloadUrl);
       
-      // Handle Google Drive links differently
-      if (url.includes('drive.google.com')) {
-        const downloadUrl = getDownloadUrl(url);
-        
-        // First fetch to get the confirmation token for large files
-        const firstResponse = await fetch(downloadUrl, {
-          credentials: 'include',
-          redirect: 'manual' // Don't follow redirect
-        });
-        
-        // If we got a redirect, follow it manually
-        if (firstResponse.redirected) {
-          const finalUrl = firstResponse.url;
-          const response = await fetch(finalUrl, {
-            credentials: 'include'
-          });
-          
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          return await response.text();
-        } else {
-          // For small files, Google Drive serves them directly
-          if (!firstResponse.ok) throw new Error(`HTTP error! status: ${firstResponse.status}`);
-          return await firstResponse.text();
-        }
-      } else {
-        // Regular URL handling
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return await response.text();
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil file (status: ${response.status})`);
       }
+      
+      return await response.text();
     } catch (error) {
-      console.error('Gagal mengambil file:', {
-        url,
-        error: error.message
-      });
-      throw new Error(`Tidak dapat memuat file: ${getFileName(url)}`);
+      console.error('Error fetching file:', { url, error });
+      throw new Error(`Tidak dapat memuat file: ${fileName}`);
     }
   }
 
