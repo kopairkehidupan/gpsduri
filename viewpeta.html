@@ -140,17 +140,14 @@
     }
   }
 
-  // Fungsi untuk mendapatkan URL download yang benar
+  // Fungsi untuk mendapatkan URL download yang benar dari Google Drive
   function getDownloadUrl(url) {
     try {
       const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
       if (!fileId) throw new Error('Invalid Google Drive URL');
       
-      // Format 1: Direct download link
-      // return `https://drive.google.com/uc?export=download&id=${fileId}`;
-      
-      // Format 2: Google Apps Script proxy
-      return `https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec?action=getFile&id=${fileId}`;
+      // Format direct download link
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
     } catch (e) {
       console.error('Error parsing download URL:', e);
       return url; // Fallback ke URL asli
@@ -190,16 +187,42 @@
     });
   }
 
-  // Modifikasi fungsi fetchFile
+  // Modifikasi fungsi fetchFile untuk menangani Google Drive links
   async function fetchFile(url) {
     try {
-      const downloadUrl = getDownloadUrl(url);
-      document.getElementById('progress').textContent = `Memuat: ${getFileName(url)}`;
+      const fileName = getFileName(url);
+      document.getElementById('progress').textContent = `Memuat: ${fileName}`;
       
-      const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
-      return await response.text();
+      // Handle Google Drive links differently
+      if (url.includes('drive.google.com')) {
+        const downloadUrl = getDownloadUrl(url);
+        
+        // First fetch to get the confirmation token for large files
+        const firstResponse = await fetch(downloadUrl, {
+          credentials: 'include',
+          redirect: 'manual' // Don't follow redirect
+        });
+        
+        // If we got a redirect, follow it manually
+        if (firstResponse.redirected) {
+          const finalUrl = firstResponse.url;
+          const response = await fetch(finalUrl, {
+            credentials: 'include'
+          });
+          
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          return await response.text();
+        } else {
+          // For small files, Google Drive serves them directly
+          if (!firstResponse.ok) throw new Error(`HTTP error! status: ${firstResponse.status}`);
+          return await firstResponse.text();
+        }
+      } else {
+        // Regular URL handling
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.text();
+      }
     } catch (error) {
       console.error('Gagal mengambil file:', {
         url,
