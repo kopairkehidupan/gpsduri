@@ -8,18 +8,11 @@
     html, body {
       height: 100%;
       margin: 0;
+      font-family: Arial, sans-serif;
     }
     #map {
       height: 100%;
       width: 100%;
-    }
-    .leaflet-marker-icon.circle-icon {
-      border-radius: 50% !important;
-      border: 1px solid #555;
-      object-fit: cover;
-      background: white;
-      width: 24px !important;
-      height: 24px !important;
     }
     .map-controls {
       position: absolute;
@@ -27,9 +20,10 @@
       right: 10px;
       z-index: 1000;
       background: white;
-      padding: 10px;
+      padding: 15px;
       border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      max-width: 300px;
     }
     .loading {
       position: absolute;
@@ -40,36 +34,114 @@
       background: white;
       padding: 20px;
       border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .file-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    .file-list ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+    .file-list li {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .file-list li.success {
+      color: green;
+    }
+    .file-list li.error {
+      color: red;
+    }
+    .legend {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      border: 1px solid #333;
     }
   </style>
 </head>
 <body>
 
-<div id="loading" class="loading">Loading map data...</div>
+<div id="loading" class="loading">
+  <h3>Memuat data peta...</h3>
+  <div id="progress">Mengambil data dari server</div>
+</div>
+
 <div id="map"></div>
+
 <div class="map-controls">
   <h3 id="blok-title">Blok: Loading...</h3>
-  <div id="file-list"></div>
+  <div id="location-info"></div>
+  <div class="file-list" id="file-list">
+    <h4>File yang dimuat:</h4>
+    <ul id="loaded-files"></ul>
+  </div>
+  <div class="legend">
+    <h4>Legenda:</h4>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: blue;"></div>
+      <span>Waypoint Biru</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: green;"></div>
+      <span>Waypoint Hijau</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: black;"></div>
+      <span>Waypoint Hitam</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: red;"></div>
+      <span>Jalur Track</span>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+
 <script>
+  // Parse URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const blok = urlParams.get('blok');
   const kebun = urlParams.get('kebun');
   const divisi = urlParams.get('divisi');
+  const waypointUrls = urlParams.getAll('waypoints');
+  const trackUrls = urlParams.getAll('tracks');
 
+  // Update UI
   document.getElementById('blok-title').textContent = `Blok: ${blok || 'Unknown'}`;
-
+  document.getElementById('location-info').innerHTML = `
+    <p><strong>Kebun:</strong> ${kebun || '-'}</p>
+    <p><strong>Divisi:</strong> ${divisi || '-'}</p>
+  `;
+  
+  // Initialize map
   const map = L.map('map').setView([1.17, 100.99], 15);
 
+  // Add base layer
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'KPAK',
     maxZoom: 22
   }).addTo(map);
 
+  // Custom icons
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
     let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
@@ -86,83 +158,226 @@
     });
   }
 
-  async function fetchPublicCSV() {
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
-    const res = await fetch(csvUrl);
-    return await res.text();
-  }
-
-  async function fetchFileFromDrive(url) {
-    const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const res = await fetch(directUrl);
-    if (!res.ok) throw new Error(`Failed to fetch file: ${url}`);
-    return await res.text();
-  }
-
-  function addGpxToMap(gpxContent, type) {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(gpxContent, "application/xml");
-
-    if (type === 'waypoint') {
-      const waypoints = xml.getElementsByTagName('wpt');
-      const bounds = [];
-      for (let wpt of waypoints) {
-        const lat = parseFloat(wpt.getAttribute('lat'));
-        const lon = parseFloat(wpt.getAttribute('lon'));
-        const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
-        const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-        const marker = L.marker([lat, lon], {
-          icon: getWaypointIcon(sym)
-        }).addTo(map);
-        marker.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-        bounds.push([lat, lon]);
+  // Function to fetch file via proxy to avoid CORS
+  async function fetchFile(url) {
+    try {
+      // Extract file ID from Google Drive URL
+      const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
+      
+      // Use Google Apps Script as proxy
+      const scriptUrl = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+      const proxyUrl = `${scriptUrl}?action=getFile&id=${fileId}`;
+      
+      document.getElementById('progress').textContent = `Mengambil file: ${url.split('/').pop()}`;
+      
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil file: ${response.status}`);
       }
-      if (bounds.length) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.message);
       }
-    } else if (type === 'track') {
-      const gpxLayer = new L.GPX(gpxContent, {
-        async: true,
-        polyline_options: { color: 'red', opacity: 0.75, weight: 4 }
-      }).addTo(map);
-      gpxLayer.on('loaded', function(e) {
-        map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
-      });
+      
+      return result.content;
+    } catch (error) {
+      console.error('Error fetching file:', error);
+      throw error;
     }
   }
 
-  async function processData() {
-    const loading = document.getElementById('loading');
-    const listEl = document.getElementById('file-list');
-    listEl.innerHTML = '<h4>Loaded Files:</h4><ul></ul>';
-    const ul = listEl.querySelector('ul');
-
+  // Function to parse GPX and add to map
+  function addGpxToMap(gpxContent, type, fileName) {
     try {
-      const csv = await fetchPublicCSV();
-      const rows = csv.split("\n").slice(1);
-      for (const row of rows) {
-        const cols = row.split(",").map(c => c.replace(/^"|"$/g, '').trim());
-        if (cols.length < 8) continue;
-        const [ , kebunData, divisiData, blokData, tipe, namaFile, fileUrl ] = cols;
-
-        if (kebunData === kebun && divisiData === divisi && blokData === blok) {
-          const li = document.createElement('li');
-          li.textContent = `${tipe}: ${namaFile}`;
-          ul.appendChild(li);
-
-          const content = await fetchFileFromDrive(fileUrl);
-          addGpxToMap(content, tipe.toLowerCase());
-        }
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(gpxContent, "application/xml");
+      
+      // Check for XML parsing errors
+      const parserError = xml.getElementsByTagName('parsererror');
+      if (parserError.length > 0) {
+        throw new Error('Format GPX tidak valid');
       }
-    } catch (err) {
-      console.error('Error processing files:', err);
+      
+      if (type === 'waypoint') {
+        const waypoints = xml.getElementsByTagName('wpt');
+        console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
+        
+        const bounds = [];
+        for (let wpt of waypoints) {
+          const lat = parseFloat(wpt.getAttribute('lat'));
+          const lon = parseFloat(wpt.getAttribute('lon'));
+          
+          if (isNaN(lat) throw new Error('Latitude tidak valid');
+          if (isNaN(lon)) throw new Error('Longitude tidak valid');
+          
+          const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
+          const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+
+          const marker = L.marker([lat, lon], {
+            icon: getWaypointIcon(sym)
+          }).addTo(map);
+
+          marker.bindPopup(`
+            <b>File:</b> ${fileName}<br>
+            <b>Waypoint:</b> ${name}<br>
+            <b>Simbol:</b> ${sym}<br>
+            <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
+          `);
+          bounds.push([lat, lon]);
+        }
+        
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
+        }
+      } 
+      else if (type === 'track') {
+        console.log(`Memproses track dari ${fileName}`);
+        
+        const gpxLayer = new L.GPX(gpxContent, {
+          async: true,
+          marker_options: {
+            startIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-start.png',
+            endIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-end.png',
+            shadowUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-shadow.png',
+            wptIconUrls: {
+              '': 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-wpt.png'
+            }
+          },
+          polyline_options: {
+            color: 'red',
+            opacity: 0.75,
+            weight: 4,
+            lineCap: 'round'
+          }
+        });
+        
+        gpxLayer.on('loaded', function(e) {
+          console.log(`Track berhasil dimuat: ${fileName}`);
+          map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+          
+          // Add info about the track
+          const distance = (e.target.get_distance() / 1000).toFixed(2);
+          const elevation = e.target.get_elevation_gain().toFixed(0);
+          
+          const infoDiv = document.createElement('div');
+          infoDiv.innerHTML = `
+            <b>Jarak:</b> ${distance} km<br>
+            <b>Elevasi:</b> ${elevation} m
+          `;
+          
+          e.target.getBounds().getCenter();
+          const center = e.target.getBounds().getCenter();
+          const marker = L.marker([center.lat, center.lng], {
+            icon: L.divIcon({
+              html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
+                      <b>${fileName}</b><br>
+                      ${distance} km, ${elevation} m elevasi
+                    </div>`,
+              className: 'track-info-label'
+            })
+          }).addTo(map);
+        });
+        
+        gpxLayer.on('error', function(e) {
+          console.error(`Gagal memuat track ${fileName}:`, e.error);
+        });
+        
+        gpxLayer.addTo(map);
+      }
+    } catch (error) {
+      console.error(`Gagal memproses ${type} dari ${fileName}:`, error);
+      throw error;
+    }
+  }
+
+  // Process all files with better error handling
+  async function processFiles() {
+    const loading = document.getElementById('loading');
+    const loadedFilesList = document.getElementById('loaded-files');
+    
+    let hasData = false;
+    let processedCount = 0;
+    const totalFiles = waypointUrls.length + trackUrls.length;
+    
+    try {
+      // Process waypoints
+      for (const url of waypointUrls) {
+        try {
+          const fileName = url.split('/').pop() || 'waypoints.gpx';
+          const li = document.createElement('li');
+          
+          document.getElementById('progress').textContent = `Memproses waypoint (${processedCount+1}/${totalFiles})...`;
+          
+          const gpxContent = await fetchFile(url);
+          await addGpxToMap(gpxContent, 'waypoint', fileName);
+          
+          li.textContent = `✅ Waypoint: ${fileName}`;
+          li.className = 'success';
+          loadedFilesList.appendChild(li);
+          hasData = true;
+        } catch (error) {
+          const li = document.createElement('li');
+          li.textContent = `❌ Waypoint: ${url.split('/').pop() || 'unknown'} (Gagal)`;
+          li.className = 'error';
+          loadedFilesList.appendChild(li);
+          console.error(`Gagal memproses waypoint ${url}:`, error);
+        }
+        processedCount++;
+      }
+      
+      // Process tracks
+      for (const url of trackUrls) {
+        try {
+          const fileName = url.split('/').pop() || 'track.gpx';
+          const li = document.createElement('li');
+          
+          document.getElementById('progress').textContent = `Memproses track (${processedCount+1}/${totalFiles})...`;
+          
+          const gpxContent = await fetchFile(url);
+          await addGpxToMap(gpxContent, 'track', fileName);
+          
+          li.textContent = `✅ Track: ${fileName}`;
+          li.className = 'success';
+          loadedFilesList.appendChild(li);
+          hasData = true;
+        } catch (error) {
+          const li = document.createElement('li');
+          li.textContent = `❌ Track: ${url.split('/').pop() || 'unknown'} (Gagal)`;
+          li.className = 'error';
+          loadedFilesList.appendChild(li);
+          console.error(`Gagal memproses track ${url}:`, error);
+        }
+        processedCount++;
+      }
+      
+      // Show message if no data loaded
+      if (!hasData) {
+        const noDataItem = document.createElement('li');
+        noDataItem.textContent = 'Tidak ada data GPS yang valid';
+        noDataItem.className = 'error';
+        loadedFilesList.appendChild(noDataItem);
+      }
+    } catch (error) {
+      console.error('Error dalam prosesFiles:', error);
     } finally {
       loading.style.display = 'none';
     }
   }
 
-  processData();
+  // Start processing files when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure all elements are loaded
+    setTimeout(processFiles, 100);
+  });
+
+  // Add click handler for location info
+  map.on('click', function(e) {
+    document.getElementById('location-info').innerHTML += `
+      <p><strong>Klik lokasi:</strong> ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}</p>
+    `;
+  });
 </script>
 
 </body>
