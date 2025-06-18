@@ -19,25 +19,50 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
 <script>
-  // Inisialisasi peta
-  var map = L.map('map').setView([-2.5, 120.5], 5); // Sesuaikan posisi awal
+  const map = L.map('map').setView([1.17, 100.99], 17);
 
-  // Tambahkan base map
+  // Tambahkan base layer
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Kop. Air Kehidupan'
+    attribution: 'Koperasi Produsen Air Kehidupan'
   }).addTo(map);
 
-  // Load file GPX
+  // Fungsi untuk menentukan ikon berdasarkan simbol
+  function getWaypointIcon(symbol) {
+    const sym = (symbol || '').toLowerCase().trim();
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
+
+    if (sym.includes('green')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
+    } else if (sym.includes('black')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+    } else if (sym.includes('blue')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+    }
+
+    return new L.Icon({
+      iconUrl: iconUrl,
+      iconSize: [32, 32],       // Ukuran ikon yang cukup jelas
+      iconAnchor: [16, 32],     // Titik bawah ikon sebagai penanda lokasi
+      popupAnchor: [0, -32]     // Posisi popup di atas ikon
+    });
+  }
+
+  // Muat dan tampilkan GPX dengan ikon khusus
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
-    marker_options: {
-      startIconUrl: null,
-      endIconUrl: null,
-      shadowUrl: null,
-    },
-    waypoint_icon: new L.Icon.Default()
+    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
+    gpx_options: { parseElements: ['wpt'] },
+    waypoint_icon: function(wpt) {
+      const sym = (wpt.getAttribute('sym') || '').trim();
+      return getWaypointIcon(sym);
+    }
   }).on('loaded', function(e) {
-    map.fitBounds(e.target.getBounds());
+      map.fitBounds(e.target.getBounds());
+  }).on('addpoint', function(e) {
+      const name = e.point_name;
+      if (name) {
+        e.point.bindPopup("<b>Waypoint:</b> " + name);
+      }
   }).addTo(map);
 </script>
 
