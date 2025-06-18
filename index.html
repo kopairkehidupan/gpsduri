@@ -1,1 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GPX Viewer</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 600px; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Leaflet GPX Plugin -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+
+<script>
+  // Inisialisasi peta
+  var map = L.map('map').setView([-2.5, 120.5], 5); // Sesuaikan posisi awal
+
+  // Tambahkan base map
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Load file GPX
+  new L.GPX("Waypoints_17-06-25.gpx", {
+    async: true,
+    marker_options: {
+      startIconUrl: null,
+      endIconUrl: null,
+      shadowUrl: null,
+    },
+    waypoint_icon: new L.Icon.Default()
+  }).on('loaded', function(e) {
+    map.fitBounds(e.target.getBounds());
+  }).addTo(map);
+</script>
+
+</body>
+</html>
 
