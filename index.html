@@ -46,23 +46,21 @@
   // Muat dan tampilkan GPX dengan ikon khusus per simbol
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
-    marker_options: {
-      startIconUrl: null,
-      endIconUrl: null,
-      shadowUrl: null
-    },
+    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
+    gpx_options: { parseElements: ['wpt'] },
     waypoint_icon: function(wpt) {
-      const sym = wpt.getAttribute('sym') || '';
+      const sym = (wpt.getAttribute('sym') || '').trim();
       return getWaypointIcon(sym);
     }
   }).on('loaded', function(e) {
-    map.fitBounds(e.target.getBounds());
-  }).on('addpoint', function(e) {
-    const name = e.point_name;
-    if (name) {
-      e.point.bindPopup("<b>Waypoint:</b> " + name);
-    }
-  }).addTo(map);
+      map.fitBounds(e.target.getBounds());
+    }).on('addpoint', function(e) {
+      console.log("Waypoint added:", e.point_name);
+      const name = e.point_name;
+      if (name) {
+        e.point.bindPopup("<b>Waypoint:</b> " + name);
+      }
+    }).addTo(map);
 </script>
 
 </body>
