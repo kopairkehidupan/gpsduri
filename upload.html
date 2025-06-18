@@ -37,7 +37,7 @@
       formData.append("waypoint", form.waypoint.files[0]);
       formData.append("track", form.track.files[0]);
 
-      const response = await fetch("YOUR_DEPLOYED_APPS_SCRIPT_URL", {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbzkTdobTPsRPQdih75SkuMo6V2BoQAlbEZCdIW14H0I30B201Ok7FRUdICdCo7iSv8FJg/exec", {
         method: "POST",
         body: formData
       });
