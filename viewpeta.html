@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sensus Pokok - Viewer</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%; margin: 0;
+    }
+    #map {
+      height: 100%; width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+
+<script>
+  const map = L.map('map').setView([1.17, 100.99], 17);
+
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'KPAK', maxZoom: 22
+  }).addTo(map);
+
+  function getWaypointIcon(symbol) {
+    const sym = (symbol || '').toLowerCase().trim();
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
+    if (sym === 'flag, green') iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
+    else if (sym === 'navaid, black') iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
+
+    return new L.Icon({
+      iconUrl,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -10]
+    });
+  }
+
+  // Get URL params
+  const params = new URLSearchParams(window.location.search);
+  const kebun = params.get('kebun');
+  const divisi = params.get('divisi');
+  const blok = params.get('blok');
+
+  // Link ke Google Sheet CSV (pastikan sudah di-publish to web)
+  const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
+
+  fetch(CSV_URL)
+    .then(res => res.text())
+    .then(csv => {
+      const rows = csv.split("\n").slice(1);
+      const filtered = rows.map(r => r.split(","))
+        .filter(c => c[1] === kebun && c[2] === divisi && c[3] === blok);
+
+      if (!filtered.length) {
+        alert("Tidak ditemukan file untuk blok ini.");
+        return;
+      }
+
+      const bounds = [];
+
+      filtered.forEach(row => {
+        const fileType = row[4].toLowerCase();
+        const link = row[6];
+
+        const fileIdMatch = link.match(/[-\w]{25,}/);
+        if (!fileIdMatch) return;
+        const fileId = fileIdMatch[0];
+        const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+        fetch(downloadUrl)
+          .then(r => r.text())
+          .then(gpxText => {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(gpxText, "application/xml");
+            const wpts = xml.getElementsByTagName("wpt");
+            for (let wpt of wpts) {
+              const lat = parseFloat(wpt.getAttribute("lat"));
+              const lon = parseFloat(wpt.getAttribute("lon"));
+              const name = wpt.getElementsByTagName("name")[0]?.textContent || "";
+              const sym = wpt.getElementsByTagName("sym")[0]?.textContent || "";
+
+              const marker = L.marker([lat, lon], {
+                icon: getWaypointIcon(sym)
+              }).addTo(map);
+
+              marker.bindPopup(`<b>${fileType.toUpperCase()}</b><br>${name}<br>${sym}`);
+              bounds.push([lat, lon]);
+            }
+            if (bounds.length) {
+              map.fitBounds(bounds, { maxZoom: 20 });
+            }
+          })
+          .catch(err => console.error('Error loading GPX:', err));
+      });
+    });
+</script>
+
+</body>
+</html>
