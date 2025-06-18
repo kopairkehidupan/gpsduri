@@ -60,6 +60,7 @@
     waypoint_icon: function(wpt) {
       const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
       const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
+      console.log(`RAW <sym>:`, sym); // Tambahkan ini!
       const icon = getWaypointIcon(sym);
       icon.options.customData = { name, sym };
       return icon;
