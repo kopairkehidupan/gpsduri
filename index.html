@@ -29,6 +29,7 @@
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
     let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
+    console.log("Using icon:", iconUrl);
   
     if (sym.includes('flag, green')) {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
