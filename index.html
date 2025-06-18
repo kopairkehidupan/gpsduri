@@ -27,14 +27,16 @@
 
   // Fungsi untuk menentukan ikon berdasarkan simbol
   function getWaypointIcon(symbol) {
-    let iconUrl = 'blue-flag.png'; // default icon
-
+    let iconUrl = 'blue-flag.png'; // default
+  
     if (symbol.includes('Green')) {
       iconUrl = 'green-flag.png';
     } else if (symbol.includes('Black')) {
       iconUrl = 'black-flag.png';
     }
-
+  
+    console.log("Symbol:", symbol, "-> Icon URL:", iconUrl);
+  
     return new L.Icon({
       iconUrl: iconUrl,
       iconSize: [25, 41],
