@@ -46,29 +46,35 @@
 
   // Load GPX dan tampilkan marker dengan ikon & popup
   new L.GPX("Waypoints_17-06-25.gpx", {
-    async: true,
-    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-    waypoint_icon: function(wpt) {
-      const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-      const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
-
-      // Buat ikon dan simpan data ke dalam options
-      const icon = getWaypointIcon(sym);
-      icon.options.customData = { name, sym };
-      return icon;
+  async: true,
+  marker_options: {
+    startIconUrl: null,
+    endIconUrl: null,
+    shadowUrl: null,
+    wptIconUrls: {
+      '': null
     }
-  })
-  .on('addpoint', function(e) {
-    const data = e.point.options.icon.options.customData || {};
-    const name = data.name || 'Unknown';
-    const sym  = data.sym || '';
-    e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-  })
-  .on('loaded', function(e) {
-    console.log("GPX loaded successfully.");
-    map.fitBounds(e.target.getBounds());
-  })
-  .addTo(map);
+  },
+  waypoint_icon: function(wpt) {
+    const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+    const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
+
+    const icon = getWaypointIcon(sym);
+    icon.options.customData = { name, sym };
+    return icon;
+  }
+})
+.on('addpoint', function(e) {
+  const data = e.point.options.icon.options.customData || {};
+  const name = data.name || 'Unknown';
+  const sym  = data.sym || '';
+  e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
+})
+.on('loaded', function(e) {
+  console.log("GPX loaded successfully.");
+  map.fitBounds(e.target.getBounds());
+})
+.addTo(map);
 </script>
 
 </body>
