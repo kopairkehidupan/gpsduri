@@ -58,14 +58,17 @@
   waypoint_icon: function(wpt) {
     const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
     const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
-
     const icon = getWaypointIcon(sym);
-    icon.options.customData = { name, sym };
-    return icon;
+    const lat  = parseFloat(wpt.getAttribute('lat'));
+    const lon  = parseFloat(wpt.getAttribute('lon'));
+  
+    const marker = L.marker([lat, lon], { icon });
+    marker.options.customData = { name, sym };
+    return marker;
   }
 })
 .on('addpoint', function(e) {
-  const data = e.point.options.icon.options.customData || {};
+  const data = e.point.options.customData || {};
   const name = data.name || 'Unknown';
   const sym  = data.sym || '';
   e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
