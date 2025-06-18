@@ -7,7 +7,10 @@
 <body>
   <h2>Form Upload Waypoint & Track GPS</h2>
 
-  <form id="uploadForm">
+  <form id="uploadForm"
+        action="https://script.google.com/macros/s/AKfycbzkTdobTPsRPQdih75SkuMo6V2BoQAlbEZCdIW14H0I30B201Ok7FRUdICdCo7iSv8FJg/exec"
+        method="POST" enctype="multipart/form-data">
+
     <label>Kebun:</label>
     <input type="text" name="kebun" required><br><br>
 
@@ -25,26 +28,5 @@
 
     <button type="submit">Upload</button>
   </form>
-
-  <script>
-    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const form = e.target;
-      const formData = new FormData();
-      formData.append("kebun", form.kebun.value);
-      formData.append("divisi", form.divisi.value);
-      formData.append("blok", form.blok.value);
-      formData.append("waypoint", form.waypoint.files[0]);
-      formData.append("track", form.track.files[0]);
-
-      const response = await fetch("https://script.google.com/macros/s/AKfycbzkTdobTPsRPQdih75SkuMo6V2BoQAlbEZCdIW14H0I30B201Ok7FRUdICdCo7iSv8FJg/exec", {
-        method: "POST",
-        body: formData
-      });
-
-      const result = await response.text();
-      alert(result);
-    });
-  </script>
 </body>
 </html>
