@@ -53,20 +53,15 @@
     async: true,
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
     waypoint_icon: function(wpt) {
-      const lat = parseFloat(wpt.getAttribute('lat'));
-      const lon = parseFloat(wpt.getAttribute('lon'));
-      const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
       const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-
-      const marker = L.marker([lat, lon], {
-        icon: getWaypointIcon(sym)
-      });
-
-      marker.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-      return marker;
+      return getWaypointIcon(sym);
     }
-  })
-  .on('loaded', function(e) {
+    }).on('addpoint', function(e) {
+    const wpt = e.point.options.gpx.wpt;
+    const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
+    const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+    e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
+  }).on('loaded', function(e) {
     console.log("GPX loaded successfully.");
     map.fitBounds(e.target.getBounds());
   })
