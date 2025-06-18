@@ -49,21 +49,37 @@
 
   // Muat dan tampilkan GPX dengan ikon khusus
   new L.GPX("Waypoints_17-06-25.gpx", {
-    async: true,
-    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-    gpx_options: { parseElements: ['wpt'] },
-    waypoint_icon: function(wpt) {
-      const sym = (wpt.getAttribute('sym') || '').trim();
-      return getWaypointIcon(sym);
+  async: true,
+  marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
+  gpx_options: { parseElements: ['wpt'] },
+  waypoint_icon: function(wpt) {
+    const sym = (wpt.querySelector('sym')?.textContent || '').toLowerCase().trim();
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
+
+    if (sym.includes('green')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
+    } else if (sym.includes('black')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+    } else if (sym.includes('blue')) {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
     }
-  }).on('loaded', function(e) {
-      map.fitBounds(e.target.getBounds());
-  }).on('addpoint', function(e) {
-      const name = e.point_name;
-      if (name) {
-        e.point.bindPopup("<b>Waypoint:</b> " + name);
-      }
-  }).addTo(map);
+
+    return new L.Icon({
+      iconUrl: iconUrl,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+      popupAnchor: [0, -32]
+    });
+  }
+}).on('loaded', function(e) {
+  map.fitBounds(e.target.getBounds());
+}).on('addpoint', function(e) {
+  const name = e.point_name;
+  if (name) {
+    e.point.bindPopup("<b>Waypoint:</b> " + name);
+  }
+}).addTo(map);
+
 </script>
 
 </body>
