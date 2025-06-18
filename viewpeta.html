@@ -209,7 +209,7 @@
           const lat = parseFloat(wpt.getAttribute('lat'));
           const lon = parseFloat(wpt.getAttribute('lon'));
           
-          if (isNaN(lat) throw new Error('Latitude tidak valid');
+          if (isNaN(lat)) throw new Error('Latitude tidak valid');
           if (isNaN(lon)) throw new Error('Longitude tidak valid');
           
           const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
