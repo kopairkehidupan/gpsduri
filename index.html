@@ -28,16 +28,16 @@
   // Fungsi ikon berdasarkan <sym>
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'blue-flag.png';
-
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
+  
     if (sym.includes('flag, green')) {
-      iconUrl = 'green-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
     } else if (sym.includes('navaid, black')) {
-      iconUrl = 'black-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
     } else if (sym.includes('flag, blue')) {
-      iconUrl = 'blue-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
     }
-
+  
     return new L.Icon({
       iconUrl: iconUrl,
       iconSize: [32, 32],
@@ -45,6 +45,7 @@
       popupAnchor: [0, -32]
     });
   }
+
 
   // Load GPX dan pasang ikon + popup langsung di sini
   new L.GPX("Waypoints_17-06-25.gpx", {
