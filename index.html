@@ -48,37 +48,41 @@
   }
 
   // Muat dan tampilkan GPX dengan ikon khusus
-  new L.GPX("Waypoints_17-06-25.gpx", {
-  async: true,
-  marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-  gpx_options: { parseElements: ['wpt'] },
-  waypoint_icon: function(wpt) {
-    const sym = (wpt.querySelector('sym')?.textContent || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
-
-    if (sym.includes('Flag, Green')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
-    } else if (sym.includes('Navaid, Black')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
-    } else if (sym.includes('Flag, Blue')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+   new L.GPX("Waypoints_17-06-25.gpx", {
+    async: true,
+    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
+    gpx_options: { parseElements: ['wpt'] },
+    waypoint_icon: function(wpt) {
+      const sym = (wpt.querySelector('sym')?.textContent || '').toLowerCase().trim();
+      let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
+  
+      if (sym.includes('flag, green')) {
+        iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
+      } else if (sym.includes('navaid, black')) {
+        iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+      } else if (sym.includes('flag, blue')) {
+        iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+      }
+  
+      return new L.Icon({
+        iconUrl: iconUrl,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      });
     }
+  })
+  .on('loaded', function(e) {
+    map.fitBounds(e.target.getBounds());
+  })
+  .on('addpoint', function(e) {
+    const name = e.point_name;
+    if (name) {
+      e.point.bindPopup("<b>Waypoint:</b> " + name);
+    }
+  })
+  .addTo(map);
 
-    return new L.Icon({
-      iconUrl: iconUrl,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32]
-    });
-  }
-}).on('loaded', function(e) {
-  map.fitBounds(e.target.getBounds());
-}).on('addpoint', function(e) {
-  const name = e.point_name;
-  if (name) {
-    e.point.bindPopup("<b>Waypoint:</b> " + name);
-  }
-}).addTo(map);
 
 </script>
 
