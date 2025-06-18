@@ -57,15 +57,19 @@
       endIconUrl: null,
       shadowUrl: null
     },
+    gpx_options: {
+      parseElements: ['wpt']
+    },
     waypoint_icon: function(wpt) {
       const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
       const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
-      console.log(`RAW <sym>:`, sym); // Tambahkan ini!
+      console.log(`RAW <sym>:`, sym); // <== sekarang ini harus muncul
       const icon = getWaypointIcon(sym);
       icon.options.customData = { name, sym };
       return icon;
     }
   })
+
   .on('addpoint', function(e) {
     const data = e.point.options.icon.options.customData || {};
     const name = data.name || 'Unknown';
