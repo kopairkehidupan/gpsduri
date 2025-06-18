@@ -63,12 +63,10 @@
     console.log("Addpoint triggered:", e.point_name);
     map.fitBounds(e.target.getBounds());
   })
-  .on('addpoint', function(e) {
-    console.log("Addpoint triggered:", e.point_name);
-    const name = e.point_name;
-    if (name) {
-      e.point.bindPopup("<b>Waypoint:</b> " + name);
-    }
+    .on('addpoint', function(e) {
+    const name = e.point.getElement().getElementsByTagName('name')[0]?.textContent || 'Unknown';
+    console.log("Addpoint:", name);
+    e.point.bindPopup("<b>Waypoint:</b> " + name);
   })
   .addTo(map);
 
