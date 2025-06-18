@@ -52,14 +52,19 @@
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-    waypoint_icon: function(wpt) {
-      const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-      return getWaypointIcon(sym);
-    }
-    }).on('addpoint', function(e) {
-    const wpt = e.point.options.gpx.wpt;
-    const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
-    const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+      waypoint_icon: function(wpt) {
+        const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+        const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
+      
+        // Simpan ke customData
+        const icon = getWaypointIcon(sym);
+        icon.options.customData = { name, sym };  // simpan ke ikon (trik)
+      
+        return icon;
+      }
+  }).on('addpoint', function(e) {
+    const name = e.point.options.icon.options.customData?.name || 'Unknown';
+    const sym  = e.point.options.icon.options.customData?.sym  || '';
     e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
   }).on('loaded', function(e) {
     console.log("GPX loaded successfully.");
