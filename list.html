@@ -9,6 +9,7 @@
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     th { background-color: #f2f2f2; }
     td.blok-cell { color: blue; text-decoration: underline; cursor: pointer; }
+    .btn-view { background-color: #4CAF50; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -25,6 +26,7 @@
       <th>Nama File</th>
       <th>Link</th>
       <th>Folder Path</th>
+      <th>Aksi</th>
     </tr>
   </thead>
   <tbody>
@@ -33,13 +35,12 @@
 </table>
 
 <script>
-  // ID Google Sheet dan format output publik (harus dipublish via "File > Share > Publish to web")
   const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
 
   fetch(SHEET_URL)
     .then(res => res.text())
     .then(csv => {
-      const rows = csv.split("\n").slice(1); // skip header
+      const rows = csv.split("\n").slice(1);
       const tableBody = document.querySelector("#sensusTable tbody");
       const allData = [];
 
@@ -48,6 +49,7 @@
         if (cols.length < 8) return;
 
         const tr = document.createElement("tr");
+
         cols.forEach((col, i) => {
           const td = document.createElement("td");
           td.innerHTML = i === 6 ? `<a href="${col}" target="_blank">Link</a>` : col;
@@ -55,34 +57,26 @@
           tr.appendChild(td);
         });
 
+        // Tombol aksi
+        const aksiTd = document.createElement("td");
+        const viewBtn = document.createElement("button");
+        viewBtn.className = "btn-view";
+        viewBtn.textContent = "Lihat Peta";
+        viewBtn.onclick = () => {
+          const kebun = cols[1];
+          const divisi = cols[2];
+          const blok = cols[3];
+          window.open(`viewpeta.html?kebun=${encodeURIComponent(kebun)}&divisi=${encodeURIComponent(divisi)}&blok=${encodeURIComponent(blok)}`, "_blank");
+        };
+        aksiTd.appendChild(viewBtn);
+        tr.appendChild(aksiTd);
+
         allData.push({ kebun: cols[1], divisi: cols[2], blok: cols[3], all: cols });
         tableBody.appendChild(tr);
-      });
-
-      // Klik pada kolom BLOK
-      document.querySelectorAll(".blok-cell").forEach(td => {
-        td.addEventListener("click", function () {
-          const blokClicked = this.textContent.trim();
-          const filtered = allData.filter(row => row.blok === blokClicked);
-
-          const html = filtered.map(row => `
-            <p>
-              <b>Kebun:</b> ${row.kebun}<br>
-              <b>Divisi:</b> ${row.divisi}<br>
-              <b>Blok:</b> ${row.blok}<br>
-              <b>File:</b> ${row.all[5]}<br>
-              <b>Link:</b> <a href="${row.all[6]}" target="_blank">${row.all[6]}</a><br>
-              <b>Folder Path:</b> ${row.all[7]}
-            </p>
-            <hr>
-          `).join('');
-
-          const popup = window.open("", "detail", "width=600,height=500");
-          popup.document.write(`<html><head><title>Detail Blok</title></head><body>${html}</body></html>`);
-        });
       });
     });
 </script>
 
 </body>
 </html>
+
