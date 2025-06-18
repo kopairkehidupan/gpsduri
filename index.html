@@ -34,11 +34,11 @@
 
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     if (sym === 'flag, green') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
     } else if (sym === 'navaid, black') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
     }
     return new L.Icon({
       iconUrl,
