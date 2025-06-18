@@ -66,7 +66,7 @@
           const kebun = cols[1];
           const divisi = cols[2];
           const blok = cols[3];
-          window.open(`viewpeta.html?kebun=${encodeURIComponent(kebun)}&divisi=${encodeURIComponent(divisi)}&blok=${encodeURIComponent(blok)}`, "_blank");
+          window.open(`viewpeta.html?kebun=${encodeURIComponent(row.kebun)}&divisi=${encodeURIComponent(row.divisi)}&blok=${encodeURIComponent(row.blok)}`, "_blank");
         };
         aksiTd.appendChild(viewBtn);
         tr.appendChild(aksiTd);
