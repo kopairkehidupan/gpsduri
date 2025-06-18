@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>GPX Viewer</title>
   <meta charset="utf-8" />
-  <base href="https://kopairkehidupan.github.io/gpsduri/">
-  <title>GPX Waypoint Viewer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 600px; width: 100%; }
+    #map { height: 600px; }
   </style>
 </head>
 <body>
@@ -15,56 +14,30 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <!-- Leaflet GPX Plugin -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
 <script>
-  const map = L.map('map').setView([1.17, 100.99], 17);
+  // Inisialisasi peta
+  var map = L.map('map').setView([-2.5, 120.5], 5); // Sesuaikan posisi awal
 
-  // Tambahkan base layer
+  // Tambahkan base map
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Koperasi Produsen Air Kehidupan'
+    attribution: 'Kop. Air Kehidupan'
   }).addTo(map);
 
-  // Fungsi untuk menentukan ikon berdasarkan simbol
-  function getWaypointIcon(symbol) {
-    const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'blue-flag.png'; // default fallback
-
-    if (sym.includes('green')) {
-      iconUrl = 'green-flag.png';
-    } else if (sym.includes('black')) {
-      iconUrl = 'black-flag.png';
-    } else if (sym.includes('blue')) {
-      iconUrl = 'blue-flag.png';
-    }
-
-    console.log("Symbol:", sym, "-> Icon URL:", iconUrl);
-
-    return new L.Icon({
-      iconUrl: iconUrl,
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [0, -30]
-    });
-  }
-
-  // Muat dan tampilkan GPX dengan ikon khusus per simbol
-  new L.GPX("Waypoints_17-06-25.gpx", {
+  // Load file GPX
+  new L.GPX("waypoint-data.gpx", {
     async: true,
-    marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-    gpx_options: { parseElements: ['wpt'] },
-    waypoint_icon: function(wpt) {
-      const sym = (wpt.getAttribute('sym') || '').trim();
-      return getWaypointIcon(sym);
-    }
+    marker_options: {
+      startIconUrl: null,
+      endIconUrl: null,
+      shadowUrl: null,
+    },
+    waypoint_icon: new L.Icon.Default()
   }).on('loaded', function(e) {
     map.fitBounds(e.target.getBounds());
-  }).on('addpoint', function(e) {
-    const name = e.point_name;
-    if (name) {
-      e.point.bindPopup("<b>Waypoint:</b> " + name);
-    }
   }).addTo(map);
 </script>
 
