@@ -10,11 +10,13 @@
     th { background-color: #f2f2f2; }
     td.blok-cell { color: blue; text-decoration: underline; cursor: pointer; }
     .btn-view { background-color: #4CAF50; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
+    .loading { display: none; margin: 20px 0; }
   </style>
 </head>
 <body>
 
 <h2>Daftar Hasil Sensus Pokok</h2>
+<div id="loading" class="loading">Loading data...</div>
 <table id="sensusTable">
   <thead>
     <tr>
@@ -22,10 +24,9 @@
       <th>Kebun</th>
       <th>Divisi</th>
       <th>Blok</th>
-      <th>Data</th>
+      <th>Tipe Data</th>
       <th>Nama File</th>
       <th>Link</th>
-      <th>Folder Path</th>
       <th>Aksi</th>
     </tr>
   </thead>
@@ -35,48 +36,99 @@
 </table>
 
 <script>
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/gviz/tq?tqx=out:csv";
+  const loadingElement = document.getElementById("loading");
+
+  // Show loading indicator
+  loadingElement.style.display = "block";
 
   fetch(SHEET_URL)
     .then(res => res.text())
     .then(csv => {
+      loadingElement.style.display = "none";
       const rows = csv.split("\n").slice(1);
       const tableBody = document.querySelector("#sensusTable tbody");
-      const allData = [];
+      const blokDataMap = {}; // To group data by blok
 
       rows.forEach(row => {
-        const cols = row.split(",");
+        const cols = row.split('","').map(col => col.replace(/"/g, '').trim());
         if (cols.length < 8) return;
 
-        const tr = document.createElement("tr");
+        const [timestamp, kebun, divisi, blok, dataType, fileName, fileUrl, folderPath] = cols;
+        
+        // Group data by blok
+        if (!blokDataMap[blok]) {
+          blokDataMap[blok] = [];
+        }
+        blokDataMap[blok].push({ timestamp, kebun, divisi, blok, dataType, fileName, fileUrl, folderPath });
 
-        cols.forEach((col, i) => {
+        // Create table row
+        const tr = document.createElement("tr");
+        
+        // Add columns to row
+        [timestamp, kebun, divisi, blok, dataType, fileName].forEach((col, i) => {
           const td = document.createElement("td");
-          td.innerHTML = i === 6 ? `<a href="${col}" target="_blank">Link</a>` : col;
+          td.textContent = col;
           if (i === 3) td.classList.add("blok-cell");
           tr.appendChild(td);
         });
 
-        // Tombol aksi
-        const aksiTd = document.createElement("td");
+        // Link column
+        const linkTd = document.createElement("td");
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.textContent = "Link";
+        link.target = "_blank";
+        linkTd.appendChild(link);
+        tr.appendChild(linkTd);
+
+        // Action column
+        const actionTd = document.createElement("td");
         const viewBtn = document.createElement("button");
         viewBtn.className = "btn-view";
         viewBtn.textContent = "Lihat Peta";
         viewBtn.onclick = () => {
-          const kebun = cols[1];
-          const divisi = cols[2];
-          const blok = cols[3];
-          window.open(`viewpeta.html?kebun=${encodeURIComponent(row.kebun)}&divisi=${encodeURIComponent(row.divisi)}&blok=${encodeURIComponent(row.blok)}`, "_blank");
+          // Open map view with all files for this blok
+          const blokFiles = blokDataMap[blok];
+          const waypoints = blokFiles.filter(f => f.dataType === 'WAYPOINT').map(f => f.fileUrl);
+          const tracks = blokFiles.filter(f => f.dataType === 'TRACK').map(f => f.fileUrl);
+          
+          const params = new URLSearchParams();
+          params.append('blok', blok);
+          waypoints.forEach(url => params.append('waypoints', url));
+          tracks.forEach(url => params.append('tracks', url));
+          
+          window.open(`viewpeta.html?${params.toString()}`, "_blank");
         };
-        aksiTd.appendChild(viewBtn);
-        tr.appendChild(aksiTd);
+        actionTd.appendChild(viewBtn);
+        tr.appendChild(actionTd);
 
-        allData.push({ kebun: cols[1], divisi: cols[2], blok: cols[3], all: cols });
         tableBody.appendChild(tr);
       });
+
+      // Add click handler for blok cells
+      document.querySelectorAll('.blok-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const blok = cell.textContent;
+          const blokFiles = blokDataMap[blok];
+          const waypoints = blokFiles.filter(f => f.dataType === 'WAYPOINT').map(f => f.fileUrl);
+          const tracks = blokFiles.filter(f => f.dataType === 'TRACK').map(f => f.fileUrl);
+          
+          const params = new URLSearchParams();
+          params.append('blok', blok);
+          waypoints.forEach(url => params.append('waypoints', url));
+          tracks.forEach(url => params.append('tracks', url));
+          
+          window.open(`viewpeta.html?${params.toString()}`, "_blank");
+        });
+      });
+    })
+    .catch(err => {
+      loadingElement.style.display = "none";
+      alert("Error loading data: " + err.message);
+      console.error(err);
     });
 </script>
 
 </body>
 </html>
-
