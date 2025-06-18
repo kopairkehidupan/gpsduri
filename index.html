@@ -28,14 +28,19 @@
   // Fungsi membuat ikon berdasarkan simbol <sym>
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
-
-    if (sym.includes('flag, green')) {
+  
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default fallback
+  
+    if (sym === 'flag, green') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
-    } else if (sym.includes('navaid, black')) {
+    } else if (sym === 'navaid, black') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+    } else if (sym === 'flag, blue') {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
     }
-
+  
+    console.log('sym:', sym, '-> icon:', iconUrl); // debugging log
+  
     return new L.Icon({
       iconUrl: iconUrl,
       iconSize: [32, 32],
