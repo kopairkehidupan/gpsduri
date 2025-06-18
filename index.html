@@ -20,25 +20,22 @@
 <script>
   const map = L.map('map').setView([1.17, 100.99], 17);
 
-  // Base map
+  // Tambahkan peta dasar
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: 'Koperasi Produsen Air Kehidupan'
   }).addTo(map);
 
-  // Fungsi ikon berdasarkan <sym>
+  // Fungsi membuat ikon berdasarkan simbol <sym>
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png'; // default
-    console.log("Using icon:", iconUrl);
-  
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+
     if (sym.includes('flag, green')) {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
     } else if (sym.includes('navaid, black')) {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
-    } else if (sym.includes('flag, blue')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
     }
-  
+
     return new L.Icon({
       iconUrl: iconUrl,
       iconSize: [32, 32],
@@ -47,26 +44,27 @@
     });
   }
 
-
-  // Load GPX dan pasang ikon + popup langsung di sini
+  // Load GPX dan tampilkan marker dengan ikon & popup
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-      waypoint_icon: function(wpt) {
-        const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-        const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
-      
-        // Simpan ke customData
-        const icon = getWaypointIcon(sym);
-        icon.options.customData = { name, sym };  // simpan ke ikon (trik)
-      
-        return icon;
-      }
-  }).on('addpoint', function(e) {
-    const name = e.point.options.icon.options.customData?.name || 'Unknown';
-    const sym  = e.point.options.icon.options.customData?.sym  || '';
+    waypoint_icon: function(wpt) {
+      const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+      const name = wpt.getElementsByTagName('name')[0]?.textContent || '';
+
+      // Buat ikon dan simpan data ke dalam options
+      const icon = getWaypointIcon(sym);
+      icon.options.customData = { name, sym };
+      return icon;
+    }
+  })
+  .on('addpoint', function(e) {
+    const data = e.point.options.icon.options.customData || {};
+    const name = data.name || 'Unknown';
+    const sym  = data.sym || '';
     e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-  }).on('loaded', function(e) {
+  })
+  .on('loaded', function(e) {
     console.log("GPX loaded successfully.");
     map.fitBounds(e.target.getBounds());
   })
