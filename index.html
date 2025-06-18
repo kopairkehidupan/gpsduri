@@ -5,7 +5,14 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 600px; width: 100%; }
+    #map { 
+      height: 600px; width: 100%; 
+    }
+    .circle-icon img {
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #444; /* opsional: beri bingkai */
+    }
   </style>
 </head>
 <body>
@@ -32,9 +39,10 @@
     }
     return new L.Icon({
       iconUrl,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32]
+      iconSize: [24, 24],        // Ukuran lebih kecil (misalnya 24x24)
+      iconAnchor: [12, 12],      // Titik tengah ikon untuk bentuk bulat
+      popupAnchor: [0, -12],
+      className: 'circle-icon'   // Tambahkan class untuk styling
     });
   }
 
