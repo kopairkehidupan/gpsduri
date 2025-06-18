@@ -27,15 +27,15 @@
 
   // Fungsi untuk menentukan ikon berdasarkan simbol
   function getWaypointIcon(symbol) {
-    const sym = (symbol || '').toLowerCase().trim(); // normalize lowercase
-    let iconUrl = 'blue-flag.png'; // default fallback
+    const sym = (symbol || '').toLowerCase().trim();
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
   
     if (sym.includes('green')) {
-      iconUrl = 'green-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
     } else if (sym.includes('black')) {
-      iconUrl = 'black-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
     } else if (sym.includes('blue')) {
-      iconUrl = 'blue-flag.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
     }
   
     console.log("Symbol:", sym, "-> Icon URL:", iconUrl);
@@ -47,7 +47,6 @@
       popupAnchor: [0, -30]
     });
   }
-
 
   // Muat dan tampilkan GPX dengan ikon khusus per simbol
   new L.GPX("Waypoints_17-06-25.gpx", {
