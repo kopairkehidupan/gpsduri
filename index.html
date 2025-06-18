@@ -54,22 +54,24 @@
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
-    gpx_options: { parseElements: ['wpt'] },
     waypoint_icon: function(wpt) {
       const sym = wpt.getElementsByTagName('sym')[0]?.textContent.toLowerCase().trim() || '';
       return getWaypointIcon(sym);
     }
   })
   .on('loaded', function(e) {
+    console.log("Addpoint triggered:", e.point_name);
     map.fitBounds(e.target.getBounds());
   })
   .on('addpoint', function(e) {
+    console.log("Addpoint triggered:", e.point_name);
     const name = e.point_name;
     if (name) {
       e.point.bindPopup("<b>Waypoint:</b> " + name);
     }
   })
   .addTo(map);
+
 </script>
 
 </body>
