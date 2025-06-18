@@ -30,14 +30,14 @@
   // Fungsi icon berdasarkan simbol
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+    let iconUrl = 'blue-flag.png';
   
     if (sym.includes('flag, green')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag.png';
+      iconUrl = 'green-flag.png';
     } else if (sym.includes('navaid, black')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag.png';
+      iconUrl = 'black-flag.png';
     } else if (sym.includes('flag, blue')) {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag.png';
+      iconUrl = 'blue-flag.png';
     }
   
     console.log("SYM:", sym, "->", iconUrl); // Untuk debug
