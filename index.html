@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>GPX Viewer</title>
   <meta charset="utf-8" />
+  <title>GPX Waypoint Viewer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 600px; }
+    #map { height: 600px; width: 100%; }
   </style>
 </head>
 <body>
@@ -14,33 +14,56 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <!-- Leaflet GPX Plugin -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
 <script>
-  // Inisialisasi peta
-  var map = L.map('map').setView([-2.5, 120.5], 5); // Sesuaikan posisi awal
+  const map = L.map('map').setView([1.17, 100.99], 17);
 
-  // Tambahkan base map
+  // Tambahkan base layer
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  // Load file GPX
+  // Fungsi untuk menentukan ikon berdasarkan simbol
+  function getWaypointIcon(symbol) {
+    let iconUrl = 'default.png'; // default icon
+
+    if (symbol.includes('Green')) {
+      iconUrl = 'green-flag.png';
+    } else if (symbol.includes('Blue')) {
+      iconUrl = 'blue-flag.png';
+    }
+
+    return new L.Icon({
+      iconUrl: iconUrl,
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [0, -30]
+    });
+  }
+
+  // Muat dan tampilkan GPX dengan ikon khusus per simbol
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
     marker_options: {
       startIconUrl: null,
       endIconUrl: null,
-      shadowUrl: null,
+      shadowUrl: null
     },
-    waypoint_icon: new L.Icon.Default()
+    waypoint_icon: function(wpt) {
+      const sym = wpt.getAttribute('sym') || '';
+      return getWaypointIcon(sym);
+    }
   }).on('loaded', function(e) {
     map.fitBounds(e.target.getBounds());
+  }).on('addpoint', function(e) {
+    const name = e.point_name;
+    if (name) {
+      e.point.bindPopup("<b>Waypoint:</b> " + name);
+    }
   }).addTo(map);
 </script>
 
 </body>
 </html>
-
