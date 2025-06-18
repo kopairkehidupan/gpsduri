@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 600px; }
+    #map { height: 600px; width: 100%; }
   </style>
 </head>
 <body>
@@ -14,24 +14,22 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <!-- Leaflet GPX Plugin -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 
 <script>
   const map = L.map('map').setView([1.17, 100.99], 17);
 
-  // Tambahkan base layer
+  // Base map
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: 'Koperasi Produsen Air Kehidupan'
   }).addTo(map);
 
-  // Fungsi untuk menentukan ikon berdasarkan simbol
-  // Fungsi icon berdasarkan simbol
+  // Fungsi ikon berdasarkan <sym>
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
     let iconUrl = 'blue-flag.png';
-  
+
     if (sym.includes('flag, green')) {
       iconUrl = 'green-flag.png';
     } else if (sym.includes('navaid, black')) {
@@ -39,9 +37,7 @@
     } else if (sym.includes('flag, blue')) {
       iconUrl = 'blue-flag.png';
     }
-  
-    console.log("SYM:", sym, "->", iconUrl); // Untuk debug
-  
+
     return new L.Icon({
       iconUrl: iconUrl,
       iconSize: [32, 32],
@@ -49,27 +45,30 @@
       popupAnchor: [0, -32]
     });
   }
-  
-  // Panggil plugin GPX
+
+  // Load GPX dan pasang ikon + popup langsung di sini
   new L.GPX("Waypoints_17-06-25.gpx", {
     async: true,
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
     waypoint_icon: function(wpt) {
-      const sym = wpt.getElementsByTagName('sym')[0]?.textContent.toLowerCase().trim() || '';
-      return getWaypointIcon(sym);
-    }
-  }).on('addpoint', function(e) {
-    const el = e.point._icon;
-    const wptEl = e.point.options.gpx.wpt;
-  
-    // Ambil elemen <name> dan <sym> dari DOM waypoint
-    const name = wptEl.getElementsByTagName('name')[0]?.textContent || 'Unknown';
-    const sym = wptEl.getElementsByTagName('sym')[0]?.textContent || '';
-  
-    console.log("Addpoint:", name, sym);
-    e.point.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-  }).addTo(map);
+      const lat = parseFloat(wpt.getAttribute('lat'));
+      const lon = parseFloat(wpt.getAttribute('lon'));
+      const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
+      const sym  = wpt.getElementsByTagName('sym')[0]?.textContent || '';
 
+      const marker = L.marker([lat, lon], {
+        icon: getWaypointIcon(sym)
+      });
+
+      marker.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
+      return marker;
+    }
+  })
+  .on('loaded', function(e) {
+    console.log("GPX loaded successfully.");
+    map.fitBounds(e.target.getBounds());
+  })
+  .addTo(map);
 </script>
 
 </body>
