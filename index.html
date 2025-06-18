@@ -59,14 +59,13 @@
       return getWaypointIcon(sym);
     }
   }).on('loaded', function(e) {
-      map.fitBounds(e.target.getBounds());
-    }).on('addpoint', function(e) {
-      console.log("Waypoint added:", e.point_name);
-      const name = e.point_name;
-      if (name) {
-        e.point.bindPopup("<b>Waypoint:</b> " + name);
-      }
-    }).addTo(map);
+    map.fitBounds(e.target.getBounds());
+  }).on('addpoint', function(e) {
+    const name = e.point_name;
+    if (name) {
+      e.point.bindPopup("<b>Waypoint:</b> " + name);
+    }
+  }).addTo(map);
 </script>
 
 </body>
