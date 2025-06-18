@@ -26,13 +26,13 @@
   }).addTo(map);
 
   // Fungsi untuk menentukan ikon berdasarkan simbol
-  function getWaypointIcon(symbol) {
-    let iconUrl = 'default.png'; // default icon
+  function getWaypointIcon(Blue) {
+    let iconUrl = 'blue-flag.png'; // default icon
 
     if (symbol.includes('Green')) {
       iconUrl = 'green-flag.png';
-    } else if (symbol.includes('Blue')) {
-      iconUrl = 'blue-flag.png';
+    } else if (symbol.includes('Black')) {
+      iconUrl = 'black-flag.png';
     }
 
     return new L.Icon({
