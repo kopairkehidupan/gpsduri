@@ -26,45 +26,54 @@
   </form>
 
   <script>
-  document.getElementById("uploadForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-
-    try {
-      const kebun = document.getElementById("kebun").value;
-      const divisi = document.getElementById("divisi").value;
-      const blok = document.getElementById("blok").value;
-      const waypointFile = document.getElementById("waypoint").files[0];
-      const trackFile = document.getElementById("track").files[0];
-
-      const waypointBase64 = await fileToBase64(waypointFile);
-      const trackBase64 = await fileToBase64(trackFile);
-
-      const payload = {
-        kebun,
-        divisi,
-        blok,
-        waypointName: waypointFile.name,
-        waypointData: waypointBase64,
-        trackName: trackFile.name,
-        trackData: trackBase64
-      };
-
-      const response = await fetch("https://script.google.com/macros/s/AKfycbwJn8kI3ZjrUqMSzxZKMpsBO7nckI7uxt_epz1J0gZqD_OFq6nBFcGpyBhjM1hY9bzpAQ/exec", {
-        method: "POST",
-        mode: "cors",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
+    // Add the missing fileToBase64 function
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-
-      const result = await response.json();
-      alert(result.message);
-    } catch (error) {
-      alert('Error: ' + error.message);
     }
-  });
-</script>
+
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      try {
+        const kebun = document.getElementById("kebun").value;
+        const divisi = document.getElementById("divisi").value;
+        const blok = document.getElementById("blok").value;
+        const waypointFile = document.getElementById("waypoint").files[0];
+        const trackFile = document.getElementById("track").files[0];
+
+        const waypointBase64 = await fileToBase64(waypointFile);
+        const trackBase64 = await fileToBase64(trackFile);
+
+        const payload = {
+          kebun,
+          divisi,
+          blok,
+          waypointName: waypointFile.name,
+          waypointData: waypointBase64,
+          trackName: trackFile.name,
+          trackData: trackBase64
+        };
+
+        const response = await fetch("https://script.google.com/macros/s/AKfycbwJn8kI3ZjrUqMSzxZKMpsBO7nckI7uxt_epz1J0gZqD_OFq6nBFcGpyBhjM1hY9bzpAQ/exec", {
+          method: "POST",
+          mode: "cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        alert(result.message);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+  </script>
 </body>
 </html>
-
