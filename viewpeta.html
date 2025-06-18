@@ -55,28 +55,21 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
 <script>
-  // Parse URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const blok = urlParams.get('blok');
-  const waypointUrls = urlParams.getAll('waypoints');
-  const trackUrls = urlParams.getAll('tracks');
+  const kebun = urlParams.get('kebun');
+  const divisi = urlParams.get('divisi');
 
-  // Update UI
   document.getElementById('blok-title').textContent = `Blok: ${blok || 'Unknown'}`;
-  
-  // Initialize map
+
   const map = L.map('map').setView([1.17, 100.99], 15);
 
-  // Add base layer
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'KPAK',
     maxZoom: 22
   }).addTo(map);
 
-  // Custom icons
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
     let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
@@ -93,121 +86,83 @@
     });
   }
 
-  // Function to fetch file from Google Drive
-  async function fetchFile(url) {
-    try {
-      // For public files, we can use a direct download link
-      const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      
-      const response = await fetch(downloadUrl);
-      if (!response.ok) throw new Error('Failed to fetch file');
-      return await response.text();
-    } catch (error) {
-      console.error('Error fetching file:', error);
-      throw error;
-    }
+  async function fetchPublicCSV() {
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
+    const res = await fetch(csvUrl);
+    return await res.text();
   }
 
-  // Function to parse GPX and add to map
+  async function fetchFileFromDrive(url) {
+    const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
+    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const res = await fetch(directUrl);
+    if (!res.ok) throw new Error(`Failed to fetch file: ${url}`);
+    return await res.text();
+  }
+
   function addGpxToMap(gpxContent, type) {
     const parser = new DOMParser();
     const xml = parser.parseFromString(gpxContent, "application/xml");
-    
+
     if (type === 'waypoint') {
-      // Handle waypoints
       const waypoints = xml.getElementsByTagName('wpt');
       const bounds = [];
-      
       for (let wpt of waypoints) {
         const lat = parseFloat(wpt.getAttribute('lat'));
         const lon = parseFloat(wpt.getAttribute('lon'));
         const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
         const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-
         const marker = L.marker([lat, lon], {
           icon: getWaypointIcon(sym)
         }).addTo(map);
-
         marker.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
         bounds.push([lat, lon]);
       }
-      
       if (bounds.length) {
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
       }
     } else if (type === 'track') {
-      // Handle tracks
-      try {
-        const gpxLayer = new L.GPX(gpxContent, {
-          async: true,
-          marker_options: {
-            startIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-start.png',
-            endIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-end.png',
-            shadowUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-shadow.png',
-            wptIconUrls: {
-              '': 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-wpt.png'
-            }
-          },
-          polyline_options: {
-            color: 'red',
-            opacity: 0.75,
-            weight: 4,
-            lineCap: 'round'
-          }
-        }).addTo(map);
-        
-        gpxLayer.on('loaded', function(e) {
-          map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
-        });
-      } catch (error) {
-        console.error('Error parsing GPX track:', error);
-      }
+      const gpxLayer = new L.GPX(gpxContent, {
+        async: true,
+        polyline_options: { color: 'red', opacity: 0.75, weight: 4 }
+      }).addTo(map);
+      gpxLayer.on('loaded', function(e) {
+        map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+      });
     }
   }
 
-  // Process all files
-  async function processFiles() {
-    const fileListElement = document.getElementById('file-list');
-    fileListElement.innerHTML = '<h4>Loaded Files:</h4><ul id="loaded-files"></ul>';
-    const loadedFilesList = document.getElementById('loaded-files');
-    
-    // Process waypoints
-    for (const url of waypointUrls) {
-      try {
-        const fileName = url.split('/').pop();
-        const listItem = document.createElement('li');
-        listItem.textContent = `Waypoint: ${fileName}`;
-        loadedFilesList.appendChild(listItem);
-        
-        const gpxContent = await fetchFile(url);
-        addGpxToMap(gpxContent, 'waypoint');
-      } catch (error) {
-        console.error(`Error processing waypoint file ${url}:`, error);
+  async function processData() {
+    const loading = document.getElementById('loading');
+    const listEl = document.getElementById('file-list');
+    listEl.innerHTML = '<h4>Loaded Files:</h4><ul></ul>';
+    const ul = listEl.querySelector('ul');
+
+    try {
+      const csv = await fetchPublicCSV();
+      const rows = csv.split("\n").slice(1);
+      for (const row of rows) {
+        const cols = row.split(",").map(c => c.replace(/^"|"$/g, '').trim());
+        if (cols.length < 8) continue;
+        const [ , kebunData, divisiData, blokData, tipe, namaFile, fileUrl ] = cols;
+
+        if (kebunData === kebun && divisiData === divisi && blokData === blok) {
+          const li = document.createElement('li');
+          li.textContent = `${tipe}: ${namaFile}`;
+          ul.appendChild(li);
+
+          const content = await fetchFileFromDrive(fileUrl);
+          addGpxToMap(content, tipe.toLowerCase());
+        }
       }
+    } catch (err) {
+      console.error('Error processing files:', err);
+    } finally {
+      loading.style.display = 'none';
     }
-    
-    // Process tracks
-    for (const url of trackUrls) {
-      try {
-        const fileName = url.split('/').pop();
-        const listItem = document.createElement('li');
-        listItem.textContent = `Track: ${fileName}`;
-        loadedFilesList.appendChild(listItem);
-        
-        const gpxContent = await fetchFile(url);
-        addGpxToMap(gpxContent, 'track');
-      } catch (error) {
-        console.error(`Error processing track file ${url}:`, error);
-      }
-    }
-    
-    // Hide loading indicator
-    document.getElementById('loading').style.display = 'none';
   }
 
-  // Start processing files
-  processFiles();
+  processData();
 </script>
 
 </body>
