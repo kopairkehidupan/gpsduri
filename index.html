@@ -56,7 +56,7 @@
     marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
     gpx_options: { parseElements: ['wpt'] },
     waypoint_icon: function(wpt) {
-      const sym = (wpt.querySelector('sym')?.textContent || '');
+      const sym = wpt.getElementsByTagName('sym')[0]?.textContent.toLowerCase().trim() || '';
       return getWaypointIcon(sym);
     }
   })
