@@ -4,8 +4,6 @@
   <title>Sensus Pokok Kebun Duri</title>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
   <style>
     html, body {
       height: 100%;
@@ -119,8 +117,10 @@
   </div>
 </div>
 
+<!-- Load scripts in correct order -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+<script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
 
 <script>
   // Parse URL parameters
@@ -141,29 +141,6 @@
       return url.split('/').pop() || 'data.gpx';
     } catch (e) {
       return 'data.gpx';
-    }
-  }
-
-  // Ganti fungsi getDownloadUrl dengan ini:
-  function getDownloadUrl(url) {
-    try {
-      if (url.includes('drive.google.com')) {
-        const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-        
-        // Beberapa alternatif proxy:
-        const proxies = [
-          `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${fileId}`)}`,
-          `https://api.codetabs.com/v1/proxy/?quest=https://drive.google.com/uc?export=download&id=${fileId}`,
-          `https://thingproxy.freeboard.io/fetch/https://drive.google.com/uc?export=download&id=${fileId}`
-        ];
-        
-        // Pilih proxy secara acak atau gunakan yang pertama
-        return proxies[0];
-      }
-      return url;
-    } catch (e) {
-      console.error('Error parsing download URL:', e);
-      return url;
     }
   }
 
@@ -225,6 +202,23 @@
     black: { count: 0 },
     track: { area: 0 }
   };
+
+  // Function to calculate area in hectares
+  function calculateArea(latLngs) {
+    if (!latLngs || latLngs.length < 3) return 0;
+    
+    let total = 0;
+    const n = latLngs.length;
+    
+    for (let i = 0; i < n; i++) {
+      const p1 = latLngs[i];
+      const p2 = latLngs[(i + 1) % n];
+      total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180);
+    }
+    
+    const area = Math.abs(total * 6378137 * 6378137 / (2 * 10000)); // Convert to hectares
+    return area;
+  }
   
   // Function to parse GPX and add to map
   function addGpxToMap(gpxContent, type, fileName) {
@@ -314,66 +308,37 @@
         gpxLayer.on('loaded', function(e) {
           console.log(`Track berhasil dimuat: ${fileName}`);
           
-          // Hitung luas area track (dalam meter persegi)
-          const latLngs = e.target.getLatLngs()[0];
-          const area = calculateArea(latLngs);
-          legendStats.track.area += area;
-          
-          map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
-          
-          // Add info about the track
-          const distance = (e.target.get_distance() / 1000).toFixed(2);
-          const elevation = e.target.get_elevation_gain().toFixed(0);
-          
-          const infoDiv = document.createElement('div');
-          infoDiv.innerHTML = `
-            <b>Jarak:</b> ${distance} km<br>
-            <b>Elevasi:</b> ${elevation} m<br>
-            <b>Luas Area:</b> ${areaHa} ha
-          `;
-          
-          const center = e.target.getBounds().getCenter();
-          const marker = L.marker([center.lat, center.lng], {
-            icon: L.divIcon({
-              html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
-                      <b>${fileName}</b><br>
-                      ${distance} km, ${elevation} m elevasi<br>
-                      ${areaHa} ha
-                    </div>`,
-              className: 'track-info-label'
-            })
-          }).addTo(map);
-          
-          // Update legend setelah memproses track
-          updateLegend();
-        });
-
-        // Function to calculate area (in square meters) of a polygon
-        function calculateArea(latLngs) {
-          if (!latLngs || latLngs.length < 3) return 0;
-          
-          let area = 0;
-          const earthRadius = 6378137; // Earth's radius in meters
-          const l = latLngs.length;
-          
-          // Convert to radians
-          const points = latLngs.map(ll => {
-            return {
-              lat: ll.lat * Math.PI / 180,
-              lng: ll.lng * Math.PI / 180
-            };
-          });
-          
-          // Calculate using the shoelace formula for spherical coordinates
-          for (let i = 0; i < l; i++) {
-            const p1 = points[i];
-            const p2 = points[(i + 1) % l];
-            area += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat) + Math.sin(p2.lat));
+          try {
+            // Hitung luas area track (dalam hektar)
+            const latLngs = e.target.getLayers()[0].getLatLngs();
+            const area = calculateArea(latLngs);
+            legendStats.track.area += area;
+            const areaHa = (area).toFixed(2);
+            
+            map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+            
+            // Add info about the track
+            const distance = (e.target.get_distance() / 1000).toFixed(2);
+            const elevation = e.target.get_elevation_gain().toFixed(0);
+            
+            const center = e.target.getBounds().getCenter();
+            const marker = L.marker([center.lat, center.lng], {
+              icon: L.divIcon({
+                html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
+                        <b>${fileName}</b><br>
+                        ${distance} km, ${elevation} m elevasi<br>
+                        ${areaHa} ha
+                      </div>`,
+                className: 'track-info-label'
+              })
+            }).addTo(map);
+            
+            // Update legend setelah memproses track
+            updateLegend();
+          } catch (error) {
+            console.error('Error processing track:', error);
           }
-          
-          area = area * earthRadius * earthRadius / 2;
-          return Math.abs(area);
-        }
+        });
         
         gpxLayer.on('error', function(e) {
           console.error(`Gagal memuat track ${fileName}:`, e.error);
@@ -387,60 +352,11 @@
     }
   }
 
-  async function tryAlternativeDownload(url, liElement, isWaypoint) {
-    try {
-      const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
-      if (!fileId) return null;
-      
-      // Coba metode alternatif
-      const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      const proxyUrls = [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
-        `https://thingproxy.freeboard.io/fetch/${directUrl}`
-      ];
-      
-      for (const proxyUrl of proxyUrls) {
-        try {
-          const response = await fetch(proxyUrl);
-          if (response.ok) {
-            const content = await response.text();
-            if (content) {
-              await addGpxToMap(content, isWaypoint ? 'waypoint' : 'track', getFileName(url));
-              liElement.textContent = `✅ ${getFileName(url)} (via proxy)`;
-              liElement.className = 'success';
-              return content;
-            }
-          }
-        } catch (e) {
-          console.log(`Gagal dengan proxy ${proxyUrl}`, e);
-        }
-      }
-    } catch (error) {
-      console.error('Alternative download failed:', error);
-    }
-    return null;
-  }
-
-  async function fetchWithRetry(url, retries = 3, delay = 1000) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.text();
-    } catch (error) {
-      if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return fetchWithRetry(url, retries - 1, delay * 2);
-      }
-      throw error;
-    }
-  }
-
   function updateLegend() {
     const legendElement = document.querySelector('.legend');
     
     // Format luas area track (dalam hektar)
-    const areaHa = (legendStats.track.area / 10000).toFixed(2);
+    const areaHa = legendStats.track.area.toFixed(2);
     
     legendElement.innerHTML = `
       <h4>Legenda:</h4>
