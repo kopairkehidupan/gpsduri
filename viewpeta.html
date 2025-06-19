@@ -207,6 +207,12 @@
   function calculateArea(latLngs) {
     if (!latLngs || latLngs.length < 3) return 0;
     
+    // Ensure we have an array of LatLng objects
+    if (typeof latLngs[0].lat !== 'function') {
+      // Convert array of {lat, lng} objects to LatLng objects if needed
+      latLngs = latLngs.map(ll => L.latLng(ll.lat, ll.lng));
+    }
+    
     let total = 0;
     const n = latLngs.length;
     
@@ -309,19 +315,26 @@
           console.log(`Track berhasil dimuat: ${fileName}`);
           
           try {
-            // Get the first polyline from the GPX layer
-            const polyline = e.target.getLayers().find(layer => layer instanceof L.Polyline);
+            // Get all polylines from the GPX layer
+            const polylines = e.target.getLayers().filter(layer => layer instanceof L.Polyline);
             
-            if (!polyline) {
-              throw new Error('No track polyline found in GPX');
+            if (polylines.length === 0) {
+              console.warn('No track polylines found in GPX, skipping area calculation');
+              legendStats.track.area = 0;
+            } else {
+              // Calculate area for each polyline and sum them up
+              let totalArea = 0;
+              polylines.forEach(polyline => {
+                const latLngs = polyline.getLatLngs();
+                // Handle nested arrays (for multi-segment polylines)
+                const flattenedLatLngs = latLngs.flat();
+                totalArea += calculateArea(flattenedLatLngs);
+              });
+              
+              legendStats.track.area = totalArea;
             }
             
-            // Hitung luas area track (dalam hektar)
-            const latLngs = polyline.getLatLngs();
-            const area = calculateArea(latLngs);
-            legendStats.track.area += area;
-            const areaHa = (area).toFixed(2);
-            
+            const areaHa = legendStats.track.area.toFixed(2);
             map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
             
             // Add info about the track
@@ -344,6 +357,9 @@
             updateLegend();
           } catch (error) {
             console.error('Error processing track:', error);
+            // Set area to 0 if there's an error
+            legendStats.track.area = 0;
+            updateLegend();
           }
         });
         
