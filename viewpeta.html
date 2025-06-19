@@ -197,28 +197,64 @@
   // Modifikasi fungsi fetchFile:
   async function fetchFile(url) {
     try {
-      const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
-      if (!fileId) throw new Error('URL Google Drive tidak valid');
-  
-      // Gunakan endpoint Apps Script
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+      // Coba langsung dari Google Drive dulu
+      const directUrl = `https://drive.google.com/uc?export=download&id=${url.match(/\/file\/d\/([^\/]+)/)[1]}`;
       
-      const response = await fetch(scriptUrl, {
-        credentials: 'omit', // Tidak mengirim cookies
-        redirect: 'follow',
-        headers: {
-          'Content-Type': 'text/plain'
+      // Coba beberapa metode berbeda secara berurutan
+      const methods = [
+        // 1. Coba langsung dari Google Drive
+        async () => {
+          const res = await fetch(directUrl);
+          if (res.ok) return await res.text();
+          throw new Error('Direct download failed');
+        },
+        
+        // 2. Coba melalui Apps Script dengan mode no-cors
+        async () => {
+          const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
+          if (!fileId) throw new Error('Invalid Google Drive URL');
+          
+          const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+          const res = await fetch(scriptUrl, { 
+            mode: 'no-cors',
+            credentials: 'omit'
+          });
+          
+          // Mode no-cors tidak memungkinkan membaca response secara langsung
+          // Jadi kita perlu menggunakan pendekatan alternatif
+          const blob = await res.blob();
+          return await blob.text();
+        },
+        
+        // 3. Coba melalui proxy alternatif
+        async () => {
+          const proxyUrl = `https://cors-anywhere.herokuapp.com/${directUrl}`;
+          const res = await fetch(proxyUrl, {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+          if (res.ok) return await res.text();
+          throw new Error('Proxy download failed');
         }
-      });
+      ];
       
-      if (!response.ok) {
-        throw new Error(`Gagal mengambil file (Status: ${response.status})`);
+      // Coba semua metode secara berurutan
+      let lastError = null;
+      for (const method of methods) {
+        try {
+          return await method();
+        } catch (error) {
+          lastError = error;
+          console.warn(`Method failed: ${error.message}`);
+        }
       }
       
-      return await response.text();
+      throw lastError || new Error('All download methods failed');
+      
     } catch (error) {
-      console.error('Error saat mengambil file:', { url, error });
-      throw new Error(`Gagal memuat file: ${error.message}`);
+      console.error('Error fetching file:', { url, error });
+      throw new Error(`Failed to load file: ${error.message}`);
     }
   }
 
@@ -269,14 +305,15 @@
       else if (type === 'track') {
         console.log(`Memproses track dari ${fileName}`);
         
+        // Di bagian inisialisasi GPX layer
         const gpxLayer = new L.GPX(gpxContent, {
           async: true,
           marker_options: {
-            startIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-start.png',
-            endIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-end.png',
-            shadowUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-shadow.png',
+            startIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-start.png',
+            endIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-end.png',
+            shadowUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-shadow.png',
             wptIconUrls: {
-              '': 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/master/pin-icon-wpt.png'
+              '': 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-wpt.png'
             }
           },
           polyline_options: {
