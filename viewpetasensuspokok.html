@@ -25,12 +25,40 @@
       right: 10px;
       z-index: 1000;
       background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+
+    .map-controls-header {
+      padding: 8px 12px;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .map-controls-content {
       padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      max-width: 300px;
-      width: 90%;
+      max-height: 300px;
+      overflow-y: auto;
       transition: all 0.3s ease;
+    }
+    
+    .map-controls.collapsed .map-controls-content {
+      max-height: 0;
+      padding: 0 10px;
+      overflow: hidden;
+    }
+    
+    .map-controls-toggle {
+      transition: transform 0.3s ease;
+    }
+    
+    .map-controls.collapsed .map-controls-toggle {
+      transform: rotate(180deg);
     }
     
     .loading {
@@ -267,11 +295,11 @@
     <ul id="loaded-files"></ul>
   </div>
   <div class="legend">
-    <h4>Legenda:</h4>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: green;"></div>
-      <span>Waypoint Hijau</span>
+    <div class="map-controls-header" id="toggleLegend">
+      <span>Legenda</span>
+      <span class="map-controls-toggle">▼</span>
     </div>
+    <div class="map-controls-content" id="legendContent">
     <div class="legend-item">
       <div class="legend-color" style="background-color: blue;"></div>
       <span>Waypoint Biru</span>
@@ -283,6 +311,7 @@
     <div class="legend-item">
       <div class="legend-color" style="background-color: red;"></div>
       <span>Luas</span>
+    </div>
     </div>
   </div>
 </div>
