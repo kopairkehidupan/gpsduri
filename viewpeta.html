@@ -212,27 +212,28 @@
       latLngs = latLngs.map(ll => L.latLng(ll.lat, ll.lng));
     }
   
-    // Cek apakah track sudah tertutup, jika belum tambahkan titik pertama ke akhir
+    // Tambahkan titik awal di akhir jika tidak tertutup
     const first = latLngs[0];
     const last = latLngs[latLngs.length - 1];
     const dist = first.distanceTo(last);
   
-    if (dist > 1) { // lebih dari 1 meter dianggap belum tertutup
-      latLngs.push(first);
+    if (dist > 1) {
+      console.warn('Track belum tertutup secara alami. Titik awal ditambahkan di akhir untuk menutup track.');
+      latLngs = [...latLngs, first];
     }
   
+    // Gunakan rumus shoelace (versi spherical projection kasar)
     let total = 0;
-    const n = latLngs.length;
-  
-    for (let i = 0; i < n - 1; i++) {
+    for (let i = 0; i < latLngs.length - 1; i++) {
       const p1 = latLngs[i];
       const p2 = latLngs[i + 1];
       total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180));
     }
   
-    const area = Math.abs(total * 6378137 * 6378137 / (2 * 10000)); // hektar
-    return area;
+    const area = Math.abs(total * 6378137 * 6378137 / (2 * 10000)); // meter² → hektar
+    return area > 0.01 ? area : 0; // abaikan area sangat kecil
   }
+
 
   
   // Function to parse GPX and add to map
