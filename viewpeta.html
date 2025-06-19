@@ -139,8 +139,13 @@
     }
 
     /* Tambahkan z-index untuk memastikan layer control di atas elemen lain */
-    .leaflet-top {
-        z-index: 1001;
+    .leaflet-bottom {
+          z-index: 999; /* Lebih rendah dari map-controls */
+      }
+    @media (max-height: 600px) {
+        .leaflet-control-layers {
+            bottom: 40px !important; /* Beri jarak dari bawah */
+        }
     }
   </style>
 </head>
@@ -245,7 +250,7 @@
   
   // Add layer control to the map
   const layerControl = L.control.layers(baseLayers, null, {
-      position: 'topright',
+      position: 'bottomright',
       collapsed: true
   }).addTo(map);
 
@@ -253,6 +258,14 @@
   setTimeout(() => {
       layerControl.getContainer().style.zIndex = '1001';
   }, 100);
+
+  // Pastikan tidak overlap dengan elemen lain
+  map.whenReady(function() {
+      const lc = document.querySelector('.leaflet-control-layers');
+      if (lc) {
+          lc.style.marginBottom = '20px'; // Beri jarak dari bawah
+      }
+  });
 
   // Custom icons
   function getWaypointIcon(symbol) {
