@@ -315,11 +315,9 @@
           console.log(`Track berhasil dimuat: ${fileName}`);
           
           // Hitung luas area track (dalam meter persegi)
-          const area = L.GeometryUtil.geodesicArea(e.target.getLatLngs()[0]);
+          const latLngs = e.target.getLatLngs()[0];
+          const area = calculateArea(latLngs);
           legendStats.track.area += area;
-          
-          // Konversi ke hektar (1 ha = 10,000 m²)
-          const areaHa = (area / 10000).toFixed(2);
           
           map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
           
@@ -349,6 +347,33 @@
           // Update legend setelah memproses track
           updateLegend();
         });
+
+        // Function to calculate area (in square meters) of a polygon
+        function calculateArea(latLngs) {
+          if (!latLngs || latLngs.length < 3) return 0;
+          
+          let area = 0;
+          const earthRadius = 6378137; // Earth's radius in meters
+          const l = latLngs.length;
+          
+          // Convert to radians
+          const points = latLngs.map(ll => {
+            return {
+              lat: ll.lat * Math.PI / 180,
+              lng: ll.lng * Math.PI / 180
+            };
+          });
+          
+          // Calculate using the shoelace formula for spherical coordinates
+          for (let i = 0; i < l; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % l];
+            area += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat) + Math.sin(p2.lat));
+          }
+          
+          area = area * earthRadius * earthRadius / 2;
+          return Math.abs(area);
+        }
         
         gpxLayer.on('error', function(e) {
           console.error(`Gagal memuat track ${fileName}:`, e.error);
