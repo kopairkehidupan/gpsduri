@@ -30,29 +30,15 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
       max-width: 300px;
       width: 90%;
-      transition: height 0.3s ease, overflow 0.3s ease;
-      height: auto; /* Default expanded */
-      overflow: visible;   
-    }
-
-    .map-controls.collapsed {
-        height: 50px; /* Sesuaikan dengan tinggi judul */
-        overflow: hidden;
-    }
-
-    /* Tambahkan indikator panah */
-    .sensus-title::after {
-        content: "▼";
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 12px;
-        transition: transform 0.3s ease;
+      transition: all 0.3s ease;
+      overflow: hidden;
+      height: auto;
     }
     
-    .map-controls.collapsed .sensus-title::after {
-        transform: translateY(-50%) rotate(-90deg);
+    /* State collapsed */
+    .map-controls.collapsed {
+      height: 50px;
+      overflow: hidden;
     }
     
     .loading {
@@ -74,6 +60,7 @@
       max-height: 200px;
       overflow-y: auto;
       margin-top: 8px;
+      transition: all 0.3s ease;
     }
     
     .file-list ul {
@@ -102,6 +89,7 @@
       border-radius: 5px;
       margin-top: 8px;
       font-size: 13px;
+      transition: all 0.3s ease;
     }
     
     .legend-item {
@@ -122,15 +110,7 @@
       font-weight: normal;
     }
     
-    .file-list.collapsed {
-      max-height: 0;
-      overflow: hidden;
-      margin: 0;
-      padding: 0;
-      opacity: 0;
-    }
-    
-    /* Judul Sensus */
+    /* Judul Sensus dengan toggle indicator */
     .sensus-title {
       text-align: center;
       margin-bottom: 10px;
@@ -139,9 +119,9 @@
       border-radius: 5px;
       color: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      cursor: pointer; /* Ubah kursor jadi pointer saat hover */
-      user-select: none; /* Mencegah teks ter-select */
-      position: relative; /* Untuk tambahan indikator */
+      cursor: pointer;
+      user-select: none;
+      position: relative;
     }
     
     .sensus-title h2 {
@@ -150,6 +130,22 @@
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      padding-right: 15px;
+    }
+    
+    /* Toggle indicator arrow */
+    .sensus-title::after {
+      content: "▼";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+    
+    .map-controls.collapsed .sensus-title::after {
+      transform: translateY(-50%) rotate(-90deg);
     }
     
     /* Layer Control */
@@ -181,7 +177,7 @@
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
-        max-width: 220px; /* Reduced from 280px */
+        max-width: 220px;
         padding: 6px;
         right: 5px;
         top: 5px;
@@ -214,15 +210,15 @@
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          z-index: 1001; /* Increased from 1000 */
+          z-index: 1001;
           background: white;
           padding: 15px;
           border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3); /* More prominent shadow */
+          box-shadow: 0 0 15px rgba(0,0,0,0.3);
           text-align: center;
           width: 80%;
           max-width: 280px;
-          display: none; /* Initially hidden */
+          display: none;
       }
       
       .loading h3 {
@@ -238,6 +234,12 @@
       
       .leaflet-control-layers {
         font-size: 12px;
+      }
+      
+      /* Default collapsed di mobile */
+      .map-controls {
+        height: 45px;
+        overflow: hidden;
       }
     }
     
@@ -280,34 +282,36 @@
 
 <div id="map"></div>
 
-<div class="map-controls">
+<div class="map-controls collapsed">
   <div class="sensus-title">
     <h2>HASIL SENSUS POKOK</h2>
   </div>
   
-  <h3 id="blok-title">Blok: Loading...</h3>
-  <div id="location-info"></div>
-  <div class="file-list" id="file-list">
-    <h4>File yang dimuat:</h4>
-    <ul id="loaded-files"></ul>
-  </div>
-  <div class="legend">
-    <h4>Legenda:</h4>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: green;"></div>
-      <span>Waypoint Hijau</span>
+  <div class="controls-content">
+    <h3 id="blok-title">Blok: Loading...</h3>
+    <div id="location-info"></div>
+    <div class="file-list" id="file-list">
+      <h4>File yang dimuat:</h4>
+      <ul id="loaded-files"></ul>
     </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: blue;"></div>
-      <span>Waypoint Biru</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: black;"></div>
-      <span>Waypoint Hitam</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: red;"></div>
-      <span>Luas</span>
+    <div class="legend">
+      <h4>Legenda:</h4>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: green;"></div>
+        <span>Waypoint Hijau</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: blue;"></div>
+        <span>Waypoint Biru</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: black;"></div>
+        <span>Waypoint Hitam</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: red;"></div>
+        <span>Luas</span>
+      </div>
     </div>
   </div>
 </div>
@@ -373,27 +377,6 @@
       position: 'bottomright',
       collapsed: true
   }).addTo(map);
-
-  // Adjust controls for mobile
-  function adjustForMobile() {
-    const controlsElement = document.querySelector('.map-controls');
-    if (window.innerWidth <= 768) {
-      // Sesuaikan ukuran font dan padding untuk mobile
-      document.querySelector('.map-controls').style.maxWidth = '280px';
-      document.querySelector('.sensus-title h2').style.fontSize = '14px';
-      
-      // Pindahkan layer control jika perlu
-      layerControl.setPosition('bottomleft');
-
-      controlsElement.classList.add('collapsed'); // Default collap
-    } else {
-      // Kembalikan ke ukuran desktop
-      document.querySelector('.map-controls').style.maxWidth = '300px';
-      document.querySelector('.sensus-title h2').style.fontSize = '16px';
-      layerControl.setPosition('bottomright');
-      controlsElement.classList.remove('collapsed'); // Default exp
-    }
-  }
 
   // Custom icons
   function getWaypointIcon(symbol) {
@@ -654,7 +637,6 @@
               li.textContent = `❌ ${fileName} (${error.message})`;
               li.className = 'error';
           }
-          updateControlsView();
       }
       
       // Proses tracks
@@ -677,7 +659,6 @@
               li.textContent = `❌ ${fileName} (${error.message})`;
               li.className = 'error';
           }
-          updateControlsView();
       }
       
       if (!hasData) {
@@ -688,21 +669,30 @@
       }
       
       loading.style.display = 'none';
-      updateControlsView();
   }
 
-  // Fungsi untuk mengupdate tampilan kontrol
-  function updateControlsView() {
-    const fileListElement = document.getElementById('file-list');
-    const loadedFilesList = document.getElementById('loaded-files');
-    const hasErrors = Array.from(loadedFilesList.children).some(li => li.className === 'error');
+  // Adjust controls for mobile
+  function adjustForMobile() {
+    const controlsElement = document.querySelector('.map-controls');
     
-    if (!hasErrors) {
-      // Jika semua file berhasil dimuat, sembunyikan daftar file
-      fileListElement.classList.add('collapsed');
+    if (window.innerWidth <= 768) {
+      // Sesuaikan ukuran font dan padding untuk mobile
+      document.querySelector('.map-controls').style.maxWidth = '220px';
+      document.querySelector('.sensus-title h2').style.fontSize = '12px';
+      
+      // Pindahkan layer control jika perlu
+      layerControl.setPosition('bottomleft');
+      
+      // Default collapsed di mobile
+      controlsElement.classList.add('collapsed');
     } else {
-      // Jika ada error, tetap tampilkan daftar file
-      fileListElement.classList.remove('collapsed');
+      // Kembalikan ke ukuran desktop
+      document.querySelector('.map-controls').style.maxWidth = '300px';
+      document.querySelector('.sensus-title h2').style.fontSize = '16px';
+      layerControl.setPosition('bottomright');
+      
+      // Default expanded di desktop
+      controlsElement.classList.remove('collapsed');
     }
   }
 
@@ -711,6 +701,14 @@
 
   // Di bagian inisialisasi, tambahkan:
   document.addEventListener('DOMContentLoaded', function() {
+      // Setup toggle functionality
+      const titleElement = document.querySelector('.sensus-title');
+      const controlsElement = document.querySelector('.map-controls');
+      
+      titleElement.addEventListener('click', function() {
+          controlsElement.classList.toggle('collapsed');
+      });
+      
       // Sembunyikan loading jika tidak ada file yang akan diproses
       if (waypointUrls.length === 0 && trackUrls.length === 0) {
           document.getElementById('loading').style.display = 'none';
@@ -722,19 +720,6 @@
           adjustForMobile();
           processFiles();
       }
-
-    // Tambahkan event listener untuk toggle controls
-    const titleElement = document.querySelector('.sensus-title');
-    const controlsElement = document.querySelector('.map-controls');
-    
-    titleElement.addEventListener('click', function() {
-        controlsElement.classList.toggle('collapsed');
-    });
-    
-    // Sembunyikan controls secara default di mobile
-    if (window.innerWidth <= 768) {
-        controlsElement.classList.add('collapsed');
-    }
   });
 </script>
 </body>
