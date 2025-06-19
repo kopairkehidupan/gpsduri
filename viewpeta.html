@@ -343,14 +343,6 @@
             
             const center = e.target.getBounds().getCenter();
             const marker = L.marker([center.lat, center.lng], {
-              icon: L.divIcon({
-                html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
-                        <b>${fileName}</b><br>
-                        ${distance} km, ${elevation} m elevasi<br>
-                        ${areaHa} ha
-                      </div>`,
-                className: 'track-info-label'
-              })
             }).addTo(map);
             
             // Update legend setelah memproses track
