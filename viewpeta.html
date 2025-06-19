@@ -310,7 +310,7 @@
             lineCap: 'round'
           }
         });
-        
+
         gpxLayer.on('loaded', function(e) {
           console.log(`Track berhasil dimuat: ${fileName}`);
           
@@ -318,40 +318,28 @@
             let totalArea = 0;
             let hasValidTrack = false;
             
-            // Get all layers and find track polylines
-            const layers = e.target.getLayers();
-            const trackLines = layers.filter(layer => {
-              // Check for both Polyline and the presence of latlngs
-              return layer instanceof L.Polyline && layer.getLatLngs().length > 0;
-            });
-        
-            if (trackLines.length > 0) {
-              hasValidTrack = true;
-              trackLines.forEach(line => {
-                try {
-                  let latLngs = line.getLatLngs();
-                  
-                  // Handle nested arrays (multi-segment tracks)
-                  if (Array.isArray(latLngs[0])) {
-                    latLngs = latLngs.flat();
-                  }
-                  
-                  // Ensure we have enough points for area calculation
-                  if (latLngs.length >= 3) {
-                    totalArea += calculateArea(latLngs);
-                  }
-                } catch (error) {
-                  console.warn('Error processing track segment:', error);
-                }
-              });
-            }
-        
-            // Update statistics
-            legendStats.track.area = totalArea;
-            const areaHa = totalArea.toFixed(2);
+            // Debug: Log all layers to see what we're working with
+            console.log('All layers:', e.target.getLayers());
             
-            // Fit bounds if we have valid track
-            if (hasValidTrack) {
+            // Alternative approach to get the track polyline
+            const trackLine = e.target._gpx.track;
+            
+            if (trackLine && trackLine.latLngs && trackLine.latLngs.length > 0) {
+              hasValidTrack = true;
+              const latLngs = trackLine.latLngs;
+              
+              // Handle multi-segment tracks
+              const flattenedLatLngs = latLngs.flat();
+              
+              if (flattenedLatLngs.length >= 3) {
+                totalArea = calculateArea(flattenedLatLngs);
+              }
+              
+              // Update statistics
+              legendStats.track.area = totalArea;
+              const areaHa = totalArea.toFixed(2);
+              
+              // Fit bounds
               map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
               
               // Add track info marker
@@ -359,18 +347,19 @@
               const elevation = e.target.get_elevation_gain().toFixed(0);
               const center = e.target.getBounds().getCenter();
               
-              //L.marker([center.lat, center.lng], {
-              //  icon: L.divIcon({
-              //    html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
-              //            <b>${fileName}</b><br>
-              //            ${distance} km, ${elevation} m elevasi<br>
-              //            ${areaHa} ha
-              //          </div>`,
-              //    className: 'track-info-label'
-              //  })
-              //}).addTo(map);
+              L.marker([center.lat, center.lng], {
+                icon: L.divIcon({
+                  html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
+                          <b>${fileName}</b><br>
+                          ${distance} km, ${elevation} m elevasi<br>
+                          ${areaHa} ha
+                        </div>`,
+                  className: 'track-info-label'
+                })
+              }).addTo(map);
             } else {
               console.warn('Track file contains no valid track data:', fileName);
+              legendStats.track.area = 0;
             }
             
             updateLegend();
