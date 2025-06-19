@@ -197,22 +197,13 @@
   // Modifikasi fungsi fetchFile:
   async function fetchFile(url) {
     const fileName = getFileName(url);
-    document.getElementById('progress').textContent = `Memuat: ${fileName}`;
+    const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
     
-    try {
-      const downloadUrl = getDownloadUrl(url);
-      const response = await fetch(downloadUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Gagal mengambil file (status: ${response.status})`);
-      }
-      
-      const data = await response.json();
-      return data.contents; // Untuk proxy allorigins
-    } catch (error) {
-      console.error('Error fetching file:', { url, error });
-      throw new Error(`Tidak dapat memuat file: ${fileName}`);
-    }
+    const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+    
+    const response = await fetch(scriptUrl);
+    if (!response.ok) throw new Error('Gagal mengambil file');
+    return await response.text();
   }
 
   // Function to parse GPX and add to map
