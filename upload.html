@@ -7,13 +7,14 @@
     body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
     form { display: flex; flex-direction: column; gap: 15px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input[type="text"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
+    input[type="text"], input[type="file"], select { width: 100%; padding: 8px; box-sizing: border-box; }
     button { background-color: #4285f4; color: white; border: none; padding: 10px 15px; cursor: pointer; }
     button:hover { background-color: #3367d6; }
     #loading { display: none; margin-top: 10px; }
     #status { margin-top: 15px; padding: 10px; border-radius: 4px; }
     .success { background-color: #dff0d8; color: #3c763d; }
     .error { background-color: #f2dede; color: #a94442; }
+    .error-input { border: 1px solid #a94442; }
   </style>
 </head>
 <body>
@@ -21,20 +22,26 @@
   <form id="uploadForm">
     <div>
       <label for="kebun">Kebun:</label>
-      <input type="text" id="kebun" required>
+      <select id="kebun" required>
+        <option value="">-- Pilih Kebun --</option>
+        <option value="Samsam">Samsam</option>
+        <option value="Duri">Duri</option>
+      </select>
     </div>
     
     <div>
       <label for="divisi">Divisi:</label>
-      <input type="text" id="divisi" required>
+      <select id="divisi" required disabled>
+        <option value="">-- Pilih Kebun terlebih dahulu --</option>
+      </select>
     </div>
     
     <div>
       <label for="blok">Blok:</label>
-      <input type="text" id="blok" required>
+      <input type="text" id="blok" required pattern="[A-Z0-9]+" title="Hanya huruf besar dan angka, tanpa spasi">
+      <small>Hanya huruf besar dan angka, tanpa spasi (contoh: A1, B12, C123)</small>
     </div>
     
-    <!-- Ganti kedua input file dengan satu input multiple -->
     <div>
       <label for="gpsFiles">GPS Files (.gpx/.kml):</label>
       <input type="file" id="gpsFiles" accept=".gpx,.kml" multiple required>
@@ -47,6 +54,63 @@
   </form>
 
   <script>
+    // Data divisi berdasarkan kebun
+    const divisiData = {
+      "Samsam": ["Divisi I", "Divisi II", "Divisi III", "Divisi IV", "Divisi V", "Divisi VI", "Divisi VII"],
+      "Duri": ["Divisi I Tegar", "Divisi II Tegar", "Divisi III Cucut", "Divisi III Mekarsari", "Divisi IV Rangau", "Divisi VI Rangau", "Divisi VII Rangau"]
+    };
+
+    // Inisialisasi dropdown divisi berdasarkan kebun yang dipilih
+    document.getElementById("kebun").addEventListener("change", function() {
+      const kebun = this.value;
+      const divisiSelect = document.getElementById("divisi");
+      
+      // Kosongkan dropdown divisi
+      divisiSelect.innerHTML = '';
+      
+      if (kebun) {
+        // Aktifkan dropdown divisi
+        divisiSelect.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Divisi --";
+        divisiSelect.appendChild(defaultOption);
+        
+        // Tambahkan opsi divisi berdasarkan kebun
+        divisiData[kebun].forEach(divisi => {
+          const option = document.createElement("option");
+          option.value = divisi;
+          option.textContent = divisi;
+          divisiSelect.appendChild(option);
+        });
+      } else {
+        // Nonaktifkan dropdown divisi jika kebun tidak dipilih
+        divisiSelect.disabled = true;
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kebun terlebih dahulu --";
+        divisiSelect.appendChild(defaultOption);
+      }
+    });
+
+    // Validasi input blok (hanya huruf besar dan angka)
+    document.getElementById("blok").addEventListener("input", function() {
+      // Konversi ke huruf besar
+      this.value = this.value.toUpperCase();
+      
+      // Hapus karakter yang tidak valid (bukan huruf/angka)
+      this.value = this.value.replace(/[^A-Z0-9]/g, '');
+      
+      // Toggle class error jika tidak valid
+      if (!this.value.match(/^[A-Z0-9]+$/)) {
+        this.classList.add("error-input");
+      } else {
+        this.classList.remove("error-input");
+      }
+    });
+
     // Convert file to Base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -65,7 +129,7 @@
       statusEl.style.display = 'block';
     }
 
-    // Ganti bagian form submission handler:
+    // Handle form submission
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       
@@ -84,10 +148,11 @@
         const blok = document.getElementById("blok").value;
         const gpsFiles = document.getElementById("gpsFiles").files;
     
-        // Validasi minimal ada 1 file
-        if (gpsFiles.length === 0) {
-          throw new Error('Pilih setidaknya satu file');
-        }
+        // Validasi input
+        if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
+        if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
+        if (!blok.match(/^[A-Z0-9]+$/)) throw new Error('Blok hanya boleh mengandung huruf besar dan angka, tanpa spasi');
+        if (gpsFiles.length === 0) throw new Error('Pilih setidaknya satu file');
     
         // Convert semua file ke base64
         const filesData = [];
