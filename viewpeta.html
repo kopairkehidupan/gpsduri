@@ -327,8 +327,7 @@
   }
 
   // Modifikasi processFiles untuk menangani error lebih baik
-  const gpxCache = {};
-  async function processFiles() {
+  async function processFiles() {async function processFiles() {
     const loading = document.getElementById('loading');
     const loadedFilesList = document.getElementById('loaded-files');
     
@@ -343,20 +342,45 @@
   
     let hasData = false;
     
-    // Proses semua file
-    for (const url of allUrls) {
+    // Proses waypoints
+    for (const url of waypointUrls) {
+      const li = document.createElement('li');
+      const fileName = getFileName(url);
+      
       try {
-        if (gpxCache[url]) {
-          console.log(`Using cached version of ${url}`);
-          addGpxToMap(gpxCache[url], isWaypoint ? 'waypoint' : 'track', fileName);
-          continue;
-        }
+        li.textContent = `🔄 Memuat ${fileName}...`;
+        loadedFilesList.appendChild(li);
         
         const gpxContent = await fetchFile(url);
-        gpxCache[url] = gpxContent; // Simpan ke cache
-        addGpxToMap(gpxContent, isWaypoint ? 'waypoint' : 'track', fileName);
+        await addGpxToMap(gpxContent, 'waypoint', fileName);
+        
+        li.textContent = `✅ ${fileName}`;
+        li.className = 'success';
+        hasData = true;
       } catch (error) {
-        console.error(`Error processing ${url}:`, error);
+        li.textContent = `❌ ${fileName} (${error.message})`;
+        li.className = 'error';
+      }
+    }
+    
+    // Proses tracks
+    for (const url of trackUrls) {
+      const li = document.createElement('li');
+      const fileName = getFileName(url);
+      
+      try {
+        li.textContent = `🔄 Memuat ${fileName}...`;
+        loadedFilesList.appendChild(li);
+        
+        const gpxContent = await fetchFile(url);
+        await addGpxToMap(gpxContent, 'track', fileName);
+        
+        li.textContent = `✅ ${fileName}`;
+        li.className = 'success';
+        hasData = true;
+      } catch (error) {
+        li.textContent = `❌ ${fileName} (${error.message})`;
+        li.className = 'error';
       }
     }
     
