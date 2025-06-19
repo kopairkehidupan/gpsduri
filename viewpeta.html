@@ -127,7 +127,7 @@
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: red;"></div>
-      <span>Jalur Track</span>
+      <span>Luas</span>
     </div>
   </div>
 </div>
@@ -354,36 +354,42 @@
   }
 
   function updateLegend() {
-    const legendElement = document.querySelector('.legend');
-    
-    // Format luas area track (dalam hektar)
-    const areaHa = legendStats.track.area.toFixed(2);
-    // Hitung total pokok (hijau + biru)
-    const totalPokok = legendStats.green.count + legendStats.blue.count;
-    
-    legendElement.innerHTML = `
-      <h4>Legenda:</h4>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: green;"></div>
-        <span>Waypoint Hijau: ${legendStats.green.count} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: blue;"></div>
-        <span>Waypoint Biru: ${legendStats.blue.count} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: black;"></div>
-        <span>Waypoint Hitam: ${legendStats.black.count} Pkk</span>
-      </div>
-      <div class="legend-item total">
-        <div class="legend-color" style="background-color: transparent;"></div>
-        <span>Jumlah Pokok: ${totalPokok} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: red;"></div>
-        <span>Jalur Track: ${areaHa} ha</span>
-      </div>
-    `;
+      const legendElement = document.querySelector('.legend');
+      
+      // Format luas area track (dalam hektar)
+      const areaHa = legendStats.track.area.toFixed(2);
+      // Hitung total pokok (hijau + biru)
+      const totalPokok = legendStats.green.count + legendStats.blue.count;
+      // Hitung Stand/Ha (total pokok dibagi luas area)
+      const standPerHa = areaHa > 0 ? (totalPokok / parseFloat(areaHa)).toFixed(2) : 0;
+      
+      legendElement.innerHTML = `
+        <h4>Legenda:</h4>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: green;"></div>
+          <span>Waypoint Hijau = ${legendStats.green.count} Pkk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: blue;"></div>
+          <span>Waypoint Biru = ${legendStats.blue.count} Pkk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: black;"></div>
+          <span>Waypoint Hitam = ${legendStats.black.count} Pkk</span>
+        </div>
+        <div class="legend-item total">
+          <div class="legend-color" style="background-color: transparent;"></div>
+          <span>Jumlah Pokok = ${totalPokok} Pkk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: red;"></div>
+          <span>Luas = ${areaHa} ha</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: transparent;"></div>
+          <span>Stand/Ha = ${standPerHa}</span>
+        </div>
+      `;
   }
 
   // Modifikasi fungsi processFiles()
