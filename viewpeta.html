@@ -138,15 +138,15 @@
     }
   }
 
-  // Fungsi untuk mendapatkan URL download dengan CORS proxy
+  // Ganti fungsi getDownloadUrl dengan ini:
   function getDownloadUrl(url) {
     try {
       if (url.includes('drive.google.com')) {
         const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-        // Gunakan CORS proxy
-        return `https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=${fileId}`;
+        // Gunakan proxy alternatif
+        return `https://api.allorigins.win/get?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${fileId}`)}`;
       }
-      return url; // Untuk URL non-Google Drive
+      return url;
     } catch (e) {
       console.error('Error parsing download URL:', e);
       return url;
@@ -186,25 +186,21 @@
     });
   }
 
-  // Modifikasi fungsi fetchFile untuk menangani CORS
+  // Modifikasi fungsi fetchFile:
   async function fetchFile(url) {
     const fileName = getFileName(url);
     document.getElementById('progress').textContent = `Memuat: ${fileName}`;
     
     try {
       const downloadUrl = getDownloadUrl(url);
-      const response = await fetch(downloadUrl, {
-        headers: {
-          // Beberapa CORS proxy membutuhkan header ini
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const response = await fetch(downloadUrl);
       
       if (!response.ok) {
         throw new Error(`Gagal mengambil file (status: ${response.status})`);
       }
       
-      return await response.text();
+      const data = await response.json();
+      return data.contents; // Untuk proxy allorigins
     } catch (error) {
       console.error('Error fetching file:', { url, error });
       throw new Error(`Tidak dapat memuat file: ${fileName}`);
