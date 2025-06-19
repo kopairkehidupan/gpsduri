@@ -34,14 +34,11 @@
       <input type="text" id="blok" required>
     </div>
     
+    <!-- Ganti kedua input file dengan satu input multiple -->
     <div>
-      <label for="waypoint">Waypoint File (.gpx/.kml):</label>
-      <input type="file" id="waypoint" accept=".gpx,.kml" required>
-    </div>
-    
-    <div>
-      <label for="track">Track File (.gpx/.kml):</label>
-      <input type="file" id="track" accept=".gpx,.kml" required>
+      <label for="gpsFiles">GPS Files (.gpx/.kml):</label>
+      <input type="file" id="gpsFiles" accept=".gpx,.kml" multiple required>
+      <small>Anda bisa memilih beberapa file sekaligus (waypoint dan track)</small>
     </div>
     
     <button type="submit">Upload</button>
@@ -68,7 +65,7 @@
       statusEl.style.display = 'block';
     }
 
-    // Handle form submission
+    // Ganti bagian form submission handler:
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       
@@ -78,7 +75,6 @@
       const statusEl = document.getElementById("status");
       
       try {
-        // Show loading state
         submitBtn.disabled = true;
         loading.style.display = 'block';
         statusEl.style.display = 'none';
@@ -86,31 +82,36 @@
         const kebun = document.getElementById("kebun").value;
         const divisi = document.getElementById("divisi").value;
         const blok = document.getElementById("blok").value;
-        const waypointFile = document.getElementById("waypoint").files[0];
-        const trackFile = document.getElementById("track").files[0];
-
-        // Validate file types
-        if (!['.gpx', '.kml'].some(ext => waypointFile.name.toLowerCase().endsWith(ext))) {
-          throw new Error('Waypoint file must be .gpx or .kml');
+        const gpsFiles = document.getElementById("gpsFiles").files;
+    
+        // Validasi minimal ada 1 file
+        if (gpsFiles.length === 0) {
+          throw new Error('Pilih setidaknya satu file');
         }
-        if (!['.gpx', '.kml'].some(ext => trackFile.name.toLowerCase().endsWith(ext))) {
-          throw new Error('Track file must be .gpx or .kml');
+    
+        // Convert semua file ke base64
+        const filesData = [];
+        for (let i = 0; i < gpsFiles.length; i++) {
+          const file = gpsFiles[i];
+          if (!['.gpx', '.kml'].some(ext => file.name.toLowerCase().endsWith(ext))) {
+            throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
+          }
+          
+          const base64Data = await fileToBase64(file);
+          filesData.push({
+            name: file.name,
+            data: base64Data
+          });
         }
-
-        const waypointBase64 = await fileToBase64(waypointFile);
-        const trackBase64 = await fileToBase64(trackFile);
-
+    
         const payload = {
           kebun,
           divisi,
           blok,
-          waypointName: waypointFile.name,
-          waypointData: waypointBase64,
-          trackName: trackFile.name,
-          trackData: trackBase64
+          files: filesData
         };
-
-        // Solution 1: Use a hidden iframe (works around CORS)
+    
+        // Sisanya sama (menggunakan iframe untuk POST)
         const formData = new FormData();
         formData.append('data', JSON.stringify(payload));
         
@@ -133,11 +134,10 @@
         document.body.appendChild(form);
         form.submit();
         
-        // Clean up after submission
         setTimeout(() => {
           document.body.removeChild(form);
           document.body.removeChild(iframe);
-          showStatus('Upload completed successfully! Please check your Google Drive.');
+          showStatus(`Upload ${filesData.length} file berhasil! Silakan cek Google Drive.`);
         }, 3000);
         
       } catch (error) {
