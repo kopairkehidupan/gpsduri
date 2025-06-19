@@ -595,10 +595,11 @@
       
       legendElement.innerHTML = `
         <h4>Legenda:</h4>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: green;"></div>
-          <span>Waypoint Hijau = ${greenCount} Pkk</span>
+        <div class="map-controls-header" id="toggleLegend">
+          <span>Legenda</span>
+          <span class="map-controls-toggle">▼</span>
         </div>
+        <div class="map-controls-content" id="legendContent">
         <div class="legend-item">
           <div class="legend-color" style="background-color: blue;"></div>
           <span>Waypoint Biru = ${blueCount} Pkk</span>
@@ -618,6 +619,7 @@
         <div class="legend-item">
           <div class="legend-color" style="background-color: transparent;"></div>
           <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
+        </div>
         </div>
       `;
   }
@@ -722,6 +724,16 @@
           adjustForMobile();
           processFiles();
       }
+
+    const toggleLegend = document.getElementById('toggleLegend');
+    const legendControls = document.querySelector('.map-controls');
+    
+    // Inisialisasi state (default bisa collapsed atau expanded)
+    legendControls.classList.add('collapsed');
+    
+    toggleLegend.addEventListener('click', function() {
+      legendControls.classList.toggle('collapsed');
+    });
   });
 </script>
 </body>
