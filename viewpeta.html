@@ -370,16 +370,27 @@
               const elevation = e.target.get_elevation_gain().toFixed(0);
               const center = e.target.getBounds().getCenter();
               
-              //L.marker([center.lat, center.lng], {
-              //  icon: L.divIcon({
-              //    html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
-              //            <b>${fileName}</b><br>
-              //            ${distance} km, ${elevation} m elevasi<br>
-              //            ${areaHa} ha
-              //          </div>`,
-              //    className: 'track-info-label'
-              //  })
-              //}).addTo(map);
+              L.marker([center.lat, center.lng], {
+                icon: L.divIcon({
+                  html: `<div style="
+                            background: white;
+                            padding: 8px;
+                            border-radius: 6px;
+                            border: 1px solid #ccc;
+                            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+                            font-size: 13px;
+                            line-height: 1.4;
+                        ">
+                          <b>${fileName}</b><br>
+                          Luas: ${areaHa} ha<br>
+                          Jarak: ${distance} km<br>
+                          Elevasi naik: ${elevation} m
+                        </div>`,
+                  className: 'track-info-label',
+                  iconAnchor: [0, 0]
+                })
+              }).addTo(map);
+
             } else {
               console.warn('Track file contains no valid track data:', fileName);
             }
