@@ -112,7 +112,8 @@
       text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
     }
 
-    * Tambahkan di bagian CSS */
+    /* Hapus tanda * yang salah sebelum komentar CSS */
+    /* Tambahkan di bagian CSS */
     .leaflet-control-layers {
         border-radius: 5px;
         box-shadow: 0 1px 5px rgba(0,0,0,0.4);
@@ -135,6 +136,11 @@
         display: block;
         font-size: 13px;
         margin: 2px 0;
+    }
+
+    /* Tambahkan z-index untuk memastikan layer control di atas elemen lain */
+    .leaflet-top {
+        z-index: 1001;
     }
   </style>
 </head>
@@ -225,11 +231,11 @@
           maxZoom: 22
       }),
       "Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: 'KPAK',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 22
       }),
       "Topographic": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-          attribution: 'KPAK',
+          attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
           maxZoom: 17
       })
   };
@@ -238,10 +244,15 @@
   baseLayers["Satellite"].addTo(map);
   
   // Add layer control to the map
-  L.control.layers(baseLayers, null, {
+  const layerControl = L.control.layers(baseLayers, null, {
       position: 'topright',
       collapsed: true
   }).addTo(map);
+
+  // Pastikan layer control muncul di atas elemen lain
+  setTimeout(() => {
+      layerControl.getContainer().style.zIndex = '1001';
+  }, 100);
 
   // Custom icons
   function getWaypointIcon(symbol) {
