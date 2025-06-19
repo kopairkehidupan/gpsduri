@@ -153,39 +153,6 @@
       margin: 2px 0;
     }
     
-    /* Footer dengan tombol kembali */
-    .map-footer {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      text-align: center;
-    }
-    
-    .back-button {
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      transition: all 0.3s ease;
-    }
-    
-    .back-button:hover {
-      background: linear-gradient(135deg, #2980b9, #3498db);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
@@ -247,18 +214,6 @@
       .leaflet-control-layers {
         font-size: 12px;
       }
-      
-      .map-footer {
-        bottom: 5px;
-        padding: 6px 12px;
-        width: 90%;
-        max-width: 300px;
-      }
-      
-      .back-button {
-        padding: 6px 12px;
-        font-size: 14px;
-      }
     }
     
     @media (max-width: 480px) {
@@ -278,15 +233,6 @@
       
       .legend-item span {
         font-size: 10px;
-      }
-      
-      .map-footer {
-        padding: 5px 10px;
-      }
-      
-      .back-button {
-        padding: 5px 10px;
-        font-size: 12px;
       }
     }
     
@@ -339,11 +285,6 @@
       <span>Luas</span>
     </div>
   </div>
-</div>
-
-<!-- Footer dengan tombol kembali -->
-<div class="map-footer">
-  <a href="list.html" class="back-button">Kembali ke Daftar Blok</a>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
