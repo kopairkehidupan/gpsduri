@@ -213,7 +213,7 @@
     for (let i = 0; i < n; i++) {
       const p1 = latLngs[i];
       const p2 = latLngs[(i + 1) % n];
-      total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180);
+      total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180));
     }
     
     const area = Math.abs(total * 6378137 * 6378137 / (2 * 10000)); // Convert to hectares
