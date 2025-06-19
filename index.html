@@ -1,97 +1,455 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Sensus Pokok Kebun Duri</title>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daftar Sensus per Blok</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
-    html, body {
-      height: 100%;
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --secondary: #34a853;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
       margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
-    #map {
-      height: 100%;
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      flex: 1;
       width: 100%;
+      box-sizing: border-box;
     }
-    .leaflet-marker-icon.circle-icon {
-      border-radius: 50% !important;
-      border: 1px solid #555;
-      object-fit: cover;
-      background: white;
-      width: 24px !important;
-      height: 24px !important;
+    
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding: 0 1rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: var(--transition);
+      margin-bottom: 1.5rem;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    
+    thead {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    th {
+      padding: 0.75rem;
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--medium-gray);
+      vertical-align: top;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:hover {
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .btn {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      text-decoration: none;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    
+    .btn-view {
+      background-color: var(--primary);
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-view:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2d8e47;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(66, 133, 244, 0.2);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      margin: 0.1rem 0;
+    }
+    
+    .badge-waypoint {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    
+    .badge-track {
+      background-color: #e8f5e9;
+      color: #388e3c;
+    }
+    
+    .responsive-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .footer {
+      background-color: var(--white);
+      padding: 1rem;
+      border-top: 1px solid var(--medium-gray);
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+    
+    .footer-buttons {
+      display: flex;
+      gap: 0.8rem;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .footer-text {
+      color: var(--dark-gray);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    
+    /* Mobile (up to 600px) */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .subtitle {
+        font-size: 0.9rem;
+      }
+      
+      th, td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+      }
+      
+      .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+      }
+      
+      .badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.3rem;
+      }
+    }
+    
+    /* Tablet (601px - 992px) */
+    @media (min-width: 601px) and (max-width: 992px) {
+      .container {
+        padding: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 1.7rem;
+      }
+      
+      .footer-content {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      
+      .footer-buttons {
+        justify-content: flex-end;
+        width: auto;
+      }
+    }
+    
+    /* Desktop (993px and up) */
+    @media (min-width: 993px) {
+      .container {
+        padding: 2rem;
+      }
+      
+      table {
+        font-size: 1rem;
+      }
+      
+      th, td {
+        padding: 1rem;
+      }
+      
+      .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+      }
+      
+      .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+      }
+      
+      .footer-content {
+        flex-direction: row;
+      }
+      
+      .footer-buttons {
+        justify-content: flex-end;
+        width: auto;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="header">
+      <h1>Daftar Blok Hasil Sensus</h1>
+      <p class="subtitle">Data sensus tanaman per blok kebun</p>
+    </div>
+    
+    <div class="card">
+      <div class="responsive-table">
+        <table id="blokTable">
+          <thead>
+            <tr>
+              <th>Kebun</th>
+              <th>Divisi</th>
+              <th>Blok</th>
+              <th>Data Tersedia</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5" class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 1rem;">Memuat data...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-<div id="map"></div>
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-buttons">
+        <a href="upload.html" class="btn btn-secondary">
+          <i class="material-icons" style="font-size: 16px;">cloud_upload</i>
+          <span>Upload Data Baru</span>
+        </a>
+      </div>
+    </div>
+  </footer>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+  <script>
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
 
-<script>
-  const map = L.map('map').setView([1.17, 100.99], 17);
+    fetch(SHEET_CSV_URL)
+      .then(res => res.text())
+      .then(csv => {
+        const rows = csv.trim().split("\n").slice(1);
+        const dataByBlok = {};
+        const tbody = document.querySelector("#blokTable tbody");
+        
+        // Clear loading row
+        tbody.innerHTML = '';
 
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'KPAK',
-    maxZoom: 22
-  }).addTo(map);
+        rows.forEach(row => {
+          const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
+          const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
+          const key = `${kebun}|${divisi}|${blok}`;
 
-  function getWaypointIcon(symbol) {
-    const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
-    if (sym === 'flag, green') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
-    } else if (sym === 'navaid, black') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
-    }
-    return new L.Icon({
-      iconUrl,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10],
-      popupAnchor: [0, -10]
-    });
-  }
+          if (!dataByBlok[key]) {
+            dataByBlok[key] = { 
+              kebun, 
+              divisi, 
+              blok, 
+              waypoints: [], 
+              tracks: [],
+              hasWaypoints: false,
+              hasTracks: false
+            };
+          }
+          
+          if (dataType.toUpperCase() === 'WAYPOINT') {
+            dataByBlok[key].waypoints.push(fileUrl);
+            dataByBlok[key].hasWaypoints = true;
+          } else if (dataType.toUpperCase() === 'TRACK') {
+            dataByBlok[key].tracks.push(fileUrl);
+            dataByBlok[key].hasTracks = true;
+          }
+        });
 
-  fetch('Waypoints_17-06-25.gpx')
-    .then(response => response.text())
-    .then(gpxText => {
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(gpxText, "application/xml");
-      const waypoints = xml.getElementsByTagName('wpt');
+        Object.values(dataByBlok).forEach(entry => {
+          const tr = document.createElement("tr");
 
-      if (waypoints.length === 0) {
-        console.warn('No <wpt> found in GPX');
-        return;
-      }
+          // Kebun, Divisi, Blok columns
+          [entry.kebun, entry.divisi, entry.blok].forEach(text => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            tr.appendChild(td);
+          });
 
-      const bounds = [];
+          // Data Available column
+          const tdData = document.createElement("td");
+          if (entry.hasWaypoints) {
+            const badge = document.createElement("span");
+            badge.className = "badge badge-waypoint";
+            badge.textContent = "Waypoints";
+            tdData.appendChild(badge);
+          }
+          if (entry.hasTracks) {
+            if (entry.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+            const badge = document.createElement("span");
+            badge.className = "badge badge-track";
+            badge.textContent = "Tracks";
+            tdData.appendChild(badge);
+          }
+          tr.appendChild(tdData);
 
-      for (let wpt of waypoints) {
-        const lat = parseFloat(wpt.getAttribute('lat'));
-        const lon = parseFloat(wpt.getAttribute('lon'));
-        const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Unknown';
-        const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+          // Action column
+          const tdAction = document.createElement("td");
+          const btn = document.createElement("button");
+          btn.className = "btn btn-view";
+          btn.innerHTML = `
+            <i class="material-icons" style="font-size: 16px;">map</i>
+            <span>Lihat Peta</span>
+          `;
+          btn.onclick = () => {
+            const params = new URLSearchParams();
+            params.append("blok", entry.blok);
+            params.append("kebun", entry.kebun);
+            params.append("divisi", entry.divisi);
+            entry.waypoints.forEach(url => params.append("waypoints", url));
+            entry.tracks.forEach(url => params.append("tracks", url));
 
-        const marker = L.marker([lat, lon], {
-          icon: getWaypointIcon(sym)
-        }).addTo(map);
+            window.open(`viewpeta.html?${params.toString()}`, "_blank");
+          };
+          tdAction.appendChild(btn);
+          tr.appendChild(tdAction);
 
-        marker.bindPopup(`<b>Waypoint:</b> ${name}<br><b>Symbol:</b> ${sym}`);
-        bounds.push([lat, lon]);
-      }
-
-      if (bounds.length) {
-        map.fitBounds(bounds, { maxZoom: 20 });
-      }
-
-      console.log("Waypoint markers added:", bounds.length);
-    })
-    .catch(err => {
-      console.error("Failed to load GPX:", err);
-    });
-</script>
-
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(error => {
+        const tbody = document.querySelector("#blokTable tbody");
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
+              <i class="material-icons" style="font-size: 36px; color: var(--medium-gray);">error_outline</i>
+              <p style="margin-top: 1rem;">Gagal memuat data. Silakan coba lagi.</p>
+              <p style="font-size: 0.8rem;">${error.message}</p>
+            </td>
+          </tr>
+        `;
+      });
+  </script>
 </body>
 </html>
