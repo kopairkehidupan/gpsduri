@@ -121,6 +121,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <script>
   // Parse URL parameters
@@ -204,14 +205,28 @@
   };
 
   // Function to calculate area in hectares
-  function calculateArea(latLngs) {
+  function calculateAreaFromTrack(latLngs) {
       if (latLngs.length < 3) return 0;
       
-      // Pastikan polygon tertutup dengan menambahkan titik pertama di akhir
-      const closedPolygon = [...latLngs, latLngs[0]];
+      // Konversi ke format GeoJSON LineString
+      const lineString = {
+          type: "Feature",
+          geometry: {
+              type: "LineString",
+              coordinates: latLngs.map(ll => [ll.lng, ll.lat])
+          },
+          properties: {}
+      };
       
-      // Gunakan library GeometryUtil untuk perhitungan yang lebih akurat
-      return L.GeometryUtil.geodesicArea(closedPolygon) / 10000; // Konversi ke hektar
+      // Buat buffer di sekitar garis track (dalam meter)
+      const bufferDistance = 5; // Sesuaikan jarak buffer sesuai kebutuhan
+      const buffered = turf.buffer(lineString, bufferDistance, {units: 'meters'});
+      
+      // Hitung luas area buffer (dalam meter persegi)
+      const areaM2 = turf.area(buffered);
+      
+      // Konversi ke hektar (1 ha = 10,000 m²)
+      return areaM2 / 10000;
   }
   
   // Function to parse GPX and add to map
@@ -324,12 +339,21 @@
                             latLngs = latLngs.flat();
                         }
                         
-                        // Pastikan cukup titik untuk membuat polygon
+                        // Pastikan cukup titik untuk membuat garis
                         if (latLngs.length >= 3) {
-                            const segmentArea = calculateArea(latLngs);
+                            const segmentArea = calculateAreaFromTrack(latLngs);
                             totalArea += segmentArea;
                             hasValidTrack = true;
                             console.log(`Area segment: ${segmentArea.toFixed(2)} ha`);
+                            
+                            // Visualisasi buffer (opsional)
+                            const lineString = turf.lineString(latLngs.map(ll => [ll.lng, ll.lat]));
+                            const buffered = turf.buffer(lineString, 5, {units: 'meters'});
+                            L.geoJSON(buffered, {
+                                color: '#ff7800',
+                                weight: 1,
+                                fillOpacity: 0.2
+                            }).addTo(map);
                         }
                     } catch (error) {
                         console.warn('Error processing track segment:', error);
@@ -353,7 +377,7 @@
                         icon: L.divIcon({
                             html: `<div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
                                     <b>${fileName}</b><br>
-                                    Luas: ${areaHa} ha<br>
+                                    Luas (buffer 5m): ${areaHa} ha<br>
                                     Jarak: ${distance} km<br>
                                     Elevasi naik: ${elevation} m
                                   </div>`,
