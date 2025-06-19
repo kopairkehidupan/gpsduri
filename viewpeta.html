@@ -380,6 +380,38 @@
     loading.style.display = 'none';
   }
 
+  async function tryAlternativeDownload(url, liElement) {
+  try {
+    const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
+    if (!fileId) return;
+    
+    // Coba metode alternatif
+    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const proxyUrls = [
+      `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl)}`
+    ];
+    
+    for (const proxyUrl of proxyUrls) {
+      try {
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+          const data = await response.json(); // Untuk allorigins
+          const content = data.contents || await response.text();
+          liElement.textContent = `✅ ${getFileName(url)} (via proxy)`;
+          liElement.className = 'success';
+          return content;
+        }
+      } catch (e) {
+        console.log(`Gagal dengan proxy ${proxyUrl}`, e);
+      }
+    }
+  } catch (error) {
+    console.error('Alternative download failed:', error);
+  }
+  return null;
+}
+
   // Start processing files when page loads
   document.addEventListener('DOMContentLoaded', function() {
     // Meminta izin ke CORS proxy (hanya untuk cors-anywhere.herokuapp.com)
