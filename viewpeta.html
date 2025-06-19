@@ -205,23 +205,26 @@
 
   // Function to calculate area in hectares
   function calculateArea(latLngs) {
-    if (latLngs.length < 3) return 0;
-    
-    // Buat polygon tertutup dengan menambahkan titik pertama di akhir
-    const closedPolygon = [...latLngs, latLngs[0]];
-    
-    let total = 0;
-    const n = closedPolygon.length;
-    const radiusBumi = 6378137; // Radius bumi dalam meter
-    
-    for (let i = 0; i < n; i++) {
-      const p1 = closedPolygon[i];
-      const p2 = closedPolygon[(i + 1) % n];
-      total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180));
-    }
-    
-    const area = Math.abs(total * radiusBumi * radiusBumi / (2 * 10000)); // Convert to hectares
-    return area;
+      if (latLngs.length < 3) return 0;
+      
+      // Pastikan polygon tertutup
+      const closedPolygon = [...latLngs, latLngs[0]];
+      let area = 0;
+      const n = closedPolygon.length;
+      
+      // Perhitungan menggunakan metode shoelace formula
+      for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          const p1 = closedPolygon[i];
+          const p2 = closedPolygon[j];
+          area += (p1.lng * p2.lat) - (p1.lat * p2.lng);
+      }
+      
+      // Konversi ke hektar (1 derajat ≈ 111.32 km, dan 1 ha = 10.000 m²)
+      const areaKm2 = Math.abs(area) * 111.32 * 111.32 / 2 / 1e6;
+      const areaHa = areaKm2 * 100;
+      
+      return areaHa;
   }
   
   // Function to parse GPX and add to map
@@ -313,84 +316,62 @@
           console.log(`Track berhasil dimuat: ${fileName}`);
           
           try {
-            let totalArea = 0;
-            let hasValidTrack = false;
-            
-            // Get all layers and find track polylines
-            const trackLines = [];
-            e.target.eachLayer(layer => {
-              if (layer instanceof L.Polyline && layer.getLatLngs().length > 0) {
-                trackLines.push(layer);
-              }
-            });
-        
-            if (trackLines.length > 0) {
-              hasValidTrack = true;
-              trackLines.forEach(line => {
-                try {
-                  let latLngs = line.getLatLngs();
-                  
-                  // Handle nested arrays (multi-segment tracks)
-                  if (Array.isArray(latLngs[0])) {
-                    latLngs = latLngs.flat();
+              let totalArea = 0;
+              let hasValidTrack = false;
+              
+              // Dapatkan semua polyline dari layer
+              e.target.eachLayer(layer => {
+                  if (layer instanceof L.Polyline) {
+                      let latLngs = layer.getLatLngs();
+                      
+                      // Handle nested arrays (multi-segment tracks)
+                      if (latLngs.length > 0 && Array.isArray(latLngs[0])) {
+                          latLngs = latLngs.flat();
+                      }
+                      
+                      // Pastikan cukup titik untuk membuat polygon
+                      if (latLngs.length >= 3) {
+                          const segmentArea = calculateArea(latLngs);
+                          totalArea += segmentArea;
+                          hasValidTrack = true;
+                      }
                   }
-                  
-                  // Ensure we have enough points for area calculation
-                  if (latLngs.length >= 3) {
-                    totalArea += calculateArea(latLngs);
-                  }
-                } catch (error) {
-                  console.warn('Error processing track segment:', error);
-                }
               });
-            }
-        
-            // Update statistics
-            legendStats.track.area = totalArea;
-            const areaHa = totalArea.toFixed(2);
-            
-            // Fit bounds if we have valid track
-            if (hasValidTrack) {
-              map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+          
+              // Update statistics
+              legendStats.track.area = totalArea;
+              updateLegend();
               
-              // Add track info marker
-              const distance = (e.target.get_distance() / 1000).toFixed(2);
-              const elevation = e.target.get_elevation_gain().toFixed(0);
-              const center = e.target.getBounds().getCenter();
-              
-              L.marker([center.lat, center.lng], {
-                icon: L.divIcon({
-                  html: `<div style="
-                            background: white;
-                            padding: 8px;
-                            border-radius: 6px;
-                            border: 1px solid #ccc;
-                            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-                            font-size: 13px;
-                            line-height: 1.4;
-                        ">
-                          <b>${fileName}</b><br>
-                          Luas: ${areaHa} ha<br>
-                          Jarak: ${distance} km<br>
-                          Elevasi naik: ${elevation} m
-                        </div>`,
-                  className: 'track-info-label',
-                  iconAnchor: [0, 0]
-                })
-              }).addTo(map);
-
-            } else {
-              console.warn('Track file contains no valid track data:', fileName);
-            }
-            
-            updateLegend();
-            
+              if (hasValidTrack) {
+                  map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+                  
+                  // Add track info marker
+                  const distance = (e.target.get_distance() / 1000).toFixed(2);
+                  const elevation = e.target.get_elevation_gain().toFixed(0);
+                  const center = e.target.getBounds().getCenter();
+                  const areaHa = totalArea.toFixed(2);
+                  
+                  L.marker([center.lat, center.lng], {
+                      icon: L.divIcon({
+                          html: `<div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                                  <b>${fileName}</b><br>
+                                  Luas: ${areaHa} ha<br>
+                                  Jarak: ${distance} km<br>
+                                  Elevasi naik: ${elevation} m
+                                </div>`,
+                          className: 'track-info-label',
+                          iconAnchor: [0, 0]
+                      })
+                  }).addTo(map);
+              } else {
+                  console.warn('Track file contains no valid track data:', fileName);
+              }
           } catch (error) {
-            console.error('Error processing track:', error);
-            legendStats.track.area = 0;
-            updateLegend();
+              console.error('Error processing track:', error);
+              legendStats.track.area = 0;
+              updateLegend();
           }
-        });
+      });
         
         gpxLayer.on('error', function(e) {
           console.error(`Gagal memuat track ${fileName}:`, e.error);
