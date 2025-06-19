@@ -156,22 +156,59 @@
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
-        max-width: 280px;
-        padding: 8px;
+        max-width: 220px; /* Reduced from 280px */
+        padding: 6px;
+        right: 5px;
+        top: 5px;
+      }
+      
+      .sensus-title {
+        padding: 5px;
       }
       
       .sensus-title h2 {
-        font-size: 14px;
+        font-size: 12px;
       }
       
       #blok-title, #location-info p {
-        font-size: 13px;
-        margin: 3px 0;
+        font-size: 11px;
+        margin: 2px 0;
       }
       
       .file-list h4, .legend h4 {
+        font-size: 12px;
+        margin: 4px 0;
+      }
+      
+      .legend-item span {
+        font-size: 11px;
+      }
+      
+      .loading {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 1001; /* Increased from 1000 */
+          background: white;
+          padding: 15px;
+          border-radius: 5px;
+          box-shadow: 0 0 15px rgba(0,0,0,0.3); /* More prominent shadow */
+          text-align: center;
+          width: 80%;
+          max-width: 280px;
+          display: none; /* Initially hidden */
+      }
+      
+      .loading h3 {
+        color: #333;
+        margin: 0 0 10px 0;
+      }
+      
+      #progress {
+        margin: 0;
+        color: #555;
         font-size: 14px;
-        margin: 5px 0;
       }
       
       .leaflet-control-layers {
@@ -181,21 +218,21 @@
     
     @media (max-width: 480px) {
       .map-controls {
-        max-width: 250px;
-        right: 5px;
-        top: 5px;
+        max-width: 200px;
+        right: 3px;
+        top: 3px;
       }
       
       .sensus-title {
-        padding: 6px;
+        padding: 4px;
       }
       
       .sensus-title h2 {
-        font-size: 13px;
+        font-size: 11px;
       }
       
       .legend-item span {
-        font-size: 12px;
+        font-size: 10px;
       }
     }
     
@@ -556,7 +593,7 @@
       `;
   }
 
-  // Modifikasi fungsi processFiles()
+  // Modify the loading display in the processFiles function
   async function processFiles() {
       console.log('Daftar file track:', trackUrls);
       console.log('Jumlah file track:', trackUrls.length);
@@ -564,59 +601,65 @@
       const loading = document.getElementById('loading');
       let hasData = false;
       
+      // Ensure loading is visible and on top
+      loading.style.display = 'block';
+      loading.style.zIndex = '1001';
+      
       // Proses waypoints
       for (const url of waypointUrls) {
-        const li = document.createElement('li');
-        const fileName = getFileName(url);
-        
-        try {
-          li.textContent = `🔄 Memuat ${fileName}...`;
-          loadedFilesList.appendChild(li);
+          const li = document.createElement('li');
+          const fileName = getFileName(url);
           
-          const gpxContent = await fetchFile(url);
-          await addGpxToMap(gpxContent, 'waypoint', fileName);
-          
-          li.textContent = `✅ ${fileName}`;
-          li.className = 'success';
-          hasData = true;
-        } catch (error) {
-          li.textContent = `❌ ${fileName} (${error.message})`;
-          li.className = 'error';
-        }
-        updateControlsView(); // Update tampilan setelah setiap file diproses
+          try {
+              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
+              li.textContent = `🔄 Memuat ${fileName}...`;
+              loadedFilesList.appendChild(li);
+              
+              const gpxContent = await fetchFile(url);
+              await addGpxToMap(gpxContent, 'waypoint', fileName);
+              
+              li.textContent = `✅ ${fileName}`;
+              li.className = 'success';
+              hasData = true;
+          } catch (error) {
+              li.textContent = `❌ ${fileName} (${error.message})`;
+              li.className = 'error';
+          }
+          updateControlsView();
       }
       
       // Proses tracks
       for (const url of trackUrls) {
-        const li = document.createElement('li');
-        const fileName = getFileName(url);
-        
-        try {
-          li.textContent = `🔄 Memuat ${fileName}...`;
-          loadedFilesList.appendChild(li);
+          const li = document.createElement('li');
+          const fileName = getFileName(url);
           
-          const gpxContent = await fetchFile(url);
-          await addGpxToMap(gpxContent, 'track', fileName);
-          
-          li.textContent = `✅ ${fileName}`;
-          li.className = 'success';
-          hasData = true;
-        } catch (error) {
-          li.textContent = `❌ ${fileName} (${error.message})`;
-          li.className = 'error';
-        }
-        updateControlsView(); // Update tampilan setelah setiap file diproses
+          try {
+              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
+              li.textContent = `🔄 Memuat ${fileName}...`;
+              loadedFilesList.appendChild(li);
+              
+              const gpxContent = await fetchFile(url);
+              await addGpxToMap(gpxContent, 'track', fileName);
+              
+              li.textContent = `✅ ${fileName}`;
+              li.className = 'success';
+              hasData = true;
+          } catch (error) {
+              li.textContent = `❌ ${fileName} (${error.message})`;
+              li.className = 'error';
+          }
+          updateControlsView();
       }
       
       if (!hasData) {
-        const li = document.createElement('li');
-        li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
-        li.className = 'error';
-        loadedFilesList.appendChild(li);
+          const li = document.createElement('li');
+          li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
+          li.className = 'error';
+          loadedFilesList.appendChild(li);
       }
       
       loading.style.display = 'none';
-      updateControlsView(); // Final update setelah semua file diproses
+      updateControlsView();
   }
 
   // Fungsi untuk mengupdate tampilan kontrol
