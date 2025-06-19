@@ -143,8 +143,16 @@
     try {
       if (url.includes('drive.google.com')) {
         const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-        // Gunakan proxy alternatif
-        return `https://api.allorigins.win/get?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${fileId}`)}`;
+        
+        // Beberapa alternatif proxy:
+        const proxies = [
+          `https://corsproxy.io/?${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${fileId}`)}`,
+          `https://api.codetabs.com/v1/proxy/?quest=https://drive.google.com/uc?export=download&id=${fileId}`,
+          `https://thingproxy.freeboard.io/fetch/https://drive.google.com/uc?export=download&id=${fileId}`
+        ];
+        
+        // Pilih proxy secara acak atau gunakan yang pertama
+        return proxies[0];
       }
       return url;
     } catch (e) {
@@ -316,71 +324,62 @@
     const loading = document.getElementById('loading');
     const loadedFilesList = document.getElementById('loaded-files');
     
-    // Reset daftar file
     loadedFilesList.innerHTML = '';
     
-    // Validasi URL
     const allUrls = [...waypointUrls, ...trackUrls];
     if (allUrls.length === 0) {
       loadedFilesList.innerHTML = '<li class="error">Tidak ada URL file yang diberikan</li>';
       loading.style.display = 'none';
       return;
     }
-
+  
     let hasData = false;
+    let retryCount = 0;
+    const maxRetries = 2;
     
-    try {
-      // Proses waypoints
-      for (const url of waypointUrls) {
-        const li = document.createElement('li');
-        const fileName = getFileName(url);
-        
+    // Proses semua file
+    for (const url of allUrls) {
+      const li = document.createElement('li');
+      const fileName = getFileName(url);
+      const isWaypoint = waypointUrls.includes(url);
+      
+      li.textContent = `🔄 Memuat ${fileName}...`;
+      loadedFilesList.appendChild(li);
+      
+      let success = false;
+      let lastError = null;
+      
+      // Coba beberapa kali
+      for (let i = 0; i < maxRetries && !success; i++) {
         try {
-          li.textContent = `🔄 Memuat ${fileName}...`;
-          loadedFilesList.appendChild(li);
-          
           const gpxContent = await fetchFile(url);
-          await addGpxToMap(gpxContent, 'waypoint', fileName);
+          await addGpxToMap(gpxContent, isWaypoint ? 'waypoint' : 'track', fileName);
           
           li.textContent = `✅ ${fileName}`;
           li.className = 'success';
+          success = true;
           hasData = true;
         } catch (error) {
-          li.textContent = `❌ ${fileName} (${error.message})`;
-          li.className = 'error';
+          lastError = error;
+          li.textContent = `🔄 Mencoba ulang ${fileName} (${i+1}/${maxRetries})...`;
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Jeda sebelum mencoba lagi
         }
       }
       
-      // Proses tracks
-      for (const url of trackUrls) {
-        const li = document.createElement('li');
-        const fileName = getFileName(url);
-        
-        try {
-          li.textContent = `🔄 Memuat ${fileName}...`;
-          loadedFilesList.appendChild(li);
-          
-          const gpxContent = await fetchFile(url);
-          await addGpxToMap(gpxContent, 'track', fileName);
-          
-          li.textContent = `✅ ${fileName}`;
-          li.className = 'success';
-          hasData = true;
-        } catch (error) {
-          li.textContent = `❌ ${fileName} (${error.message})`;
-          li.className = 'error';
-        }
-      }
-      
-      if (!hasData) {
-        const li = document.createElement('li');
-        li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
+      if (!success) {
+        li.textContent = `❌ ${fileName} (${lastError.message})`;
         li.className = 'error';
-        loadedFilesList.appendChild(li);
       }
-    } finally {
-      loading.style.display = 'none';
     }
+    
+    if (!hasData) {
+      const li = document.createElement('li');
+      li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
+      li.className = 'error';
+      loadedFilesList.appendChild(li);
+    }
+    
+    loading.style.display = 'none';
   }
 
   // Start processing files when page loads
