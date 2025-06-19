@@ -196,14 +196,22 @@
 
   // Modifikasi fungsi fetchFile:
   async function fetchFile(url) {
-    const fileName = getFileName(url);
-    const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
-    
-    const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
-    
-    const response = await fetch(scriptUrl);
-    if (!response.ok) throw new Error('Gagal mengambil file');
-    return await response.text();
+    try {
+      const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
+      if (!fileId) throw new Error('URL Google Drive tidak valid');
+  
+      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+      
+      const response = await fetch(scriptUrl);
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil file (Status: ${response.status})`);
+      }
+      
+      return await response.text();
+    } catch (error) {
+      console.error('Error saat mengambil file:', { url, error });
+      throw new Error(`Gagal memuat file: ${error.message}`);
+    }
   }
 
   // Function to parse GPX and add to map
