@@ -125,13 +125,12 @@
   const waypointUrls = urlParams.getAll('waypoints');
   const trackUrls = urlParams.getAll('tracks');
 
-  // Fungsi untuk mendapatkan nama file yang benar dari URL
+   // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
     try {
-      // Jika URL Google Drive, kita tidak bisa dapatkan nama asli dari URL saja
-      // Jadi kita akan menggunakan nama default
       if (url.includes('drive.google.com')) {
-        return 'Waypoints.gpx'; // atau nama default lainnya
+        const match = url.match(/[^\/]+(?=\/view|$)/);
+        return match ? `file_${match[0].substring(0,6)}.gpx` : 'waypoints.gpx';
       }
       return url.split('/').pop() || 'data.gpx';
     } catch (e) {
@@ -139,18 +138,18 @@
     }
   }
 
-  // Fungsi untuk mendapatkan URL download yang benar dari Google Drive
+  // Fungsi untuk mendapatkan URL download dengan CORS proxy
   function getDownloadUrl(url) {
     try {
-      // Ekstrak ID file dari URL Google Drive
-      const match = url.match(/\/file\/d\/([^\/]+)/);
-      if (!match) throw new Error('Invalid Google Drive URL');
-      
-      const fileId = match[1];
-      return `https://drive.google.com/uc?export=download&id=${fileId}`;
+      if (url.includes('drive.google.com')) {
+        const fileId = url.match(/\/file\/d\/([^\/]+)/)[1];
+        // Gunakan CORS proxy
+        return `https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=${fileId}`;
+      }
+      return url; // Untuk URL non-Google Drive
     } catch (e) {
       console.error('Error parsing download URL:', e);
-      return url; // Fallback ke URL asli
+      return url;
     }
   }
 
@@ -187,14 +186,19 @@
     });
   }
 
-  // Modifikasi fungsi fetchFile untuk menangani Google Drive links
+  // Modifikasi fungsi fetchFile untuk menangani CORS
   async function fetchFile(url) {
     const fileName = getFileName(url);
     document.getElementById('progress').textContent = `Memuat: ${fileName}`;
     
     try {
       const downloadUrl = getDownloadUrl(url);
-      const response = await fetch(downloadUrl);
+      const response = await fetch(downloadUrl, {
+        headers: {
+          // Beberapa CORS proxy membutuhkan header ini
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Gagal mengambil file (status: ${response.status})`);
@@ -385,8 +389,13 @@
 
   // Start processing files when page loads
   document.addEventListener('DOMContentLoaded', function() {
-    // Small delay to ensure all elements are loaded
-    setTimeout(processFiles, 100);
+    // Meminta izin ke CORS proxy (hanya untuk cors-anywhere.herokuapp.com)
+    fetch('https://cors-anywhere.herokuapp.com/corsdemo')
+      .then(() => processFiles())
+      .catch(() => {
+        // Jika gagal, tetap coba proses file (beberapa proxy tidak membutuhkan izin)
+        processFiles();
+      });
   });
 
   // Add click handler for location info
