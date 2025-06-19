@@ -207,19 +207,27 @@
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) {
-          console.warn('Tidak cukup titik untuk menghitung luas (minimal 3 titik)');
+          console.warn('Not enough points to calculate area (minimum 3 points required)');
           return 0;
       }
       
-      // Convert to GeoJSON polygon format (close the ring)
+      // Convert to GeoJSON format (array of [longitude, latitude] pairs)
       const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
-      coordinates.push(coordinates[0]); // Close the polygon
+      // Close the polygon by adding the first point at the end
+      coordinates.push(coordinates[0]);
       
-      const polygon = turf.polygon([coordinates]);
-      const area = turf.area(polygon) / 10000; // Convert to hectares
-      
-      console.log('Berhasil menghitung luas:', area.toFixed(2), 'ha');
-      return area;
+      try {
+          // Create a Turf.js polygon
+          const polygon = turf.polygon([coordinates]);
+          // Calculate area in square meters, then convert to hectares
+          const area = turf.area(polygon) / 10000;
+          
+          console.log('Area calculated successfully:', area.toFixed(4), 'hectares');
+          return area;
+      } catch (error) {
+          console.error('Error calculating area with Turf.js:', error);
+          return 0;
+      }
   }
   
   // Function to parse GPX and add to map
@@ -287,39 +295,29 @@
         updateLegend();
       } 
       else if (type === 'track') {
-        console.log(`Memproses track dari ${fileName}`);
+        console.log(`Processing track from ${fileName}`);
         
         try {
-            // Parse manual untuk memeriksa struktur GPX
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(gpxContent, "text/xml");
-            const trkpts = xmlDoc.getElementsByTagName('trkpt');
-            
-            if (trkpts.length === 0) {
-                console.warn(`File ${fileName} tidak memiliki titik track`);
-                return;
-            }
-            
-            console.log(`Jumlah titik track: ${trkpts.length}`);
-            
-            // Buat polyline manual dari titik-titik track
+            // Parse the GPX track points
+            const trkpts = xml.getElementsByTagName('trkpt');
             const latLngs = [];
+            
             for (let i = 0; i < trkpts.length; i++) {
                 const trkpt = trkpts[i];
                 const lat = parseFloat(trkpt.getAttribute('lat'));
                 const lon = parseFloat(trkpt.getAttribute('lon'));
-                latLngs.push([lat, lon]);
+                latLngs.push(L.latLng(lat, lon));
             }
             
-            // Hitung luas area
-            const area = calculateOpenTrackArea(latLngs.map(ll => L.latLng(ll[0], ll[1])));
-            console.log(`Luas area: ${area.toFixed(2)} ha`);
+            // Calculate area
+            const area = calculateOpenTrackArea(latLngs);
+            console.log(`Track area: ${area.toFixed(4)} ha`);
             
             // Update legend
             legendStats.track.area = area;
             updateLegend();
             
-            // Tambahkan ke peta
+            // Add to map
             const polyline = L.polyline(latLngs, {
                 color: 'red',
                 weight: 4,
@@ -331,7 +329,7 @@
             map.fitBounds(polyline.getBounds());
             
         } catch (error) {
-            console.error(`Gagal memproses track ${fileName}:`, error);
+            console.error(`Failed to process track ${fileName}:`, error);
         }
     }
     } catch (error) {
