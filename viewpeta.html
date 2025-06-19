@@ -356,26 +356,37 @@
   function updateLegend() {
       const legendElement = document.querySelector('.legend');
       
-      // Format luas area track (dalam hektar)
-      const areaHa = legendStats.track.area.toFixed(2);
-      // Hitung total pokok (hijau + biru)
-      const totalPokok = legendStats.green.count + legendStats.blue.count;
-      // Hitung Stand/Ha (total pokok dibagi luas area)
-      const standPerHa = areaHa > 0 ? (totalPokok / parseFloat(areaHa)).toFixed(2) : 0;
+      // Format luas area track (dalam hektar) dengan separator ribuan
+      const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
+      // Hitung total pokok (hijau + biru) dengan separator ribuan
+      const totalPokok = (legendStats.green.count + legendStats.blue.count).toLocaleString('id-ID');
+      // Hitung Stand/Ha (total pokok dibagi luas area) dengan separator ribuan
+      const standPerHa = legendStats.track.area > 0 
+          ? (legendStats.green.count + legendStats.blue.count) / legendStats.track.area
+          : 0;
+      const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2
+      });
+      
+      // Format untuk masing-masing warna
+      const greenCount = legendStats.green.count.toLocaleString('id-ID');
+      const blueCount = legendStats.blue.count.toLocaleString('id-ID');
+      const blackCount = legendStats.black.count.toLocaleString('id-ID');
       
       legendElement.innerHTML = `
         <h4>Legenda:</h4>
         <div class="legend-item">
           <div class="legend-color" style="background-color: green;"></div>
-          <span>Waypoint Hijau = ${legendStats.green.count} Pkk</span>
+          <span>Waypoint Hijau = ${greenCount} Pkk</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: blue;"></div>
-          <span>Waypoint Biru = ${legendStats.blue.count} Pkk</span>
+          <span>Waypoint Biru = ${blueCount} Pkk</span>
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: black;"></div>
-          <span>Waypoint Hitam = ${legendStats.black.count} Pkk</span>
+          <span>Waypoint Hitam = ${blackCount} Pkk</span>
         </div>
         <div class="legend-item total">
           <div class="legend-color" style="background-color: transparent;"></div>
@@ -387,7 +398,7 @@
         </div>
         <div class="legend-item">
           <div class="legend-color" style="background-color: transparent;"></div>
-          <span>Stand/Ha = ${standPerHa}</span>
+          <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
         </div>
       `;
   }
