@@ -93,6 +93,24 @@
       border-top: 1px solid #eee;
       padding-top: 10px;
     }
+    .sensus-title {
+      text-align: center;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: linear-gradient(135deg, #27ae60, #2ecc71);
+      border-radius: 5px;
+      color: white;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+    }
+    
+    .sensus-title h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
@@ -105,6 +123,11 @@
 <div id="map"></div>
 
 <div class="map-controls">
+  <!-- Tambahkan div baru untuk judul -->
+  <div class="sensus-title">
+    <h2>HASIL SENSUS POKOK</h2>
+  </div>
+  
   <h3 id="blok-title">Blok: Loading...</h3>
   <div id="location-info"></div>
   <div class="file-list" id="file-list">
