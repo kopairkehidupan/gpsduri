@@ -1,86 +1,308 @@
-<!-- list.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daftar Sensus per Blok</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
-    body { font-family: Arial; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; }
-    .btn-view { background-color: #2196F3; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --secondary: #34a853;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    thead {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+    
+    tr:hover {
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .btn-view {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-view:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(66, 133, 244, 0.2);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+    }
+    
+    .badge-waypoint {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    
+    .badge-track {
+      background-color: #e8f5e9;
+      color: #388e3c;
+    }
+    
+    .responsive-table {
+      overflow-x: auto;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      th, td {
+        padding: 0.75rem;
+      }
+      
+      .btn-view {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+      }
+    }
   </style>
 </head>
 <body>
+  <div class="container">
+    <div class="header">
+      <h1>Daftar Blok Hasil Sensus</h1>
+      <p class="subtitle">Data sensus tanaman per blok kebun</p>
+    </div>
+    
+    <div class="card">
+      <div class="responsive-table">
+        <table id="blokTable">
+          <thead>
+            <tr>
+              <th>Kebun</th>
+              <th>Divisi</th>
+              <th>Blok</th>
+              <th>Data Tersedia</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="5" class="loading">
+                <div class="spinner"></div>
+                <span style="margin-left: 1rem;">Memuat data...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-<h2>Daftar Blok Hasil Sensus</h2>
-<table id="blokTable">
-  <thead>
-    <tr>
-      <th>Kebun</th>
-      <th>Divisi</th>
-      <th>Blok</th>
-      <th>Aksi</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+  <script>
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
 
-<script>
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
+    fetch(SHEET_CSV_URL)
+      .then(res => res.text())
+      .then(csv => {
+        const rows = csv.trim().split("\n").slice(1);
+        const dataByBlok = {};
+        const tbody = document.querySelector("#blokTable tbody");
+        
+        // Clear loading row
+        tbody.innerHTML = '';
 
-fetch(SHEET_CSV_URL)
-  .then(res => res.text())
-  .then(csv => {
-    const rows = csv.trim().split("\n").slice(1);
-    const dataByBlok = {};
+        rows.forEach(row => {
+          const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
+          const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
+          const key = `${kebun}|${divisi}|${blok}`;
 
-    rows.forEach(row => {
-      const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
-      const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
-      const key = `${kebun}|${divisi}|${blok}`;
+          if (!dataByBlok[key]) {
+            dataByBlok[key] = { 
+              kebun, 
+              divisi, 
+              blok, 
+              waypoints: [], 
+              tracks: [],
+              hasWaypoints: false,
+              hasTracks: false
+            };
+          }
+          
+          if (dataType.toUpperCase() === 'WAYPOINT') {
+            dataByBlok[key].waypoints.push(fileUrl);
+            dataByBlok[key].hasWaypoints = true;
+          } else if (dataType.toUpperCase() === 'TRACK') {
+            dataByBlok[key].tracks.push(fileUrl);
+            dataByBlok[key].hasTracks = true;
+          }
+        });
 
-      if (!dataByBlok[key]) dataByBlok[key] = { kebun, divisi, blok, waypoints: [], tracks: [] };
-      if (dataType.toUpperCase() === 'WAYPOINT') {
-        dataByBlok[key].waypoints.push(fileUrl);
-      } else if (dataType.toUpperCase() === 'TRACK') {
-        dataByBlok[key].tracks.push(fileUrl);
-      }
-    });
+        Object.values(dataByBlok).forEach(entry => {
+          const tr = document.createElement("tr");
 
-    const tbody = document.querySelector("#blokTable tbody");
+          // Kebun, Divisi, Blok columns
+          [entry.kebun, entry.divisi, entry.blok].forEach(text => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            tr.appendChild(td);
+          });
 
-    Object.values(dataByBlok).forEach(entry => {
-      const tr = document.createElement("tr");
+          // Data Available column
+          const tdData = document.createElement("td");
+          if (entry.hasWaypoints) {
+            const badge = document.createElement("span");
+            badge.className = "badge badge-waypoint";
+            badge.textContent = "Waypoints";
+            tdData.appendChild(badge);
+          }
+          if (entry.hasTracks) {
+            if (entry.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+            const badge = document.createElement("span");
+            badge.className = "badge badge-track";
+            badge.textContent = "Tracks";
+            tdData.appendChild(badge);
+          }
+          tr.appendChild(tdData);
 
-      [entry.kebun, entry.divisi, entry.blok].forEach(text => {
-        const td = document.createElement("td");
-        td.textContent = text;
-        tr.appendChild(td);
+          // Action column
+          const tdAction = document.createElement("td");
+          const btn = document.createElement("button");
+          btn.className = "btn-view";
+          btn.innerHTML = `
+            <i class="material-icons" style="font-size: 18px;">map</i>
+            <span>Lihat Peta</span>
+          `;
+          btn.onclick = () => {
+            const params = new URLSearchParams();
+            params.append("blok", entry.blok);
+            params.append("kebun", entry.kebun);
+            params.append("divisi", entry.divisi);
+            entry.waypoints.forEach(url => params.append("waypoints", url));
+            entry.tracks.forEach(url => params.append("tracks", url));
+
+            window.open(`viewpeta.html?${params.toString()}`, "_blank");
+          };
+          tdAction.appendChild(btn);
+          tr.appendChild(tdAction);
+
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(error => {
+        const tbody = document.querySelector("#blokTable tbody");
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
+              <i class="material-icons" style="font-size: 48px; color: var(--medium-gray);">error_outline</i>
+              <p style="margin-top: 1rem;">Gagal memuat data. Silakan coba lagi.</p>
+              <p style="font-size: 0.875rem;">${error.message}</p>
+            </td>
+          </tr>
+        `;
       });
-
-      const tdAction = document.createElement("td");
-      const btn = document.createElement("button");
-      btn.className = "btn-view";
-      btn.textContent = "Lihat di Peta";
-      btn.onclick = () => {
-        const params = new URLSearchParams();
-        params.append("blok", entry.blok);
-        params.append("kebun", entry.kebun);
-        params.append("divisi", entry.divisi);
-        entry.waypoints.forEach(url => params.append("waypoints", url));
-        entry.tracks.forEach(url => params.append("tracks", url));
-
-        window.open(`viewpeta.html?${params.toString()}`, "_blank");
-      };
-      tdAction.appendChild(btn);
-      tr.appendChild(tdAction);
-
-      tbody.appendChild(tr);
-    });
-  });
-</script>
-
+  </script>
 </body>
 </html>
