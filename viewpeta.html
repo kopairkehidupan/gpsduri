@@ -200,9 +200,14 @@
       const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
       if (!fileId) throw new Error('URL Google Drive tidak valid');
   
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+      // Gunakan endpoint Apps Script dengan cache-buster
+      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}&t=${Date.now()}`;
       
-      const response = await fetch(scriptUrl);
+      const response = await fetch(scriptUrl, {
+        mode: 'cors', // Explicitly request CORS
+        redirect: 'follow'
+      });
+      
       if (!response.ok) {
         throw new Error(`Gagal mengambil file (Status: ${response.status})`);
       }
@@ -340,29 +345,23 @@
     for (const url of allUrls) {
       const li = document.createElement('li');
       const fileName = getFileName(url);
-      const isWaypoint = waypointUrls.includes(url);
       
-      li.textContent = `🔄 Memuat ${fileName}...`;
-      loadedFilesList.appendChild(li);
-      
-      let success = false;
-      let lastError = null;
-      
-      // Coba beberapa kali
-      for (let i = 0; i < maxRetries && !success; i++) {
-        try {
-          const gpxContent = await fetchFile(url);
-          await addGpxToMap(gpxContent, isWaypoint ? 'waypoint' : 'track', fileName);
-          
-          li.textContent = `✅ ${fileName}`;
-          li.className = 'success';
-          success = true;
-          hasData = true;
-        } catch (error) {
-          lastError = error;
-          li.textContent = `🔄 Mencoba ulang ${fileName} (${i+1}/${maxRetries})...`;
-          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Jeda sebelum mencoba lagi
-        }
+      try {
+        li.textContent = `🔄 Memuat ${fileName}...`;
+        loadedFilesList.appendChild(li);
+        
+        const gpxContent = await fetchFile(url);
+        await addGpxToMap(gpxContent, isWaypoint ? 'waypoint' : 'track', fileName);
+        
+        li.textContent = `✅ ${fileName}`;
+        li.className = 'success';
+        hasData = true;
+      } catch (error) {
+        li.textContent = `❌ ${fileName} (${error.message})`;
+        li.className = 'error';
+        
+        // Coba alternatif jika gagal
+        await tryAlternativeDownload(url, li);
       }
       
       if (!success) {
