@@ -25,40 +25,34 @@
       right: 10px;
       z-index: 1000;
       background: white;
-      border-radius: 4px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-      overflow: hidden;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      max-width: 300px;
+      width: 90%;
+      transition: height 0.3s ease, overflow 0.3s ease;
+      height: auto; /* Default expanded */
+      overflow: visible;   
     }
 
-    .map-controls-header {
-      padding: 8px 12px;
-      background: var(--primary);
-      color: white;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .map-controls.collapsed {
+        height: 50px; /* Sesuaikan dengan tinggi judul */
+        overflow: hidden;
+    }
+
+    /* Tambahkan indikator panah */
+    .sensus-title::after {
+        content: "▼";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        transition: transform 0.3s ease;
     }
     
-    .map-controls-content {
-      padding: 10px;
-      max-height: 300px;
-      overflow-y: auto;
-      transition: all 0.3s ease;
-    }
-    
-    .map-controls.collapsed .map-controls-content {
-      max-height: 0;
-      padding: 0 10px;
-      overflow: hidden;
-    }
-    
-    .map-controls-toggle {
-      transition: transform 0.3s ease;
-    }
-    
-    .map-controls.collapsed .map-controls-toggle {
-      transform: rotate(180deg);
+    .map-controls.collapsed .sensus-title::after {
+        transform: translateY(-50%) rotate(-90deg);
     }
     
     .loading {
@@ -145,6 +139,9 @@
       border-radius: 5px;
       color: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer; /* Ubah kursor jadi pointer saat hover */
+      user-select: none; /* Mencegah teks ter-select */
+      position: relative; /* Untuk tambahan indikator */
     }
     
     .sensus-title h2 {
@@ -295,11 +292,11 @@
     <ul id="loaded-files"></ul>
   </div>
   <div class="legend">
-    <div class="map-controls-header" id="toggleLegend">
-      <span>Legenda</span>
-      <span class="map-controls-toggle">▼</span>
+    <h4>Legenda:</h4>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: green;"></div>
+      <span>Waypoint Hijau</span>
     </div>
-    <div class="map-controls-content" id="legendContent">
     <div class="legend-item">
       <div class="legend-color" style="background-color: blue;"></div>
       <span>Waypoint Biru</span>
@@ -311,7 +308,6 @@
     <div class="legend-item">
       <div class="legend-color" style="background-color: red;"></div>
       <span>Luas</span>
-    </div>
     </div>
   </div>
 </div>
@@ -380,6 +376,7 @@
 
   // Adjust controls for mobile
   function adjustForMobile() {
+    const controlsElement = document.querySelector('.map-controls');
     if (window.innerWidth <= 768) {
       // Sesuaikan ukuran font dan padding untuk mobile
       document.querySelector('.map-controls').style.maxWidth = '280px';
@@ -387,11 +384,14 @@
       
       // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
+
+      controlsElement.classList.add('collapsed'); // Default collap
     } else {
       // Kembalikan ke ukuran desktop
       document.querySelector('.map-controls').style.maxWidth = '300px';
       document.querySelector('.sensus-title h2').style.fontSize = '16px';
       layerControl.setPosition('bottomright');
+      controlsElement.classList.remove('collapsed'); // Default exp
     }
   }
 
@@ -595,11 +595,10 @@
       
       legendElement.innerHTML = `
         <h4>Legenda:</h4>
-        <div class="map-controls-header" id="toggleLegend">
-          <span>Legenda</span>
-          <span class="map-controls-toggle">▼</span>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: green;"></div>
+          <span>Waypoint Hijau = ${greenCount} Pkk</span>
         </div>
-        <div class="map-controls-content" id="legendContent">
         <div class="legend-item">
           <div class="legend-color" style="background-color: blue;"></div>
           <span>Waypoint Biru = ${blueCount} Pkk</span>
@@ -619,7 +618,6 @@
         <div class="legend-item">
           <div class="legend-color" style="background-color: transparent;"></div>
           <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
-        </div>
         </div>
       `;
   }
@@ -725,15 +723,18 @@
           processFiles();
       }
 
-    const toggleLegend = document.getElementById('toggleLegend');
-    const legendControls = document.querySelector('.map-controls');
+    // Tambahkan event listener untuk toggle controls
+    const titleElement = document.querySelector('.sensus-title');
+    const controlsElement = document.querySelector('.map-controls');
     
-    // Inisialisasi state (default bisa collapsed atau expanded)
-    legendControls.classList.add('collapsed');
-    
-    toggleLegend.addEventListener('click', function() {
-      legendControls.classList.toggle('collapsed');
+    titleElement.addEventListener('click', function() {
+        controlsElement.classList.toggle('collapsed');
     });
+    
+    // Sembunyikan controls secara default di mobile
+    if (window.innerWidth <= 768) {
+        controlsElement.classList.add('collapsed');
+    }
   });
 </script>
 </body>
