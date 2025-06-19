@@ -206,10 +206,22 @@
 
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
-      if (latLngs.length < 3) return 0;
+      if (latLngs.length < 3) {
+          console.warn('Tidak cukup titik untuk menghitung luas (minimal 3 titik)');
+          return 0;
+      }
+      
       // Buat polygon sederhana dengan menghubungkan titik pertama dan terakhir
-      const closed = [...latLngs, latLngs[0]];
-      return L.GeometryUtil.geodesicArea(closed) / 10000;
+      const closedPolygon = [...latLngs, latLngs[0]];
+      
+      try {
+          const area = L.GeometryUtil.geodesicArea(closedPolygon) / 10000;
+          console.log('Berhasil menghitung luas:', area.toFixed(2), 'ha');
+          return area;
+      } catch (error) {
+          console.error('Gagal menghitung luas:', error);
+          return 0;
+      }
   }
   
   // Function to parse GPX and add to map
@@ -279,117 +291,51 @@
       else if (type === 'track') {
         console.log(`Memproses track dari ${fileName}`);
         
-        const gpxLayer = new L.GPX(gpxContent, {
-            async: true,
-            marker_options: {
-                startIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-start.png',
-                endIconUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-end.png',
-                shadowUrl: 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-shadow.png',
-                wptIconUrls: {
-                    '': 'https://cdn.rawgit.com/mpetazzoni/leaflet-gpx/v1.5.0/pin-icon-wpt.png'
-                }
-            },
-            polyline_options: {
-                color: 'red',
-                opacity: 0.75,
-                weight: 4,
-                lineCap: 'round'
-            }
-        });
-        
-        // Modifikasi pada bagian track processing:
-        gpxLayer.on('loaded', function(e) {
-            console.log(`Track berhasil dimuat: ${fileName}`);
+        try {
+            // Parse manual untuk memeriksa struktur GPX
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(gpxContent, "text/xml");
+            const trkpts = xmlDoc.getElementsByTagName('trkpt');
             
-            try {
-                let totalArea = 0;
-                let hasValidTrack = false;
-                
-                // Dapatkan semua polyline dari layer
-                const trackLines = [];
-                e.target.eachLayer(layer => {
-                    if (layer instanceof L.Polyline) {
-                        trackLines.push(layer);
-                    }
-                });
-                
-                // Proses setiap polyline
-                trackLines.forEach(line => {
-                    try {
-                        let latLngs = line.getLatLngs();
-                        
-                        // Handle nested arrays (multi-segment tracks)
-                        if (Array.isArray(latLngs[0])) {
-                            latLngs = latLngs.flat();
-                        }
-                        
-                        // Pastikan cukup titik untuk membuat garis
-                        if (latLngs.length >= 3) {
-                            // Hitung luas menggunakan buffer
-                            const segmentArea = calculateOpenTrackArea(latLngs);
-                            totalArea += segmentArea;
-                            hasValidTrack = true;
-                            console.log(`Area segment: ${segmentArea.toFixed(2)} ha`);
-                            
-                            // Visualisasi buffer area
-                            const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
-                            const lineString = turf.lineString(coordinates);
-                            const buffered = turf.buffer(lineString, 5, {units: 'meters'});
-                            
-                            L.geoJSON(buffered, {
-                                color: '#ff7800',
-                                weight: 1,
-                                fillColor: '#ff7800',
-                                fillOpacity: 0.3
-                            }).addTo(map);
-                        }
-                    } catch (error) {
-                        console.warn('Error processing track segment:', error);
-                    }
-                });
-                
-                // Update statistics - INI BAGIAN YANG DIPERBAIKI
-                legendStats.track.area = totalArea;
-                console.log('Total area calculated:', totalArea.toFixed(2), 'ha');
-                updateLegend();
-                
-                if (hasValidTrack) {
-                    map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
-                    
-                    // Add track info marker
-                    const distance = (e.target.get_distance() / 1000).toFixed(2);
-                    const elevation = e.target.get_elevation_gain().toFixed(0);
-                    const center = e.target.getBounds().getCenter();
-                    const areaHa = totalArea.toFixed(2);
-                    
-                    L.marker([center.lat, center.lng], {
-                        icon: L.divIcon({
-                            html: `<div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #ccc; box-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
-                                    <b>${fileName}</b><br>
-                                    Luas Perkiraan (buffer 5m): ${areaHa} ha<br>
-                                    Jarak: ${distance} km<br>
-                                    Elevasi naik: ${elevation} m
-                                  </div>`,
-                            className: 'track-info-label',
-                            iconAnchor: [0, 0]
-                        })
-                    }).addTo(map);
-                } else {
-                    console.warn('Track file contains no valid track data:', fileName);
-                }
-            } catch (error) {
-                console.error('Error processing track:', error);
-                legendStats.track.area = 0;
-                updateLegend();
+            if (trkpts.length === 0) {
+                console.warn(`File ${fileName} tidak memiliki titik track`);
+                return;
             }
-        });
-        
-        gpxLayer.on('error', function(e) {
-            console.error(`Gagal memuat track ${fileName}:`, e.error);
-        });
-        
-        gpxLayer.addTo(map);
-      }
+            
+            console.log(`Jumlah titik track: ${trkpts.length}`);
+            
+            // Buat polyline manual dari titik-titik track
+            const latLngs = [];
+            for (let i = 0; i < trkpts.length; i++) {
+                const trkpt = trkpts[i];
+                const lat = parseFloat(trkpt.getAttribute('lat'));
+                const lon = parseFloat(trkpt.getAttribute('lon'));
+                latLngs.push([lat, lon]);
+            }
+            
+            // Hitung luas area
+            const area = calculateOpenTrackArea(latLngs.map(ll => L.latLng(ll[0], ll[1])));
+            console.log(`Luas area: ${area.toFixed(2)} ha`);
+            
+            // Update legend
+            legendStats.track.area = area;
+            updateLegend();
+            
+            // Tambahkan ke peta
+            const polyline = L.polyline(latLngs, {
+                color: 'red',
+                weight: 4,
+                opacity: 0.75,
+                lineCap: 'round'
+            }).addTo(map);
+            
+            // Fit bounds
+            map.fitBounds(polyline.getBounds());
+            
+        } catch (error) {
+            console.error(`Gagal memproses track ${fileName}:`, error);
+        }
+    }
     } catch (error) {
       console.error(`Gagal memproses ${type} dari ${fileName}:`, error);
       throw error;
@@ -425,6 +371,8 @@
 
   // Main function to process files
   async function processFiles() {
+    console.log('Daftar file track:', trackUrls);
+    console.log('Jumlah file track:', trackUrls.length);
     const loadedFilesList = document.getElementById('loaded-files');
     const loading = document.getElementById('loading');
     let hasData = false;
