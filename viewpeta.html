@@ -129,7 +129,7 @@
   const waypointUrls = urlParams.getAll('waypoints');
   const trackUrls = urlParams.getAll('tracks');
 
-   // Fungsi untuk mendapatkan nama file
+  // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
     try {
       if (url.includes('drive.google.com')) {
@@ -359,37 +359,6 @@
       throw error;
     }
   }
-  
-  // Proses tracks
-  for (const url of trackUrls) {
-    const li = document.createElement('li');
-    const fileName = getFileName(url);
-    
-    try {
-      li.textContent = `🔄 Memuat ${fileName}...`;
-      loadedFilesList.appendChild(li);
-      
-      const gpxContent = await fetchFile(url);
-      await addGpxToMap(gpxContent, 'track', fileName);
-      
-      li.textContent = `✅ ${fileName}`;
-      li.className = 'success';
-      hasData = true;
-    } catch (error) {
-      li.textContent = `❌ ${fileName} (${error.message})`;
-      li.className = 'error';
-    }
-  }
-  
-  if (!hasData) {
-    const li = document.createElement('li');
-    li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
-    li.className = 'error';
-    loadedFilesList.appendChild(li);
-  }
-  
-  loading.style.display = 'none';
-}
 
   async function tryAlternativeDownload(url, liElement, isWaypoint) {
     try {
@@ -441,37 +410,94 @@
   }
 
   function updateLegend() {
-  const legendElement = document.querySelector('.legend');
-  
-  // Format luas area track (dalam hektar)
-  const areaHa = (legendStats.track.area / 10000).toFixed(2);
-  
-  legendElement.innerHTML = `
-    <h4>Legenda:</h4>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: blue;"></div>
-      <span>Waypoint Biru: ${legendStats.blue.count} pohon</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: green;"></div>
-      <span>Waypoint Hijau: ${legendStats.green.count} pohon</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: black;"></div>
-      <span>Waypoint Hitam: ${legendStats.black.count} pohon</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: red;"></div>
-      <span>Jalur Track: ${areaHa} ha</span>
-    </div>
-  `;
-}
+    const legendElement = document.querySelector('.legend');
+    
+    // Format luas area track (dalam hektar)
+    const areaHa = (legendStats.track.area / 10000).toFixed(2);
+    
+    legendElement.innerHTML = `
+      <h4>Legenda:</h4>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: blue;"></div>
+        <span>Waypoint Biru: ${legendStats.blue.count} pohon</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: green;"></div>
+        <span>Waypoint Hijau: ${legendStats.green.count} pohon</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: black;"></div>
+        <span>Waypoint Hitam: ${legendStats.black.count} pohon</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: red;"></div>
+        <span>Jalur Track: ${areaHa} ha</span>
+      </div>
+    `;
+  }
+
+  // Main function to process files
+  async function processFiles() {
+    const loadedFilesList = document.getElementById('loaded-files');
+    const loading = document.getElementById('loading');
+    let hasData = false;
+    
+    // Proses waypoints
+    for (const url of waypointUrls) {
+      const li = document.createElement('li');
+      const fileName = getFileName(url);
+      
+      try {
+        li.textContent = `🔄 Memuat ${fileName}...`;
+        loadedFilesList.appendChild(li);
+        
+        const gpxContent = await fetchFile(url);
+        await addGpxToMap(gpxContent, 'waypoint', fileName);
+        
+        li.textContent = `✅ ${fileName}`;
+        li.className = 'success';
+        hasData = true;
+      } catch (error) {
+        li.textContent = `❌ ${fileName} (${error.message})`;
+        li.className = 'error';
+      }
+    }
+    
+    // Proses tracks
+    for (const url of trackUrls) {
+      const li = document.createElement('li');
+      const fileName = getFileName(url);
+      
+      try {
+        li.textContent = `🔄 Memuat ${fileName}...`;
+        loadedFilesList.appendChild(li);
+        
+        const gpxContent = await fetchFile(url);
+        await addGpxToMap(gpxContent, 'track', fileName);
+        
+        li.textContent = `✅ ${fileName}`;
+        li.className = 'success';
+        hasData = true;
+      } catch (error) {
+        li.textContent = `❌ ${fileName} (${error.message})`;
+        li.className = 'error';
+      }
+    }
+    
+    if (!hasData) {
+      const li = document.createElement('li');
+      li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
+      li.className = 'error';
+      loadedFilesList.appendChild(li);
+    }
+    
+    loading.style.display = 'none';
+  }
 
   // Start processing files when page loads
   document.addEventListener('DOMContentLoaded', function() {
     processFiles();
   });
 </script>
-
 </body>
 </html>
