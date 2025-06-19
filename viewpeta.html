@@ -205,36 +205,24 @@
 
   // Function to calculate area in hectares
   function calculateArea(latLngs) {
-    if (!latLngs || latLngs.length < 3) return 0;
-  
-    // Pastikan latLngs adalah array LatLng
-    if (typeof latLngs[0].lat !== 'function') {
-      latLngs = latLngs.map(ll => L.latLng(ll.lat, ll.lng));
-    }
-  
-    // Tambahkan titik awal di akhir jika tidak tertutup
-    const first = latLngs[0];
-    const last = latLngs[latLngs.length - 1];
-    const dist = first.distanceTo(last);
-  
-    if (dist > 1) {
-      console.warn('Track belum tertutup secara alami. Titik awal ditambahkan di akhir untuk menutup track.');
-      latLngs = [...latLngs, first];
-    }
-  
-    // Gunakan rumus shoelace (versi spherical projection kasar)
+    if (latLngs.length < 3) return 0;
+    
+    // Buat polygon tertutup dengan menambahkan titik pertama di akhir
+    const closedPolygon = [...latLngs, latLngs[0]];
+    
     let total = 0;
-    for (let i = 0; i < latLngs.length - 1; i++) {
-      const p1 = latLngs[i];
-      const p2 = latLngs[i + 1];
+    const n = closedPolygon.length;
+    const radiusBumi = 6378137; // Radius bumi dalam meter
+    
+    for (let i = 0; i < n; i++) {
+      const p1 = closedPolygon[i];
+      const p2 = closedPolygon[(i + 1) % n];
       total += (p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180));
     }
-  
-    const area = Math.abs(total * 6378137 * 6378137 / (2 * 10000)); // meter² → hektar
-    return area > 0.01 ? area : 0; // abaikan area sangat kecil
+    
+    const area = Math.abs(total * radiusBumi * radiusBumi / (2 * 10000)); // Convert to hectares
+    return area;
   }
-
-
   
   // Function to parse GPX and add to map
   function addGpxToMap(gpxContent, type, fileName) {
