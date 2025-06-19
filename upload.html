@@ -1,57 +1,314 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Upload GPS ke Google Drive</title>
+  <title>GPS Data Upload</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-    form { display: flex; flex-direction: column; gap: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input[type="text"], input[type="file"], select { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { background-color: #4285f4; color: white; border: none; padding: 10px 15px; cursor: pointer; }
-    button:hover { background-color: #3367d6; }
-    #loading { display: none; margin-top: 10px; }
-    #status { margin-top: 15px; padding: 10px; border-radius: 4px; }
-    .success { background-color: #dff0d8; color: #3c763d; }
-    .error { background-color: #f2dede; color: #a94442; }
-    .error-input { border: 1px solid #a94442; }
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --success: #4caf50;
+      --error: #f44336;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 600px;
+      padding: 2rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      transition: var(--transition);
+    }
+    
+    h2 {
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+      text-align: center;
+      font-size: 1.8rem;
+    }
+    
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    label {
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    
+    select, input[type="text"], input[type="file"] {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--medium-gray);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      background-color: var(--white);
+    }
+    
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1rem;
+    }
+    
+    .file-input-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      border: 2px dashed var(--medium-gray);
+      border-radius: 8px;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .file-input-label:hover {
+      border-color: var(--primary);
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .file-input-label i {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    
+    .file-input-label span {
+      font-size: 0.9rem;
+    }
+    
+    input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .file-list {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--dark-gray);
+    }
+    
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+    }
+    
+    button {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    button:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    button:disabled {
+      background-color: var(--medium-gray);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--dark-gray);
+    }
+    
+    .spinner {
+      border: 3px solid rgba(66, 133, 244, 0.2);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #status {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    
+    .error-input {
+      border-color: var(--error) !important;
+    }
+    
+    small {
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+    }
+    
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
   </style>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-  <h2>Form Upload Waypoint & Track GPS</h2>
-  <form id="uploadForm">
-    <div>
-      <label for="kebun">Kebun:</label>
-      <select id="kebun" required>
-        <option value="">-- Pilih Kebun --</option>
-        <option value="Samsam">Samsam</option>
-        <option value="Duri">Duri</option>
-      </select>
+  <div class="container">
+    <div class="card">
+      <h2>GPS Data Upload</h2>
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="kebun">Kebun</label>
+          <select id="kebun" required>
+            <option value="">-- Pilih Kebun --</option>
+            <option value="Samsam">Samsam</option>
+            <option value="Duri">Duri</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="divisi">Divisi</label>
+          <select id="divisi" required disabled>
+            <option value="">-- Pilih Kebun terlebih dahulu --</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="blok">Blok</label>
+          <input type="text" id="blok" required pattern="[A-Z0-9]+" title="Hanya huruf besar dan angka, tanpa spasi">
+          <small>Hanya huruf besar dan angka, tanpa spasi (contoh: A1, B12, C123)</small>
+        </div>
+        
+        <div class="form-group">
+          <label>GPS Files (.gpx/.kml)</label>
+          <div class="file-input-container">
+            <label class="file-input-label" for="gpsFiles">
+              <i class="material-icons">cloud_upload</i>
+              <span>Klik untuk memilih file atau tarik file ke sini</span>
+              <small>Format yang didukung: .gpx, .kml</small>
+            </label>
+            <input type="file" id="gpsFiles" accept=".gpx,.kml" multiple required>
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <button type="submit">
+          <i class="material-icons">file_upload</i>
+          Upload Data
+        </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          Mengunggah... Harap tunggu
+        </div>
+        <div id="status"></div>
+      </form>
     </div>
-    
-    <div>
-      <label for="divisi">Divisi:</label>
-      <select id="divisi" required disabled>
-        <option value="">-- Pilih Kebun terlebih dahulu --</option>
-      </select>
-    </div>
-    
-    <div>
-      <label for="blok">Blok:</label>
-      <input type="text" id="blok" required pattern="[A-Z0-9]+" title="Hanya huruf besar dan angka, tanpa spasi">
-      <small>Hanya huruf besar dan angka, tanpa spasi (contoh: A1, B12, C123)</small>
-    </div>
-    
-    <div>
-      <label for="gpsFiles">GPS Files (.gpx/.kml):</label>
-      <input type="file" id="gpsFiles" accept=".gpx,.kml" multiple required>
-      <small>Anda bisa memilih beberapa file sekaligus (waypoint dan track)</small>
-    </div>
-    
-    <button type="submit">Upload</button>
-    <div id="loading">Uploading... Please wait.</div>
-    <div id="status"></div>
-  </form>
+  </div>
 
   <script>
     // Data divisi berdasarkan kebun
@@ -108,6 +365,26 @@
         this.classList.add("error-input");
       } else {
         this.classList.remove("error-input");
+      }
+    });
+
+    // Tampilkan daftar file yang dipilih
+    document.getElementById("gpsFiles").addEventListener("change", function() {
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = '';
+      
+      if (this.files.length > 0) {
+        Array.from(this.files).forEach(file => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+          fileItem.innerHTML = `
+            <i class="material-icons">description</i>
+            <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          `;
+          fileList.appendChild(fileItem);
+        });
+      } else {
+        fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
       }
     });
 
