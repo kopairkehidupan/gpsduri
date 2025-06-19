@@ -24,6 +24,7 @@
       border-radius: 5px;
       box-shadow: 0 0 15px rgba(0,0,0,0.2);
       max-width: 300px;
+      transition: all 0.3s ease;
     }
     .loading {
       position: absolute;
@@ -77,6 +78,13 @@
     .legend-item span {
       font-size: 14px;
       font-weight: normal;
+    }
+    .file-list.collapsed {
+      max-height: 0;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
     }
   </style>
 </head>
@@ -365,70 +373,97 @@
     `;
   }
 
-  // Main function to process files
+  // Modifikasi fungsi processFiles()
   async function processFiles() {
-    console.log('Daftar file track:', trackUrls);
-    console.log('Jumlah file track:', trackUrls.length);
-    const loadedFilesList = document.getElementById('loaded-files');
-    const loading = document.getElementById('loading');
-    let hasData = false;
-    
-    // Proses waypoints
-    for (const url of waypointUrls) {
-      const li = document.createElement('li');
-      const fileName = getFileName(url);
+      console.log('Daftar file track:', trackUrls);
+      console.log('Jumlah file track:', trackUrls.length);
+      const loadedFilesList = document.getElementById('loaded-files');
+      const loading = document.getElementById('loading');
+      let hasData = false;
       
-      try {
-        li.textContent = `🔄 Memuat ${fileName}...`;
-        loadedFilesList.appendChild(li);
+      // Proses waypoints
+      for (const url of waypointUrls) {
+        const li = document.createElement('li');
+        const fileName = getFileName(url);
         
-        const gpxContent = await fetchFile(url);
-        await addGpxToMap(gpxContent, 'waypoint', fileName);
-        
-        li.textContent = `✅ ${fileName}`;
-        li.className = 'success';
-        hasData = true;
-      } catch (error) {
-        li.textContent = `❌ ${fileName} (${error.message})`;
-        li.className = 'error';
+        try {
+          li.textContent = `🔄 Memuat ${fileName}...`;
+          loadedFilesList.appendChild(li);
+          
+          const gpxContent = await fetchFile(url);
+          await addGpxToMap(gpxContent, 'waypoint', fileName);
+          
+          li.textContent = `✅ ${fileName}`;
+          li.className = 'success';
+          hasData = true;
+        } catch (error) {
+          li.textContent = `❌ ${fileName} (${error.message})`;
+          li.className = 'error';
+        }
+        updateControlsView(); // Update tampilan setelah setiap file diproses
       }
-    }
-    
-    // Proses tracks
-    for (const url of trackUrls) {
-      const li = document.createElement('li');
-      const fileName = getFileName(url);
       
-      try {
-        li.textContent = `🔄 Memuat ${fileName}...`;
-        loadedFilesList.appendChild(li);
+      // Proses tracks
+      for (const url of trackUrls) {
+        const li = document.createElement('li');
+        const fileName = getFileName(url);
         
-        const gpxContent = await fetchFile(url);
-        await addGpxToMap(gpxContent, 'track', fileName);
-        
-        li.textContent = `✅ ${fileName}`;
-        li.className = 'success';
-        hasData = true;
-      } catch (error) {
-        li.textContent = `❌ ${fileName} (${error.message})`;
-        li.className = 'error';
+        try {
+          li.textContent = `🔄 Memuat ${fileName}...`;
+          loadedFilesList.appendChild(li);
+          
+          const gpxContent = await fetchFile(url);
+          await addGpxToMap(gpxContent, 'track', fileName);
+          
+          li.textContent = `✅ ${fileName}`;
+          li.className = 'success';
+          hasData = true;
+        } catch (error) {
+          li.textContent = `❌ ${fileName} (${error.message})`;
+          li.className = 'error';
+        }
+        updateControlsView(); // Update tampilan setelah setiap file diproses
       }
-    }
-    
-    if (!hasData) {
-      const li = document.createElement('li');
-      li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
-      li.className = 'error';
-      loadedFilesList.appendChild(li);
-    }
-    
-    loading.style.display = 'none';
+      
+      if (!hasData) {
+        const li = document.createElement('li');
+        li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
+        li.className = 'error';
+        loadedFilesList.appendChild(li);
+      }
+      
+      loading.style.display = 'none';
+      updateControlsView(); // Final update setelah semua file diproses
   }
 
-  // Start processing files when page loads
+  // Di bagian inisialisasi, tambahkan:
   document.addEventListener('DOMContentLoaded', function() {
-    processFiles();
+      // Sembunyikan loading jika tidak ada file yang akan diproses
+      if (waypointUrls.length === 0 && trackUrls.length === 0) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('file-list').innerHTML = `
+              <h4>Tidak ada file yang perlu dimuat</h4>
+          `;
+      } else {
+          processFiles();
+      }
   });
+  
+  // Fungsi untuk mengupdate tampilan kontrol
+  function updateControlsView() {
+    const fileListElement = document.getElementById('file-list');
+    const loadedFilesList = document.getElementById('loaded-files');
+    const hasErrors = Array.from(loadedFilesList.children).some(li => li.className === 'error');
+    
+    if (!hasErrors) {
+      // Jika semua file berhasil dimuat, sembunyikan daftar file
+      fileListElement.classList.add('collapsed');
+    } else {
+      // Jika ada error, tetap tampilkan daftar file
+      fileListElement.classList.remove('collapsed');
+    }
+  }
+
 </script>
   
 </body>
