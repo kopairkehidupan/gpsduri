@@ -111,6 +111,31 @@
       letter-spacing: 1px;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
     }
+
+    * Tambahkan di bagian CSS */
+    .leaflet-control-layers {
+        border-radius: 5px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        background: white;
+    }
+    
+    .leaflet-control-layers-toggle {
+        background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png');
+        width: 36px;
+        height: 36px;
+    }
+    
+    .leaflet-control-layers-expanded {
+        padding: 6px 10px 6px 6px;
+        color: #333;
+        background: white;
+    }
+    
+    .leaflet-control-layers label {
+        display: block;
+        font-size: 13px;
+        margin: 2px 0;
+    }
   </style>
 </head>
 <body>
@@ -192,11 +217,30 @@
   
   // Initialize map
   const map = L.map('map').setView([1.17, 100.99], 15);
-
-  // Add base layer
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'KPAK',
-    maxZoom: 22
+  
+  // Define base layers
+  const baseLayers = {
+      "Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'KPAK',
+          maxZoom: 22
+      }),
+      "Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 22
+      }),
+      "Topographic": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+          maxZoom: 17
+      })
+  };
+  
+  // Add default layer (Satellite)
+  baseLayers["Satellite"].addTo(map);
+  
+  // Add layer control to the map
+  L.control.layers(baseLayers, null, {
+      position: 'topright',
+      collapsed: true
   }).addTo(map);
 
   // Custom icons
