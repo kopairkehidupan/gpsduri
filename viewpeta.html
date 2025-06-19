@@ -447,13 +447,6 @@
   document.addEventListener('DOMContentLoaded', function() {
     processFiles();
   });
-
-  // Add click handler for location info
-  map.on('click', function(e) {
-    document.getElementById('location-info').innerHTML += `
-      <p><strong>Klik lokasi:</strong> ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}</p>
-    `;
-  });
 </script>
 
 </body>
