@@ -86,6 +86,13 @@
       padding: 0;
       opacity: 0;
     }
+    /* Tambahkan di bagian CSS */
+    .legend-item.total {
+      font-weight: bold;
+      margin-top: 10px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -351,6 +358,8 @@
     
     // Format luas area track (dalam hektar)
     const areaHa = legendStats.track.area.toFixed(2);
+    // Hitung total pokok (hijau + biru)
+    const totalPokok = legendStats.green.count + legendStats.blue.count;
     
     legendElement.innerHTML = `
       <h4>Legenda:</h4>
@@ -365,6 +374,10 @@
       <div class="legend-item">
         <div class="legend-color" style="background-color: black;"></div>
         <span>Waypoint Hitam: ${legendStats.black.count} Pkk</span>
+      </div>
+      <div class="legend-item total">
+        <div class="legend-color" style="background-color: transparent;"></div>
+        <span>Jumlah Pokok: ${totalPokok} Pkk</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: red;"></div>
