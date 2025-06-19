@@ -74,6 +74,10 @@
       margin-right: 10px;
       border: 1px solid #333;
     }
+    .legend-item span {
+      font-size: 14px;
+      font-weight: normal;
+    }
   </style>
 </head>
 <body>
@@ -95,12 +99,12 @@
   <div class="legend">
     <h4>Legenda:</h4>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: blue;"></div>
-      <span>Waypoint Biru</span>
-    </div>
-    <div class="legend-item">
       <div class="legend-color" style="background-color: green;"></div>
       <span>Waypoint Hijau</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: blue;"></div>
+      <span>Waypoint Biru</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: black;"></div>
@@ -212,6 +216,14 @@
     }
   }
 
+  // Variabel global untuk menyimpan statistik
+  const legendStats = {
+    blue: { count: 0 },
+    green: { count: 0 },
+    black: { count: 0 },
+    track: { area: 0 }
+  };
+  
   // Function to parse GPX and add to map
   function addGpxToMap(gpxContent, type, fileName) {
     // Validasi awal
@@ -247,13 +259,21 @@
           
           const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
           const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-
+          
+          // Hitung waypoint berdasarkan warna
+          if (sym.toLowerCase().includes('green')) {
+            legendStats.green.count++;
+          } else if (sym.toLowerCase().includes('black')) {
+            legendStats.black.count++;
+          } else {
+            legendStats.blue.count++; // Default blue
+          }
+  
           const marker = L.marker([lat, lon], {
             icon: getWaypointIcon(sym)
           }).addTo(map);
-
+  
           marker.bindPopup(`
-            <b>File:</b> ${fileName}<br>
             <b>Waypoint:</b> ${name}<br>
             <b>Simbol:</b> ${sym}<br>
             <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
@@ -264,11 +284,13 @@
         if (bounds.length > 0) {
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
         }
+        
+        // Update legend setelah memproses waypoints
+        updateLegend();
       } 
       else if (type === 'track') {
         console.log(`Memproses track dari ${fileName}`);
         
-        // Di bagian inisialisasi GPX layer
         const gpxLayer = new L.GPX(gpxContent, {
           async: true,
           marker_options: {
@@ -289,6 +311,14 @@
         
         gpxLayer.on('loaded', function(e) {
           console.log(`Track berhasil dimuat: ${fileName}`);
+          
+          // Hitung luas area track (dalam meter persegi)
+          const area = L.GeometryUtil.geodesicArea(e.target.getLatLngs()[0]);
+          legendStats.track.area += area;
+          
+          // Konversi ke hektar (1 ha = 10,000 m²)
+          const areaHa = (area / 10000).toFixed(2);
+          
           map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
           
           // Add info about the track
@@ -298,20 +328,24 @@
           const infoDiv = document.createElement('div');
           infoDiv.innerHTML = `
             <b>Jarak:</b> ${distance} km<br>
-            <b>Elevasi:</b> ${elevation} m
+            <b>Elevasi:</b> ${elevation} m<br>
+            <b>Luas Area:</b> ${areaHa} ha
           `;
           
-          e.target.getBounds().getCenter();
           const center = e.target.getBounds().getCenter();
           const marker = L.marker([center.lat, center.lng], {
             icon: L.divIcon({
               html: `<div style="background: white; padding: 5px; border-radius: 3px; border: 1px solid #ccc;">
                       <b>${fileName}</b><br>
-                      ${distance} km, ${elevation} m elevasi
+                      ${distance} km, ${elevation} m elevasi<br>
+                      ${areaHa} ha
                     </div>`,
               className: 'track-info-label'
             })
           }).addTo(map);
+          
+          // Update legend setelah memproses track
+          updateLegend();
         });
         
         gpxLayer.on('error', function(e) {
@@ -323,43 +357,6 @@
     } catch (error) {
       console.error(`Gagal memproses ${type} dari ${fileName}:`, error);
       throw error;
-    }
-  }
-
-  // Modifikasi processFiles untuk menangani error lebih baik
-  async function processFiles() {
-  const loading = document.getElementById('loading');
-  const loadedFilesList = document.getElementById('loaded-files');
-  
-  loadedFilesList.innerHTML = '';
-  
-  const allUrls = [...waypointUrls, ...trackUrls];
-  if (allUrls.length === 0) {
-    loadedFilesList.innerHTML = '<li class="error">Tidak ada URL file yang diberikan</li>';
-    loading.style.display = 'none';
-    return;
-  }
-
-  let hasData = false;
-  
-  // Proses waypoints
-  for (const url of waypointUrls) {
-    const li = document.createElement('li');
-    const fileName = getFileName(url);
-    
-    try {
-      li.textContent = `🔄 Memuat ${fileName}...`;
-      loadedFilesList.appendChild(li);
-      
-      const gpxContent = await fetchFile(url);
-      await addGpxToMap(gpxContent, 'waypoint', fileName);
-      
-      li.textContent = `✅ ${fileName}`;
-      li.className = 'success';
-      hasData = true;
-    } catch (error) {
-      li.textContent = `❌ ${fileName} (${error.message})`;
-      li.className = 'error';
     }
   }
   
@@ -430,17 +427,44 @@
   }
 
   async function fetchWithRetry(url, retries = 3, delay = 1000) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
-  } catch (error) {
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(url, retries - 1, delay * 2);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (error) {
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return fetchWithRetry(url, retries - 1, delay * 2);
+      }
+      throw error;
     }
-    throw error;
   }
+
+  function updateLegend() {
+  const legendElement = document.querySelector('.legend');
+  
+  // Format luas area track (dalam hektar)
+  const areaHa = (legendStats.track.area / 10000).toFixed(2);
+  
+  legendElement.innerHTML = `
+    <h4>Legenda:</h4>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: blue;"></div>
+      <span>Waypoint Biru: ${legendStats.blue.count} pohon</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: green;"></div>
+      <span>Waypoint Hijau: ${legendStats.green.count} pohon</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: black;"></div>
+      <span>Waypoint Hitam: ${legendStats.black.count} pohon</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: red;"></div>
+      <span>Jalur Track: ${areaHa} ha</span>
+    </div>
+  `;
 }
 
   // Start processing files when page loads
