@@ -211,17 +211,15 @@
           return 0;
       }
       
-      // Buat polygon sederhana dengan menghubungkan titik pertama dan terakhir
-      const closedPolygon = [...latLngs, latLngs[0]];
+      // Convert to GeoJSON polygon format (close the ring)
+      const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
+      coordinates.push(coordinates[0]); // Close the polygon
       
-      try {
-          const area = L.GeometryUtil.geodesicArea(closedPolygon) / 10000;
-          console.log('Berhasil menghitung luas:', area.toFixed(2), 'ha');
-          return area;
-      } catch (error) {
-          console.error('Gagal menghitung luas:', error);
-          return 0;
-      }
+      const polygon = turf.polygon([coordinates]);
+      const area = turf.area(polygon) / 10000; // Convert to hectares
+      
+      console.log('Berhasil menghitung luas:', area.toFixed(2), 'ha');
+      return area;
   }
   
   // Function to parse GPX and add to map
