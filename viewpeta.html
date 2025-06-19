@@ -1,31 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sensus Pokok Kebun Duri</title>
+  <title>Sensus Pokok Kebun</title>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
+      overflow: hidden;
     }
+    
     #map {
       height: 100%;
       width: 100%;
     }
+    
+    /* Kontrol Peta Responsif */
     .map-controls {
       position: absolute;
       top: 10px;
       right: 10px;
       z-index: 1000;
       background: white;
-      padding: 15px;
+      padding: 10px;
       border-radius: 5px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
       max-width: 300px;
+      width: 90%;
       transition: all 0.3s ease;
     }
+    
     .loading {
       position: absolute;
       top: 50%;
@@ -33,52 +40,66 @@
       transform: translate(-50%, -50%);
       z-index: 1000;
       background: white;
-      padding: 20px;
+      padding: 15px;
       border-radius: 5px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
       text-align: center;
+      width: 80%;
+      max-width: 300px;
     }
+    
     .file-list {
-      max-height: 300px;
+      max-height: 200px;
       overflow-y: auto;
-      margin-top: 10px;
+      margin-top: 8px;
     }
+    
     .file-list ul {
       list-style-type: none;
       padding: 0;
       margin: 0;
     }
+    
     .file-list li {
-      padding: 5px 0;
+      padding: 4px 0;
       border-bottom: 1px solid #eee;
+      font-size: 13px;
     }
+    
     .file-list li.success {
       color: green;
     }
+    
     .file-list li.error {
       color: red;
     }
+    
     .legend {
       background: white;
-      padding: 10px;
+      padding: 8px;
       border-radius: 5px;
-      margin-top: 10px;
+      margin-top: 8px;
+      font-size: 13px;
     }
+    
     .legend-item {
       display: flex;
       align-items: center;
-      margin: 5px 0;
+      margin: 4px 0;
     }
+    
     .legend-color {
-      width: 20px;
-      height: 20px;
-      margin-right: 10px;
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
       border: 1px solid #333;
     }
+    
     .legend-item span {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: normal;
     }
+    
     .file-list.collapsed {
       max-height: 0;
       overflow: hidden;
@@ -86,66 +107,105 @@
       padding: 0;
       opacity: 0;
     }
-    /* Tambahkan di bagian CSS */
-    .legend-item.total {
-      font-weight: bold;
-      margin-top: 10px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }
+    
+    /* Judul Sensus */
     .sensus-title {
       text-align: center;
-      margin-bottom: 15px;
-      padding: 12px;
+      margin-bottom: 10px;
+      padding: 8px;
       background: linear-gradient(135deg, #27ae60, #2ecc71);
       border-radius: 5px;
       color: white;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .sensus-title h2 {
       margin: 0;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px;
     }
-
-    /* Hapus tanda * yang salah sebelum komentar CSS */
-    /* Tambahkan di bagian CSS */
+    
+    /* Layer Control */
     .leaflet-control-layers {
-        border-radius: 5px;
-        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
-        background: white;
+      border-radius: 5px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+      background: white;
+      font-size: 13px;
     }
     
     .leaflet-control-layers-toggle {
-        background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png');
-        width: 36px;
-        height: 36px;
+      background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png');
+      width: 30px;
+      height: 30px;
     }
     
     .leaflet-control-layers-expanded {
-        padding: 6px 10px 6px 6px;
-        color: #333;
-        background: white;
+      padding: 5px 8px 5px 5px;
+      color: #333;
+      background: white;
     }
     
     .leaflet-control-layers label {
-        display: block;
-        font-size: 13px;
-        margin: 2px 0;
+      display: block;
+      font-size: 13px;
+      margin: 2px 0;
     }
-
-    /* Tambahkan z-index untuk memastikan layer control di atas elemen lain */
-    .leaflet-bottom {
-          z-index: 999; /* Lebih rendah dari map-controls */
+    
+    /* Responsive untuk perangkat mobile */
+    @media (max-width: 768px) {
+      .map-controls {
+        max-width: 280px;
+        padding: 8px;
       }
-    @media (max-height: 600px) {
-        .leaflet-control-layers {
-            bottom: 40px !important; /* Beri jarak dari bawah */
-        }
+      
+      .sensus-title h2 {
+        font-size: 14px;
+      }
+      
+      #blok-title, #location-info p {
+        font-size: 13px;
+        margin: 3px 0;
+      }
+      
+      .file-list h4, .legend h4 {
+        font-size: 14px;
+        margin: 5px 0;
+      }
+      
+      .leaflet-control-layers {
+        font-size: 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .map-controls {
+        max-width: 250px;
+        right: 5px;
+        top: 5px;
+      }
+      
+      .sensus-title {
+        padding: 6px;
+      }
+      
+      .sensus-title h2 {
+        font-size: 13px;
+      }
+      
+      .legend-item span {
+        font-size: 12px;
+      }
+    }
+    
+    /* Posisi layer control */
+    .leaflet-bottom {
+      z-index: 999;
+    }
+    
+    .leaflet-control-container {
+      z-index: 999;
     }
   </style>
 </head>
@@ -159,7 +219,6 @@
 <div id="map"></div>
 
 <div class="map-controls">
-  <!-- Tambahkan div baru untuk judul -->
   <div class="sensus-title">
     <h2>HASIL SENSUS POKOK</h2>
   </div>
@@ -191,7 +250,6 @@
   </div>
 </div>
 
-<!-- Load scripts in correct order -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
 <script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
@@ -226,7 +284,7 @@
     <p><strong>Divisi:</strong> ${divisi || '-'}</p>
   `;
   
-  // Initialize map
+  // Initialize map with responsive view
   const map = L.map('map').setView([1.17, 100.99], 15);
   
   // Define base layers
@@ -236,11 +294,11 @@
           maxZoom: 22
       }),
       "Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: 'KPAK',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 22
       }),
       "Topographic": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-          attribution: 'KPAK',
+          attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 17
       })
   };
@@ -248,24 +306,28 @@
   // Add default layer (Satellite)
   baseLayers["Satellite"].addTo(map);
   
-  // Add layer control to the map
+  // Add responsive layer control
   const layerControl = L.control.layers(baseLayers, null, {
       position: 'bottomright',
       collapsed: true
   }).addTo(map);
 
-  // Pastikan layer control muncul di atas elemen lain
-  setTimeout(() => {
-      layerControl.getContainer().style.zIndex = '1001';
-  }, 100);
-
-  // Pastikan tidak overlap dengan elemen lain
-  map.whenReady(function() {
-      const lc = document.querySelector('.leaflet-control-layers');
-      if (lc) {
-          lc.style.marginBottom = '20px'; // Beri jarak dari bawah
-      }
-  });
+  // Adjust controls for mobile
+  function adjustForMobile() {
+    if (window.innerWidth <= 768) {
+      // Sesuaikan ukuran font dan padding untuk mobile
+      document.querySelector('.map-controls').style.maxWidth = '280px';
+      document.querySelector('.sensus-title h2').style.fontSize = '14px';
+      
+      // Pindahkan layer control jika perlu
+      layerControl.setPosition('bottomleft');
+    } else {
+      // Kembalikan ke ukuran desktop
+      document.querySelector('.map-controls').style.maxWidth = '300px';
+      document.querySelector('.sensus-title h2').style.fontSize = '16px';
+      layerControl.setPosition('bottomright');
+    }
+  }
 
   // Custom icons
   function getWaypointIcon(symbol) {
@@ -557,19 +619,6 @@
       updateControlsView(); // Final update setelah semua file diproses
   }
 
-  // Di bagian inisialisasi, tambahkan:
-  document.addEventListener('DOMContentLoaded', function() {
-      // Sembunyikan loading jika tidak ada file yang akan diproses
-      if (waypointUrls.length === 0 && trackUrls.length === 0) {
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('file-list').innerHTML = `
-              <h4>Tidak ada file yang perlu dimuat</h4>
-          `;
-      } else {
-          processFiles();
-      }
-  });
-  
   // Fungsi untuk mengupdate tampilan kontrol
   function updateControlsView() {
     const fileListElement = document.getElementById('file-list');
@@ -585,7 +634,23 @@
     }
   }
 
+  // Event listener untuk resize window
+  window.addEventListener('resize', adjustForMobile);
+
+  // Di bagian inisialisasi, tambahkan:
+  document.addEventListener('DOMContentLoaded', function() {
+      // Sembunyikan loading jika tidak ada file yang akan diproses
+      if (waypointUrls.length === 0 && trackUrls.length === 0) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('file-list').innerHTML = `
+              <h4>Tidak ada file yang perlu dimuat</h4>
+          `;
+      } else {
+          // Sesuaikan tampilan awal berdasarkan ukuran layar
+          adjustForMobile();
+          processFiles();
+      }
+  });
 </script>
-  
 </body>
 </html>
