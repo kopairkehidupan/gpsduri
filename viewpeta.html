@@ -200,12 +200,15 @@
       const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
       if (!fileId) throw new Error('URL Google Drive tidak valid');
   
-      // Gunakan endpoint Apps Script dengan cache-buster
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}&t=${Date.now()}`;
+      // Gunakan endpoint Apps Script
+      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
       
       const response = await fetch(scriptUrl, {
-        mode: 'cors', // Explicitly request CORS
-        redirect: 'follow'
+        credentials: 'omit', // Tidak mengirim cookies
+        redirect: 'follow',
+        headers: {
+          'Content-Type': 'text/plain'
+        }
       });
       
       if (!response.ok) {
@@ -338,13 +341,12 @@
     }
   
     let hasData = false;
-    let retryCount = 0;
-    const maxRetries = 2;
     
     // Proses semua file
     for (const url of allUrls) {
       const li = document.createElement('li');
       const fileName = getFileName(url);
+      const isWaypoint = waypointUrls.includes(url);
       
       try {
         li.textContent = `🔄 Memuat ${fileName}...`;
@@ -361,12 +363,7 @@
         li.className = 'error';
         
         // Coba alternatif jika gagal
-        await tryAlternativeDownload(url, li);
-      }
-      
-      if (!success) {
-        li.textContent = `❌ ${fileName} (${lastError.message})`;
-        li.className = 'error';
+        await tryAlternativeDownload(url, li, isWaypoint);
       }
     }
     
@@ -380,47 +377,44 @@
     loading.style.display = 'none';
   }
 
-  async function tryAlternativeDownload(url, liElement) {
-  try {
-    const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
-    if (!fileId) return;
-    
-    // Coba metode alternatif
-    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const proxyUrls = [
-      `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl)}`
-    ];
-    
-    for (const proxyUrl of proxyUrls) {
-      try {
-        const response = await fetch(proxyUrl);
-        if (response.ok) {
-          const data = await response.json(); // Untuk allorigins
-          const content = data.contents || await response.text();
-          liElement.textContent = `✅ ${getFileName(url)} (via proxy)`;
-          liElement.className = 'success';
-          return content;
+  async function tryAlternativeDownload(url, liElement, isWaypoint) {
+    try {
+      const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
+      if (!fileId) return null;
+      
+      // Coba metode alternatif
+      const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      const proxyUrls = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(directUrl)}`,
+        `https://thingproxy.freeboard.io/fetch/${directUrl}`
+      ];
+      
+      for (const proxyUrl of proxyUrls) {
+        try {
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            const content = await response.text();
+            if (content) {
+              await addGpxToMap(content, isWaypoint ? 'waypoint' : 'track', getFileName(url));
+              liElement.textContent = `✅ ${getFileName(url)} (via proxy)`;
+              liElement.className = 'success';
+              return content;
+            }
+          }
+        } catch (e) {
+          console.log(`Gagal dengan proxy ${proxyUrl}`, e);
         }
-      } catch (e) {
-        console.log(`Gagal dengan proxy ${proxyUrl}`, e);
       }
+    } catch (error) {
+      console.error('Alternative download failed:', error);
     }
-  } catch (error) {
-    console.error('Alternative download failed:', error);
+    return null;
   }
-  return null;
-}
 
   // Start processing files when page loads
   document.addEventListener('DOMContentLoaded', function() {
-    // Meminta izin ke CORS proxy (hanya untuk cors-anywhere.herokuapp.com)
-    fetch('https://cors-anywhere.herokuapp.com/corsdemo')
-      .then(() => processFiles())
-      .catch(() => {
-        // Jika gagal, tetap coba proses file (beberapa proxy tidak membutuhkan izin)
-        processFiles();
-      });
+    processFiles();
   });
 
   // Add click handler for location info
