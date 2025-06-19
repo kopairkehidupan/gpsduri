@@ -309,8 +309,15 @@
           console.log(`Track berhasil dimuat: ${fileName}`);
           
           try {
+            // Get the first polyline from the GPX layer
+            const polyline = e.target.getLayers().find(layer => layer instanceof L.Polyline);
+            
+            if (!polyline) {
+              throw new Error('No track polyline found in GPX');
+            }
+            
             // Hitung luas area track (dalam hektar)
-            const latLngs = e.target.getLayers()[0].getLatLngs();
+            const latLngs = polyline.getLatLngs();
             const area = calculateArea(latLngs);
             legendStats.track.area += area;
             const areaHa = (area).toFixed(2);
