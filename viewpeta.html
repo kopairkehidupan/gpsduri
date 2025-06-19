@@ -207,7 +207,8 @@
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) return 0;
-      
+          console.log('Jumlah titik track:', latLngs.length);
+          console.log('Koordinat pertama:', latLngs[0]);
       try {
           // Konversi ke format GeoJSON LineString
           const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
