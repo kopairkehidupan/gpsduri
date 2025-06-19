@@ -207,25 +207,9 @@
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) return 0;
-      
-      try {
-          // Konversi ke format GeoJSON LineString
-          const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
-          const lineString = turf.lineString(coordinates);
-          
-          // Buat buffer di sekitar garis track (5 meter di setiap sisi)
-          const buffered = turf.buffer(lineString, 5, {units: 'meters'});
-          
-          // Hitung luas area buffer (dalam meter persegi)
-          const areaM2 = turf.area(buffered);
-          
-          // Konversi ke hektar (1 ha = 10,000 m²)
-          return areaM2 / 10000;
-          
-      } catch (error) {
-          console.error('Error calculating buffer area:', error);
-          return 0;
-      }
+      // Buat polygon sederhana dengan menghubungkan titik pertama dan terakhir
+      const closed = [...latLngs, latLngs[0]];
+      return L.GeometryUtil.geodesicArea(closed) / 10000;
   }
   
   // Function to parse GPX and add to map
