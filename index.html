@@ -313,9 +313,18 @@
         background-color: #ea4335;
         margin-left: 0.5rem;
       }
-      
       .btn-danger:hover {
         background-color: #d33426;
+      }
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }   
+      @media (max-width: 600px) {
+        .actions {
+          flex-direction: column;
+        }
       }
     }
   </style>
@@ -404,14 +413,15 @@
 
         Object.values(dataByBlok).forEach(entry => {
           const tr = document.createElement("tr");
-
+          const key = `${entry.kebun}|${entry.divisi}|${entry.blok}`; // Definisikan key di sini
+        
           // Kebun, Divisi, Blok columns
           [entry.kebun, entry.divisi, entry.blok].forEach(text => {
             const td = document.createElement("td");
             td.textContent = text;
             tr.appendChild(td);
           });
-
+        
           // Data Available column
           const tdData = document.createElement("td");
           if (entry.hasWaypoints) {
@@ -428,34 +438,42 @@
             tdData.appendChild(badge);
           }
           tr.appendChild(tdData);
-
+        
           // Action column
           const tdAction = document.createElement("td");
-          const btn = document.createElement("button");
-          btn.className = "btn btn-view";
-          btn.innerHTML = `
-            <button class="btn btn-view">
-              <i class="material-icons" style="font-size: 16px;">map</i>
-              <span>Lihat Peta</span>
-            </button>
-            <button class="btn btn-danger btn-delete" data-key="${key}">
-              <i class="material-icons" style="font-size: 16px;">delete</i>
-              <span>Hapus</span>
-            </button>
+          tdAction.className = "actions"; // Tambahkan class untuk styling
+          
+          // Tombol Lihat Peta
+          const viewBtn = document.createElement("button");
+          viewBtn.className = "btn btn-view";
+          viewBtn.innerHTML = `
+            <i class="material-icons" style="font-size: 16px;">map</i>
+            <span>Lihat Peta</span>
           `;
-          btn.onclick = () => {
+          viewBtn.onclick = () => {
             const params = new URLSearchParams();
             params.append("blok", entry.blok);
             params.append("kebun", entry.kebun);
             params.append("divisi", entry.divisi);
             entry.waypoints.forEach(url => params.append("waypoints", url));
             entry.tracks.forEach(url => params.append("tracks", url));
-
             window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
           };
-          tdAction.appendChild(btn);
+          
+          // Tombol Hapus
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn btn-danger btn-delete";
+          deleteBtn.setAttribute("data-key", key);
+          deleteBtn.innerHTML = `
+            <i class="material-icons" style="font-size: 16px;">delete</i>
+            <span>Hapus</span>
+          `;
+          
+          // Tambahkan kedua tombol ke tdAction
+          tdAction.appendChild(viewBtn);
+          tdAction.appendChild(deleteBtn);
+          
           tr.appendChild(tdAction);
-
           tbody.appendChild(tr);
         });
       })
