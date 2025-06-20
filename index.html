@@ -638,7 +638,7 @@
         // Karena mode no-cors, kita tidak bisa membaca response langsung
         // Jadi kita asumsikan request berhasil dan hapus row
         row.remove();
-        alert('Data berhasil dihapus!');
+       alertMessage.textContent = `Data berhasil dihapus!`;;
         
         // Jika ingin memastikan, bisa reload halaman
         // window.location.reload();
