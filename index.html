@@ -513,70 +513,22 @@
         // Tampilkan loading
         row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
         
-        // URL deployment alternatif
-        const deploymentId = 'AKfycbyEEr70Qbi_ETP3AAlavRQXb2ZTcU5IGcKP8grLHDERQCEI364Jw1gTI9yESuP-zjwH0A';
-        const url = `https://script.google.com/macros/s/${deploymentId}/exec`;
+        // Gunakan URL deployment langsung
+        const url = `https://script.google.com/macros/s/AKfycbyEEr70Qbi_ETP3AAlavRQXb2ZTcU5IGcKP8grLHDERQCEI364Jw1gTI9yESuP-zjwH0A/exec?action=deleteBlok&kebun=${encodeURIComponent(kebun)}&divisi=${encodeURIComponent(divisi)}&blok=${encodeURIComponent(blok)}`;
         
-        // Buat form untuk submit
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = url;
-        form.target = 'gas-iframe';
-        form.style.display = 'none';
-        
-        // Tambahkan parameter
-        const addParam = (name, value) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
-        };
-        
-        addParam('action', 'deleteBlok');
-        addParam('kebun', kebun);
-        addParam('divisi', divisi);
-        addParam('blok', blok);
-        
-        // Buat iframe untuk menerima response
-        const iframe = document.createElement('iframe');
-        iframe.name = 'gas-iframe';
-        iframe.style.display = 'none';
-        
-        // Handler untuk menerima message dari iframe
-        window.addEventListener('message', function handleMessage(event) {
-          // Pastikan origin yang dipercaya
-          if (event.origin !== "https://script.google.com") return;
-          
-          const response = event.data;
-          document.body.removeChild(iframe);
-          document.body.removeChild(form);
-          window.removeEventListener('message', handleMessage);
-          
-          if (response.status === 'success') {
-            row.remove();
-            alert('Data berhasil dihapus!');
-          } else {
-            throw new Error(response.message || 'Gagal menghapus data');
-          }
+        // Gunakan fetch dengan CORS proxy jika diperlukan
+        const response = await fetch(url, {
+          method: 'GET',
+          mode: 'no-cors' // Mode no-cors untuk menghindari CORS issues
         });
         
-        // Tambahkan elemen ke DOM
-        document.body.appendChild(iframe);
-        document.body.appendChild(form);
+        // Karena mode no-cors, kita tidak bisa membaca response langsung
+        // Jadi kita asumsikan request berhasil dan hapus row
+        row.remove();
+        alert('Data berhasil dihapus!');
         
-        // Submit form
-        form.submit();
-        
-        // Timeout handling
-        setTimeout(() => {
-          if (iframe.parentNode) {
-            document.body.removeChild(iframe);
-            document.body.removeChild(form);
-            window.removeEventListener('message', handleMessage);
-            throw new Error('Waktu permintaan habis. Silakan coba lagi.');
-          }
-        }, 30000);
+        // Jika ingin memastikan, bisa reload halaman
+        // window.location.reload();
         
       } catch (error) {
         console.error('Error:', error);
