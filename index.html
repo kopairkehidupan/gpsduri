@@ -327,6 +327,62 @@
         }
       }
     }
+    /* Custom Alert Styles */
+    .alert-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+    
+    .alert-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .alert-box {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      width: 90%;
+      max-width: 400px;
+      overflow: hidden;
+      transform: translateY(20px);
+      transition: var(--transition);
+    }
+    
+    .alert-overlay.active .alert-box {
+      transform: translateY(0);
+    }
+    
+    .alert-header {
+      padding: 1rem;
+      background-color: var(--primary);
+      color: var(--white);
+      font-weight: 500;
+    }
+    
+    .alert-body {
+      padding: 1.5rem;
+      color: var(--dark-gray);
+    }
+    
+    .alert-footer {
+      padding: 1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.8rem;
+      border-top: 1px solid var(--medium-gray);
+    }
   </style>
 </head>
 <body>
@@ -357,6 +413,23 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert -->
+  <div class="alert-overlay" id="confirmAlert">
+    <div class="alert-box">
+      <div class="alert-header">
+        <i class="material-icons" style="vertical-align: middle;">warning</i>
+        <span style="margin-left: 0.5rem;">Konfirmasi Penghapusan</span>
+      </div>
+      <div class="alert-body" id="alertMessage">
+        Apakah Anda yakin ingin menghapus data ini?
+      </div>
+      <div class="alert-footer">
+        <button class="btn btn-danger" id="confirmDelete">Hapus</button>
+        <button class="btn" id="cancelDelete">Batal</button>
       </div>
     </div>
   </div>
@@ -494,15 +567,55 @@
 
     // Tambahkan fungsi ini setelah fetch data
     function setupDeleteButtons() {
+      const confirmAlert = document.getElementById('confirmAlert');
+      const alertMessage = document.getElementById('alertMessage');
+      const confirmDeleteBtn = document.getElementById('confirmDelete');
+      const cancelDeleteBtn = document.getElementById('cancelDelete');
+      
+      let currentKey = null;
+      let currentRow = null;
+      
       document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', function() {
           const key = this.getAttribute('data-key');
           const [kebun, divisi, blok] = key.split('|');
           
-          if (confirm(`Apakah Anda yakin ingin menghapus semua data untuk Blok ${blok}, Divisi ${divisi}, Kebun ${kebun}?`)) {
-            deleteBlokData(kebun, divisi, blok, key);
-          }
+          currentKey = key;
+          currentRow = this.closest('tr');
+          
+          // Set pesan alert
+          alertMessage.textContent = `Apakah Anda yakin ingin menghapus semua data untuk Blok ${blok}, Divisi ${divisi}, Kebun ${kebun}?`;
+          
+          // Tampilkan alert
+          confirmAlert.classList.add('active');
         });
+      });
+      
+      // Handle tombol Hapus
+      confirmDeleteBtn.addEventListener('click', () => {
+        confirmAlert.classList.remove('active');
+        if (currentKey) {
+          const [kebun, divisi, blok] = currentKey.split('|');
+          deleteBlokData(kebun, divisi, blok, currentKey);
+        }
+        currentKey = null;
+        currentRow = null;
+      });
+      
+      // Handle tombol Batal
+      cancelDeleteBtn.addEventListener('click', () => {
+        confirmAlert.classList.remove('active');
+        currentKey = null;
+        currentRow = null;
+      });
+      
+      // Tutup alert ketika klik di luar area alert
+      confirmAlert.addEventListener('click', (e) => {
+        if (e.target === confirmAlert) {
+          confirmAlert.classList.remove('active');
+          currentKey = null;
+          currentRow = null;
+        }
       });
     }
     
