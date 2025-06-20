@@ -309,6 +309,14 @@
         justify-content: flex-end;
         width: auto;
       }
+      .btn-danger {
+        background-color: #ea4335;
+        margin-left: 0.5rem;
+      }
+      
+      .btn-danger:hover {
+        background-color: #d33426;
+      }
     }
   </style>
 </head>
@@ -426,8 +434,13 @@
           const btn = document.createElement("button");
           btn.className = "btn btn-view";
           btn.innerHTML = `
-            <i class="material-icons" style="font-size: 16px;">map</i>
-            <span>Lihat Peta</span>
+            <button class="btn btn-view">
+              <i class="material-icons" style="font-size: 16px;">map</i>
+              <span>Lihat Peta</span>
+            </button>
+            <button class="btn btn-danger btn-delete" data-key="${key}">
+              <i class="material-icons" style="font-size: 16px;">delete</i>
+              <span>Hapus</span>
           `;
           btn.onclick = () => {
             const params = new URLSearchParams();
@@ -457,6 +470,50 @@
           </tr>
         `;
       });
+
+    // Tambahkan fungsi ini setelah fetch data
+    function setupDeleteButtons() {
+      document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const key = this.getAttribute('data-key');
+          const [kebun, divisi, blok] = key.split('|');
+          
+          if (confirm(`Apakah Anda yakin ingin menghapus semua data untuk Blok ${blok}, Divisi ${divisi}, Kebun ${kebun}?`)) {
+            deleteBlokData(kebun, divisi, blok, key);
+          }
+        });
+      });
+    }
+    
+    async function deleteBlokData(kebun, divisi, blok, key) {
+      try {
+        // Tampilkan loading
+        const row = document.querySelector(`.btn-delete[data-key="${key}"]`).closest('tr');
+        row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
+        
+        // Panggil Apps Script untuk menghapus data
+        const response = await fetch(`https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=deleteBlok&kebun=${encodeURIComponent(kebun)}&divisi=${encodeURIComponent(divisi)}&blok=${encodeURIComponent(blok)}`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          // Hapus row dari tabel
+          row.remove();
+          alert('Data berhasil dihapus!');
+        } else {
+          throw new Error(result.message || 'Gagal menghapus data');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        row.innerHTML = `<td colspan="5" style="text-align: center; color: var(--dark-gray);">
+          <i class="material-icons" style="color: #ea4335;">error</i>
+          <p>Gagal menghapus data: ${error.message}</p>
+          <button onclick="window.location.reload()">Coba Lagi</button>
+        </td>`;
+      }
+    }
+    
+    // Panggil setupDeleteButtons setelah data dimuat
+    setupDeleteButtons();
   </script>
 </body>
 </html>
