@@ -507,54 +507,75 @@
     }
     
     async function deleteBlokData(kebun, divisi, blok, key) {
-    const row = document.querySelector(`.btn-delete[data-key="${key}"]`).closest('tr');
-    
-    try {
-      // Tampilkan loading
-      row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
+      const row = document.querySelector(`.btn-delete[data-key="${key}"]`).closest('tr');
       
-      // Panggil Apps Script untuk menghapus data
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=deleteBlok&kebun=${encodeURIComponent(kebun)}&divisi=${encodeURIComponent(divisi)}&blok=${encodeURIComponent(blok)}`;
-      
-      // Gunakan mode 'cors' dan credentials 'include'
-      const response = await fetch(scriptUrl, {
-        mode: 'cors',
-        credentials: 'include',
-        redirect: 'follow'
-      });
-      
-      // Handle redirect manually if needed
-      if (response.redirected) {
-        const finalUrl = response.url;
-        const finalResponse = await fetch(finalUrl, {
-          mode: 'cors',
-          credentials: 'include'
+      try {
+        // Tampilkan loading
+        row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
+        
+        // Gunakan pendekatan JSONP untuk menghindari CORS
+        await jsonpRequest({
+          url: `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`,
+          params: {
+            action: 'deleteBlok',
+            kebun: kebun,
+            divisi: divisi,
+            blok: blok
+          },
+          callback: (response) => {
+            if (response.status === 'success') {
+              row.remove();
+              alert('Data berhasil dihapus!');
+            } else {
+              throw new Error(response.message || 'Gagal menghapus data');
+            }
+          }
         });
-        const result = await finalResponse.json();
-        handleDeleteResult(result, row);
-      } else {
-        const result = await response.json();
-        handleDeleteResult(result, row);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        row.innerHTML = `<td colspan="5" style="text-align: center; color: var(--dark-gray);">
+          <i class="material-icons" style="color: #ea4335;">error</i>
+          <p>Gagal menghapus data: ${error.message}</p>
+          <button onclick="window.location.reload()">Coba Lagi</button>
+        </td>`;
       }
-    } catch (error) {
-      console.error('Error:', error);
-      row.innerHTML = `<td colspan="5" style="text-align: center; color: var(--dark-gray);">
-        <i class="material-icons" style="color: #ea4335;">error</i>
-        <p>Gagal menghapus data: ${error.message}</p>
-        <button onclick="window.location.reload()">Coba Lagi</button>
-      </td>`;
     }
-  }
-  
-  function handleDeleteResult(result, row) {
-    if (result.status === 'success') {
-      // Hapus row dari tabel
-      row.remove();
-      alert('Data berhasil dihapus!');
-    } else {
-      throw new Error(result.message || 'Gagal menghapus data');
+    
+    // Fungsi helper untuk JSONP request
+    function jsonpRequest(options) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `jsonp_${Date.now()}`;
+        const script = document.createElement('script');
+        
+        // Setup callback
+        window[callbackName] = (response) => {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          
+          if (response.status === 'success') {
+            if (options.callback) options.callback(response);
+            resolve(response);
+          } else {
+            reject(new Error(response.message || 'Request failed'));
+          }
+        };
+        
+        // Handle error
+        script.onerror = () => {
+          delete window[callbackName];
+          document.body.removeChild(script);
+          reject(new Error('Failed to load script'));
+        };
+        
+        // Build URL
+        const params = new URLSearchParams(options.params);
+        params.append('callback', callbackName);
+        script.src = `${options.url}?${params.toString()}`;
+        
+        document.body.appendChild(script);
+      });
     }
-  }
   </script>
 </body>
 </html>
