@@ -513,23 +513,28 @@
         // Tampilkan loading
         row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
         
-        // Gunakan pendekatan Google Apps Script URL yang benar
-        const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`;
+        // URL deployment yang benar (tanpa /u/5/)
+        const cleanUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`;
         const params = new URLSearchParams({
           action: 'deleteBlok',
           kebun: kebun,
           divisi: divisi,
-          blok: blok
+          blok: blok,
+          callback: 'handleGASResponse' // Tambahkan parameter callback
         });
         
-        // Buat iframe untuk menghindari CORS
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = `${scriptUrl}?${params.toString()}`;
+        // Buat elemen script untuk JSONP
+        const scriptId = 'gas-jsonp-script';
+        const oldScript = document.getElementById(scriptId);
+        if (oldScript) document.body.removeChild(oldScript);
         
-        // Tambahkan callback handler
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `${cleanUrl}?${params.toString()}`;
+        
+        // Setup callback handler
         window.handleGASResponse = function(response) {
-          document.body.removeChild(iframe);
+          document.body.removeChild(script);
           delete window.handleGASResponse;
           
           if (response.status === 'success') {
@@ -540,14 +545,21 @@
           }
         };
         
-        // Tambahkan iframe ke dokumen
-        document.body.appendChild(iframe);
+        // Handle error
+        script.onerror = () => {
+          document.body.removeChild(script);
+          if (window.handleGASResponse) delete window.handleGASResponse;
+          throw new Error('Gagal menghubungi server. Silakan coba lagi.');
+        };
+        
+        // Tambahkan script ke dokumen
+        document.body.appendChild(script);
         
         // Timeout handling
         setTimeout(() => {
-          if (iframe.parentNode) {
-            document.body.removeChild(iframe);
-            delete window.handleGASResponse;
+          if (script.parentNode) {
+            document.body.removeChild(script);
+            if (window.handleGASResponse) delete window.handleGASResponse;
             throw new Error('Waktu permintaan habis. Silakan coba lagi.');
           }
         }, 30000);
