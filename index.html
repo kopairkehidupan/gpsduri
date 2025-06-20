@@ -513,29 +513,45 @@
         // Tampilkan loading
         row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
         
-        // URL deployment yang benar (tanpa /u/5/)
-        const cleanUrl = `https://script.google.com/macros/s/AKfycbxvsACV_YPp3GtRlP2phWkGaUASECKpshJ_HS737eF-FypWEIvnvp_WRclAvLXN2-Y/exec`;
-        const params = new URLSearchParams({
-          action: 'deleteBlok',
-          kebun: kebun,
-          divisi: divisi,
-          blok: blok,
-          callback: 'handleGASResponse' // Tambahkan parameter callback
-        });
+        // URL deployment alternatif
+        const deploymentId = 'AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA';
+        const url = `https://script.google.com/macros/s/${deploymentId}/exec`;
         
-        // Buat elemen script untuk JSONP
-        const scriptId = 'gas-jsonp-script';
-        const oldScript = document.getElementById(scriptId);
-        if (oldScript) document.body.removeChild(oldScript);
+        // Buat form untuk submit
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = url;
+        form.target = 'gas-iframe';
+        form.style.display = 'none';
         
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = `${cleanUrl}?${params.toString()}`;
+        // Tambahkan parameter
+        const addParam = (name, value) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        };
         
-        // Setup callback handler
-        window.handleGASResponse = function(response) {
-          document.body.removeChild(script);
-          delete window.handleGASResponse;
+        addParam('action', 'deleteBlok');
+        addParam('kebun', kebun);
+        addParam('divisi', divisi);
+        addParam('blok', blok);
+        
+        // Buat iframe untuk menerima response
+        const iframe = document.createElement('iframe');
+        iframe.name = 'gas-iframe';
+        iframe.style.display = 'none';
+        
+        // Handler untuk menerima message dari iframe
+        window.addEventListener('message', function handleMessage(event) {
+          // Pastikan origin yang dipercaya
+          if (event.origin !== "https://script.google.com") return;
+          
+          const response = event.data;
+          document.body.removeChild(iframe);
+          document.body.removeChild(form);
+          window.removeEventListener('message', handleMessage);
           
           if (response.status === 'success') {
             row.remove();
@@ -543,23 +559,21 @@
           } else {
             throw new Error(response.message || 'Gagal menghapus data');
           }
-        };
+        });
         
-        // Handle error
-        script.onerror = () => {
-          document.body.removeChild(script);
-          if (window.handleGASResponse) delete window.handleGASResponse;
-          throw new Error('Gagal menghubungi server. Silakan coba lagi.');
-        };
+        // Tambahkan elemen ke DOM
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
         
-        // Tambahkan script ke dokumen
-        document.body.appendChild(script);
+        // Submit form
+        form.submit();
         
         // Timeout handling
         setTimeout(() => {
-          if (script.parentNode) {
-            document.body.removeChild(script);
-            if (window.handleGASResponse) delete window.handleGASResponse;
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+            document.body.removeChild(form);
+            window.removeEventListener('message', handleMessage);
             throw new Error('Waktu permintaan habis. Silakan coba lagi.');
           }
         }, 30000);
