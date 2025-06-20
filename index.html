@@ -507,40 +507,60 @@
     }
     
     async function deleteBlokData(kebun, divisi, blok, key) {
-      const row = document.querySelector(`.btn-delete[data-key="${key}"]`).closest('tr');
+    const row = document.querySelector(`.btn-delete[data-key="${key}"]`).closest('tr');
+    
+    try {
+      // Tampilkan loading
+      row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
       
-      try {
-        // Tampilkan loading
-        row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
-        
-        // Gunakan URL deployment yang benar (tanpa /u/5/)
-        await jsonpRequest({
-          url: `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`,
-          params: {
-            action: 'deleteBlok',
-            kebun: kebun,
-            divisi: divisi,
-            blok: blok
-          },
-          callback: (response) => {
-            if (response.status === 'success') {
-              row.remove();
-              alert('Data berhasil dihapus!');
-            } else {
-              throw new Error(response.message || 'Gagal menghapus data');
+      // Daftar URL alternatif untuk mencoba
+      const baseUrls = [
+        `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`,
+        `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/execDev`,
+        `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/dev`
+      ];
+      
+      let lastError;
+      
+      // Coba semua URL alternatif
+      for (const url of baseUrls) {
+        try {
+          await jsonpRequest({
+            url: url,
+            params: {
+              action: 'deleteBlok',
+              kebun: kebun,
+              divisi: divisi,
+              blok: blok
+            },
+            callback: (response) => {
+              if (response.status === 'success') {
+                row.remove();
+                alert('Data berhasil dihapus!');
+              } else {
+                throw new Error(response.message || 'Gagal menghapus data');
+              }
             }
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error:', error);
-        row.innerHTML = `<td colspan="5" style="text-align: center; color: var(--dark-gray);">
-          <i class="material-icons" style="color: #ea4335;">error</i>
-          <p>Gagal menghapus data: ${error.message}</p>
-          <button onclick="window.location.reload()">Coba Lagi</button>
-        </td>`;
+          });
+          return; // Berhasil, keluar dari loop
+        } catch (error) {
+          console.log(`Gagal dengan URL ${url}:`, error);
+          lastError = error;
+        }
       }
+      
+      // Jika semua URL gagal
+      throw lastError;
+      
+    } catch (error) {
+      console.error('Error:', error);
+      row.innerHTML = `<td colspan="5" style="text-align: center; color: var(--dark-gray);">
+        <i class="material-icons" style="color: #ea4335;">error</i>
+        <p>Gagal menghapus data: ${error.message}</p>
+        <button onclick="window.location.reload()">Coba Lagi</button>
+      </td>`;
     }
+  }
     
     // Fungsi helper untuk JSONP request yang lebih robust
     function jsonpRequest(options) {
@@ -575,7 +595,21 @@
         script.onerror = () => {
           clearTimeout(timeoutId);
           cleanup();
-          reject(new Error('Gagal menghubungi server. Silakan coba lagi.'));
+          
+          // Coba lagi dengan URL alternatif (tanpa /u/5/)
+          const altUrl = options.url.replace('/u/0/', '/').replace('/u/1/', '/')
+                                   .replace('/u/2/', '/').replace('/u/3/', '/')
+                                   .replace('/u/4/', '/').replace('/u/5/', '/');
+          
+          if (altUrl !== options.url) {
+            console.log('Mencoba URL alternatif:', altUrl);
+            jsonpRequest({
+              ...options,
+              url: altUrl
+            }).then(resolve).catch(reject);
+          } else {
+            reject(new Error('Gagal menghubungi server. Silakan coba lagi.'));
+          }
         };
         
         // Timeout handling (30 detik)
@@ -591,10 +625,11 @@
         }
         params.append('callback', callbackName);
         
-        // Gunakan URL yang benar dan encode URI dengan tepat
-        const baseUrl = options.url.replace('/u/0/', '/').replace('/u/1/', '/').replace('/u/2/', '/').replace('/u/3/', '/').replace('/u/4/', '/').replace('/u/5/', '/');
-        script.src = `${baseUrl}?${params.toString()}`;
+        // Gunakan URL yang sudah dibersihkan
+        const cleanUrl = options.url.replace('/u/[0-9]/', '/').replace(/\/u\/\d\//, '/');
+        script.src = `${cleanUrl}?${params.toString()}`;
         
+        console.log('Menggunakan URL:', script.src);
         document.body.appendChild(script);
       });
     }
