@@ -513,23 +513,44 @@
         // Tampilkan loading
         row.innerHTML = `<td colspan="5" class="loading"><div class="spinner"></div><span style="margin-left: 1rem;">Menghapus data...</span></td>`;
         
-        // Gunakan pendekatan fetch dengan proxy CORS
-        const response = await fetchWithCorsRetry({
-          url: `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`,
-          params: {
-            action: 'deleteBlok',
-            kebun: kebun,
-            divisi: divisi,
-            blok: blok
-          }
+        // Gunakan pendekatan Google Apps Script URL yang benar
+        const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec`;
+        const params = new URLSearchParams({
+          action: 'deleteBlok',
+          kebun: kebun,
+          divisi: divisi,
+          blok: blok
         });
         
-        if (response.status === 'success') {
-          row.remove();
-          alert('Data berhasil dihapus!');
-        } else {
-          throw new Error(response.message || 'Gagal menghapus data');
-        }
+        // Buat iframe untuk menghindari CORS
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = `${scriptUrl}?${params.toString()}`;
+        
+        // Tambahkan callback handler
+        window.handleGASResponse = function(response) {
+          document.body.removeChild(iframe);
+          delete window.handleGASResponse;
+          
+          if (response.status === 'success') {
+            row.remove();
+            alert('Data berhasil dihapus!');
+          } else {
+            throw new Error(response.message || 'Gagal menghapus data');
+          }
+        };
+        
+        // Tambahkan iframe ke dokumen
+        document.body.appendChild(iframe);
+        
+        // Timeout handling
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+            delete window.handleGASResponse;
+            throw new Error('Waktu permintaan habis. Silakan coba lagi.');
+          }
+        }, 30000);
         
       } catch (error) {
         console.error('Error:', error);
@@ -539,53 +560,6 @@
           <button onclick="window.location.reload()">Coba Lagi</button>
         </td>`;
       }
-    }
-    
-    // Fungsi fetch dengan retry dan CORS proxy
-    async function fetchWithCorsRetry(options) {
-      const retryUrls = [
-        // Coba langsung ke URL asli
-        `https://script.google.com/macros/s/${options.params.action}`,
-        
-        // Gunakan CORS proxy jika langsung gagal
-        `https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/${options.params.action}`,
-        
-        // Alternatif proxy lainnya
-        `https://api.codetabs.com/v1/proxy/?quest=https://script.google.com/macros/s/${options.params.action}`
-      ];
-      
-      const params = new URLSearchParams();
-      for (const key in options.params) {
-        params.append(key, options.params[key]);
-      }
-      
-      let lastError;
-      
-      for (const baseUrl of retryUrls) {
-        try {
-          const url = `${baseUrl}?${params.toString()}`;
-          console.log('Mencoba URL:', url);
-          
-          const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest'
-            }
-          });
-          
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          
-          const data = await response.json();
-          return data;
-          
-        } catch (error) {
-          console.log(`Gagal dengan URL:`, error);
-          lastError = error;
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Jeda 1 detik
-        }
-      }
-      
-      throw lastError || new Error('Semua percobaan gagal');
     }
   </script>
 </body>
