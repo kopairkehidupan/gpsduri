@@ -476,6 +476,8 @@
           tr.appendChild(tdAction);
           tbody.appendChild(tr);
         });
+        // Panggil setupDeleteButtons setelah selesai memuat data
+        setupDeleteButtons();
       })
       .catch(error => {
         const tbody = document.querySelector("#blokTable tbody");
