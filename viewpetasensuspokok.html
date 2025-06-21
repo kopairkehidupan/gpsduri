@@ -278,6 +278,28 @@
     .map-controls.collapsed .sensus-title::after {
         transform: translateY(-50%) rotate(-90deg);
     }
+    
+    /* Tombol toggle detail */
+    .toggle-detail {
+        text-align: center;
+        margin: 8px 0;
+        padding: 6px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        color: #555;
+        border: 1px dashed #999;
+        user-select: none;
+    }
+    
+    .toggle-detail:hover {
+        background: #e0e0e0;
+    }
+    
+    .hidden {
+        display: none;
+    }
   </style>
 </head>
 <body>
@@ -296,6 +318,7 @@
   
   <h3 id="blok-title">Blok: Loading...</h3>
   <div id="location-info"></div>
+  <div id="toggle-detail" class="toggle-detail hidden">--------Tekan disini untuk melihat detail--------</div>
   <div class="file-list" id="file-list">
     <h4>File yang dimuat:</h4>
     <ul id="loaded-files"></ul>
@@ -394,12 +417,14 @@
       // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
       controlsElement.classList.add('collapsed'); // Default collap
+      updateToggleVisibility();
     } else {
       // Kembalikan ke ukuran desktop
       document.querySelector('.map-controls').style.maxWidth = '300px';
       document.querySelector('.sensus-title h2').style.fontSize = '16px';
       layerControl.setPosition('bottomright');
       controlsElement.classList.remove('collapsed'); // Default exp
+      document.getElementById('toggle-detail').classList.add('hidden');
     }
   }
 
@@ -717,6 +742,18 @@
   // Event listener untuk resize window
   window.addEventListener('resize', adjustForMobile);
 
+  // Fungsi untuk update tampilan toggle
+  function updateToggleVisibility() {
+      const controlsElement = document.querySelector('.map-controls');
+      const toggleDetail = document.getElementById('toggle-detail');
+      
+      if (controlsElement.classList.contains('collapsed')) {
+          toggleDetail.classList.remove('hidden');
+      } else {
+          toggleDetail.classList.add('hidden');
+      }
+  }
+
   // Di bagian inisialisasi, tambahkan:
   document.addEventListener('DOMContentLoaded', function() {
       // Sembunyikan loading jika tidak ada file yang akan diproses
@@ -731,18 +768,27 @@
           processFiles();
       }
 
-     // Tambahkan event listener untuk toggle controls
-    const titleElement = document.querySelector('.sensus-title');
-    const controlsElement = document.querySelector('.map-controls');
-    
-    titleElement.addEventListener('click', function() {
-        controlsElement.classList.toggle('collapsed');
-    });
-    
-    // Sembunyikan controls secara default di mobile
-    if (window.innerWidth <= 768) {
-        controlsElement.classList.add('collapsed');
-    }
+      // Tambahkan event listener untuk toggle controls
+      const titleElement = document.querySelector('.sensus-title');
+      const controlsElement = document.querySelector('.map-controls');
+      const toggleDetail = document.getElementById('toggle-detail');
+      
+      titleElement.addEventListener('click', function() {
+          controlsElement.classList.toggle('collapsed');
+          updateToggleVisibility();
+      });
+      
+      // Event listener untuk toggle detail
+      toggleDetail.addEventListener('click', function() {
+          controlsElement.classList.remove('collapsed');
+          updateToggleVisibility();
+      });
+      
+      // Sembunyikan controls secara default di mobile
+      if (window.innerWidth <= 768) {
+          controlsElement.classList.add('collapsed');
+          updateToggleVisibility();
+      }
   });
 </script>
 </body>
