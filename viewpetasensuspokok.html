@@ -279,27 +279,51 @@
         transform: translateY(-50%) rotate(-90deg);
     }
 
-    /* Tambahkan di bagian CSS */
-    .scroll-indicator {
-      display: none; /* Sembunyikan di desktop */
-      text-align: center;
-      padding: 5px 0;
+    /* Tambahan CSS untuk indicator */
+    .content-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      margin: 5px 0;
+      background: #f5f5f5;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
       font-size: 12px;
       color: #666;
-      background: #f5f5f5;
-      margin: 5px 0;
-      border-radius: 3px;
-      cursor: pointer;
+      border: 1px dashed #ccc;
     }
     
-    @media (max-width: 768px) {
-      .scroll-indicator {
-        display: block; /* Tampilkan hanya di mobile */
-      }
-      
-      .map-controls.collapsed .scroll-indicator {
-        display: none; /* Sembunyikan jika panel collapsed */
-      }
+    .content-indicator:hover {
+      background: #e0e0e0;
+    }
+    
+    .content-indicator::after {
+      content: "▼";
+      margin-left: 5px;
+      font-size: 10px;
+      transition: transform 0.3s ease;
+    }
+    
+    .map-controls.collapsed .content-indicator::after {
+      transform: rotate(-90deg);
+    }
+    
+    /* Animasi untuk konten yang tersembunyi */
+    .collapsible-content {
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .map-controls.collapsed .collapsible-content {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+    
+    .map-controls:not(.collapsed) .collapsible-content {
+      max-height: 1000px;
+      opacity: 1;
     }
   </style>
 </head>
@@ -319,8 +343,9 @@
   
   <h3 id="blok-title">Blok: Loading...</h3>
   <div id="location-info"></div>
-  <div class="scroll-indicator" id="scroll-indicator">
-    ↕ Geser ke bawah untuk melihat legenda ↕
+  <!-- Indicator untuk konten tersembunyi -->
+  <div class="content-indicator" id="content-indicator">
+    Tampilkan informasi lengkap
   </div>
   <div class="file-list" id="file-list">
     <h4>File yang dimuat:</h4>
@@ -769,16 +794,61 @@
     if (window.innerWidth <= 768) {
         controlsElement.classList.add('collapsed');
     }
+
+    // Handle indicator click
+    document.getElementById('content-indicator').addEventListener('click', function() {
+          const controls = document.querySelector('.map-controls');
+          controls.classList.toggle('collapsed');
+          
+          // Update teks indicator
+          this.textContent = controls.classList.contains('collapsed') 
+              ? 'Tampilkan informasi lengkap' 
+              : 'Sembunyikan informasi';
+      });
+      
+      // Update indicator text based on initial state
+      const updateIndicatorText = () => {
+          const indicator = document.getElementById('content-indicator');
+          const isCollapsed = document.querySelector('.map-controls').classList.contains('collapsed');
+          indicator.textContent = isCollapsed 
+              ? 'Tampilkan informasi lengkap' 
+              : 'Sembunyikan informasi';
+      };
+      
+      // Panggil pertama kali
+      updateIndicatorText();
+      
+      // Juga update saat window di-resize
+      window.addEventListener('resize', updateIndicatorText);
   });
 
-  // Tambahkan di JavaScript
-  document.getElementById('expand-button').addEventListener('click', function() {
-    const controls = document.querySelector('.map-controls');
-    controls.classList.toggle('expanded');
-    this.textContent = controls.classList.contains('expanded') 
-      ? '▲ Sembunyikan Legenda ▲' 
-      : '▼ Tampilkan Legenda ▼';
+  // Fungsi untuk update UI saat data dimuat
+  function updateUIAfterLoad() {
+      const controls = document.querySelector('.map-controls');
+      const hasData = document.getElementById('loaded-files').children.length > 0;
+      
+      // Jika ada data, pastikan indicator visible
+      if (hasData) {
+          document.getElementById('content-indicator').style.display = 'flex';
+      } else {
+          document.getElementById('content-indicator').style.display = 'none';
+      }
+      
+      // Untuk mobile, default collapsed
+      if (window.innerWidth <= 768) {
+          controls.classList.add('collapsed');
+      } else {
+          controls.classList.remove('collapsed');
+      }
+      
+      updateIndicatorText();
+  }
+
+  // Panggil fungsi ini setelah processFiles selesai
+  // Di dalam function processFiles(), setelah loading.style.display = 'none';
+  updateUIAfterLoad();
   });
+
 </script>
 </body>
 </html>
