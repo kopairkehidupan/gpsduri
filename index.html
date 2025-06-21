@@ -464,6 +464,7 @@
         // Clear loading row
         tbody.innerHTML = '';
 
+        // Proses data dari CSV
         rows.forEach(row => {
           const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
           const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
@@ -506,50 +507,69 @@
           return kebunOrderA - kebunOrderB;
         });
 
-        // Variabel untuk melacak baris sebelumnya untuk merge cell
-        let prevKebun = null;
-        let prevDivisi = null;
-        let kebunRowSpan = 1;
-        let divisiRowSpan = 1;
-        let kebunStartRow = null;
-        let divisiStartRow = null;
-        
-        // Array untuk menyimpan semua baris
-        const tableRows = [];
+        // Kelompokkan data berdasarkan kebun dan divisi untuk merge cell
+        const groupedData = [];
+        let currentGroup = null;
 
-        sortedData.forEach((entry, index) => {
-          const tr = document.createElement("tr");
-          const key = `${entry.kebun}|${entry.divisi}|${entry.blok}`;
+        sortedData.forEach(item => {
+          const groupKey = `${item.kebun}|${item.divisi}`;
           
-          // Kolom Kebun (akan diisi nanti setelah menentukan rowspan)
+          if (!currentGroup || currentGroup.key !== groupKey) {
+            currentGroup = {
+              key: groupKey,
+              kebun: item.kebun,
+              divisi: item.divisi,
+              items: []
+            };
+            groupedData.push(currentGroup);
+          }
+          
+          currentGroup.items.push(item);
+        });
+
+        // Bangun tabel dengan merge cell
+        groupedData.forEach(group => {
+          // Buat baris pertama untuk grup ini
+          const firstRow = document.createElement("tr");
+          
+          // Kolom Kebun (rowspan sesuai jumlah item)
           const tdKebun = document.createElement("td");
-          tdKebun.textContent = entry.kebun;
+          tdKebun.textContent = group.kebun;
+          tdKebun.rowSpan = group.items.length;
+          tdKebun.style.verticalAlign = 'middle';
+          firstRow.appendChild(tdKebun);
           
-          // Kolom Divisi (akan diisi nanti setelah menentukan rowspan)
+          // Kolom Divisi (rowspan sesuai jumlah item)
           const tdDivisi = document.createElement("td");
-          tdDivisi.textContent = entry.divisi;
+          tdDivisi.textContent = group.divisi;
+          tdDivisi.rowSpan = group.items.length;
+          tdDivisi.style.verticalAlign = 'middle';
+          firstRow.appendChild(tdDivisi);
+          
+          // Baris pertama memiliki kolom Blok, Data, dan Aksi
+          const firstItem = group.items[0];
           
           // Kolom Blok
           const tdBlok = document.createElement("td");
-          tdBlok.textContent = entry.blok;
-          tr.appendChild(tdBlok);
+          tdBlok.textContent = firstItem.blok;
+          firstRow.appendChild(tdBlok);
           
           // Kolom Data Tersedia
           const tdData = document.createElement("td");
-          if (entry.hasWaypoints) {
+          if (firstItem.hasWaypoints) {
             const badge = document.createElement("span");
             badge.className = "badge badge-waypoint";
             badge.textContent = "Waypoints";
             tdData.appendChild(badge);
           }
-          if (entry.hasTracks) {
-            if (entry.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+          if (firstItem.hasTracks) {
+            if (firstItem.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
             const badge = document.createElement("span");
             badge.className = "badge badge-track";
             badge.textContent = "Tracks";
             tdData.appendChild(badge);
           }
-          tr.appendChild(tdData);
+          firstRow.appendChild(tdData);
           
           // Kolom Aksi
           const tdAction = document.createElement("td");
@@ -564,18 +584,18 @@
           `;
           viewBtn.onclick = () => {
             const params = new URLSearchParams();
-            params.append("blok", entry.blok);
-            params.append("kebun", entry.kebun);
-            params.append("divisi", entry.divisi);
-            entry.waypoints.forEach(url => params.append("waypoints", url));
-            entry.tracks.forEach(url => params.append("tracks", url));
+            params.append("blok", firstItem.blok);
+            params.append("kebun", firstItem.kebun);
+            params.append("divisi", firstItem.divisi);
+            firstItem.waypoints.forEach(url => params.append("waypoints", url));
+            firstItem.tracks.forEach(url => params.append("tracks", url));
             window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
           };
           
           // Tombol Hapus
           const deleteBtn = document.createElement("button");
           deleteBtn.className = "btn btn-danger btn-delete";
-          deleteBtn.setAttribute("data-key", key);
+          deleteBtn.setAttribute("data-key", `${firstItem.kebun}|${firstItem.divisi}|${firstItem.blok}`);
           deleteBtn.innerHTML = `
             <i class="material-icons" style="font-size: 16px;">delete</i>
             <span>Hapus</span>
@@ -583,71 +603,79 @@
           
           tdAction.appendChild(viewBtn);
           tdAction.appendChild(deleteBtn);
-          tr.appendChild(tdAction);
+          firstRow.appendChild(tdAction);
           
-          // Simpan baris ke array
-          tableRows.push({
-            tr,
-            tdKebun,
-            tdDivisi,
-            kebun: entry.kebun,
-            divisi: entry.divisi
-          });
-        });
-
-        // Proses merge cell untuk kebun dan divisi
-        for (let i = 0; i < tableRows.length; i++) {
-          const current = tableRows[i];
-          const next = i < tableRows.length - 1 ? tableRows[i + 1] : null;
+          tbody.appendChild(firstRow);
           
-          // Cek untuk merge kebun
-          if (prevKebun === null || current.kebun !== prevKebun) {
-            kebunStartRow = i;
-            kebunRowSpan = 1;
-          } else {
-            kebunRowSpan++;
+          // Tambahkan baris tambahan untuk item lainnya dalam grup yang sama
+          for (let i = 1; i < group.items.length; i++) {
+            const item = group.items[i];
+            const row = document.createElement("tr");
+            
+            // Kolom Blok
+            const tdBlok = document.createElement("td");
+            tdBlok.textContent = item.blok;
+            row.appendChild(tdBlok);
+            
+            // Kolom Data Tersedia
+            const tdData = document.createElement("td");
+            if (item.hasWaypoints) {
+              const badge = document.createElement("span");
+              badge.className = "badge badge-waypoint";
+              badge.textContent = "Waypoints";
+              tdData.appendChild(badge);
+            }
+            if (item.hasTracks) {
+              if (item.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+              const badge = document.createElement("span");
+              badge.className = "badge badge-track";
+              badge.textContent = "Tracks";
+              tdData.appendChild(badge);
+            }
+            row.appendChild(tdData);
+            
+            // Kolom Aksi
+            const tdAction = document.createElement("td");
+            tdAction.className = "actions";
+            
+            // Tombol Lihat Peta
+            const viewBtn = document.createElement("button");
+            viewBtn.className = "btn btn-view";
+            viewBtn.innerHTML = `
+              <i class="material-icons" style="font-size: 16px;">map</i>
+              <span>Lihat Peta</span>
+            `;
+            viewBtn.onclick = () => {
+              const params = new URLSearchParams();
+              params.append("blok", item.blok);
+              params.append("kebun", item.kebun);
+              params.append("divisi", item.divisi);
+              item.waypoints.forEach(url => params.append("waypoints", url));
+              item.tracks.forEach(url => params.append("tracks", url));
+              window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
+            };
+            
+            // Tombol Hapus
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "btn btn-danger btn-delete";
+            deleteBtn.setAttribute("data-key", `${item.kebun}|${item.divisi}|${item.blok}`);
+            deleteBtn.innerHTML = `
+              <i class="material-icons" style="font-size: 16px;">delete</i>
+              <span>Hapus</span>
+            `;
+            
+            tdAction.appendChild(viewBtn);
+            tdAction.appendChild(deleteBtn);
+            row.appendChild(tdAction);
+            
+            tbody.appendChild(row);
           }
-          
-          // Cek untuk merge divisi
-          if (prevDivisi === null || current.divisi !== prevDivisi) {
-            divisiStartRow = i;
-            divisiRowSpan = 1;
-          } else {
-            divisiRowSpan++;
-          }
-          
-          // Jika ini baris terakhir atau kebun berikutnya berbeda
-          if (!next || current.kebun !== next.kebun) {
-            tableRows[kebunStartRow].tdKebun.rowSpan = kebunRowSpan;
-            current.tr.insertBefore(tableRows[kebunStartRow].tdKebun, current.tr.firstChild);
-            kebunRowSpan = 1;
-            kebunStartRow = null;
-          }
-          
-          // Jika ini baris terakhir atau divisi berikutnya berbeda
-          if (!next || current.divisi !== next.divisi) {
-            tableRows[divisiStartRow].tdDivisi.rowSpan = divisiRowSpan;
-            // Insert setelah kolom kebun
-            const kebunCell = current.tr.querySelector('td:first-child');
-            kebunCell.insertAdjacentElement('afterend', tableRows[divisiStartRow].tdDivisi);
-            divisiRowSpan = 1;
-            divisiStartRow = null;
-          }
-          
-          prevKebun = current.kebun;
-          prevDivisi = current.divisi;
-        }
-
-        // Tambahkan semua baris ke tbody
-        tableRows.forEach(row => {
-          tbody.appendChild(row.tr);
         });
 
         // Panggil setupDeleteButtons setelah selesai memuat data
         setupDeleteButtons();
       })
       .catch(error => {
-        // Error handling tetap sama
         const tbody = document.querySelector("#blokTable tbody");
         tbody.innerHTML = `
           <tr>
@@ -659,8 +687,8 @@
           </tr>
         `;
       });
-    
-    // Tambahkan fungsi ini setelah fetch data
+
+    // Fungsi setupDeleteButtons dan deleteBlokData tetap sama
     function setupDeleteButtons() {
       const confirmAlert = document.getElementById('confirmAlert');
       const alertMessage = document.getElementById('alertMessage');
@@ -733,7 +761,6 @@
         // Karena mode no-cors, kita tidak bisa membaca response langsung
         // Jadi kita asumsikan request berhasil dan hapus row
         row.remove();
-       alertMessage.textContent = `Data berhasil dihapus!`;;
         
         // Jika ingin memastikan, bisa reload halaman
         // window.location.reload();
