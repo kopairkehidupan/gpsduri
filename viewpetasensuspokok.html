@@ -797,29 +797,29 @@
 
     // Handle indicator click
     document.getElementById('content-indicator').addEventListener('click', function() {
-          const controls = document.querySelector('.map-controls');
-          controls.classList.toggle('collapsed');
-          
-          // Update teks indicator
-          this.textContent = controls.classList.contains('collapsed') 
-              ? 'Tampilkan informasi lengkap' 
-              : 'Sembunyikan informasi';
-      });
-      
-      // Update indicator text based on initial state
-      const updateIndicatorText = () => {
-          const indicator = document.getElementById('content-indicator');
-          const isCollapsed = document.querySelector('.map-controls').classList.contains('collapsed');
-          indicator.textContent = isCollapsed 
-              ? 'Tampilkan informasi lengkap' 
-              : 'Sembunyikan informasi';
-      };
-      
-      // Panggil pertama kali
-      updateIndicatorText();
-      
-      // Juga update saat window di-resize
-      window.addEventListener('resize', updateIndicatorText);
+        const controls = document.querySelector('.map-controls');
+        controls.classList.toggle('collapsed');
+        
+        // Update teks indicator
+        this.textContent = controls.classList.contains('collapsed') 
+            ? 'Tampilkan informasi lengkap' 
+            : 'Sembunyikan informasi';
+    });
+    
+    // Update indicator text based on initial state
+    const updateIndicatorText = () => {
+        const indicator = document.getElementById('content-indicator');
+        const isCollapsed = document.querySelector('.map-controls').classList.contains('collapsed');
+        indicator.textContent = isCollapsed 
+            ? 'Tampilkan informasi lengkap' 
+            : 'Sembunyikan informasi';
+    };
+    
+    // Panggil pertama kali
+    updateIndicatorText();
+    
+    // Juga update saat window di-resize
+    window.addEventListener('resize', updateIndicatorText);
   });
 
   // Fungsi untuk update UI saat data dimuat
@@ -847,8 +847,6 @@
   // Panggil fungsi ini setelah processFiles selesai
   // Di dalam function processFiles(), setelah loading.style.display = 'none';
   updateUIAfterLoad();
-  });
-
 </script>
 </body>
 </html>
