@@ -448,6 +448,12 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
 
+    // Urutan kebun yang diinginkan (Samsam pertama, Duri kedua)
+    const KEBUN_ORDER = {
+      'Samsam': 1,
+      'Duri': 2
+    };
+
     fetch(SHEET_CSV_URL)
       .then(res => res.text())
       .then(csv => {
@@ -484,18 +490,51 @@
           }
         });
 
-        Object.values(dataByBlok).forEach(entry => {
+        // Konversi object ke array dan urutkan
+        const sortedData = Object.values(dataByBlok).sort((a, b) => {
+          // Urutkan berdasarkan divisi (numerik)
+          const divA = parseInt(a.divisi.replace(/\D/g, '')) || 0;
+          const divB = parseInt(b.divisi.replace(/\D/g, '')) || 0;
+          
+          if (divA !== divB) {
+            return divA - divB;
+          }
+          
+          // Jika divisi sama, urutkan berdasarkan kebun (Samsam pertama)
+          const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
+          const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
+          return kebunOrderA - kebunOrderB;
+        });
+
+        // Variabel untuk melacak baris sebelumnya untuk merge cell
+        let prevKebun = null;
+        let prevDivisi = null;
+        let kebunRowSpan = 1;
+        let divisiRowSpan = 1;
+        let kebunStartRow = null;
+        let divisiStartRow = null;
+        
+        // Array untuk menyimpan semua baris
+        const tableRows = [];
+
+        sortedData.forEach((entry, index) => {
           const tr = document.createElement("tr");
-          const key = `${entry.kebun}|${entry.divisi}|${entry.blok}`; // Definisikan key di sini
-        
-          // Kebun, Divisi, Blok columns
-          [entry.kebun, entry.divisi, entry.blok].forEach(text => {
-            const td = document.createElement("td");
-            td.textContent = text;
-            tr.appendChild(td);
-          });
-        
-          // Data Available column
+          const key = `${entry.kebun}|${entry.divisi}|${entry.blok}`;
+          
+          // Kolom Kebun (akan diisi nanti setelah menentukan rowspan)
+          const tdKebun = document.createElement("td");
+          tdKebun.textContent = entry.kebun;
+          
+          // Kolom Divisi (akan diisi nanti setelah menentukan rowspan)
+          const tdDivisi = document.createElement("td");
+          tdDivisi.textContent = entry.divisi;
+          
+          // Kolom Blok
+          const tdBlok = document.createElement("td");
+          tdBlok.textContent = entry.blok;
+          tr.appendChild(tdBlok);
+          
+          // Kolom Data Tersedia
           const tdData = document.createElement("td");
           if (entry.hasWaypoints) {
             const badge = document.createElement("span");
@@ -511,10 +550,10 @@
             tdData.appendChild(badge);
           }
           tr.appendChild(tdData);
-        
-          // Action column
+          
+          // Kolom Aksi
           const tdAction = document.createElement("td");
-          tdAction.className = "actions"; // Tambahkan class untuk styling
+          tdAction.className = "actions";
           
           // Tombol Lihat Peta
           const viewBtn = document.createElement("button");
@@ -542,17 +581,73 @@
             <span>Hapus</span>
           `;
           
-          // Tambahkan kedua tombol ke tdAction
           tdAction.appendChild(viewBtn);
           tdAction.appendChild(deleteBtn);
-          
           tr.appendChild(tdAction);
-          tbody.appendChild(tr);
+          
+          // Simpan baris ke array
+          tableRows.push({
+            tr,
+            tdKebun,
+            tdDivisi,
+            kebun: entry.kebun,
+            divisi: entry.divisi
+          });
         });
+
+        // Proses merge cell untuk kebun dan divisi
+        for (let i = 0; i < tableRows.length; i++) {
+          const current = tableRows[i];
+          const next = i < tableRows.length - 1 ? tableRows[i + 1] : null;
+          
+          // Cek untuk merge kebun
+          if (prevKebun === null || current.kebun !== prevKebun) {
+            kebunStartRow = i;
+            kebunRowSpan = 1;
+          } else {
+            kebunRowSpan++;
+          }
+          
+          // Cek untuk merge divisi
+          if (prevDivisi === null || current.divisi !== prevDivisi) {
+            divisiStartRow = i;
+            divisiRowSpan = 1;
+          } else {
+            divisiRowSpan++;
+          }
+          
+          // Jika ini baris terakhir atau kebun berikutnya berbeda
+          if (!next || current.kebun !== next.kebun) {
+            tableRows[kebunStartRow].tdKebun.rowSpan = kebunRowSpan;
+            current.tr.insertBefore(tableRows[kebunStartRow].tdKebun, current.tr.firstChild);
+            kebunRowSpan = 1;
+            kebunStartRow = null;
+          }
+          
+          // Jika ini baris terakhir atau divisi berikutnya berbeda
+          if (!next || current.divisi !== next.divisi) {
+            tableRows[divisiStartRow].tdDivisi.rowSpan = divisiRowSpan;
+            // Insert setelah kolom kebun
+            const kebunCell = current.tr.querySelector('td:first-child');
+            kebunCell.insertAdjacentElement('afterend', tableRows[divisiStartRow].tdDivisi);
+            divisiRowSpan = 1;
+            divisiStartRow = null;
+          }
+          
+          prevKebun = current.kebun;
+          prevDivisi = current.divisi;
+        }
+
+        // Tambahkan semua baris ke tbody
+        tableRows.forEach(row => {
+          tbody.appendChild(row.tr);
+        });
+
         // Panggil setupDeleteButtons setelah selesai memuat data
         setupDeleteButtons();
       })
       .catch(error => {
+        // Error handling tetap sama
         const tbody = document.querySelector("#blokTable tbody");
         tbody.innerHTML = `
           <tr>
@@ -564,7 +659,7 @@
           </tr>
         `;
       });
-
+    
     // Tambahkan fungsi ini setelah fetch data
     function setupDeleteButtons() {
       const confirmAlert = document.getElementById('confirmAlert');
