@@ -25,14 +25,14 @@
       right: 10px;
       z-index: 1000;
       background: white;
-      padding: 10px;
+      padding: 8px;
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      max-width: 300px;
+      max-width: 280px;
       width: 90%;
       height: auto;
       overflow: visible;
-      transition: height 0.3s ease, overflow 0.3s ease;
+      transition: all 0.3s ease;
     }
     
     .loading {
@@ -65,7 +65,7 @@
     .file-list li {
       padding: 4px 0;
       border-bottom: 1px solid #eee;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .file-list li.success {
@@ -81,7 +81,7 @@
       padding: 8px;
       border-radius: 5px;
       margin-top: 8px;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .legend-item {
@@ -91,14 +91,15 @@
     }
     
     .legend-color {
-      width: 16px;
-      height: 16px;
-      margin-right: 8px;
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
       border: 1px solid #333;
+      border-radius: 2px;
     }
     
     .legend-item span {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: normal;
     }
     
@@ -113,23 +114,32 @@
     /* Judul Sensus */
     .sensus-title {
       text-align: center;
-      margin-bottom: 10px;
-      padding: 8px;
+      margin-bottom: 0;
+      padding: 6px;
       background: linear-gradient(135deg, #27ae60, #2ecc71);
       border-radius: 5px;
       color: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       cursor: pointer;
       user-select: none;
-      position: relative; /* Untuk tambahan indikator */
+      position: relative;
     }
     
     .sensus-title h2 {
       margin: 0;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    
+    .sensus-title .subtitle {
+      display: block;
+      font-size: 10px;
+      margin-top: 2px;
+      font-weight: normal;
+      opacity: 0.8;
     }
     
     /* Layer Control */
@@ -137,7 +147,7 @@
       border-radius: 5px;
       box-shadow: 0 1px 5px rgba(0,0,0,0.2);
       background: white;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .leaflet-control-layers-toggle {
@@ -154,14 +164,14 @@
     
     .leaflet-control-layers label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       margin: 2px 0;
     }
     
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
-        max-width: 220px; /* Reduced from 280px */
+        max-width: 220px;
         padding: 6px;
         right: 5px;
         top: 5px;
@@ -175,13 +185,17 @@
         font-size: 12px;
       }
       
+      .sensus-title .subtitle {
+        font-size: 9px;
+      }
+      
       #blok-title, #location-info p {
         font-size: 11px;
         margin: 2px 0;
       }
       
       .file-list h4, .legend h4 {
-        font-size: 12px;
+        font-size: 11px;
         margin: 4px 0;
       }
       
@@ -194,30 +208,31 @@
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          z-index: 1001; /* Increased from 1000 */
+          z-index: 1001;
           background: white;
           padding: 15px;
           border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3); /* More prominent shadow */
+          box-shadow: 0 0 15px rgba(0,0,0,0.3);
           text-align: center;
           width: 80%;
           max-width: 280px;
-          display: none; /* Initially hidden */
+          display: none;
       }
       
       .loading h3 {
         color: #333;
         margin: 0 0 10px 0;
+        font-size: 14px;
       }
       
       #progress {
         margin: 0;
         color: #555;
-        font-size: 14px;
+        font-size: 12px;
       }
       
       .leaflet-control-layers {
-        font-size: 12px;
+        font-size: 11px;
       }
     }
     
@@ -236,6 +251,10 @@
         font-size: 11px;
       }
       
+      .sensus-title .subtitle {
+        font-size: 8px;
+      }
+      
       .legend-item span {
         font-size: 10px;
       }
@@ -251,32 +270,50 @@
     }
 
     /* Toggle Controls */
-    
     .map-controls.collapsed {
-        height: 80px; /* Sesuaikan dengan tinggi judul */
+        height: 50px;
         overflow: hidden;
-    }
-    
-    /* Judul sebagai toggle button */
-    .sensus-title {
-        cursor: pointer;
-        user-select: none;
-        position: relative; /* Untuk tambahan indikator */
     }
     
     /* Tambahkan indikator panah */
     .sensus-title::after {
         content: "▼";
         position: absolute;
-        right: 10px;
+        right: 8px;
         top: 50%;
         transform: translateY(-50%);
-        font-size: 12px;
+        font-size: 10px;
         transition: transform 0.3s ease;
     }
     
     .map-controls.collapsed .sensus-title::after {
         transform: translateY(-50%) rotate(-90deg);
+    }
+    
+    /* Animasi untuk toggle */
+    .map-controls {
+      transition: all 0.3s ease;
+    }
+    
+    /* Style untuk info blok */
+    #blok-title {
+      font-size: 13px;
+      margin: 6px 0;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    #location-info p {
+      margin: 3px 0;
+      font-size: 12px;
+      color: #555;
+    }
+    
+    .file-list h4, .legend h4 {
+      margin: 6px 0 4px 0;
+      font-size: 12px;
+      color: #333;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -291,7 +328,7 @@
 
 <div class="map-controls">
   <div class="sensus-title">
-    <h2>HASIL SENSUS POKOK</h2>
+    <h2>HASIL SENSUS POKOK<br><span class="subtitle">--- Tekan di sini untuk melihat detail ---</span></h2>
   </div>
   
   <h3 id="blok-title">Blok: Loading...</h3>
@@ -388,16 +425,16 @@
     const controlsElement = document.querySelector('.map-controls');
     if (window.innerWidth <= 768) {
       // Sesuaikan ukuran font dan padding untuk mobile
-      document.querySelector('.map-controls').style.maxWidth = '280px';
-      document.querySelector('.sensus-title h2').style.fontSize = '14px';
+      document.querySelector('.map-controls').style.maxWidth = '220px';
+      document.querySelector('.sensus-title h2').style.fontSize = '12px';
       
       // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
       controlsElement.classList.add('collapsed'); // Default collap
     } else {
       // Kembalikan ke ukuran desktop
-      document.querySelector('.map-controls').style.maxWidth = '300px';
-      document.querySelector('.sensus-title h2').style.fontSize = '16px';
+      document.querySelector('.map-controls').style.maxWidth = '280px';
+      document.querySelector('.sensus-title h2').style.fontSize = '14px';
       layerControl.setPosition('bottomright');
       controlsElement.classList.remove('collapsed'); // Default exp
     }
