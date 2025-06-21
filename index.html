@@ -460,6 +460,19 @@
       'Duri': 2
     };
 
+    // Fungsi untuk memisahkan huruf dan angka dari blok
+    function parseBlok(blok) {
+      // Mencari posisi pertama angka
+      const match = blok.match(/([A-Za-z]+)(\d+)/);
+      if (match) {
+        return {
+          letters: match[1].toUpperCase(),
+          numbers: parseInt(match[2], 10)
+        };
+      }
+      return { letters: '', numbers: 0 };
+    }
+
     fetch(SHEET_CSV_URL)
       .then(res => res.text())
       .then(csv => {
@@ -511,6 +524,19 @@
           const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
           const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
           return kebunOrderA - kebunOrderB;
+
+           // Jika kebun sama, urutkan berdasarkan blok
+          const blokA = parseBlok(a.blok);
+          const blokB = parseBlok(b.blok);
+          
+          // Bandingkan bagian huruf
+          const letterCompare = blokA.letters.localeCompare(blokB.letters);
+          if (letterCompare !== 0) {
+            return letterCompare;
+          }
+          
+          // Jika huruf sama, bandingkan bagian angka
+          return blokA.numbers - blokB.numbers;
         });
 
         // Kelompokkan data berdasarkan kebun dan divisi untuk merge cell
