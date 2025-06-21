@@ -353,12 +353,12 @@
       <span>TBM (Hijau)</span>
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: black;"></div>
-      <span>Titik Kosong + Abnormal (Hitam+Merah)</span>
-    </div>
-    <div class="legend-item">
       <div class="legend-color" style="background-color: orange;"></div>
       <span>Sisipan (Orange)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: black;"></div>
+      <span>Titik Kosong + Abnormal (Hitam+Merah)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: #800080;"></div>
@@ -644,13 +644,17 @@
     // Format numbers
     const greenCount = legendStats.green.count.toLocaleString('id-ID');
     const blueCount = legendStats.blue.count.toLocaleString('id-ID');
-    const blackRedCount = legendStats.black.count.toLocaleString('id-ID'); // Gabungan hitam+merah
+    const blackRedCount = legendStats.black.count.toLocaleString('id-ID');
     const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
-    const totalPokok = (legendStats.green.count + legendStats.blue.count).toLocaleString('id-ID');
+    
+    // Ubah perhitungan total pokok (biru + hijau + orange)
+    const totalPokok = (legendStats.blue.count + legendStats.green.count + legendStats.orange.count).toLocaleString('id-ID');
+    
     const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
     
+    // Update stand/ha sesuai total pokok baru
     const standPerHa = legendStats.track.area > 0 
-      ? (legendStats.green.count + legendStats.blue.count) / legendStats.track.area
+      ? (legendStats.blue.count + legendStats.green.count + legendStats.orange.count) / legendStats.track.area
       : 0;
     const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
       maximumFractionDigits: 2,
@@ -668,12 +672,12 @@
         <span>TBM (Hijau) = ${greenCount} Pkk</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color" style="background-color: black;"></div>
-        <span>Titik Kosong + Abnormal (Hitam+Merah) = ${blackRedCount} Pkk</span>
-      </div>
-      <div class="legend-item">
         <div class="legend-color" style="background-color: orange;"></div>
         <span>Sisipan (Orange) = ${orangeCount} Pkk</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: black;"></div>
+        <span>Titik Kosong + Abnormal (Hitam+Merah) = ${blackRedCount} Pkk</span>
       </div>
       <div class="legend-item total">
         <div class="legend-color" style="background-color: transparent;"></div>
