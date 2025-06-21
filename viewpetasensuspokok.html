@@ -458,7 +458,7 @@
     const sym = (symbol || '').toLowerCase().trim();
     let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // default blue
     
-    if (sym === 'flag, green') {
+    if (sym === 'flag, green' || sym === 'city (small)') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
     } else if (sym === 'navaid, black') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
@@ -466,6 +466,8 @@
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/orange-flag-cropped.png';
     } else if (sym === 'navaid, red') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/red-flag-cropped.png';
+    } else if (sym === 'custom 7') {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     }
     
     return new L.Icon({
@@ -567,7 +569,7 @@
           const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
           
           // Hitung waypoint berdasarkan warna
-          if (sym.toLowerCase().includes('green')) {
+          if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
             legendStats.green.count++;
           } else if (sym.toLowerCase().includes('black')) {
             legendStats.black.count++;
@@ -575,6 +577,8 @@
             legendStats.orange.count++;
           } else if (sym.toLowerCase().includes('red')) {
             legendStats.red.count++;
+          } else if (sym.toLowerCase().includes('custom 7')) {
+            legendStats.blue.count++; // Custom 7 dihitung sebagai biru
           } else {
             legendStats.blue.count++; // Default blue
           }
@@ -666,11 +670,11 @@
       <h4>Legenda:</h4>
       <div class="legend-item">
         <div class="legend-color" style="background-color: green;"></div>
-        <span>Waypoint Hijau = ${greenCount} Pkk</span>
+        <span>City (Small)/Hijau = ${greenCount} Pkk</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: blue;"></div>
-        <span>Waypoint Biru = ${blueCount} Pkk</span>
+        <span>Custom 7/Biru = ${blueCount} Pkk</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: black;"></div>
