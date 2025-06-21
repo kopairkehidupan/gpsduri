@@ -32,7 +32,7 @@
       width: 90%;
       height: auto;
       overflow: visible;
-      transition: height 0.3s ease, overflow 0.3s ease;
+      transition: all 0.3s ease;
     }
     
     .loading {
@@ -121,7 +121,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       cursor: pointer;
       user-select: none;
-      position: relative; /* Untuk tambahan indikator */
+      position: relative;
     }
     
     .sensus-title h2 {
@@ -161,7 +161,7 @@
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
-        max-width: 220px; /* Reduced from 280px */
+        max-width: 220px;
         padding: 6px;
         right: 5px;
         top: 5px;
@@ -194,15 +194,15 @@
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          z-index: 1001; /* Increased from 1000 */
+          z-index: 1001;
           background: white;
           padding: 15px;
           border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3); /* More prominent shadow */
+          box-shadow: 0 0 15px rgba(0,0,0,0.3);
           text-align: center;
           width: 80%;
           max-width: 280px;
-          display: none; /* Initially hidden */
+          display: none;
       }
       
       .loading h3 {
@@ -251,20 +251,13 @@
     }
 
     /* Toggle Controls */
-    
     .map-controls.collapsed {
-        height: 80px; /* Sesuaikan dengan tinggi judul */
+        height: auto;
+        max-height: 80px;
         overflow: hidden;
     }
     
     /* Judul sebagai toggle button */
-    .sensus-title {
-        cursor: pointer;
-        user-select: none;
-        position: relative; /* Untuk tambahan indikator */
-    }
-    
-    /* Tambahkan indikator panah */
     .sensus-title::after {
         content: "▼";
         position: absolute;
@@ -279,10 +272,20 @@
         transform: translateY(-50%) rotate(-90deg);
     }
     
-    /* Tombol toggle detail */
-    .toggle-detail {
+    /* Tombol toggle detail - POSISI DI LUAR MAP-CONTROLS */
+    .toggle-detail-container {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        width: 90%;
+        max-width: 300px;
         text-align: center;
-        margin: 8px 0;
+    }
+    
+    .toggle-detail {
+        display: inline-block;
+        margin-top: 8px;
         padding: 6px;
         background: #f0f0f0;
         border-radius: 4px;
@@ -291,6 +294,7 @@
         color: #555;
         border: 1px dashed #999;
         user-select: none;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
     
     .toggle-detail:hover {
@@ -311,6 +315,11 @@
 
 <div id="map"></div>
 
+<!-- Tombol toggle dipindahkan di luar map-controls -->
+<div id="toggle-detail-container" class="toggle-detail-container hidden">
+  <div id="toggle-detail" class="toggle-detail">--------Tekan disini untuk melihat detail--------</div>
+</div>
+
 <div class="map-controls">
   <div class="sensus-title">
     <h2>HASIL SENSUS POKOK</h2>
@@ -318,7 +327,6 @@
   
   <h3 id="blok-title">Blok: Loading...</h3>
   <div id="location-info"></div>
-  <div id="toggle-detail" class="toggle-detail hidden">--------Tekan disini untuk melihat detail--------</div>
   <div class="file-list" id="file-list">
     <h4>File yang dimuat:</h4>
     <ul id="loaded-files"></ul>
@@ -409,6 +417,8 @@
   // Adjust controls for mobile
   function adjustForMobile() {
     const controlsElement = document.querySelector('.map-controls');
+    const toggleContainer = document.getElementById('toggle-detail-container');
+    
     if (window.innerWidth <= 768) {
       // Sesuaikan ukuran font dan padding untuk mobile
       document.querySelector('.map-controls').style.maxWidth = '280px';
@@ -416,16 +426,26 @@
       
       // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
-      controlsElement.classList.add('collapsed'); // Default collap
-      updateToggleVisibility();
+      controlsElement.classList.add('collapsed');
+      
+      // Sesuaikan posisi toggle container
+      toggleContainer.style.maxWidth = '280px';
+      toggleContainer.style.right = '5px';
+      toggleContainer.style.top = '5px';
     } else {
       // Kembalikan ke ukuran desktop
       document.querySelector('.map-controls').style.maxWidth = '300px';
       document.querySelector('.sensus-title h2').style.fontSize = '16px';
       layerControl.setPosition('bottomright');
-      controlsElement.classList.remove('collapsed'); // Default exp
-      document.getElementById('toggle-detail').classList.add('hidden');
+      controlsElement.classList.remove('collapsed');
+      
+      // Sesuaikan posisi toggle container
+      toggleContainer.style.maxWidth = '300px';
+      toggleContainer.style.right = '10px';
+      toggleContainer.style.top = '10px';
     }
+    
+    updateToggleVisibility();
   }
 
   // Custom icons
@@ -745,12 +765,12 @@
   // Fungsi untuk update tampilan toggle
   function updateToggleVisibility() {
       const controlsElement = document.querySelector('.map-controls');
-      const toggleDetail = document.getElementById('toggle-detail');
+      const toggleContainer = document.getElementById('toggle-detail-container');
       
-      if (controlsElement.classList.contains('collapsed')) {
-          toggleDetail.classList.remove('hidden');
+      if (window.innerWidth <= 768 && controlsElement.classList.contains('collapsed')) {
+          toggleContainer.classList.remove('hidden');
       } else {
-          toggleDetail.classList.add('hidden');
+          toggleContainer.classList.add('hidden');
       }
   }
 
