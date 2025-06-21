@@ -343,7 +343,7 @@
     <ul id="loaded-files"></ul>
   </div>
   <div class="legend">
-  <h4>Legenda:</h4>
+    <h4>Legenda:</h4>
     <div class="legend-item">
       <div class="legend-color" style="background-color: blue;"></div>
       <span>TM (Biru)</span>
@@ -354,15 +354,11 @@
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: black;"></div>
-      <span>Titik Kosong (Hitam)</span>
+      <span>Titik Kosong + Abnormal (Hitam+Merah)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: orange;"></div>
       <span>Sisipan (Orange)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: red;"></div>
-      <span>Titik Kosong (Merah)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: #800080;"></div>
@@ -500,12 +496,10 @@
   const legendStats = {
     blue: { count: 0 },
     green: { count: 0 },
-    black: { count: 0 },
+    black: { count: 0 }, // Sekarang menyimpan hitungan black + red
     orange: { count: 0 },
-    red: { count: 0 },
     track: { area: 0 }
   };
-
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) {
@@ -571,14 +565,12 @@
           // Hitung waypoint berdasarkan warna
           if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
             legendStats.green.count++;
-          } else if (sym.toLowerCase().includes('black')) {
-            legendStats.black.count++;
+          } else if (sym.toLowerCase().includes('black') || sym.toLowerCase().includes('red')) {
+            legendStats.black.count++; // Gabungkan hitam dan merah
           } else if (sym.toLowerCase().includes('orange')) {
             legendStats.orange.count++;
-          } else if (sym.toLowerCase().includes('red')) {
-            legendStats.red.count++;
           } else if (sym.toLowerCase().includes('custom 7')) {
-            legendStats.blue.count++; // Custom 7 dihitung sebagai biru
+            legendStats.blue.count++;
           } else {
             legendStats.blue.count++; // Default blue
           }
@@ -649,12 +641,11 @@
   function updateLegend() {
     const legendElement = document.querySelector('.legend');
     
-    // Format numbers with thousand separators
+    // Format numbers
     const greenCount = legendStats.green.count.toLocaleString('id-ID');
     const blueCount = legendStats.blue.count.toLocaleString('id-ID');
-    const blackCount = legendStats.black.count.toLocaleString('id-ID');
+    const blackRedCount = legendStats.black.count.toLocaleString('id-ID'); // Gabungan hitam+merah
     const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
-    const redCount = legendStats.red.count.toLocaleString('id-ID');
     const totalPokok = (legendStats.green.count + legendStats.blue.count).toLocaleString('id-ID');
     const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
     
@@ -678,15 +669,11 @@
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: black;"></div>
-        <span>Titik Kosong + Abnormal (Hitam) = ${blackCount} Pkk</span>
+        <span>Titik Kosong + Abnormal (Hitam+Merah) = ${blackRedCount} Pkk</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: orange;"></div>
         <span>Sisipan (Orange) = ${orangeCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: red;"></div>
-        <span>Titik Kosong (Merah) = ${redCount} Pkk</span>
       </div>
       <div class="legend-item total">
         <div class="legend-color" style="background-color: transparent;"></div>
