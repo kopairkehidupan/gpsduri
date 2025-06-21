@@ -383,6 +383,12 @@
       gap: 0.8rem;
       border-top: 1px solid var(--medium-gray);
     }
+
+    /* Tambahkan ini */
+    td.merged-cell {
+      vertical-align: top;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -536,14 +542,14 @@
           const tdKebun = document.createElement("td");
           tdKebun.textContent = group.kebun;
           tdKebun.rowSpan = group.items.length;
-          tdKebun.style.verticalAlign = 'middle';
+          tdKebun.className = "merged-cell"; // Tambahkan class ini
           firstRow.appendChild(tdKebun);
           
           // Kolom Divisi (rowspan sesuai jumlah item)
           const tdDivisi = document.createElement("td");
           tdDivisi.textContent = group.divisi;
           tdDivisi.rowSpan = group.items.length;
-          tdDivisi.style.verticalAlign = 'middle';
+          tdDivisi.className = "merged-cell"; // Tambahkan class ini
           firstRow.appendChild(tdDivisi);
           
           // Baris pertama memiliki kolom Blok, Data, dan Aksi
