@@ -135,11 +135,16 @@
     }
     
     .sensus-title .subtitle {
-      display: block;
+      display: none; /* Initially hidden */
       font-size: 10px;
       margin-top: 2px;
       font-weight: normal;
       opacity: 0.8;
+    }
+    
+    /* Show subtitle only when collapsed */
+    .map-controls.collapsed .sensus-title .subtitle {
+      display: block;
     }
     
     /* Layer Control */
@@ -271,7 +276,7 @@
 
     /* Toggle Controls */
     .map-controls.collapsed {
-        height: 80px;
+        height: 50px;
         overflow: hidden;
     }
     
@@ -288,11 +293,6 @@
     
     .map-controls.collapsed .sensus-title::after {
         transform: translateY(-50%) rotate(-90deg);
-    }
-    
-    /* Hide subtitle when collapsed */
-    .map-controls.collapsed .subtitle {
-        display: none;
     }
     
     /* Animasi untuk toggle */
