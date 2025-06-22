@@ -1,8 +1,9 @@
+ript
 // Daftar IP yang diizinkan (ganti dengan IP perangkat Anda)
 const ALLOWED_IPS = [
     '192.168.195.97',  // Contoh IP komputer 1
-    '192.168.1.101',  // Contoh IP komputer 2
-    '123.123.123.123' // Contoh IP publik
+    '192.168.1.101',   // Contoh IP komputer 2
+    '123.123.123.123'  // Contoh IP publik
 ];
 
 // Fungsi untuk memeriksa IP pengguna
@@ -27,19 +28,30 @@ function disableButtons() {
     const uploadBtn = document.querySelector('a[href="uploadsensuspokok.html"]');
     if (uploadBtn) {
         uploadBtn.classList.add('disabled');
-        uploadBtn.onclick = function(e) {
+        uploadBtn.addEventListener('click', function(e) {
             e.preventDefault();
             alert('Akses ditolak: Hanya perangkat tertentu yang dapat mengupload data.');
-        };
+        });
     }
 
-    // Tombol Hapus
+    // Tombol Hapus - Perubahan utama di sini
     document.querySelectorAll('.btn-delete').forEach(btn => {
+        const originalOnClick = btn.onclick; // Simpan fungsi asli
+        
         btn.classList.add('disabled');
-        btn.onclick = function(e) {
-            e.preventDefault();
-            alert('Akses ditolak: Hanya perangkat tertentu yang dapat menghapus data.');
-        };
+        btn.addEventListener('click', function(e) {
+            if (btn.classList.contains('disabled')) {
+                e.preventDefault();
+                e.stopImmediatePropagation(); // Menghentikan event bubbling
+                alert('Akses ditolak: Hanya perangkat tertentu yang dapat menghapus data.');
+                return false;
+            }
+            
+            // Jika tidak disabled, jalankan fungsi asli
+            if (originalOnClick) {
+                originalOnClick.call(this, e);
+            }
+        });
     });
 }
 
@@ -49,7 +61,9 @@ style.textContent = `
     .disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        pointer-events: none;
+    }
+    .disabled:hover {
+        opacity: 0.5 !important;
     }
 `;
 document.head.appendChild(style);
@@ -60,8 +74,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     if (!hasAccess) {
         disableButtons();
-        
-        // Tambahkan notifikasi di konsol untuk debugging
         console.warn('Akses dibatasi: IP perangkat tidak terdaftar');
+    } else {
+        console.log('Akses diizinkan untuk IP ini');
     }
+});
+
+// Pastikan kode ini dijalankan SETELAH tombol-tombol dibuat/dirender
+// Jika tombol dibuat secara dinamis, gunakan MutationObserver:
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length) {
+            checkIP().then(hasAccess => {
+                if (!hasAccess) disableButtons();
+            });
+        }
+    });
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
 });
