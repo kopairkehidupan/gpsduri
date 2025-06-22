@@ -32,24 +32,32 @@ async function checkIPAccess() {
     return false;
 }
 
+function disableElement(element) {
+    // Clone element untuk menghapus semua event listener yang ada
+    const newElement = element.cloneNode(true);
+    element.parentNode.replaceChild(newElement, element);
+    
+    // Tambahkan class dan handler baru
+    newElement.classList.add('restricted-access');
+    newElement.style.pointerEvents = 'none';
+    
+    // Tambahkan handler untuk mencegah aksi default
+    newElement.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        alert(IP_CONFIG.accessDeniedMessage);
+        return false;
+    }, true); // Gunakan capture phase
+}
+
 function restrictAccess() {
     // Disable Upload Button
     const uploadBtn = document.querySelector('a[href="uploadsensuspokok.html"]');
-    if (uploadBtn) {
-        uploadBtn.classList.add('restricted-access');
-        uploadBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert(IP_CONFIG.accessDeniedMessage);
-        });
-    }
+    if (uploadBtn) disableElement(uploadBtn);
 
     // Disable Delete Buttons
     document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.classList.add('restricted-access');
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert(IP_CONFIG.accessDeniedMessage);
-        });
+        disableElement(btn);
     });
 }
 
@@ -58,14 +66,13 @@ function restrictAccess() {
     try {
         const hasAccess = await checkIPAccess();
         if (!hasAccess) {
-            restrictAccess();
-            
             // Add restricted style
             const style = document.createElement('style');
             style.textContent = `
                 .restricted-access {
                     opacity: 0.6;
-                    cursor: not-allowed;
+                    cursor: not-allowed !important;
+                    pointer-events: none !important;
                     position: relative;
                 }
                 .restricted-access::after {
@@ -75,8 +82,28 @@ function restrictAccess() {
                     top: 50%;
                     transform: translateY(-50%);
                 }
+                .restricted-access:hover {
+                    opacity: 0.6 !important;
+                }
             `;
             document.head.appendChild(style);
+            
+            // Restrict access
+            restrictAccess();
+            
+            // Observer untuk menangani elemen yang muncul kemudian
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.addedNodes.length) {
+                        restrictAccess();
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
         }
     } catch (error) {
         console.error('Access control initialization failed:', error);
