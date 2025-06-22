@@ -16,34 +16,74 @@ async function getClientIP(apiUrl) {
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
-        
-        // Handle berbagai format response API
-        const ip = data.ip || data.ipAddress;
-        if (IP_CONFIG.debugMode) console.log(`API: ${apiUrl}, IP: ${ip}`);
-        return ip;
+        return data.ip || data.ipAddress;
     } catch (error) {
         if (IP_CONFIG.debugMode) console.error(`Error fetching IP from ${apiUrl}:`, error);
         throw error;
     }
 }
 
+async function getLocalIPs() {
+    return new Promise((resolve) => {
+        const ips = [];
+        const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+        
+        if (!RTCPeerConnection) {
+            if (IP_CONFIG.debugMode) console.log('RTCPeerConnection not supported');
+            resolve([]);
+            return;
+        }
+
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        
+        pc.createDataChannel('');
+        pc.createOffer()
+            .then(offer => pc.setLocalDescription(offer))
+            .catch(err => {
+                if (IP_CONFIG.debugMode) console.error('Error creating offer:', err);
+                resolve([]);
+            });
+
+        pc.onicecandidate = (ice) => {
+            if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+            const ip = ice.candidate.candidate.split(' ')[4];
+            if (ip && ips.indexOf(ip) === -1) ips.push(ip);
+        };
+
+        setTimeout(() => {
+            if (IP_CONFIG.debugMode) console.log('Local IPs detected:', ips);
+            resolve(ips);
+        }, 1000);
+    });
+}
+
 async function checkIPAccess() {
     if (IP_CONFIG.debugMode) console.log('Memeriksa akses IP...');
     
-    // Coba semua endpoint sampai berhasil
+    // Dapatkan IP lokal terlebih dahulu
+    const localIPs = await getLocalIPs();
+    if (IP_CONFIG.debugMode) console.log('IP Lokal:', localIPs);
+    
+    // Periksa IP lokal terlebih dahulu
+    const localMatch = localIPs.some(ip => 
+        IP_CONFIG.allowedIPs.some(allowedIP => ip === allowedIP)
+    );
+    
+    if (localMatch) {
+        if (IP_CONFIG.debugMode) console.log('IP lokal diizinkan');
+        return true;
+    }
+    
+    // Jika tidak ada match di lokal, cek IP publik
     for (const endpoint of IP_CONFIG.apiEndpoints) {
         try {
             const ip = await getClientIP(endpoint);
-            if (IP_CONFIG.debugMode) console.log('IP terdeteksi:', ip);
+            if (IP_CONFIG.debugMode) console.log('IP Publik terdeteksi:', ip);
             
-            // Periksa apakah IP termasuk dalam yang diizinkan
-            const isAllowed = IP_CONFIG.allowedIPs.some(allowedIP => {
-                // Bandingkan dengan atau tanpa prefix
-                return ip === allowedIP || ip.endsWith(allowedIP);
-            });
+            const isAllowed = IP_CONFIG.allowedIPs.some(allowedIP => ip === allowedIP);
             
             if (isAllowed) {
-                if (IP_CONFIG.debugMode) console.log('IP diizinkan');
+                if (IP_CONFIG.debugMode) console.log('IP publik diizinkan');
                 return true;
             }
         } catch (error) {
