@@ -1,72 +1,86 @@
-// Daftar IP yang diizinkan
-const ALLOWED_IPS = [
-    '192.168.195.97',  // IP komputer 1
-    '192.168.1.101',   // IP komputer 2
-    '123.123.123.123'  // IP publik
-];
+// Konfigurasi
+const IP_CONFIG = {
+    allowedIPs: ['192.168.195.97', '123.123.123.123'],
+    apiEndpoints: [
+        'https://api.ipify.org?format=json',
+        'https://api64.ipify.org?format=json'
+    ],
+    accessDeniedMessage: 'Akses terbatas: Fitur ini hanya tersedia untuk perangkat tertentu'
+};
 
-// Fungsi untuk memeriksa IP
-async function checkIP() {
+// Utility Functions
+async function getClientIP(apiUrl) {
     try {
-        const response = await fetch('https://api.ipify.org?format=json');
+        const response = await fetch(apiUrl);
         if (!response.ok) throw new Error('Network response was not ok');
-        const { ip } = await response.json();
-        return ALLOWED_IPS.includes(ip);
+        return await response.json();
     } catch (error) {
-        console.error('Error checking IP:', error);
-        return false; // Default deny jika gagal check IP
+        console.error(`Error fetching IP from ${apiUrl}:`, error);
+        throw error;
     }
 }
 
-// Fungsi untuk mengontrol akses
-async function controlAccess() {
-    const hasAccess = await checkIP();
-    
-    if (!hasAccess) {
-        // Nonaktifkan tombol Upload
-        const uploadBtn = document.querySelector('a[href="uploadsensuspokok.html"]');
-        if (uploadBtn) {
-            uploadBtn.classList.add('no-access');
-            uploadBtn.onclick = (e) => {
-                e.preventDefault();
-                alert('Akses terbatas: Hanya perangkat tertentu yang dapat mengupload data.');
-            };
+async function checkIPAccess() {
+    for (const endpoint of IP_CONFIG.apiEndpoints) {
+        try {
+            const { ip } = await getClientIP(endpoint);
+            if (IP_CONFIG.allowedIPs.includes(ip)) return true;
+        } catch {
+            continue;
         }
+    }
+    return false;
+}
 
-        // Nonaktifkan tombol Hapus
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.classList.add('no-access');
-            const originalClick = btn.onclick;
-            btn.onclick = (e) => {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-                alert('Akses terbatas: Hanya perangkat tertentu yang dapat menghapus data.');
-            };
+function restrictAccess() {
+    // Disable Upload Button
+    const uploadBtn = document.querySelector('a[href="uploadsensuspokok.html"]');
+    if (uploadBtn) {
+        uploadBtn.classList.add('restricted-access');
+        uploadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert(IP_CONFIG.accessDeniedMessage);
         });
     }
+
+    // Disable Delete Buttons
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.classList.add('restricted-access');
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert(IP_CONFIG.accessDeniedMessage);
+        });
+    });
 }
 
-// Style untuk elemen terbatas
-const style = document.createElement('style');
-style.textContent = `
-    .no-access {
-        opacity: 0.5;
-        cursor: not-allowed;
-        position: relative;
+// Initialize
+(async function init() {
+    try {
+        const hasAccess = await checkIPAccess();
+        if (!hasAccess) {
+            restrictAccess();
+            
+            // Add restricted style
+            const style = document.createElement('style');
+            style.textContent = `
+                .restricted-access {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                    position: relative;
+                }
+                .restricted-access::after {
+                    content: "🔒";
+                    position: absolute;
+                    right: 5px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } catch (error) {
+        console.error('Access control initialization failed:', error);
+        // Default to restricted access if check fails
+        restrictAccess();
     }
-    .no-access:hover {
-        opacity: 0.5 !important;
-    }
-    .no-access::after {
-        content: "🔒";
-        margin-left: 5px;
-    }
-`;
-document.head.appendChild(style);
-
-// Eksekusi setelah DOM siap
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', controlAccess);
-} else {
-    controlAccess();
-}
+})();
