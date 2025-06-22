@@ -32,33 +32,51 @@ async function checkIPAccess() {
     return false;
 }
 
-function disableElement(element) {
-    // Clone element untuk menghapus semua event listener yang ada
-    const newElement = element.cloneNode(true);
-    element.parentNode.replaceChild(newElement, element);
+function disableDeleteFunctionality() {
+    // Hapus semua event listener yang ada pada tombol hapus
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        // Clone tombol untuk menghapus event listener yang ada
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        // Tambahkan class restricted
+        newBtn.classList.add('restricted-access');
+        
+        // Nonaktifkan sepenuhnya
+        newBtn.onclick = null;
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            alert(IP_CONFIG.accessDeniedMessage);
+            return false;
+        });
+        
+        // Nonaktifkan juga event listener dari parent jika ada
+        if (newBtn.closest('td')) {
+            newBtn.closest('td').onclick = null;
+        }
+    });
     
-    // Tambahkan class dan handler baru
-    newElement.classList.add('restricted-access');
-    newElement.style.pointerEvents = 'none';
-    
-    // Tambahkan handler untuk mencegah aksi default
-    newElement.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        alert(IP_CONFIG.accessDeniedMessage);
-        return false;
-    }, true); // Gunakan capture phase
+    // Nonaktifkan confirmAlert jika ada
+    const confirmAlert = document.getElementById('confirmAlert');
+    if (confirmAlert) {
+        confirmAlert.style.display = 'none';
+    }
 }
 
 function restrictAccess() {
     // Disable Upload Button
     const uploadBtn = document.querySelector('a[href="uploadsensuspokok.html"]');
-    if (uploadBtn) disableElement(uploadBtn);
+    if (uploadBtn) {
+        uploadBtn.classList.add('restricted-access');
+        uploadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert(IP_CONFIG.accessDeniedMessage);
+        });
+    }
 
-    // Disable Delete Buttons
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-        disableElement(btn);
-    });
+    // Disable Delete Buttons secara lebih agresif
+    disableDeleteFunctionality();
 }
 
 // Initialize
@@ -66,7 +84,7 @@ function restrictAccess() {
     try {
         const hasAccess = await checkIPAccess();
         if (!hasAccess) {
-            // Add restricted style
+            // Tambahkan style terlebih dahulu
             const style = document.createElement('style');
             style.textContent = `
                 .restricted-access {
@@ -88,22 +106,13 @@ function restrictAccess() {
             `;
             document.head.appendChild(style);
             
-            // Restrict access
+            // Kemudian restrict akses
             restrictAccess();
             
-            // Observer untuk menangani elemen yang muncul kemudian
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.addedNodes.length) {
-                        restrictAccess();
-                    }
-                });
-            });
-            
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
+            // Nonaktifkan setupDeleteButtons
+            if (window.setupDeleteButtons) {
+                window.setupDeleteButtons = function() {};
+            }
         }
     } catch (error) {
         console.error('Access control initialization failed:', error);
