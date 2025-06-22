@@ -580,9 +580,9 @@
           }).addTo(map);
   
           marker.bindPopup(`
-            <b>Waypoint:</b> ${name}<br>
-            <b>Simbol:</b> ${sym}<br>
-            <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
+              <b>Waypoint:</b> ${name}<br>
+              <b>Kategori:</b> ${getCategoryName(sym)}<br>
+              <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
           `);
           bounds.push([lat, lon]);
         }
@@ -808,6 +808,26 @@
         controlsElement.classList.add('collapsed');
     }
   });
+
+  // Tambahkan fungsi ini di bagian script
+  function getCategoryName(symbol) {
+      const sym = (symbol || '').toLowerCase().trim();
+      
+      if (sym === 'flag, green' || sym === 'city (small)') {
+          return 'Tanaman Belum Menghasilkan (TBM)';
+      } else if (sym === 'navaid, black') {
+          return 'Titik Kosong/Abnormal';
+      } else if (sym === 'navaid, orange') {
+          return 'Sisipan';
+      } else if (sym === 'navaid, red') {
+          return 'Titik Kosong/Abnormal';
+      } else if (sym === 'custom 7') {
+          return 'Tanaman Menghasilkan (TM)';
+      } else {
+          return 'Tanaman Menghasilkan (TM)'; // Default
+      }
+  }
+  
 </script>
 </body>
 </html>
