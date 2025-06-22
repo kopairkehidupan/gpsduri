@@ -1,4 +1,3 @@
-ript
 // Daftar IP yang diizinkan (ganti dengan IP perangkat Anda)
 const ALLOWED_IPS = [
     '192.168.195.97',  // Contoh IP komputer 1
