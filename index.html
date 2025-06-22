@@ -722,6 +722,11 @@
 
     // Fungsi setupDeleteButtons dan deleteBlokData tetap sama
     function setupDeleteButtons() {
+      // Jika tombol sudah di-restrict, jangan lanjutkan
+      if (document.querySelector('.btn-delete.restricted-access')) {
+          return;
+      }
+      
       const confirmAlert = document.getElementById('confirmAlert');
       const alertMessage = document.getElementById('alertMessage');
       const confirmDeleteBtn = document.getElementById('confirmDelete');
