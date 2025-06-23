@@ -460,6 +460,30 @@
       'Duri': 2
     };
 
+    // Urutan prioritas divisi untuk Samsam
+    const DIVISI_SAMSAM_ORDER = {
+      'I': 1,
+      'II': 2,
+      'III': 3,
+      'IV': 4,
+      'V': 5,
+      'VI': 6
+    };
+
+    // Urutan prioritas divisi untuk Duri
+    const DIVISI_DURI_ORDER = {
+      'I Tegar': 1,
+      'II Tegar': 2,
+      'III Tegar': 3, 
+      'IV Tegar': 4,
+      'V Tegar': 5,
+      'VI Tegar': 6,
+      'I Rangau': 7,
+      'II Rangau': 8,
+      'III Rangau': 9,
+      'IV Rangau': 10
+    };
+    
     // Fungsi untuk memisahkan huruf dan angka dari blok
     function parseBlok(blok) {
       // Mencari posisi pertama angka
@@ -474,134 +498,206 @@
     }
 
     fetch(SHEET_CSV_URL)
-      .then(res => res.text())
-      .then(csv => {
-        const rows = csv.trim().split("\n").slice(1);
-        const dataByBlok = {};
-        const tbody = document.querySelector("#blokTable tbody");
+    .then(res => res.text())
+    .then(csv => {
+      const rows = csv.trim().split("\n").slice(1);
+      const dataByBlok = {};
+      const tbody = document.querySelector("#blokTable tbody");
+      
+      // Clear loading row
+      tbody.innerHTML = '';
+
+      // Proses data dari CSV
+      rows.forEach(row => {
+        const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
+        const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
+        const key = `${kebun}|${divisi}|${blok}`;
+
+        if (!dataByBlok[key]) {
+          dataByBlok[key] = { 
+            kebun, 
+            divisi, 
+            blok, 
+            waypoints: [], 
+            tracks: [],
+            hasWaypoints: false,
+            hasTracks: false
+          };
+        }
         
-        // Clear loading row
-        tbody.innerHTML = '';
+        if (dataType.toUpperCase() === 'WAYPOINT') {
+          dataByBlok[key].waypoints.push(fileUrl);
+          dataByBlok[key].hasWaypoints = true;
+        } else if (dataType.toUpperCase() === 'TRACK') {
+          dataByBlok[key].tracks.push(fileUrl);
+          dataByBlok[key].hasTracks = true;
+        }
+      });
 
-        // Proses data dari CSV
-        rows.forEach(row => {
-          const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
-          const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
-          const key = `${kebun}|${divisi}|${blok}`;
-
-          if (!dataByBlok[key]) {
-            dataByBlok[key] = { 
-              kebun, 
-              divisi, 
-              blok, 
-              waypoints: [], 
-              tracks: [],
-              hasWaypoints: false,
-              hasTracks: false
-            };
-          }
-          
-          if (dataType.toUpperCase() === 'WAYPOINT') {
-            dataByBlok[key].waypoints.push(fileUrl);
-            dataByBlok[key].hasWaypoints = true;
-          } else if (dataType.toUpperCase() === 'TRACK') {
-            dataByBlok[key].tracks.push(fileUrl);
-            dataByBlok[key].hasTracks = true;
-          }
-        });
-
-        // Konversi object ke array dan urutkan
-        const sortedData = Object.values(dataByBlok).sort((a, b) => {
-          // Urutkan berdasarkan divisi (numerik)
-          const divA = parseInt(a.divisi.replace(/\D/g, '')) || 0;
-          const divB = parseInt(b.divisi.replace(/\D/g, '')) || 0;
-          
-          if (divA !== divB) {
-            return divA - divB;
-          }
-          
-          // Jika divisi sama, urutkan berdasarkan kebun (Samsam pertama)
-          const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
-          const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
+      // Konversi object ke array dan urutkan
+      const sortedData = Object.values(dataByBlok).sort((a, b) => {
+        // Urutkan berdasarkan kebun (Samsam pertama)
+        const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
+        const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
+        if (kebunOrderA !== kebunOrderB) {
           return kebunOrderA - kebunOrderB;
+        }
+        
+        // Jika kebun sama, urutkan berdasarkan divisi
+        let divisiOrderA, divisiOrderB;
+        
+        if (a.kebun === 'Samsam') {
+          divisiOrderA = DIVISI_SAMSAM_ORDER[a.divisi] || 99;
+          divisiOrderB = DIVISI_SAMSAM_ORDER[b.divisi] || 99;
+        } else if (a.kebun === 'Duri') {
+          divisiOrderA = DIVISI_DURI_ORDER[a.divisi] || 99;
+          divisiOrderB = DIVISI_DURI_ORDER[b.divisi] || 99;
+        }
+        
+        if (divisiOrderA !== divisiOrderB) {
+          return divisiOrderA - divisiOrderB;
+        }
+        
+        // Jika divisi sama, urutkan berdasarkan blok
+        const blokA = parseBlok(a.blok);
+        const blokB = parseBlok(b.blok);
+        
+        // Bandingkan bagian huruf
+        const letterCompare = blokA.letters.localeCompare(blokB.letters);
+        if (letterCompare !== 0) {
+          return letterCompare;
+        }
+        
+        // Jika huruf sama, bandingkan bagian angka
+        return blokA.numbers - blokB.numbers;
+      });
 
-           // Jika kebun sama, urutkan berdasarkan blok
-          const blokA = parseBlok(a.blok);
-          const blokB = parseBlok(b.blok);
-          
-          // Bandingkan bagian huruf
-          const letterCompare = blokA.letters.localeCompare(blokB.letters);
-          if (letterCompare !== 0) {
-            return letterCompare;
-          }
-          
-          // Jika huruf sama, bandingkan bagian angka
-          return blokA.numbers - blokB.numbers;
-        });
+      // Kelompokkan data berdasarkan kebun dan divisi untuk merge cell
+      const groupedData = [];
+      let currentGroup = null;
 
-        // Kelompokkan data berdasarkan kebun dan divisi untuk merge cell
-        const groupedData = [];
-        let currentGroup = null;
+      sortedData.forEach(item => {
+        const groupKey = `${item.kebun}|${item.divisi}`;
+        
+        if (!currentGroup || currentGroup.key !== groupKey) {
+          currentGroup = {
+            key: groupKey,
+            kebun: item.kebun,
+            divisi: item.divisi,
+            items: []
+          };
+          groupedData.push(currentGroup);
+        }
+        
+        currentGroup.items.push(item);
+      });
 
-        sortedData.forEach(item => {
-          const groupKey = `${item.kebun}|${item.divisi}`;
-          
-          if (!currentGroup || currentGroup.key !== groupKey) {
-            currentGroup = {
-              key: groupKey,
-              kebun: item.kebun,
-              divisi: item.divisi,
-              items: []
-            };
-            groupedData.push(currentGroup);
-          }
-          
-          currentGroup.items.push(item);
-        });
-
-        // Bangun tabel dengan merge cell
-        groupedData.forEach(group => {
-          // Buat baris pertama untuk grup ini
-          const firstRow = document.createElement("tr");
-          
-          // Kolom Kebun (rowspan sesuai jumlah item)
-          const tdKebun = document.createElement("td");
-          tdKebun.textContent = group.kebun;
-          tdKebun.rowSpan = group.items.length;
-          tdKebun.className = "merged-cell"; // Tambahkan class ini
-          firstRow.appendChild(tdKebun);
-          
-          // Kolom Divisi (rowspan sesuai jumlah item)
-          const tdDivisi = document.createElement("td");
-          tdDivisi.textContent = group.divisi;
-          tdDivisi.rowSpan = group.items.length;
-          tdDivisi.className = "merged-cell"; // Tambahkan class ini
-          firstRow.appendChild(tdDivisi);
-          
-          // Baris pertama memiliki kolom Blok, Data, dan Aksi
-          const firstItem = group.items[0];
+      // Bangun tabel dengan merge cell
+      groupedData.forEach(group => {
+        // Buat baris pertama untuk grup ini
+        const firstRow = document.createElement("tr");
+        
+        // Kolom Kebun (rowspan sesuai jumlah item)
+        const tdKebun = document.createElement("td");
+        tdKebun.textContent = group.kebun;
+        tdKebun.rowSpan = group.items.length;
+        tdKebun.className = "merged-cell";
+        firstRow.appendChild(tdKebun);
+        
+        // Kolom Divisi (rowspan sesuai jumlah item)
+        const tdDivisi = document.createElement("td");
+        tdDivisi.textContent = group.divisi;
+        tdDivisi.rowSpan = group.items.length;
+        tdDivisi.className = "merged-cell";
+        firstRow.appendChild(tdDivisi);
+        
+        // Baris pertama memiliki kolom Blok, Data, dan Aksi
+        const firstItem = group.items[0];
+        
+        // Kolom Blok
+        const tdBlok = document.createElement("td");
+        tdBlok.textContent = firstItem.blok;
+        firstRow.appendChild(tdBlok);
+        
+        // Kolom Data Tersedia
+        const tdData = document.createElement("td");
+        if (firstItem.hasWaypoints) {
+          const badge = document.createElement("span");
+          badge.className = "badge badge-waypoint";
+          badge.textContent = "Waypoints";
+          tdData.appendChild(badge);
+        }
+        if (firstItem.hasTracks) {
+          if (firstItem.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+          const badge = document.createElement("span");
+          badge.className = "badge badge-track";
+          badge.textContent = "Tracks";
+          tdData.appendChild(badge);
+        }
+        firstRow.appendChild(tdData);
+        
+        // Kolom Aksi
+        const tdAction = document.createElement("td");
+        tdAction.className = "actions";
+        
+        // Tombol Lihat Peta
+        const viewBtn = document.createElement("button");
+        viewBtn.className = "btn btn-view";
+        viewBtn.innerHTML = `
+          <i class="material-icons" style="font-size: 16px;">map</i>
+          <span>Lihat Peta</span>
+        `;
+        viewBtn.onclick = () => {
+          const params = new URLSearchParams();
+          params.append("blok", firstItem.blok);
+          params.append("kebun", firstItem.kebun);
+          params.append("divisi", firstItem.divisi);
+          firstItem.waypoints.forEach(url => params.append("waypoints", url));
+          firstItem.tracks.forEach(url => params.append("tracks", url));
+          window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
+        };
+        
+        // Tombol Hapus
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-danger btn-delete";
+        deleteBtn.setAttribute("data-key", `${firstItem.kebun}|${firstItem.divisi}|${firstItem.blok}`);
+        deleteBtn.innerHTML = `
+          <i class="material-icons" style="font-size: 16px;">delete</i>
+          <span>Hapus</span>
+        `;
+        
+        tdAction.appendChild(viewBtn);
+        tdAction.appendChild(deleteBtn);
+        firstRow.appendChild(tdAction);
+        
+        tbody.appendChild(firstRow);
+        
+        // Tambahkan baris tambahan untuk item lainnya dalam grup yang sama
+        for (let i = 1; i < group.items.length; i++) {
+          const item = group.items[i];
+          const row = document.createElement("tr");
           
           // Kolom Blok
           const tdBlok = document.createElement("td");
-          tdBlok.textContent = firstItem.blok;
-          firstRow.appendChild(tdBlok);
+          tdBlok.textContent = item.blok;
+          row.appendChild(tdBlok);
           
           // Kolom Data Tersedia
           const tdData = document.createElement("td");
-          if (firstItem.hasWaypoints) {
+          if (item.hasWaypoints) {
             const badge = document.createElement("span");
             badge.className = "badge badge-waypoint";
             badge.textContent = "Waypoints";
             tdData.appendChild(badge);
           }
-          if (firstItem.hasTracks) {
-            if (firstItem.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
+          if (item.hasTracks) {
+            if (item.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
             const badge = document.createElement("span");
             badge.className = "badge badge-track";
             badge.textContent = "Tracks";
             tdData.appendChild(badge);
           }
-          firstRow.appendChild(tdData);
+          row.appendChild(tdData);
           
           // Kolom Aksi
           const tdAction = document.createElement("td");
@@ -616,18 +712,18 @@
           `;
           viewBtn.onclick = () => {
             const params = new URLSearchParams();
-            params.append("blok", firstItem.blok);
-            params.append("kebun", firstItem.kebun);
-            params.append("divisi", firstItem.divisi);
-            firstItem.waypoints.forEach(url => params.append("waypoints", url));
-            firstItem.tracks.forEach(url => params.append("tracks", url));
+            params.append("blok", item.blok);
+            params.append("kebun", item.kebun);
+            params.append("divisi", item.divisi);
+            item.waypoints.forEach(url => params.append("waypoints", url));
+            item.tracks.forEach(url => params.append("tracks", url));
             window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
           };
           
           // Tombol Hapus
           const deleteBtn = document.createElement("button");
           deleteBtn.className = "btn btn-danger btn-delete";
-          deleteBtn.setAttribute("data-key", `${firstItem.kebun}|${firstItem.divisi}|${firstItem.blok}`);
+          deleteBtn.setAttribute("data-key", `${item.kebun}|${item.divisi}|${item.blok}`);
           deleteBtn.innerHTML = `
             <i class="material-icons" style="font-size: 16px;">delete</i>
             <span>Hapus</span>
@@ -635,90 +731,27 @@
           
           tdAction.appendChild(viewBtn);
           tdAction.appendChild(deleteBtn);
-          firstRow.appendChild(tdAction);
+          row.appendChild(tdAction);
           
-          tbody.appendChild(firstRow);
-          
-          // Tambahkan baris tambahan untuk item lainnya dalam grup yang sama
-          for (let i = 1; i < group.items.length; i++) {
-            const item = group.items[i];
-            const row = document.createElement("tr");
-            
-            // Kolom Blok
-            const tdBlok = document.createElement("td");
-            tdBlok.textContent = item.blok;
-            row.appendChild(tdBlok);
-            
-            // Kolom Data Tersedia
-            const tdData = document.createElement("td");
-            if (item.hasWaypoints) {
-              const badge = document.createElement("span");
-              badge.className = "badge badge-waypoint";
-              badge.textContent = "Waypoints";
-              tdData.appendChild(badge);
-            }
-            if (item.hasTracks) {
-              if (item.hasWaypoints) tdData.appendChild(document.createTextNode(" "));
-              const badge = document.createElement("span");
-              badge.className = "badge badge-track";
-              badge.textContent = "Tracks";
-              tdData.appendChild(badge);
-            }
-            row.appendChild(tdData);
-            
-            // Kolom Aksi
-            const tdAction = document.createElement("td");
-            tdAction.className = "actions";
-            
-            // Tombol Lihat Peta
-            const viewBtn = document.createElement("button");
-            viewBtn.className = "btn btn-view";
-            viewBtn.innerHTML = `
-              <i class="material-icons" style="font-size: 16px;">map</i>
-              <span>Lihat Peta</span>
-            `;
-            viewBtn.onclick = () => {
-              const params = new URLSearchParams();
-              params.append("blok", item.blok);
-              params.append("kebun", item.kebun);
-              params.append("divisi", item.divisi);
-              item.waypoints.forEach(url => params.append("waypoints", url));
-              item.tracks.forEach(url => params.append("tracks", url));
-              window.open(`viewpetasensuspokok.html?${params.toString()}`, "_blank");
-            };
-            
-            // Tombol Hapus
-            const deleteBtn = document.createElement("button");
-            deleteBtn.className = "btn btn-danger btn-delete";
-            deleteBtn.setAttribute("data-key", `${item.kebun}|${item.divisi}|${item.blok}`);
-            deleteBtn.innerHTML = `
-              <i class="material-icons" style="font-size: 16px;">delete</i>
-              <span>Hapus</span>
-            `;
-            
-            tdAction.appendChild(viewBtn);
-            tdAction.appendChild(deleteBtn);
-            row.appendChild(tdAction);
-            
-            tbody.appendChild(row);
-          }
-        });
-
-        // Panggil setupDeleteButtons setelah selesai memuat data
-        setupDeleteButtons();
-      })
-      .catch(error => {
-        const tbody = document.querySelector("#blokTable tbody");
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
-              <i class="material-icons" style="font-size: 36px; color: var(--medium-gray);">error_outline</i>
-              <p style="margin-top: 1rem;">Gagal memuat data. Silakan coba lagi.</p>
-              <p style="font-size: 0.8rem;">${error.message}</p>
-            </td>
-          </tr>
-        `;
+          tbody.appendChild(row);
+        }
       });
+
+      // Panggil setupDeleteButtons setelah selesai memuat data
+      setupDeleteButtons();
+    })
+    .catch(error => {
+      const tbody = document.querySelector("#blokTable tbody");
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
+            <i class="material-icons" style="font-size: 36px; color: var(--medium-gray);">error_outline</i>
+            <p style="margin-top: 1rem;">Gagal memuat data. Silakan coba lagi.</p>
+            <p style="font-size: 0.8rem;">${error.message}</p>
+          </td>
+        </tr>
+      `;
+    });
 
     // Fungsi setupDeleteButtons dan deleteBlokData tetap sama
     function setupDeleteButtons() {
