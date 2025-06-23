@@ -497,6 +497,7 @@
       return { letters: '', numbers: 0 };
     }
 
+    function loadAndDisplayData() {
     fetch(SHEET_CSV_URL)
     .then(res => res.text())
     .then(csv => {
@@ -536,14 +537,14 @@
 
       // Konversi object ke array dan urutkan
       const sortedData = Object.values(dataByBlok).sort((a, b) => {
-        // Urutkan berdasarkan kebun (Samsam pertama)
+        // 1. Urutkan berdasarkan kebun (Samsam pertama)
         const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
         const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
         if (kebunOrderA !== kebunOrderB) {
           return kebunOrderA - kebunOrderB;
         }
         
-        // Jika kebun sama, urutkan berdasarkan divisi
+        // 2. Jika kebun sama, urutkan berdasarkan divisi
         let divisiOrderA, divisiOrderB;
         
         if (a.kebun === 'Samsam') {
@@ -552,13 +553,17 @@
         } else if (a.kebun === 'Duri') {
           divisiOrderA = DIVISI_DURI_ORDER[a.divisi] || 99;
           divisiOrderB = DIVISI_DURI_ORDER[b.divisi] || 99;
+        } else {
+          // Untuk kebun lain, urutkan berdasarkan nama divisi
+          divisiOrderA = a.divisi.localeCompare(b.divisi);
+          divisiOrderB = b.divisi.localeCompare(a.divisi);
         }
         
         if (divisiOrderA !== divisiOrderB) {
           return divisiOrderA - divisiOrderB;
         }
         
-        // Jika divisi sama, urutkan berdasarkan blok
+        // 3. Jika divisi sama, urutkan berdasarkan blok
         const blokA = parseBlok(a.blok);
         const blokB = parseBlok(b.blok);
         
@@ -752,6 +757,7 @@
         </tr>
       `;
     });
+    }
 
     // Fungsi untuk menonaktifkan tombol berdasarkan IP
     // Daftar IP yang diizinkan (PUBLIK atau LOKAL)
@@ -928,6 +934,15 @@
           <button onclick="window.location.reload()">Coba Lagi</button>
         </td>`;
       }
+    }
+
+    // Panggil fungsi saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', loadAndDisplayData);
+    
+    // Setelah upload berhasil, reload halaman
+    function afterUploadSuccess() {
+      alert('Upload berhasil! Data akan diperbarui.');
+      loadAndDisplayData(); // Atau bisa juga window.location.reload()
     }
   </script>
 </body>
