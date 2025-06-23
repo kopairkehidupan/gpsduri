@@ -540,52 +540,26 @@
           <i class="material-icons">file_upload</i>
           <span>Upload Data</span>
         </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          <span>Mengunggah... Harap tunggu</span>
+        </div>
         <div id="status" class="status"></div>
       </form>
     </div>
   </div>
 
-  <!-- Progress Modal (yang sudah ada, kita modifikasi) -->
+  <!-- Progress Modal -->
   <div class="progress-modal" id="progressModal">
     <div class="progress-content">
       <div class="progress-header">
-        <h3 class="progress-title">Proses Upload</h3>
+        <h3 class="progress-title">Upload Progress</h3>
         <button class="progress-close" id="progressClose">&times;</button>
       </div>
-      
-      <!-- Tambahkan detail progres di sini -->
-      <div class="progress-text" id="progressText">
-        <div id="currentAction">Mempersiapkan upload...</div>
-        <div id="fileProgress">0/0 file diproses</div>
-      </div>
-      
+      <div class="progress-text" id="progressText">Preparing upload...</div>
       <div class="progress-bar-container">
         <div class="progress-bar" id="progressBar"></div>
       </div>
-      
-      <!-- Tambahkan info warna yang terdeteksi -->
-      <div id="colorStats" style="margin-top: 1rem; display: none;">
-        <h4 style="margin-bottom: 0.5rem;">Deteksi Warna:</h4>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center;">
-            <div style="width:12px;height:12px;background:blue;margin-right:4px;"></div>
-            <span>TM: <span id="blueCount">0</span></span>
-          </div>
-          <div style="display: flex; align-items: center;">
-            <div style="width:12px;height:12px;background:green;margin-right:4px;"></div>
-            <span>TBM: <span id="greenCount">0</span></span>
-          </div>
-          <div style="display: flex; align-items: center;">
-            <div style="width:12px;height:12px;background:orange;margin-right:4px;"></div>
-            <span>Sisipan: <span id="orangeCount">0</span></span>
-          </div>
-          <div style="display: flex; align-items: center;">
-            <div style="width:12px;height:12px;background:black;margin-right:4px;"></div>
-            <span>Kosong: <span id="blackCount">0</span></span>
-          </div>
-        </div>
-      </div>
-      
       <div class="progress-files" id="progressFiles"></div>
     </div>
   </div>
@@ -688,34 +662,16 @@
     });
 
     // Update progress bar and file status
-    // Fungsi updateProgress yang diperbarui
-    function updateProgress(progress, currentFile, currentStatus, files, colorStats = null) {
+    function updateProgress(progress, currentFile, currentStatus, files) {
       const progressBar = document.getElementById("progressBar");
-      const currentAction = document.getElementById("currentAction");
-      const fileProgress = document.getElementById("fileProgress");
+      const progressText = document.getElementById("progressText");
       const progressFiles = document.getElementById("progressFiles");
       
       // Update progress bar
       progressBar.style.width = `${progress}%`;
       
       // Update progress text
-      if (currentFile) {
-        currentAction.textContent = currentStatus === "uploading" ? 
-          `Memproses ${currentFile}` : 
-          currentStatus === "success" ? `Berhasil memproses ${currentFile}` : 
-          `Gagal memproses ${currentFile}`;
-      }
-      
-      fileProgress.textContent = `${files.filter(f => f.status).length}/${files.length} file diproses`;
-      
-      // Update color stats jika ada
-      if (colorStats) {
-        document.getElementById("colorStats").style.display = 'block';
-        document.getElementById("blueCount").textContent = colorStats.blue;
-        document.getElementById("greenCount").textContent = colorStats.green;
-        document.getElementById("orangeCount").textContent = colorStats.orange;
-        document.getElementById("blackCount").textContent = colorStats.black;
-      }
+      progressText.textContent = `Uploading... ${progress.toFixed(0)}% complete`;
       
       // Update file list
       progressFiles.innerHTML = '';
@@ -734,11 +690,15 @@
         const status = document.createElement("div");
         status.className = "progress-file-status";
         
-        if (file.status) {
-          status.textContent = file.status === "success" ? "Berhasil" : "Gagal";
+        if (file.name === currentFile) {
+          status.textContent = currentStatus === "success" ? "Uploaded" : currentStatus === "error" ? "Failed" : "Uploading...";
+          status.classList.add(currentStatus === "success" ? "status-success" : 
+                             currentStatus === "error" ? "status-error" : "status-uploading");
+        } else if (file.status) {
+          status.textContent = file.status === "success" ? "Uploaded" : "Failed";
           status.classList.add(file.status === "success" ? "status-success" : "status-error");
         } else {
-          status.textContent = "Menunggu";
+          status.textContent = "Waiting";
         }
         
         fileEl.appendChild(icon);
@@ -766,40 +726,38 @@
       statusEl.style.display = 'block';
     }
 
-    // Modifikasi bagian form submission
+    // Handle form submission
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
+      const loading = document.getElementById("loading");
       const statusEl = document.getElementById("status");
       
       try {
         submitBtn.disabled = true;
+        loading.style.display = 'flex';
         statusEl.style.display = 'none';
         
-        // Dapatkan nilai form
         const kebun = document.getElementById("kebun").value;
         const divisi = document.getElementById("divisi").value;
         const blok = document.getElementById("blok").value;
         const gpsFiles = document.getElementById("gpsFiles").files;
-        
+    
         // Validasi input
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
         if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
         if (!blok.match(/^[A-Z0-9]+$/)) throw new Error('Blok hanya boleh mengandung huruf besar dan angka, tanpa spasi');
         if (gpsFiles.length === 0) throw new Error('Pilih setidaknya satu file');
-        
+    
         // Show progress modal
         progressModal.style.display = "flex";
-        document.getElementById("colorStats").style.display = 'none'; // Sembunyikan awal
         
         // Prepare files data
         const files = Array.from(gpsFiles).map(file => ({
           name: file.name,
           size: file.size,
-          type: file.name.toLowerCase().endsWith('.gpx') ? 'GPX' : 
-                file.name.toLowerCase().endsWith('.kml') ? 'KML' : 'OTHER',
           status: null
         }));
         
@@ -809,12 +767,6 @@
         // Convert and upload files one by one
         const filesData = [];
         let uploadedCount = 0;
-        let colorStats = {
-          blue: 0,
-          green: 0,
-          orange: 0,
-          black: 0
-        };
         
         for (let i = 0; i < gpsFiles.length; i++) {
           const file = gpsFiles[i];
@@ -824,69 +776,78 @@
             updateProgress((i / gpsFiles.length) * 100, file.name, "uploading", files);
             
             if (!['.gpx', '.kml'].some(ext => file.name.toLowerCase().endsWith(ext))) {
-              throw new Error(`File harus berekstensi .gpx atau .kml`);
+              throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
             }
             
             const base64Data = await fileToBase64(file);
             filesData.push({
               name: file.name,
-              data: base64Data,
-              type: file.name.toLowerCase().endsWith('.gpx') ? 'GPX' : 'KML'
+              data: base64Data
             });
-            
-            // Jika file GPX, parse untuk dapatkan warna
-            if (file.name.toLowerCase().endsWith('.gpx')) {
-              try {
-                const gpxContent = await readFileAsText(file);
-                const tempStats = parseGpxColors(gpxContent);
-                colorStats.blue += tempStats.blue;
-                colorStats.green += tempStats.green;
-                colorStats.orange += tempStats.orange;
-                colorStats.black += tempStats.black;
-                
-                // Update color stats in modal
-                updateProgress(
-                  (i / gpsFiles.length) * 100, 
-                  file.name, 
-                  "uploading", 
-                  files, 
-                  colorStats
-                );
-              } catch (parseError) {
-                console.warn(`Gagal parse GPX ${file.name}:`, parseError);
-              }
-            }
             
             // Mark as successfully processed
             files[i].status = "success";
             uploadedCount++;
             
             // Update progress - upload complete
-            updateProgress(
-              ((i + 1) / gpsFiles.length) * 100, 
-              file.name, 
-              "success", 
-              files, 
-              colorStats
-            );
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "success", files);
             
           } catch (error) {
             console.error(`Error processing file ${file.name}:`, error);
             files[i].status = "error";
-            updateProgress(
-              ((i + 1) / gpsFiles.length) * 100, 
-              file.name, 
-              "error", 
-              files, 
-              colorStats
-            );
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "error", files);
+            // Continue with next file even if one fails
           }
           
           // Small delay to allow UI to update
           await new Promise(resolve => setTimeout(resolve, 100));
         }
+    
+        // Only proceed with upload if at least one file was successfully processed
+        if (uploadedCount === 0) {
+          throw new Error('Tidak ada file yang berhasil diproses');
+        }
+    
+        const payload = {
+          kebun,
+          divisi,
+          blok,
+          files: filesData
+        };
+    
+        // Submit the form data to Google Apps Script
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(payload));
         
-        // ... [rest of your existing code] ...
+        const iframe = document.createElement('iframe');
+        iframe.name = 'hidden-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const form = document.createElement('form');
+        form.target = 'hidden-iframe';
+        form.method = 'POST';
+        form.action = 'https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(payload);
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+        
+        // Update progress to show completion
+        updateProgress(100, null, null, files);
+        
+        // Show success message
+        showStatus(`Upload ${uploadedCount} file berhasil! ${gpsFiles.length - uploadedCount} gagal.`);
+        
+        // Auto-close progress modal after 3 seconds
+        setTimeout(() => {
+          progressModal.style.display = "none";
+        }, 3000);
         
       } catch (error) {
         console.error('Upload error:', error);
@@ -894,6 +855,7 @@
         progressModal.style.display = "none";
       } finally {
         submitBtn.disabled = false;
+        loading.style.display = 'none';
       }
     });
   </script>
