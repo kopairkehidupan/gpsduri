@@ -756,25 +756,28 @@
     // Fungsi untuk menonaktifkan tombol berdasarkan IP
     // Daftar IP yang diizinkan (PUBLIK atau LOKAL)
     const ALLOWED_IPS = [
-      "202.67.44.10",    // IP lokal
-      "123.123.123.123"    // IP publik (ganti dengan IP publik Anda)
+      "202.67.44.*"
     ];
     
     async function disableButtonsByIP() {
       try {
-        // Coba deteksi IP dengan berbagai metode
-        let detectedIP = await detectIP();
+        const detectedIP = await detectIP();
         console.log("IP Terdeteksi:", detectedIP);
     
-        if (!ALLOWED_IPS.includes(detectedIP)) {
+        // Cek apakah IP termasuk dalam range yang diizinkan
+        const isAllowed = ALLOWED_IP_RANGES.some(range => {
+          if (range.endsWith('.*')) {
+            const base = range.slice(0, -2); // Hapus .*
+            return detectedIP.startsWith(base);
+          }
+          return detectedIP === range;
+        });
+    
+        if (!isAllowed) {
           disableButtons();
-          console.log("Tombol dinonaktifkan untuk IP ini");
-        } else {
-          console.log("Akses diizinkan untuk IP ini");
         }
       } catch (error) {
         console.error("Gagal deteksi IP:", error);
-        // Jangan nonaktifkan tombol jika deteksi gagal
       }
     }
     
