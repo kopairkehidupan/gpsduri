@@ -381,8 +381,8 @@
   const waypointUrls = urlParams.getAll('waypoints');
   const trackUrls = urlParams.getAll('tracks');
 
-  // Variabel global untuk menyimpan semua titik track
-  const allTrackPoints = [];
+  // Variabel global untuk menyimpan semua track sebagai polygon terpisah
+  const trackPolygons = [];
 
   // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
@@ -609,9 +609,12 @@
                 const trkpt = trkpts[i];
                 const lat = parseFloat(trkpt.getAttribute('lat'));
                 const lon = parseFloat(trkpt.getAttribute('lon'));
-                const point = L.latLng(lat, lon);
-                latLngs.push(point);
-                allTrackPoints.push(point); // Simpan semua titik track
+                latLngs.push(L.latLng(lat, lon));
+            }
+            
+            // Simpan sebagai polygon terpisah
+            if (latLngs.length >= 3) {
+                trackPolygons.push(latLngs);
             }
             
             // Add to map
@@ -622,7 +625,7 @@
                 lineCap: 'round'
             }).addTo(map);
             
-            // Fit bounds
+            // Fit bounds untuk track ini
             map.fitBounds(polyline.getBounds());
             
         } catch (error) {
@@ -750,10 +753,16 @@
       }
       
       // Hitung luas total setelah semua track diproses
-      if (allTrackPoints.length > 0) {
-          const totalArea = calculateTotalTrackArea();
+      if (trackPolygons.length > 0) {
+          const totalArea = calculateTotalAreaFromPolygons();
           legendStats.track.area = totalArea;
           updateLegend();
+          
+          // Fit bounds untuk semua track
+          const allBounds = trackPolygons.flat();
+          if (allBounds.length > 0) {
+              map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
+          }
       }
       
       if (!hasData) {
@@ -832,26 +841,30 @@
     }
   }
 
-  function calculateTotalTrackArea() {
-      if (allTrackPoints.length < 3) {
-          console.warn('Not enough points to calculate total area');
-          return 0;
-      }
-      
-      // Convert to GeoJSON format
-      const coordinates = allTrackPoints.map(ll => [ll.lng, ll.lat]);
-      coordinates.push(coordinates[0]); // Tutup polygon
-      
-      try {
-          const polygon = turf.polygon([coordinates]);
-          const area = turf.area(polygon) / 10000; // Konversi ke hektar
-          console.log('Total area calculated:', area.toFixed(4), 'hectares');
-          return area;
-      } catch (error) {
-          console.error('Error calculating total area:', error);
-          return 0;
-      }
-  }
+  function calculateTotalAreaFromPolygons() {
+    if (trackPolygons.length === 0) return 0;
+    
+    let totalArea = 0;
+    
+    trackPolygons.forEach(polygonPoints => {
+        if (polygonPoints.length < 3) return;
+        
+        // Convert to GeoJSON format
+        const coordinates = polygonPoints.map(ll => [ll.lng, ll.lat]);
+        coordinates.push(coordinates[0]); // Tutup polygon
+        
+        try {
+            const polygon = turf.polygon([coordinates]);
+            const area = turf.area(polygon) / 10000; // Konversi ke hektar
+            totalArea += area;
+        } catch (error) {
+            console.error('Error calculating polygon area:', error);
+        }
+    });
+    
+    console.log('Total area from all polygons:', totalArea.toFixed(4), 'hectares');
+    return totalArea;
+}
   
 </script>
 </body>
