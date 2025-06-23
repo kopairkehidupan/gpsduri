@@ -25,11 +25,13 @@
       right: 10px;
       z-index: 1000;
       background: white;
-      padding: 10px;
+      padding: 8px;
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      max-width: 300px;
+      max-width: 280px;
       width: 90%;
+      height: auto;
+      overflow: visible;
       transition: all 0.3s ease;
     }
     
@@ -63,7 +65,7 @@
     .file-list li {
       padding: 4px 0;
       border-bottom: 1px solid #eee;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .file-list li.success {
@@ -79,7 +81,7 @@
       padding: 8px;
       border-radius: 5px;
       margin-top: 8px;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .legend-item {
@@ -89,14 +91,15 @@
     }
     
     .legend-color {
-      width: 16px;
-      height: 16px;
-      margin-right: 8px;
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
       border: 1px solid #333;
+      border-radius: 2px;
     }
     
     .legend-item span {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: normal;
     }
     
@@ -111,20 +114,37 @@
     /* Judul Sensus */
     .sensus-title {
       text-align: center;
-      margin-bottom: 10px;
-      padding: 8px;
+      margin-bottom: 0;
+      padding: 6px;
       background: linear-gradient(135deg, #27ae60, #2ecc71);
       border-radius: 5px;
       color: white;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+      user-select: none;
+      position: relative;
     }
     
     .sensus-title h2 {
       margin: 0;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    
+    .sensus-title .subtitle {
+      display: none; /* Initially hidden */
+      font-size: 10px;
+      margin-top: 2px;
+      font-weight: normal;
+      opacity: 0.8;
+    }
+    
+    /* Show subtitle only when collapsed */
+    .map-controls.collapsed .sensus-title .subtitle {
+      display: block;
     }
     
     /* Layer Control */
@@ -132,7 +152,7 @@
       border-radius: 5px;
       box-shadow: 0 1px 5px rgba(0,0,0,0.2);
       background: white;
-      font-size: 13px;
+      font-size: 12px;
     }
     
     .leaflet-control-layers-toggle {
@@ -149,14 +169,14 @@
     
     .leaflet-control-layers label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       margin: 2px 0;
     }
     
     /* Responsive untuk perangkat mobile */
     @media (max-width: 768px) {
       .map-controls {
-        max-width: 220px; /* Reduced from 280px */
+        max-width: 220px;
         padding: 6px;
         right: 5px;
         top: 5px;
@@ -170,13 +190,17 @@
         font-size: 12px;
       }
       
+      .sensus-title .subtitle {
+        font-size: 9px;
+      }
+      
       #blok-title, #location-info p {
         font-size: 11px;
         margin: 2px 0;
       }
       
       .file-list h4, .legend h4 {
-        font-size: 12px;
+        font-size: 11px;
         margin: 4px 0;
       }
       
@@ -189,30 +213,31 @@
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          z-index: 1001; /* Increased from 1000 */
+          z-index: 1001;
           background: white;
           padding: 15px;
           border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3); /* More prominent shadow */
+          box-shadow: 0 0 15px rgba(0,0,0,0.3);
           text-align: center;
           width: 80%;
           max-width: 280px;
-          display: none; /* Initially hidden */
+          display: none;
       }
       
       .loading h3 {
         color: #333;
         margin: 0 0 10px 0;
+        font-size: 14px;
       }
       
       #progress {
         margin: 0;
         color: #555;
-        font-size: 14px;
+        font-size: 12px;
       }
       
       .leaflet-control-layers {
-        font-size: 12px;
+        font-size: 11px;
       }
     }
     
@@ -231,6 +256,10 @@
         font-size: 11px;
       }
       
+      .sensus-title .subtitle {
+        font-size: 8px;
+      }
+      
       .legend-item span {
         font-size: 10px;
       }
@@ -243,6 +272,53 @@
     
     .leaflet-control-container {
       z-index: 999;
+    }
+
+    /* Toggle Controls */
+    .map-controls.collapsed {
+        height: 100px;
+        overflow: hidden;
+    }
+    
+    /* Tambahkan indikator panah */
+    .sensus-title::after {
+        content: "▼";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+        transition: transform 0.3s ease;
+    }
+    
+    .map-controls.collapsed .sensus-title::after {
+        transform: translateY(-50%) rotate(-90deg);
+    }
+    
+    /* Animasi untuk toggle */
+    .map-controls {
+      transition: all 0.3s ease;
+    }
+    
+    /* Style untuk info blok */
+    #blok-title {
+      font-size: 13px;
+      margin: 6px 0;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    #location-info p {
+      margin: 3px 0;
+      font-size: 12px;
+      color: #555;
+    }
+    
+    .file-list h4, .legend h4 {
+      margin: 6px 0 4px 0;
+      font-size: 12px;
+      color: #333;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -257,7 +333,7 @@
 
 <div class="map-controls">
   <div class="sensus-title">
-    <h2>HASIL SENSUS POKOK</h2>
+    <h2>HASIL SENSUS POKOK<br><span class="subtitle">--- Tekan di sini untuk melihat detail ---</span></h2>
   </div>
   
   <h3 id="blok-title">Blok: Loading...</h3>
@@ -269,16 +345,20 @@
   <div class="legend">
     <h4>Legenda:</h4>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: green;"></div>
-      <span>Waypoint Hijau</span>
+      <div class="legend-color" style="background-color: blue;"></div>
+      <span>TM (Biru)</span>
     </div>
     <div class="legend-item">
-      <div class="legend-color" style="background-color: blue;"></div>
-      <span>Waypoint Biru</span>
+      <div class="legend-color" style="background-color: green;"></div>
+      <span>TBM (Hijau)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: orange;"></div>
+      <span>Sisipan (Orange)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: black;"></div>
-      <span>Waypoint Hitam</span>
+      <span>Titik Kosong + Abnormal (Hitam+Merah)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: red;"></div>
@@ -351,30 +431,41 @@
 
   // Adjust controls for mobile
   function adjustForMobile() {
+    const controlsElement = document.querySelector('.map-controls');
     if (window.innerWidth <= 768) {
       // Sesuaikan ukuran font dan padding untuk mobile
-      document.querySelector('.map-controls').style.maxWidth = '280px';
-      document.querySelector('.sensus-title h2').style.fontSize = '14px';
+      document.querySelector('.map-controls').style.maxWidth = '220px';
+      document.querySelector('.sensus-title h2').style.fontSize = '12px';
       
       // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
+      controlsElement.classList.add('collapsed'); // Default collap
     } else {
       // Kembalikan ke ukuran desktop
-      document.querySelector('.map-controls').style.maxWidth = '300px';
-      document.querySelector('.sensus-title h2').style.fontSize = '16px';
+      document.querySelector('.map-controls').style.maxWidth = '280px';
+      document.querySelector('.sensus-title h2').style.fontSize = '14px';
       layerControl.setPosition('bottomright');
+      controlsElement.classList.remove('collapsed'); // Default exp
     }
   }
 
   // Custom icons
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
-    if (sym === 'flag, green') {
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // default blue
+    
+    if (sym === 'flag, green' || sym === 'city (small)') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
     } else if (sym === 'navaid, black') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
+    } else if (sym === 'navaid, orange') {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/orange-flag-cropped.png';
+    } else if (sym === 'navaid, red') {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/red-flag-cropped.png';
+    } else if (sym === 'custom 7') {
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     }
+    
     return new L.Icon({
       iconUrl,
       iconSize: [12, 12],
@@ -405,10 +496,10 @@
   const legendStats = {
     blue: { count: 0 },
     green: { count: 0 },
-    black: { count: 0 },
+    black: { count: 0 }, // Sekarang menyimpan hitungan black + red
+    orange: { count: 0 },
     track: { area: 0 }
   };
-
   // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) {
@@ -472,10 +563,14 @@
           const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
           
           // Hitung waypoint berdasarkan warna
-          if (sym.toLowerCase().includes('green')) {
+          if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
             legendStats.green.count++;
-          } else if (sym.toLowerCase().includes('black')) {
-            legendStats.black.count++;
+          } else if (sym.toLowerCase().includes('black') || sym.toLowerCase().includes('red')) {
+            legendStats.black.count++; // Gabungkan hitam dan merah
+          } else if (sym.toLowerCase().includes('orange')) {
+            legendStats.orange.count++;
+          } else if (sym.toLowerCase().includes('custom 7')) {
+            legendStats.blue.count++;
           } else {
             legendStats.blue.count++; // Default blue
           }
@@ -485,9 +580,9 @@
           }).addTo(map);
   
           marker.bindPopup(`
-            <b>Waypoint:</b> ${name}<br>
-            <b>Simbol:</b> ${sym}<br>
-            <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
+              <b>Waypoint:</b> ${name}<br>
+              <b>Kategori:</b> ${getCategoryName(sym)}<br>
+              <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
           `);
           bounds.push([lat, lon]);
         }
@@ -544,53 +639,59 @@
   }
 
   function updateLegend() {
-      const legendElement = document.querySelector('.legend');
-      
-      // Format luas area track (dalam hektar) dengan separator ribuan
-      const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
-      // Hitung total pokok (hijau + biru) dengan separator ribuan
-      const totalPokok = (legendStats.green.count + legendStats.blue.count).toLocaleString('id-ID');
-      // Hitung Stand/Ha (total pokok dibagi luas area) dengan separator ribuan
-      const standPerHa = legendStats.track.area > 0 
-          ? (legendStats.green.count + legendStats.blue.count) / legendStats.track.area
-          : 0;
-      const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
-          maximumFractionDigits: 2,
-          minimumFractionDigits: 2
-      });
-      
-      // Format untuk masing-masing warna
-      const greenCount = legendStats.green.count.toLocaleString('id-ID');
-      const blueCount = legendStats.blue.count.toLocaleString('id-ID');
-      const blackCount = legendStats.black.count.toLocaleString('id-ID');
-      
-      legendElement.innerHTML = `
-        <h4>Legenda:</h4>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: green;"></div>
-          <span>Waypoint Hijau = ${greenCount} Pkk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: blue;"></div>
-          <span>Waypoint Biru = ${blueCount} Pkk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: black;"></div>
-          <span>Waypoint Hitam = ${blackCount} Pkk</span>
-        </div>
-        <div class="legend-item total">
-          <div class="legend-color" style="background-color: transparent;"></div>
-          <span>Jumlah Pokok = ${totalPokok} Pkk</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: red;"></div>
-          <span>Luas = ${areaHa} ha</span>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color" style="background-color: transparent;"></div>
-          <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
-        </div>
-      `;
+    const legendElement = document.querySelector('.legend');
+    
+    // Format numbers
+    const greenCount = legendStats.green.count.toLocaleString('id-ID');
+    const blueCount = legendStats.blue.count.toLocaleString('id-ID');
+    const blackRedCount = legendStats.black.count.toLocaleString('id-ID');
+    const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
+    
+    // Ubah perhitungan total pokok (biru + hijau + orange)
+    const totalPokok = (legendStats.blue.count + legendStats.green.count + legendStats.orange.count).toLocaleString('id-ID');
+    
+    const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
+    
+    // Update stand/ha sesuai total pokok baru
+    const standPerHa = legendStats.track.area > 0 
+      ? (legendStats.blue.count + legendStats.green.count + legendStats.orange.count) / legendStats.track.area
+      : 0;
+    const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2
+    });
+    
+    legendElement.innerHTML = `
+      <h4>Legenda:</h4>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: blue;"></div>
+        <span>TM (Biru) = ${blueCount} Pkk</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: green;"></div>
+        <span>TBM (Hijau) = ${greenCount} Pkk</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: orange;"></div>
+        <span>Sisipan (Orange) = ${orangeCount} Pkk</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: black;"></div>
+        <span>Titik Kosong + Abnormal (Hitam+Merah) = ${blackRedCount} Pkk</span>
+      </div>
+      <div class="legend-item total">
+        <div class="legend-color" style="background-color: transparent;"></div>
+        <span>Jumlah Pokok = ${totalPokok} Pkk</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: red;"></div>
+        <span>Luas = ${areaHa} ha</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: transparent;"></div>
+        <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
+      </div>
+    `;
   }
 
   // Modify the loading display in the processFiles function
@@ -693,7 +794,40 @@
           adjustForMobile();
           processFiles();
       }
+
+     // Tambahkan event listener untuk toggle controls
+    const titleElement = document.querySelector('.sensus-title');
+    const controlsElement = document.querySelector('.map-controls');
+    
+    titleElement.addEventListener('click', function() {
+        controlsElement.classList.toggle('collapsed');
+    });
+    
+    // Sembunyikan controls secara default di mobile
+    if (window.innerWidth <= 768) {
+        controlsElement.classList.add('collapsed');
+    }
   });
+
+  // Tambahkan fungsi ini di bagian script
+  function getCategoryName(symbol) {
+      const sym = (symbol || '').toLowerCase().trim();
+      
+      if (sym === 'flag, green' || sym === 'city (small)') {
+          return 'Tanaman Belum Menghasilkan (TBM)';
+      } else if (sym === 'navaid, black') {
+          return 'Titik Kosong/Abnormal';
+      } else if (sym === 'navaid, orange') {
+          return 'Sisipan';
+      } else if (sym === 'navaid, red') {
+          return 'Titik Kosong/Abnormal';
+      } else if (sym === 'custom 7') {
+          return 'Tanaman Menghasilkan (TM)';
+      } else {
+          return 'Tanaman Menghasilkan (TM)'; // Default
+      }
+  }
+  
 </script>
 </body>
 </html>
