@@ -20,7 +20,6 @@
       --transition: all 0.3s ease;
     }
     
-    /* Tambahkan ini ke CSS body */
     body {
       font-family: 'Poppins', sans-serif;
       background-color: #f9f9f9;
@@ -32,7 +31,7 @@
       flex-direction: column;
       min-height: 100vh;
       position: relative;
-      padding-bottom: 80px; /* Sesuaikan dengan tinggi footer */
+      padding-bottom: 80px;
     }
     
     .container {
@@ -42,7 +41,7 @@
       flex: 1;
       width: 100%;
       box-sizing: border-box;
-      margin-bottom: 80px; /* Tambahkan ini */
+      margin-bottom: 80px;
     }
 
     .header {
@@ -287,13 +286,135 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Ganti CSS footer yang ada dengan ini */
+    /* Progress modal styles */
+    .progress-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .progress-content {
+      background-color: white;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .progress-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 0;
+    }
+    
+    .progress-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--dark-gray);
+    }
+    
+    .progress-bar-container {
+      width: 100%;
+      height: 10px;
+      background-color: var(--light-gray);
+      border-radius: 5px;
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary);
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--dark-gray);
+      margin-bottom: 1rem;
+    }
+    
+    .progress-files {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      border-top: 1px solid var(--medium-gray);
+      padding-top: 1rem;
+    }
+    
+    .progress-file {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .progress-file:last-child {
+      border-bottom: none;
+    }
+    
+    .progress-file-icon {
+      margin-right: 0.5rem;
+      font-size: 1.2rem;
+    }
+    
+    .progress-file-name {
+      flex: 1;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .progress-file-status {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+    
+    .status-uploading {
+      background-color: rgba(66, 133, 244, 0.1);
+      color: var(--primary);
+    }
+    
+    .status-success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+    }
+    
+    .status-error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+    }
+
     .footer {
       background-color: var(--white);
       padding: 1rem;
       border-top: 1px solid var(--medium-gray);
       box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-      position: fixed; /* Ubah dari sticky ke fixed */
+      position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
@@ -323,7 +444,6 @@
       text-align: center;
     }
 
-    /* Mobile (up to 600px) */
     @media (max-width: 600px) {
       .container {
         padding: 0.8rem;
@@ -366,33 +486,9 @@
       .material-icons {
         font-size: 18px;
       }
-    }
-    
-    /* Tablet (601px - 992px) */
-    @media (min-width: 601px) and (max-width: 992px) {
-      .container {
+      
+      .progress-content {
         padding: 1.5rem;
-      }
-      
-      .footer-content {
-        flex-direction: row;
-        justify-content: space-between;
-      }
-      
-      .footer-buttons {
-        justify-content: flex-end;
-        width: auto;
-      }
-    }
-    
-    /* Desktop (993px and up) */
-    @media (min-width: 993px) {
-      .container {
-        padding: 2rem;
-      }
-      
-      .card {
-        padding: 2rem;
       }
     }
   </style>
@@ -453,6 +549,21 @@
     </div>
   </div>
 
+  <!-- Progress Modal -->
+  <div class="progress-modal" id="progressModal">
+    <div class="progress-content">
+      <div class="progress-header">
+        <h3 class="progress-title">Upload Progress</h3>
+        <button class="progress-close" id="progressClose">&times;</button>
+      </div>
+      <div class="progress-text" id="progressText">Preparing upload...</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-files" id="progressFiles"></div>
+    </div>
+  </div>
+
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-buttons">
@@ -468,7 +579,7 @@
     // Data divisi berdasarkan kebun
     const divisiData = {
       "Samsam": ["Divisi I", "Divisi II", "Divisi III", "Divisi IV", "Divisi V", "Divisi VI", "Divisi VII"],
-      "Duri": ["Divisi I Tegar", "Divisi II Tegar", "Divisi III Cucut", "Divisi III Mekarsari", "Divisi IV Rangau", "Divisi VI Rangau"]
+      "Duri": ["Divisi I Tegar", "Divisi II Tegar", "Divisi III Cucut", "Divisi III Mekarsari", "Divisi IV Rangau", "Divisi V Rangau", "Divisi VI Rangau"]
     };
 
     // Inisialisasi dropdown divisi berdasarkan kebun yang dipilih
@@ -542,6 +653,61 @@
       }
     });
 
+    // Show/hide progress modal
+    const progressModal = document.getElementById("progressModal");
+    const progressClose = document.getElementById("progressClose");
+    
+    progressClose.addEventListener("click", () => {
+      progressModal.style.display = "none";
+    });
+
+    // Update progress bar and file status
+    function updateProgress(progress, currentFile, currentStatus, files) {
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+      const progressFiles = document.getElementById("progressFiles");
+      
+      // Update progress bar
+      progressBar.style.width = `${progress}%`;
+      
+      // Update progress text
+      progressText.textContent = `Uploading... ${progress.toFixed(0)}% complete`;
+      
+      // Update file list
+      progressFiles.innerHTML = '';
+      files.forEach(file => {
+        const fileEl = document.createElement("div");
+        fileEl.className = "progress-file";
+        
+        const icon = document.createElement("i");
+        icon.className = "material-icons progress-file-icon";
+        icon.textContent = "description";
+        
+        const name = document.createElement("div");
+        name.className = "progress-file-name";
+        name.textContent = file.name;
+        
+        const status = document.createElement("div");
+        status.className = "progress-file-status";
+        
+        if (file.name === currentFile) {
+          status.textContent = currentStatus === "success" ? "Sudah diupload" : currentStatus === "error" ? "Failed" : "Uploading...";
+          status.classList.add(currentStatus === "success" ? "status-success" : 
+                             currentStatus === "error" ? "status-error" : "status-uploading");
+        } else if (file.status) {
+          status.textContent = file.status === "success" ? "Sudah diupload" : "Failed";
+          status.classList.add(file.status === "success" ? "status-success" : "status-error");
+        } else {
+          status.textContent = "Waiting";
+        }
+        
+        fileEl.appendChild(icon);
+        fileEl.appendChild(name);
+        fileEl.appendChild(status);
+        progressFiles.appendChild(fileEl);
+      });
+    }
+
     // Convert file to Base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -585,19 +751,61 @@
         if (!blok.match(/^[A-Z0-9]+$/)) throw new Error('Blok hanya boleh mengandung huruf besar dan angka, tanpa spasi');
         if (gpsFiles.length === 0) throw new Error('Pilih setidaknya satu file');
     
-        // Convert semua file ke base64
+        // Show progress modal
+        progressModal.style.display = "flex";
+        
+        // Prepare files data
+        const files = Array.from(gpsFiles).map(file => ({
+          name: file.name,
+          size: file.size,
+          status: null
+        }));
+        
+        // Initial progress update
+        updateProgress(0, null, null, files);
+        
+        // Convert and upload files one by one
         const filesData = [];
+        let uploadedCount = 0;
+        
         for (let i = 0; i < gpsFiles.length; i++) {
           const file = gpsFiles[i];
-          if (!['.gpx', '.kml'].some(ext => file.name.toLowerCase().endsWith(ext))) {
-            throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
+          
+          try {
+            // Update progress - starting upload
+            updateProgress((i / gpsFiles.length) * 100, file.name, "uploading", files);
+            
+            if (!['.gpx', '.kml'].some(ext => file.name.toLowerCase().endsWith(ext))) {
+              throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
+            }
+            
+            const base64Data = await fileToBase64(file);
+            filesData.push({
+              name: file.name,
+              data: base64Data
+            });
+            
+            // Mark as successfully processed
+            files[i].status = "success";
+            uploadedCount++;
+            
+            // Update progress - upload complete
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "success", files);
+            
+          } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            files[i].status = "error";
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "error", files);
+            // Continue with next file even if one fails
           }
           
-          const base64Data = await fileToBase64(file);
-          filesData.push({
-            name: file.name,
-            data: base64Data
-          });
+          // Small delay to allow UI to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    
+        // Only proceed with upload if at least one file was successfully processed
+        if (uploadedCount === 0) {
+          throw new Error('Tidak ada file yang berhasil diproses');
         }
     
         const payload = {
@@ -607,7 +815,7 @@
           files: filesData
         };
     
-        // Sisanya sama (menggunakan iframe untuk POST)
+        // Submit the form data to Google Apps Script
         const formData = new FormData();
         formData.append('data', JSON.stringify(payload));
         
@@ -630,15 +838,21 @@
         document.body.appendChild(form);
         form.submit();
         
+        // Update progress to show completion
+        updateProgress(100, null, null, files);
+        
+        // Show success message
+        showStatus(`Upload ${uploadedCount} file berhasil! ${gpsFiles.length - uploadedCount} gagal.`);
+        
+        // Auto-close progress modal after 3 seconds
         setTimeout(() => {
-          document.body.removeChild(form);
-          document.body.removeChild(iframe);
-          showStatus(`Upload ${filesData.length} file berhasil!`);
+          progressModal.style.display = "none";
         }, 3000);
         
       } catch (error) {
         console.error('Upload error:', error);
         showStatus('Error: ' + error.message, true);
+        progressModal.style.display = "none";
       } finally {
         submitBtn.disabled = false;
         loading.style.display = 'none';
