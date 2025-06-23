@@ -346,7 +346,7 @@
     <h4>Legenda:</h4>
     <div class="legend-item">
       <div class="legend-color" style="background-color: blue;"></div>
-      <span>TM (Biru)</span>
+      <span>TM (Biru+Merah)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: green;"></div>
@@ -358,7 +358,7 @@
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: black;"></div>
-      <span>Titik Kosong + Abnormal (Hitam+Merah)</span>
+      <span>Titik Kosong + Abnormal (Hitam)</span>
     </div>
     <div class="legend-item">
       <div class="legend-color" style="background-color: red;"></div>
@@ -461,7 +461,7 @@
     } else if (sym === 'navaid, orange') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/orange-flag-cropped.png';
     } else if (sym === 'navaid, red') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/red-flag-cropped.png';
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // Red now counts as TM (blue)
     } else if (sym === 'custom 7') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     }
@@ -565,12 +565,12 @@
           // Hitung waypoint berdasarkan warna
           if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
             legendStats.green.count++;
-          } else if (sym.toLowerCase().includes('black') || sym.toLowerCase().includes('red')) {
-            legendStats.black.count++; // Gabungkan hitam dan merah
+          } else if (sym.toLowerCase().includes('black')) {
+            legendStats.black.count++; // Hitam saja untuk Titik Kosong + Abnormal
           } else if (sym.toLowerCase().includes('orange')) {
             legendStats.orange.count++;
-          } else if (sym.toLowerCase().includes('custom 7')) {
-            legendStats.blue.count++;
+          } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
+            legendStats.blue.count++; // Merah sekarang masuk TM (biru)
           } else {
             legendStats.blue.count++; // Default blue
           }
@@ -644,7 +644,7 @@
     // Format numbers
     const greenCount = legendStats.green.count.toLocaleString('id-ID');
     const blueCount = legendStats.blue.count.toLocaleString('id-ID');
-    const blackRedCount = legendStats.black.count.toLocaleString('id-ID');
+    const blackCount = legendStats.black.count.toLocaleString('id-ID');
     const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
     
     // Ubah perhitungan total pokok (biru + hijau + orange)
@@ -665,7 +665,7 @@
       <h4>Legenda:</h4>
       <div class="legend-item">
         <div class="legend-color" style="background-color: blue;"></div>
-        <span>TM (Biru) = ${blueCount} Pkk</span>
+        <span>TM (Biru+Merah) = ${blueCount} Pkk</span>
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: green;"></div>
@@ -677,7 +677,7 @@
       </div>
       <div class="legend-item">
         <div class="legend-color" style="background-color: black;"></div>
-        <span>Titik Kosong + Abnormal (Hitam+Merah) = ${blackRedCount} Pkk</span>
+        <span>Titik Kosong + Abnormal (Hitam) = ${blackCount} Pkk</span>
       </div>
       <div class="legend-item total">
         <div class="legend-color" style="background-color: transparent;"></div>
@@ -811,21 +811,21 @@
 
   // Tambahkan fungsi ini di bagian script
   function getCategoryName(symbol) {
-      const sym = (symbol || '').toLowerCase().trim();
-      
-      if (sym === 'flag, green' || sym === 'city (small)') {
-          return 'Tanaman Belum Menghasilkan (TBM)';
-      } else if (sym === 'navaid, black') {
-          return 'Titik Kosong/Abnormal';
-      } else if (sym === 'navaid, orange') {
-          return 'Sisipan';
-      } else if (sym === 'navaid, red') {
-          return 'Titik Kosong/Abnormal';
-      } else if (sym === 'custom 7') {
-          return 'Tanaman Menghasilkan (TM)';
-      } else {
-          return 'Tanaman Menghasilkan (TM)'; // Default
-      }
+    const sym = (symbol || '').toLowerCase().trim();
+    
+    if (sym === 'flag, green' || sym === 'city (small)') {
+      return 'Tanaman Belum Menghasilkan (TBM)';
+    } else if (sym === 'navaid, black') {
+      return 'Titik Kosong/Abnormal';
+    } else if (sym === 'navaid, orange') {
+      return 'Sisipan';
+    } else if (sym === 'navaid, red') {
+      return 'Tanaman Menghasilkan (TM)'; // Red now counts as TM
+    } else if (sym === 'custom 7') {
+      return 'Tanaman Menghasilkan (TM)';
+    } else {
+      return 'Tanaman Menghasilkan (TM)'; // Default
+    }
   }
   
 </script>
