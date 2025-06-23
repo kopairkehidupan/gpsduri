@@ -691,11 +691,11 @@
         status.className = "progress-file-status";
         
         if (file.name === currentFile) {
-          status.textContent = currentStatus === "success" ? "Uploaded" : currentStatus === "error" ? "Failed" : "Uploading...";
+          status.textContent = currentStatus === "success" ? "Sudah diupload" : currentStatus === "error" ? "Failed" : "Uploading...";
           status.classList.add(currentStatus === "success" ? "status-success" : 
                              currentStatus === "error" ? "status-error" : "status-uploading");
         } else if (file.status) {
-          status.textContent = file.status === "success" ? "Uploaded" : "Failed";
+          status.textContent = file.status === "success" ? "Sudah diupload" : "Failed";
           status.classList.add(file.status === "success" ? "status-success" : "status-error");
         } else {
           status.textContent = "Waiting";
