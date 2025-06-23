@@ -440,6 +440,12 @@
     </div>
   </div>
 
+  // Tambahkan loading indicator di HTML
+<div id="loading" style="display:none; padding: 10px; text-align: center;">
+  <div class="spinner"></div>
+  <span>Memuat data...</span>
+</div>
+
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-buttons">
@@ -928,6 +934,70 @@
           <button onclick="window.location.reload()">Coba Lagi</button>
         </td>`;
       }
+    }
+
+    // Fungsi untuk load data
+    function loadBlokData() {
+      const loadingElement = document.getElementById('loading');
+      loadingElement.style.display = 'block';
+      
+      fetch('https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getCombinedData')
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.querySelector('#blokTabel tbody');
+          tableBody.innerHTML = '';
+          
+          data.forEach((item, index) => {
+            const row = document.createElement('tr');
+            
+            // Format kriteria warna
+            let colorInfo = 'Data warna tidak tersedia';
+            if (item.colors) {
+              colorInfo = `
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center;">
+                    <div style="width:12px;height:12px;background:blue;margin-right:4px;"></div>
+                    <span>TM: ${item.colors.blue || 0}</span>
+                  </div>
+                  <div style="display: flex; align-items: center;">
+                    <div style="width:12px;height:12px;background:green;margin-right:4px;"></div>
+                    <span>TBM: ${item.colors.green || 0}</span>
+                  </div>
+                  <div style="display: flex; align-items: center;">
+                    <div style="width:12px;height:12px;background:orange;margin-right:4px;"></div>
+                    <span>Sisipan: ${item.colors.orange || 0}</span>
+                  </div>
+                  <div style="display: flex; align-items: center;">
+                    <div style="width:12px;height:12px;background:black;margin-right:4px;"></div>
+                    <span>Kosong: ${item.colors.black || 0}</span>
+                  </div>
+                  ${item.colors.total ? `<div><strong>Total: ${item.colors.total}</strong></div>` : ''}
+                </div>
+              `;
+            }
+            
+            row.innerHTML = `
+              <td>${index + 1}</td>
+              <td>${item.kebun}</td>
+              <td>${item.divisi}</td>
+              <td>${item.blok}</td>
+              <td>${colorInfo}</td>
+              <td>
+                <button onclick="viewBlok('${item.kebun}', '${item.divisi}', '${item.blok}')">View</button>
+                <button onclick="deleteBlok('${item.kebun}', '${item.divisi}', '${item.blok}')">Delete</button>
+              </td>
+            `;
+            
+            tableBody.appendChild(row);
+          });
+          
+          loadingElement.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          loadingElement.style.display = 'none';
+          alert('Gagal memuat data: ' + error.message);
+        });
     }
   </script>
 </body>
