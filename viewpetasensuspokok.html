@@ -381,6 +381,9 @@
   const waypointUrls = urlParams.getAll('waypoints');
   const trackUrls = urlParams.getAll('tracks');
 
+  // Variabel global untuk menyimpan semua titik track
+  const allTrackPoints = [];
+
   // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
     try {
@@ -606,16 +609,10 @@
                 const trkpt = trkpts[i];
                 const lat = parseFloat(trkpt.getAttribute('lat'));
                 const lon = parseFloat(trkpt.getAttribute('lon'));
-                latLngs.push(L.latLng(lat, lon));
+                const point = L.latLng(lat, lon);
+                latLngs.push(point);
+                allTrackPoints.push(point); // Simpan semua titik track
             }
-            
-            // Calculate area
-            const area = calculateOpenTrackArea(latLngs);
-            console.log(`Track area: ${area.toFixed(4)} ha`);
-            
-            // Update legend
-            legendStats.track.area = area;
-            updateLegend();
             
             // Add to map
             const polyline = L.polyline(latLngs, {
@@ -752,6 +749,13 @@
           updateControlsView();
       }
       
+      // Hitung luas total setelah semua track diproses
+      if (allTrackPoints.length > 0) {
+          const totalArea = calculateTotalTrackArea();
+          legendStats.track.area = totalArea;
+          updateLegend();
+      }
+      
       if (!hasData) {
           const li = document.createElement('li');
           li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
@@ -826,6 +830,27 @@
     } else {
       return 'Tanaman Menghasilkan (TM)'; // Default
     }
+  }
+
+  function calculateTotalTrackArea() {
+      if (allTrackPoints.length < 3) {
+          console.warn('Not enough points to calculate total area');
+          return 0;
+      }
+      
+      // Convert to GeoJSON format
+      const coordinates = allTrackPoints.map(ll => [ll.lng, ll.lat]);
+      coordinates.push(coordinates[0]); // Tutup polygon
+      
+      try {
+          const polygon = turf.polygon([coordinates]);
+          const area = turf.area(polygon) / 10000; // Konversi ke hektar
+          console.log('Total area calculated:', area.toFixed(4), 'hectares');
+          return area;
+      } catch (error) {
+          console.error('Error calculating total area:', error);
+          return 0;
+      }
   }
   
 </script>
