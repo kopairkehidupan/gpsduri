@@ -753,7 +753,73 @@
     
         // Show progress modal
         progressModal.style.display = "flex";
+
+         // Process files and collect stats
+        const stats = {
+          blue: { count: 0 },
+          green: { count: 0 },
+          orange: { count: 0 },
+          black: { count: 0 },
+          track: { area: 0 }
+        };
+
+        const filesData = [];
+        let uploadedCount = 0;
         
+        for (let i = 0; i < gpsFiles.length; i++) {
+          const file = gpsFiles[i];
+          const fileName = file.name;
+          
+          try {
+            // Update progress - starting upload
+            updateProgress((i / gpsFiles.length) * 100, fileName, "uploading", Array.from(gpsFiles));
+            
+            const base64Data = await fileToBase64(file);
+            filesData.push({
+              name: fileName,
+              data: base64Data
+            });
+    
+            // Parse GPX content to calculate stats
+            const gpxContent = await readFileAsText(file);
+            const fileStats = calculateGpxStats(gpxContent);
+            
+            // Aggregate stats
+            stats.blue.count += fileStats.blue;
+            stats.green.count += fileStats.green;
+            stats.orange.count += fileStats.orange;
+            stats.black.count += fileStats.black;
+            stats.track.area += fileStats.area;
+            
+            uploadedCount++;
+            updateProgress(((i + 1) / gpsFiles.length) * 100, fileName, "success", Array.from(gpsFiles));
+            
+          } catch (error) {
+            console.error(`Error processing file ${fileName}:`, error);
+            updateProgress(((i + 1) / gpsFiles.length) * 100, fileName, "error", Array.from(gpsFiles));
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    
+        // Save stats to Google Sheet
+        if (uploadedCount > 0) {
+          const scriptUrl = `https://script.google.com/macros/s/AKfycbyEEr70Qbi_ETP3AAlavRQXb2ZTcU5IGcKP8grLHDERQCEI364Jw1gTI9yESuP-zjwH0A/exec?action=saveSensusData`;
+          
+          await fetch(scriptUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              kebun: kebun,
+              divisi: divisi,
+              blok: blok,
+              stats: stats
+            }),
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+            
         // Prepare files data
         const files = Array.from(gpsFiles).map(file => ({
           name: file.name,
