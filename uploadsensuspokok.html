@@ -545,16 +545,6 @@
           <span>Mengunggah... Harap tunggu</span>
         </div>
         <div id="status" class="status"></div>
-        <div class="form-group">
-          <label for="legenda">Legenda Warna</label>
-          <small>Format: Warna=Keterangan (contoh: Merah=TBM, Kuning=TM, Hijau=TS, Biru=TT)</small>
-          <input type="text" id="legenda" placeholder="Merah=TBM, Kuning=TM, Hijau=TS, Biru=TT">
-        </div>
-        
-        <div class="form-group">
-          <label for="catatan">Catatan Tambahan</label>
-          <textarea id="catatan" rows="2" style="padding: 0.8rem 1rem; border: 1px solid var(--medium-gray); border-radius: 8px; font-family: inherit;"></textarea>
-        </div>
       </form>
     </div>
   </div>
@@ -744,8 +734,6 @@
       const submitBtn = form.querySelector('button[type="submit"]');
       const loading = document.getElementById("loading");
       const statusEl = document.getElementById("status");
-      const legenda = document.getElementById("legenda").value;
-      const catatan = document.getElementById("catatan").value;
       
       try {
         submitBtn.disabled = true;
@@ -824,9 +812,7 @@
           kebun,
           divisi,
           blok,
-          files: filesData,
-          legenda,
-          catatan
+          files: filesData
         };
     
         // Submit the form data to Google Apps Script
