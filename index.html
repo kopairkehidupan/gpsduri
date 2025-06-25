@@ -510,7 +510,6 @@
         const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
         const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
-        const row = document.createElement("tr");
 
         if (!dataByBlok[key]) {
           dataByBlok[key] = { 
