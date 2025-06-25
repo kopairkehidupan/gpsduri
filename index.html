@@ -518,10 +518,8 @@
     const STATS_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuuPuKJaBpe4syPOqlfp7FJgDXI8zsH49Rc39tGGmNCAo467ny5XzsC8L1riXTbcHzitL5FG_7ROCx/pub?output=csv"; // Ganti dengan URL publik STATS_SHEET
     
     Promise.all([fetch(MAIN_SHEET_CSV), fetch(STATS_SHEET_CSV)])
-    .then(res => res.text())
-    .then(csv => {
-      .then(responses => Promise.all(responses.map(res => res.text())))
-      .then(([mainCsv, statsCsv]) => {
+    .then(responses => Promise.all(responses.map(res => res.text())))
+    .then(([mainCsv, statsCsv]) => {
       const mainRows = mainCsv.trim().split("\n").slice(1);
       const statsRows = statsCsv.trim().split("\n").slice(1);
       const tbody = document.querySelector("#blokTable tbody");
