@@ -6,6 +6,7 @@
   <title>Sensus Pokok GPS Data Upload</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
   <style>
     :root {
       --primary: #4285f4;
@@ -777,14 +778,42 @@
       if (points.length < 3) return 0;
       
       try {
+        // Pastikan turf terdefinisi
+        if (typeof turf === 'undefined') {
+          console.warn('Turf.js library not loaded - using simple area calculation');
+          return calculateSimpleArea(points);
+        }
+        
         // Tutup polygon dengan menambahkan titik pertama di akhir
         const polygonPoints = [...points, points[0]];
         const polygon = turf.polygon([polygonPoints]);
         return turf.area(polygon); // Luas dalam meter persegi
       } catch (error) {
-        console.error('Error calculating area:', error);
-        return 0;
+        console.error('Error calculating area with Turf.js:', error);
+        return calculateSimpleArea(points);
       }
+    }
+    
+    // Fungsi fallback untuk menghitung luas sederhana jika Turf.js tidak tersedia
+    function calculateSimpleArea(points) {
+      if (points.length < 3) return 0;
+      
+      // Implementasi sederhana perhitungan luas polygon (Shoelace formula)
+      let area = 0;
+      const n = points.length;
+      
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const xi = points[i][0];
+        const yi = points[i][1];
+        const xj = points[j][0];
+        const yj = points[j][1];
+        
+        area += xi * yj;
+        area -= xj * yi;
+      }
+      
+      return Math.abs(area / 2); // Hasil dalam satuan persegi (skala kecil)
     }
 
     function fileToBase64(file) {
