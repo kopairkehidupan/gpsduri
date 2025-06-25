@@ -708,7 +708,85 @@
       });
     }
 
-    // Convert file to Base64
+    // Helper functions for file processing
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+
+    function parseGPXForStats(gpxContent) {
+      const stats = {
+        tm: 0,        // Tanaman Menghasilkan (Biru+Merah)
+        tbm: 0,       // Tanaman Belum Menghasilkan (Hijau)
+        sisipan: 0,   // Sisipan (Orange)
+        abnormal: 0,  // Titik Kosong + Abnormal (Hitam)
+        trackPoints: [] // Titik-titik track untuk menghitung luas
+      };
+
+      try {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(gpxContent, "application/xml");
+
+        // Check for XML parsing errors
+        const parserError = xml.getElementsByTagName('parsererror');
+        if (parserError.length > 0) {
+          throw new Error('Invalid GPX format');
+        }
+
+        // Process waypoints
+        const waypoints = xml.getElementsByTagName('wpt');
+        for (let wpt of waypoints) {
+          const sym = (wpt.getElementsByTagName('sym')[0]?.textContent || '').toLowerCase().trim();
+          
+          if (sym.includes('green') || sym.includes('city (small)')) {
+            stats.tbm++;
+          } else if (sym.includes('black')) {
+            stats.abnormal++;
+          } else if (sym.includes('orange')) {
+            stats.sisipan++;
+          } else if (sym.includes('red') || sym.includes('custom 7')) {
+            stats.tm++;
+          } else {
+            stats.tm++; // Default dianggap TM
+          }
+        }
+
+        // Process track points
+        const trkpts = xml.getElementsByTagName('trkpt');
+        for (let i = 0; i < trkpts.length; i++) {
+          const trkpt = trkpts[i];
+          const lat = parseFloat(trkpt.getAttribute('lat'));
+          const lon = parseFloat(trkpt.getAttribute('lon'));
+          
+          if (!isNaN(lat) && !isNaN(lon)) {
+            stats.trackPoints.push([lon, lat]); // Format untuk Turf.js: [longitude, latitude]
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing GPX for stats:', error);
+      }
+      
+      return stats;
+    }
+
+    function calculateArea(points) {
+      if (points.length < 3) return 0;
+      
+      try {
+        // Tutup polygon dengan menambahkan titik pertama di akhir
+        const polygonPoints = [...points, points[0]];
+        const polygon = turf.polygon([polygonPoints]);
+        return turf.area(polygon); // Luas dalam meter persegi
+      } catch (error) {
+        console.error('Error calculating area:', error);
+        return 0;
+      }
+    }
+
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -718,7 +796,6 @@
       });
     }
 
-    // Show status message
     function showStatus(message, isError = false) {
       const statusEl = document.getElementById('status');
       statusEl.textContent = message;
@@ -754,12 +831,23 @@
         // Show progress modal
         progressModal.style.display = "flex";
         
-        // Prepare files data
+        // Prepare files data dan hitung statistik
         const files = Array.from(gpsFiles).map(file => ({
           name: file.name,
           size: file.size,
           status: null
         }));
+        
+        // Inisialisasi statistik
+        const legendStats = {
+          tm: 0,        // Tanaman Menghasilkan
+          tbm: 0,       // Tanaman Belum Menghasilkan
+          sisipan: 0,   // Sisipan
+          abnormal: 0,  // Abnormal
+          totalPokok: 0, // Total
+          luasHa: 0,     // Luas dalam hektar
+          standPerHa: 0  // Stand per hektar
+        };
         
         // Initial progress update
         updateProgress(0, null, null, files);
@@ -779,6 +867,23 @@
               throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
             }
             
+            // Baca file dan hitung statistik
+            const fileContent = await readFileAsText(file);
+            const fileStats = parseGPXForStats(fileContent);
+            
+            // Akumulasi statistik
+            legendStats.tm += fileStats.tm;
+            legendStats.tbm += fileStats.tbm;
+            legendStats.sisipan += fileStats.sisipan;
+            legendStats.abnormal += fileStats.abnormal;
+            
+            // Hitung luas jika ada track points
+            if (fileStats.trackPoints.length >= 3) {
+              const area = calculateArea(fileStats.trackPoints) / 10000; // Konversi ke hektar
+              legendStats.luasHa += area;
+            }
+            
+            // Konversi ke base64 untuk upload
             const base64Data = await fileToBase64(file);
             filesData.push({
               name: file.name,
@@ -796,12 +901,16 @@
             console.error(`Error processing file ${file.name}:`, error);
             files[i].status = "error";
             updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "error", files);
-            // Continue with next file even if one fails
           }
           
           // Small delay to allow UI to update
           await new Promise(resolve => setTimeout(resolve, 100));
         }
+    
+        // Hitung total pokok dan stand per hektar
+        legendStats.totalPokok = legendStats.tm + legendStats.tbm + legendStats.sisipan;
+        legendStats.standPerHa = legendStats.luasHa > 0 ? 
+          legendStats.totalPokok / legendStats.luasHa : 0;
     
         // Only proceed with upload if at least one file was successfully processed
         if (uploadedCount === 0) {
@@ -812,7 +921,16 @@
           kebun,
           divisi,
           blok,
-          files: filesData
+          files: filesData,
+          stats: {
+            tm: legendStats.tm,
+            tbm: legendStats.tbm,
+            sisipan: legendStats.sisipan,
+            abnormal: legendStats.abnormal,
+            totalPokok: legendStats.totalPokok,
+            luasHa: legendStats.luasHa,
+            standPerHa: legendStats.standPerHa
+          }
         };
     
         // Submit the form data to Google Apps Script
@@ -842,7 +960,7 @@
         updateProgress(100, null, null, files);
         
         // Show success message
-        showStatus(`Upload ${uploadedCount} file berhasil! ${gpsFiles.length - uploadedCount} gagal.`);
+        showStatus(`Upload ${uploadedCount} file berhasil! Statistik: TM=${legendStats.tm}, TBM=${legendStats.tbm}, Sisipan=${legendStats.sisipan}, Abnormal=${legendStats.abnormal}, Total=${legendStats.totalPokok}, Luas=${legendStats.luasHa.toFixed(2)} ha, Stand/Ha=${legendStats.standPerHa.toFixed(2)}`);
         
         // Auto-close progress modal after 3 seconds
         setTimeout(() => {
