@@ -533,10 +533,12 @@
         const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok, luasHa, standPerHa] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
         
-        // Konversi format angka yang menggunakan koma sebagai desimal
+        // Fungsi untuk parsing angka dengan format Indonesia
         const parseNumber = (str) => {
           if (!str) return 0;
-          return parseFloat(str.replace(',', '.')) || 0;
+          // Hapus titik sebagai pemisah ribuan, ganti koma dengan titik untuk desimal
+          const numStr = str.replace(/\./g, '').replace(',', '.');
+          return parseFloat(numStr) || 0;
         };
         
         statsData[key] = {
@@ -545,8 +547,8 @@
           sisipan: parseInt(sisipan) || 0,
           abnormal: parseInt(abnormal) || 0,
           totalPokok: parseInt(totalPokok) || 0,
-          luasHa: parseNumber(luasHa), // Gunakan fungsi parseNumber khusus
-          standPerHa: parseNumber(standPerHa) // Gunakan fungsi parseNumber khusus
+          luasHa: parseNumber(luasHa), // Gunakan parseNumber khusus
+          standPerHa: parseNumber(standPerHa) // Gunakan parseNumber khusus
         };
       });
 
@@ -1033,22 +1035,24 @@
       loadAndDisplayData(); // Atau bisa juga window.location.reload()
     }
 
-    // Fungsi helper untuk format angka
+    // Fungsi helper untuk format angka dengan koma sebagai desimal
     function formatNumber(num, decimalPlaces = 0) {
       // Handle kasus ketika num null/undefined
       if (num === null || num === undefined) return '0';
       
       // Jika num adalah string dengan koma sebagai desimal, konversi ke float
-      if (typeof num === 'string' && num.includes(',')) {
-        num = parseFloat(num.replace(',', '.')) || 0;
+      if (typeof num === 'string') {
+        num = num.replace(/\./g, '').replace(',', '.');
+        num = parseFloat(num) || 0;
       }
       
-      // Bulatkan angka dan format dengan separator ribuan
-      const rounded = decimalPlaces > 0 ? 
-        parseFloat(num.toFixed(decimalPlaces)) : 
-        Math.round(num);
+      // Bulatkan angka dan format dengan separator ribuan (titik) dan desimal (koma)
+      const options = {
+        minimumFractionDigits: decimalPlaces,
+        maximumFractionDigits: decimalPlaces
+      };
       
-      return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return num.toLocaleString('id-ID', options);
     }
   </script>
 </body>
