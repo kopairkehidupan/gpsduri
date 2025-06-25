@@ -1040,19 +1040,23 @@
       // Handle kasus ketika num null/undefined
       if (num === null || num === undefined) return '0';
       
-      // Jika num adalah string dengan koma sebagai desimal, konversi ke float
+      // Jika num adalah string, bersihkan dan konversi ke number
       if (typeof num === 'string') {
-        num = num.replace(/\./g, '').replace(',', '.');
-        num = parseFloat(num) || 0;
+        // Hapus semua titik (jika digunakan sebagai pemisah ribuan)
+        let cleanNum = num.replace(/\./g, '');
+        // Ganti koma dengan titik untuk desimal
+        cleanNum = cleanNum.replace(',', '.');
+        num = parseFloat(cleanNum) || 0;
       }
       
-      // Bulatkan angka dan format dengan separator ribuan (titik) dan desimal (koma)
-      const options = {
+      // Format angka dengan:
+      // - Titik sebagai pemisah ribuan
+      // - Koma sebagai pemisah desimal
+      // - Jumlah digit desimal sesuai parameter
+      return num.toLocaleString('id-ID', {
         minimumFractionDigits: decimalPlaces,
         maximumFractionDigits: decimalPlaces
-      };
-      
-      return num.toLocaleString('id-ID', options);
+      });
     }
   </script>
 </body>
