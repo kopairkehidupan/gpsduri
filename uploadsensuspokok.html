@@ -909,7 +909,7 @@
             // Hitung luas jika ada track points
             if (fileStats.trackPoints.length >= 3) {
               const area = calculateArea(fileStats.trackPoints) / 10000; // Konversi ke hektar
-              legendStats.luasHa += area;
+              legendStats.luasHa += parseFloat(area.toFixed(2));
             }
             
             // Konversi ke base64 untuk upload
