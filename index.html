@@ -661,29 +661,6 @@
         const tdBlok = document.createElement("td");
         tdBlok.textContent = firstItem.blok;
         firstRow.appendChild(tdBlok);
-
-        // Kolom Hasil Sensus Pokok
-        const tdStats = document.createElement("td");
-        
-        if (firstItem.stats) {
-          const stats = firstItem.stats;
-          tdStats.innerHTML = `
-            <div style="font-size: 0.8rem; line-height: 1.4;">
-              <div>TM: <strong>${stats.tm}</strong></div>
-              <div>TBM: <strong>${stats.tbm}</strong></div>
-              <div>Sisipan: <strong>${stats.sisipan}</strong></div>
-              <div>Abnormal: <strong>${stats.abnormal}</strong></div>
-              <div>Total: <strong>${stats.totalPokok}</strong></div>
-              <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
-              <div>Stand: <strong>${stats.standPerHa.toFixed(0)}/Ha</strong></div>
-            </div>
-          `;
-        } else {
-          tdStats.textContent = "Data tidak tersedia";
-          tdStats.style.color = "var(--dark-gray)";
-          tdStats.style.fontStyle = "italic";
-        }
-        firstRow.appendChild(tdStats);
         
         // Kolom Data Tersedia
         const tdData = document.createElement("td");
@@ -701,6 +678,29 @@
           tdData.appendChild(badge);
         }
         firstRow.appendChild(tdData);
+
+        // Kolom Hasil Sensus Pokok
+        const tdStats = document.createElement("td");
+        
+        if (firstItem.stats) {
+          const stats = firstItem.stats;
+          tdStats.innerHTML = `
+            <div style="font-size: 0.8rem; line-height: 1.4;">
+              <div>TM: <strong>${stats.tm} Pkk</strong></div>
+              <div>TBM: <strong>${stats.tbm} Pkk</strong></div>
+              <div>Sisipan: <strong>${stats.sisipan} Pkk</strong></div>
+              <div>Kosong/Abnormal: <strong>${stats.abnormal} Titik</strong></div>
+              <div>Total: <strong>${stats.totalPokok} Pkk</strong></div>
+              <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
+              <div>Stand: <strong>${stats.standPerHa.toFixed(0)} Pkk/Ha</strong></div>
+            </div>
+          `;
+        } else {
+          tdStats.textContent = "Data tidak tersedia";
+          tdStats.style.color = "var(--dark-gray)";
+          tdStats.style.fontStyle = "italic";
+        }
+        firstRow.appendChild(tdStats);
         
         // Kolom Aksi
         const tdAction = document.createElement("td");
