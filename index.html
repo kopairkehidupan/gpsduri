@@ -533,22 +533,14 @@
         const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok, luasHa, standPerHa] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
         
-        // Fungsi untuk parsing angka dengan format Indonesia
-        const parseNumber = (str) => {
-          if (!str) return 0;
-          // Hapus titik sebagai pemisah ribuan, ganti koma dengan titik untuk desimal
-          const numStr = str.replace(/\./g, '').replace(',', '.');
-          return parseFloat(numStr) || 0;
-        };
-        
         statsData[key] = {
           tm: parseInt(tm) || 0,
           tbm: parseInt(tbm) || 0,
           sisipan: parseInt(sisipan) || 0,
           abnormal: parseInt(abnormal) || 0,
           totalPokok: parseInt(totalPokok) || 0,
-          luasHa: parseNumber(luasHa), // Gunakan parseNumber khusus
-          standPerHa: parseNumber(standPerHa) // Gunakan parseNumber khusus
+          luasHa: parseNumber(luasHa, 2), // Gunakan parseNumber dengan 2 desimal
+          standPerHa: parseNumber(standPerHa, 2) // Gunakan parseNumber dengan 2 desimal
         };
       });
 
@@ -699,7 +691,7 @@
               <div>Kosong/Abnormal: <strong>${formatNumber(stats.abnormal)} Titik</strong></div>
               <div>Total: <strong>${formatNumber(stats.totalPokok)} Pkk</strong></div>
               <div>Luas: <strong>${formatNumber(stats.luasHa, 2)} Ha</strong></div>
-              <div>Stand: <strong>${formatNumber(stats.standPerHa)} Pkk/Ha</strong></div>
+              <div>Stand: <strong>${formatNumber(stats.standPerHa, 2)} Pkk/Ha</strong></div>
             </div>
           `;
         } else {
@@ -1035,24 +1027,40 @@
       loadAndDisplayData(); // Atau bisa juga window.location.reload()
     }
 
-    // Fungsi helper untuk format angka dengan koma sebagai desimal
+    // Fungsi untuk parsing angka dari string (menggunakan format Indonesia)
+    function parseNumber(str, decimalPlaces = 2) {
+      if (!str || str.trim() === '') return 0;
+      
+      // Bersihkan string dari karakter non-numerik kecuali koma dan titik
+      let cleanStr = str.toString().replace(/[^0-9.,]/g, '');
+      
+      // Jika ada koma sebagai desimal dan titik sebagai ribuan
+      if (cleanStr.indexOf(',') > -1 && cleanStr.indexOf('.') > -1) {
+        cleanStr = cleanStr.replace(/\./g, ''); // Hapus titik ribuan
+        cleanStr = cleanStr.replace(',', '.');   // Ganti koma desimal dengan titik
+      } 
+      // Jika hanya ada koma (asumsi sebagai desimal)
+      else if (cleanStr.indexOf(',') > -1) {
+        cleanStr = cleanStr.replace(',', '.');
+      }
+      
+      const num = parseFloat(cleanStr) || 0;
+      return parseFloat(num.toFixed(decimalPlaces)); // Pastikan presisi desimal
+    }
+    
+    // Fungsi untuk formatting angka (format Indonesia)
     function formatNumber(num, decimalPlaces = 2) {
       // Handle kasus ketika num null/undefined
       if (num === null || num === undefined) return '0';
       
-      // Jika num adalah string, bersihkan dan konversi ke number
+      // Jika num adalah string, parse dulu
       if (typeof num === 'string') {
-        // Hapus semua titik (jika digunakan sebagai pemisah ribuan)
-        let cleanNum = num.replace(/\./g, '');
-        // Ganti koma dengan titik untuk desimal
-        cleanNum = cleanNum.replace(',', '.');
-        num = parseFloat(cleanNum) || 0;
+        num = parseNumber(num, decimalPlaces);
       }
       
       // Format angka dengan:
       // - Titik sebagai pemisah ribuan
       // - Koma sebagai pemisah desimal
-      // - Jumlah digit desimal sesuai parameter
       return num.toLocaleString('id-ID', {
         minimumFractionDigits: decimalPlaces,
         maximumFractionDigits: decimalPlaces
