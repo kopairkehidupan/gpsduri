@@ -1,871 +1,864 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Sensus Pokok Kebun</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sensus Pokok GPS Data Upload</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --success: #4caf50;
+      --error: #f44336;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
     }
     
-    #map {
-      height: 100%;
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      position: relative;
+      padding-bottom: 80px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1rem;
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 80px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding: 0 1rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      transition: var(--transition);
+      margin-bottom: 1.5rem;
+    }
+    
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    
+    label {
+      font-weight: 500;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    
+    select, input[type="text"], input[type="file"] {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--medium-gray);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      background-color: var(--white);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1rem;
+    }
+    
+    .file-input-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
       width: 100%;
     }
     
-    /* Kontrol Peta Responsif */
-    .map-controls {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 1000;
-      background: white;
-      padding: 8px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      max-width: 280px;
-      width: 90%;
-      height: auto;
-      overflow: visible;
-      transition: all 0.3s ease;
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      border: 2px dashed var(--medium-gray);
+      border-radius: 8px;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
     }
     
-    .loading {
+    .file-input-label:hover {
+      border-color: var(--primary);
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .file-input-label i {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    
+    .file-input-label span {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    input[type="file"] {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1000;
-      background: white;
-      padding: 15px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      text-align: center;
-      width: 80%;
-      max-width: 300px;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
     }
     
     .file-list {
-      max-height: 200px;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+      max-height: 150px;
       overflow-y: auto;
-      margin-top: 8px;
     }
     
-    .file-list ul {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-    
-    .file-list li {
-      padding: 4px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 12px;
-    }
-    
-    .file-list li.success {
-      color: green;
-    }
-    
-    .file-list li.error {
-      color: red;
-    }
-    
-    .legend {
-      background: white;
-      padding: 8px;
-      border-radius: 5px;
-      margin-top: 8px;
-      font-size: 12px;
-    }
-    
-    .legend-item {
+    .file-item {
       display: flex;
       align-items: center;
-      margin: 4px 0;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--medium-gray);
     }
     
-    .legend-color {
-      width: 14px;
-      height: 14px;
-      margin-right: 6px;
-      border: 1px solid #333;
-      border-radius: 2px;
+    .file-item:last-child {
+      border-bottom: none;
     }
     
-    .legend-item span {
-      font-size: 12px;
-      font-weight: normal;
-    }
-    
-    .file-list.collapsed {
-      max-height: 0;
-      overflow: hidden;
-      margin: 0;
-      padding: 0;
-      opacity: 0;
-    }
-    
-    /* Judul Sensus */
-    .sensus-title {
-      text-align: center;
-      margin-bottom: 0;
-      padding: 6px;
-      background: linear-gradient(135deg, #27ae60, #2ecc71);
-      border-radius: 5px;
-      color: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .btn {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.9rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 1rem;
       cursor: pointer;
-      user-select: none;
-      position: relative;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
     }
     
-    .sensus-title h2 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      line-height: 1.2;
+    .btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
     }
     
-    .sensus-title .subtitle {
-      display: none; /* Initially hidden */
-      font-size: 10px;
-      margin-top: 2px;
+    .btn:disabled {
+      background-color: var(--medium-gray);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--dark-gray);
+      font-size: 0.9rem;
+    }
+    
+    .spinner {
+      border: 2px solid rgba(66, 133, 244, 0.2);
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .status {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    
+    .error-input {
+      border-color: var(--error) !important;
+    }
+    
+    small {
+      font-size: 0.75rem;
+      color: var(--dark-gray);
+    }
+    
+    .material-icons {
+      font-family: 'Material Icons';
       font-weight: normal;
-      opacity: 0.8;
-    }
-    
-    /* Show subtitle only when collapsed */
-    .map-controls.collapsed .sensus-title .subtitle {
-      display: block;
-    }
-    
-    /* Layer Control */
-    .leaflet-control-layers {
-      border-radius: 5px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
-      background: white;
-      font-size: 12px;
-    }
-    
-    .leaflet-control-layers-toggle {
-      background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png');
-      width: 30px;
-      height: 30px;
-    }
-    
-    .leaflet-control-layers-expanded {
-      padding: 5px 8px 5px 5px;
-      color: #333;
-      background: white;
-    }
-    
-    .leaflet-control-layers label {
-      display: block;
-      font-size: 12px;
-      margin: 2px 0;
-    }
-    
-    /* Responsive untuk perangkat mobile */
-    @media (max-width: 768px) {
-      .map-controls {
-        max-width: 220px;
-        padding: 6px;
-        right: 5px;
-        top: 5px;
-      }
-      
-      .sensus-title {
-        padding: 5px;
-      }
-      
-      .sensus-title h2 {
-        font-size: 12px;
-      }
-      
-      .sensus-title .subtitle {
-        font-size: 9px;
-      }
-      
-      #blok-title, #location-info p {
-        font-size: 11px;
-        margin: 2px 0;
-      }
-      
-      .file-list h4, .legend h4 {
-        font-size: 11px;
-        margin: 4px 0;
-      }
-      
-      .legend-item span {
-        font-size: 11px;
-      }
-      
-      .loading {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          z-index: 1001;
-          background: white;
-          padding: 15px;
-          border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3);
-          text-align: center;
-          width: 80%;
-          max-width: 280px;
-          display: none;
-      }
-      
-      .loading h3 {
-        color: #333;
-        margin: 0 0 10px 0;
-        font-size: 14px;
-      }
-      
-      #progress {
-        margin: 0;
-        color: #555;
-        font-size: 12px;
-      }
-      
-      .leaflet-control-layers {
-        font-size: 11px;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .map-controls {
-        max-width: 200px;
-        right: 3px;
-        top: 3px;
-      }
-      
-      .sensus-title {
-        padding: 4px;
-      }
-      
-      .sensus-title h2 {
-        font-size: 11px;
-      }
-      
-      .sensus-title .subtitle {
-        font-size: 8px;
-      }
-      
-      .legend-item span {
-        font-size: 10px;
-      }
-    }
-    
-    /* Posisi layer control */
-    .leaflet-bottom {
-      z-index: 999;
-    }
-    
-    .leaflet-control-container {
-      z-index: 999;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Toggle Controls */
-    .map-controls.collapsed {
-        height: 100px;
-        overflow: hidden;
+    /* Progress modal styles */
+    .progress-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
     }
     
-    /* Tambahkan indikator panah */
-    .sensus-title::after {
-        content: "▼";
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 10px;
-        transition: transform 0.3s ease;
+    .progress-content {
+      background-color: white;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     }
     
-    .map-controls.collapsed .sensus-title::after {
-        transform: translateY(-50%) rotate(-90deg);
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
     }
     
-    /* Animasi untuk toggle */
-    .map-controls {
-      transition: all 0.3s ease;
+    .progress-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 0;
     }
     
-    /* Style untuk info blok */
-    #blok-title {
-      font-size: 13px;
-      margin: 6px 0;
-      font-weight: bold;
-      color: #333;
+    .progress-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--dark-gray);
     }
     
-    #location-info p {
-      margin: 3px 0;
-      font-size: 12px;
-      color: #555;
+    .progress-bar-container {
+      width: 100%;
+      height: 10px;
+      background-color: var(--light-gray);
+      border-radius: 5px;
+      margin: 1rem 0;
+      overflow: hidden;
     }
     
-    .file-list h4, .legend h4 {
-      margin: 6px 0 4px 0;
-      font-size: 12px;
-      color: #333;
-      font-weight: bold;
+    .progress-bar {
+      height: 100%;
+      background-color: var(--primary);
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--dark-gray);
+      margin-bottom: 1rem;
+    }
+    
+    .progress-files {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      border-top: 1px solid var(--medium-gray);
+      padding-top: 1rem;
+    }
+    
+    .progress-file {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--light-gray);
+    }
+    
+    .progress-file:last-child {
+      border-bottom: none;
+    }
+    
+    .progress-file-icon {
+      margin-right: 0.5rem;
+      font-size: 1.2rem;
+    }
+    
+    .progress-file-name {
+      flex: 1;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .progress-file-status {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+    
+    .status-uploading {
+      background-color: rgba(66, 133, 244, 0.1);
+      color: var(--primary);
+    }
+    
+    .status-success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+    }
+    
+    .status-error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+    }
+
+    .footer {
+      background-color: var(--white);
+      padding: 1rem;
+      border-top: 1px solid var(--medium-gray);
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+    
+    .footer-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+    
+    .footer-buttons {
+      display: flex;
+      gap: 0.8rem;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .footer-text {
+      color: var(--dark-gray);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 0.8rem;
+      }
+      
+      .card {
+        padding: 1rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .subtitle {
+        font-size: 0.9rem;
+      }
+      
+      select, input[type="text"], input[type="file"] {
+        padding: 0.7rem 0.8rem;
+        font-size: 0.85rem;
+      }
+      
+      .file-input-label {
+        padding: 1rem 0.8rem;
+      }
+      
+      .file-input-label i {
+        font-size: 1.5rem;
+      }
+      
+      .file-input-label span {
+        font-size: 0.8rem;
+      }
+      
+      .btn {
+        padding: 0.8rem;
+        font-size: 0.9rem;
+      }
+      
+      .material-icons {
+        font-size: 18px;
+      }
+      
+      .progress-content {
+        padding: 1.5rem;
+      }
     }
   </style>
 </head>
 <body>
-
-<div id="loading" class="loading">
-  <h3>Memuat data peta...</h3>
-  <div id="progress">Mengambil data dari server</div>
-</div>
-
-<div id="map"></div>
-
-<div class="map-controls">
-  <div class="sensus-title">
-    <h2>HASIL SENSUS POKOK<br><span class="subtitle">--- Tekan di sini untuk melihat detail ---</span></h2>
+  <div class="container">
+    <div class="header">
+      <h1>Sensus Pokok GPS Data Upload</h1>
+    </div>
+    
+    <div class="card">
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="kebun">Kebun</label>
+          <select id="kebun" required>
+            <option value="">-- Pilih Kebun --</option>
+            <option value="Samsam">Samsam</option>
+            <option value="Duri">Duri</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="divisi">Divisi</label>
+          <select id="divisi" required disabled>
+            <option value="">-- Pilih Kebun terlebih dahulu --</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="blok">Blok</label>
+          <input type="text" id="blok" required pattern="[A-Z0-9]+" title="Hanya huruf besar dan angka, tanpa spasi">
+          <small>Hanya huruf besar dan angka, tanpa spasi (contoh: A1, B12, C123)</small>
+        </div>
+        
+        <div class="form-group">
+          <label>GPS Files (.gpx/.kml)</label>
+          <div class="file-input-container">
+            <label class="file-input-label" for="gpsFiles">
+              <i class="material-icons">cloud_upload</i>
+              <span>Klik untuk memilih file atau tarik file ke sini</span>
+              <small>Format yang didukung: .gpx, .kml</small>
+            </label>
+            <input type="file" id="gpsFiles" accept=".gpx,.kml" multiple required>
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <button type="submit" class="btn">
+          <i class="material-icons">file_upload</i>
+          <span>Upload Data</span>
+        </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          <span>Mengunggah... Harap tunggu</span>
+        </div>
+        <div id="status" class="status"></div>
+      </form>
+    </div>
   </div>
-  
-  <h3 id="blok-title">Blok: Loading...</h3>
-  <div id="location-info"></div>
-  <div class="file-list" id="file-list">
-    <h4>File yang dimuat:</h4>
-    <ul id="loaded-files"></ul>
-  </div>
-  <div class="legend">
-    <h4>Legenda:</h4>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: blue;"></div>
-      <span>TM (Biru+Merah)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: green;"></div>
-      <span>TBM (Hijau)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: orange;"></div>
-      <span>Sisipan (Orange)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: black;"></div>
-      <span>Titik Kosong + Abnormal (Hitam)</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background-color: red;"></div>
-      <span>Luas</span>
+
+  <!-- Progress Modal -->
+  <div class="progress-modal" id="progressModal">
+    <div class="progress-content">
+      <div class="progress-header">
+        <h3 class="progress-title">Upload Progress</h3>
+        <button class="progress-close" id="progressClose">&times;</button>
+      </div>
+      <div class="progress-text" id="progressText">Preparing upload...</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-files" id="progressFiles"></div>
     </div>
   </div>
-</div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
-<script src="https://unpkg.com/leaflet-geometryutil@0.9.3/src/leaflet.geometryutil.js"></script>
-<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-buttons">
+        <a href="index.html" class="btn">
+          <i class="material-icons" style="font-size: 16px;">list</i>
+          <span>Lihat Daftar Blok</span>
+        </a>
+      </div>
+    </div>
+  </footer>
 
-<script>
-  // Parse URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const blok = urlParams.get('blok');
-  const kebun = urlParams.get('kebun');
-  const divisi = urlParams.get('divisi');
-  const waypointUrls = urlParams.getAll('waypoints');
-  const trackUrls = urlParams.getAll('tracks');
+  <script>
+    // Data divisi berdasarkan kebun
+    const divisiData = {
+      "Samsam": ["Divisi I", "Divisi II", "Divisi III", "Divisi IV", "Divisi V", "Divisi VI", "Divisi VII"],
+      "Duri": ["Divisi I Tegar", "Divisi II Tegar", "Divisi III Cucut", "Divisi III Mekarsari", "Divisi IV Rangau", "Divisi V Rangau", "Divisi VI Rangau"]
+    };
 
-  // Variabel global untuk menyimpan semua track sebagai polygon terpisah
-  const trackPolygons = [];
-
-  // Fungsi untuk mendapatkan nama file
-  function getFileName(url) {
-    try {
-      if (url.includes('drive.google.com')) {
-        const match = url.match(/[^\/]+(?=\/view|$)/);
-        return match ? `file_${match[0].substring(0,6)}.gpx` : 'waypoints.gpx';
-      }
-      return url.split('/').pop() || 'data.gpx';
-    } catch (e) {
-      return 'data.gpx';
-    }
-  }
-
-  // Update UI
-  document.getElementById('blok-title').textContent = `Blok: ${blok || 'Unknown'}`;
-  document.getElementById('location-info').innerHTML = `
-    <p><strong>Kebun:</strong> ${kebun || '-'}</p>
-    <p><strong>Divisi:</strong> ${divisi || '-'}</p>
-  `;
-  
-  // Initialize map with responsive view
-  const map = L.map('map').setView([1.17, 100.99], 15);
-  
-  // Define base layers
-  const baseLayers = {
-      "Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-          attribution: 'Map Layer by Erik Simarmata',
-          maxZoom: 22
-      }),
-      "Street Map": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: 'Map Layer by Erik Simarmata',
-          maxZoom: 22
-      }),
-      "Topographic": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-          attribution: 'Map Layer by Erik Simarmata',
-          maxZoom: 17
-      })
-  };
-  
-  // Add default layer (Satellite)
-  baseLayers["Satellite"].addTo(map);
-  
-  // Add responsive layer control
-  const layerControl = L.control.layers(baseLayers, null, {
-      position: 'bottomright',
-      collapsed: true
-  }).addTo(map);
-
-  // Adjust controls for mobile
-  function adjustForMobile() {
-    const controlsElement = document.querySelector('.map-controls');
-    if (window.innerWidth <= 768) {
-      // Sesuaikan ukuran font dan padding untuk mobile
-      document.querySelector('.map-controls').style.maxWidth = '220px';
-      document.querySelector('.sensus-title h2').style.fontSize = '12px';
+    // Inisialisasi dropdown divisi berdasarkan kebun yang dipilih
+    document.getElementById("kebun").addEventListener("change", function() {
+      const kebun = this.value;
+      const divisiSelect = document.getElementById("divisi");
       
-      // Pindahkan layer control jika perlu
-      layerControl.setPosition('bottomleft');
-      controlsElement.classList.add('collapsed'); // Default collap
-    } else {
-      // Kembalikan ke ukuran desktop
-      document.querySelector('.map-controls').style.maxWidth = '280px';
-      document.querySelector('.sensus-title h2').style.fontSize = '14px';
-      layerControl.setPosition('bottomright');
-      controlsElement.classList.remove('collapsed'); // Default exp
-    }
-  }
-
-  // Custom icons
-  function getWaypointIcon(symbol) {
-    const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // default blue
-    
-    if (sym === 'flag, green' || sym === 'city (small)') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
-    } else if (sym === 'navaid, black') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/black-flag-cropped.png';
-    } else if (sym === 'navaid, orange') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/orange-flag-cropped.png';
-    } else if (sym === 'navaid, red') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // Red now counts as TM (blue)
-    } else if (sym === 'custom 7') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
-    }
-    
-    return new L.Icon({
-      iconUrl,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-      popupAnchor: [0, -6]
+      // Kosongkan dropdown divisi
+      divisiSelect.innerHTML = '';
+      
+      if (kebun) {
+        // Aktifkan dropdown divisi
+        divisiSelect.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Divisi --";
+        divisiSelect.appendChild(defaultOption);
+        
+        // Tambahkan opsi divisi berdasarkan kebun
+        divisiData[kebun].forEach(divisi => {
+          const option = document.createElement("option");
+          option.value = divisi;
+          option.textContent = divisi;
+          divisiSelect.appendChild(option);
+        });
+      } else {
+        // Nonaktifkan dropdown divisi jika kebun tidak dipilih
+        divisiSelect.disabled = true;
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kebun terlebih dahulu --";
+        divisiSelect.appendChild(defaultOption);
+      }
     });
-  }
 
-  // Modifikasi fungsi fetchFile:
-  async function fetchFile(url) {
-    try {
-      const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
-      if (!fileId) throw new Error('Invalid Google Drive URL');
+    // Validasi input blok (hanya huruf besar dan angka)
+    document.getElementById("blok").addEventListener("input", function() {
+      // Konversi ke huruf besar
+      this.value = this.value.toUpperCase();
       
-      const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
+      // Hapus karakter yang tidak valid (bukan huruf/angka)
+      this.value = this.value.replace(/[^A-Z0-9]/g, '');
       
-      const res = await fetch(scriptUrl);
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-      
-      return await res.text();
-    } catch (error) {
-      console.error('Error fetching file:', error);
-      throw new Error(`Failed to load file: ${error.message}`);
-    }
-  }
-
-  // Variabel global untuk menyimpan statistik
-  const legendStats = {
-    blue: { count: 0 },
-    green: { count: 0 },
-    black: { count: 0 }, // Sekarang menyimpan hitungan black + red
-    orange: { count: 0 },
-    track: { area: 0 }
-  };
-  // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
-  function calculateOpenTrackArea(latLngs) {
-      if (latLngs.length < 3) {
-          console.warn('Not enough points to calculate area (minimum 3 points required)');
-          return 0;
+      // Toggle class error jika tidak valid
+      if (!this.value.match(/^[A-Z0-9]+$/)) {
+        this.classList.add("error-input");
+      } else {
+        this.classList.remove("error-input");
       }
+    });
+
+    // Tampilkan daftar file yang dipilih
+    document.getElementById("gpsFiles").addEventListener("change", function() {
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = '';
       
-      // Convert to GeoJSON format (array of [longitude, latitude] pairs)
-      const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
-      // Close the polygon by adding the first point at the end
-      coordinates.push(coordinates[0]);
+      if (this.files.length > 0) {
+        Array.from(this.files).forEach(file => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+          fileItem.innerHTML = `
+            <i class="material-icons">description</i>
+            <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          `;
+          fileList.appendChild(fileItem);
+        });
+      } else {
+        fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
+      }
+    });
+
+    // Show/hide progress modal
+    const progressModal = document.getElementById("progressModal");
+    const progressClose = document.getElementById("progressClose");
+    
+    progressClose.addEventListener("click", () => {
+      progressModal.style.display = "none";
+    });
+
+    // Update progress bar and file status
+    function updateProgress(progress, currentFile, currentStatus, files) {
+      const progressBar = document.getElementById("progressBar");
+      const progressText = document.getElementById("progressText");
+      const progressFiles = document.getElementById("progressFiles");
+      
+      // Update progress bar
+      progressBar.style.width = `${progress}%`;
+      
+      // Update progress text
+      progressText.textContent = `Uploading... ${progress.toFixed(0)}% complete`;
+      
+      // Update file list
+      progressFiles.innerHTML = '';
+      files.forEach(file => {
+        const fileEl = document.createElement("div");
+        fileEl.className = "progress-file";
+        
+        const icon = document.createElement("i");
+        icon.className = "material-icons progress-file-icon";
+        icon.textContent = "description";
+        
+        const name = document.createElement("div");
+        name.className = "progress-file-name";
+        name.textContent = file.name;
+        
+        const status = document.createElement("div");
+        status.className = "progress-file-status";
+        
+        if (file.name === currentFile) {
+          status.textContent = currentStatus === "success" ? "Sudah diupload" : currentStatus === "error" ? "Failed" : "Uploading...";
+          status.classList.add(currentStatus === "success" ? "status-success" : 
+                             currentStatus === "error" ? "status-error" : "status-uploading");
+        } else if (file.status) {
+          status.textContent = file.status === "success" ? "Sudah diupload" : "Failed";
+          status.classList.add(file.status === "success" ? "status-success" : "status-error");
+        } else {
+          status.textContent = "Waiting";
+        }
+        
+        fileEl.appendChild(icon);
+        fileEl.appendChild(name);
+        fileEl.appendChild(status);
+        progressFiles.appendChild(fileEl);
+      });
+    }
+
+    // Convert file to Base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Show status message
+    function showStatus(message, isError = false) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'status error' : 'status success';
+      statusEl.style.display = 'block';
+    }
+
+    // Handle form submission
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const loading = document.getElementById("loading");
+      const statusEl = document.getElementById("status");
       
       try {
-          // Create a Turf.js polygon
-          const polygon = turf.polygon([coordinates]);
-          // Calculate area in square meters, then convert to hectares
-          const area = turf.area(polygon) / 10000;
+        submitBtn.disabled = true;
+        loading.style.display = 'flex';
+        statusEl.style.display = 'none';
+        
+        const kebun = document.getElementById("kebun").value;
+        const divisi = document.getElementById("divisi").value;
+        const blok = document.getElementById("blok").value;
+        const gpsFiles = document.getElementById("gpsFiles").files;
+    
+        // Validasi input
+        if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
+        if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
+        if (!blok.match(/^[A-Z0-9]+$/)) throw new Error('Blok hanya boleh mengandung huruf besar dan angka, tanpa spasi');
+        if (gpsFiles.length === 0) throw new Error('Pilih setidaknya satu file');
+    
+        // Show progress modal
+        progressModal.style.display = "flex";
+        
+        // Prepare files data
+        const files = Array.from(gpsFiles).map(file => ({
+          name: file.name,
+          size: file.size,
+          status: null
+        }));
+        
+        // Initial progress update
+        updateProgress(0, null, null, files);
+        
+        // Convert and upload files one by one
+        const filesData = [];
+        let uploadedCount = 0;
+        
+        for (let i = 0; i < gpsFiles.length; i++) {
+          const file = gpsFiles[i];
           
-          console.log('Area calculated successfully:', area.toFixed(4), 'hectares');
-          return area;
+          try {
+            // Update progress - starting upload
+            updateProgress((i / gpsFiles.length) * 100, file.name, "uploading", files);
+            
+            if (!['.gpx', '.kml'].some(ext => file.name.toLowerCase().endsWith(ext))) {
+              throw new Error(`File ${file.name} harus berekstensi .gpx atau .kml`);
+            }
+            
+            const base64Data = await fileToBase64(file);
+            filesData.push({
+              name: file.name,
+              data: base64Data
+            });
+            
+            // Mark as successfully processed
+            files[i].status = "success";
+            uploadedCount++;
+            
+            // Update progress - upload complete
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "success", files);
+            
+          } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            files[i].status = "error";
+            updateProgress(((i + 1) / gpsFiles.length) * 100, file.name, "error", files);
+            // Continue with next file even if one fails
+          }
+          
+          // Small delay to allow UI to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    
+        // Only proceed with upload if at least one file was successfully processed
+        if (uploadedCount === 0) {
+          throw new Error('Tidak ada file yang berhasil diproses');
+        }
+    
+        const payload = {
+          kebun,
+          divisi,
+          blok,
+          files: filesData
+        };
+    
+        // Submit the form data to Google Apps Script
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(payload));
+        
+        const iframe = document.createElement('iframe');
+        iframe.name = 'hidden-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const form = document.createElement('form');
+        form.target = 'hidden-iframe';
+        form.method = 'POST';
+        form.action = 'https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(payload);
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+        
+        // Update progress to show completion
+        updateProgress(100, null, null, files);
+        
+        // Show success message
+        showStatus(`Upload ${uploadedCount} file berhasil! ${gpsFiles.length - uploadedCount} gagal.`);
+        
+        // Auto-close progress modal after 3 seconds
+        setTimeout(() => {
+          progressModal.style.display = "none";
+        }, 3000);
+        
       } catch (error) {
-          console.error('Error calculating area with Turf.js:', error);
-          return 0;
+        console.error('Upload error:', error);
+        showStatus('Error: ' + error.message, true);
+        progressModal.style.display = "none";
+      } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
       }
-  }
-  
-  // Function to parse GPX and add to map
-  function addGpxToMap(gpxContent, type, fileName) {
-    // Validasi awal
-    if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
-      throw new Error('File tidak valid - Terdeteksi halaman HTML');
-    }
-    
-    if (!gpxContent.trim().startsWith('<') || !gpxContent.includes('<gpx')) {
-      throw new Error('Format GPX tidak valid');
-    }
-    
-    try {
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(gpxContent, "application/xml");
-      
-      // Check for XML parsing errors
-      const parserError = xml.getElementsByTagName('parsererror');
-      if (parserError.length > 0) {
-        throw new Error('Format GPX tidak valid');
-      }
-      
-      if (type === 'waypoint') {
-        const waypoints = xml.getElementsByTagName('wpt');
-        console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
-        
-        const bounds = [];
-        for (let wpt of waypoints) {
-          const lat = parseFloat(wpt.getAttribute('lat'));
-          const lon = parseFloat(wpt.getAttribute('lon'));
-          
-          if (isNaN(lat)) throw new Error('Latitude tidak valid');
-          if (isNaN(lon)) throw new Error('Longitude tidak valid');
-          
-          const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
-          const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-          
-          // Hitung waypoint berdasarkan warna
-          if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
-            legendStats.green.count++;
-          } else if (sym.toLowerCase().includes('black')) {
-            legendStats.black.count++; // Hitam saja untuk Titik Kosong + Abnormal
-          } else if (sym.toLowerCase().includes('orange')) {
-            legendStats.orange.count++;
-          } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
-            legendStats.blue.count++; // Merah sekarang masuk TM (biru)
-          } else {
-            legendStats.blue.count++; // Default blue
-          }
-  
-          const marker = L.marker([lat, lon], {
-            icon: getWaypointIcon(sym)
-          }).addTo(map);
-  
-          marker.bindPopup(`
-              <b>Waypoint:</b> ${name}<br>
-              <b>Kategori:</b> ${getCategoryName(sym)}<br>
-              <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
-          `);
-          bounds.push([lat, lon]);
-        }
-        
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
-        }
-        
-        // Update legend setelah memproses waypoints
-        updateLegend();
-      } 
-      else if (type === 'track') {
-        console.log(`Processing track from ${fileName}`);
-        
-        try {
-            // Parse the GPX track points
-            const trkpts = xml.getElementsByTagName('trkpt');
-            const latLngs = [];
-            
-            for (let i = 0; i < trkpts.length; i++) {
-                const trkpt = trkpts[i];
-                const lat = parseFloat(trkpt.getAttribute('lat'));
-                const lon = parseFloat(trkpt.getAttribute('lon'));
-                latLngs.push(L.latLng(lat, lon));
-            }
-            
-            // Simpan sebagai polygon terpisah
-            if (latLngs.length >= 3) {
-                trackPolygons.push(latLngs);
-            }
-            
-            // Add to map
-            const polyline = L.polyline(latLngs, {
-                color: 'red',
-                weight: 4,
-                opacity: 0.75,
-                lineCap: 'round'
-            }).addTo(map);
-            
-            // Fit bounds untuk track ini
-            map.fitBounds(polyline.getBounds());
-            
-        } catch (error) {
-            console.error(`Failed to process track ${fileName}:`, error);
-        }
-    }
-    } catch (error) {
-      console.error(`Gagal memproses ${type} dari ${fileName}:`, error);
-      throw error;
-    }
-  }
-
-  function updateLegend() {
-    const legendElement = document.querySelector('.legend');
-    
-    // Format numbers
-    const greenCount = legendStats.green.count.toLocaleString('id-ID');
-    const blueCount = legendStats.blue.count.toLocaleString('id-ID');
-    const blackCount = legendStats.black.count.toLocaleString('id-ID');
-    const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
-    
-    // Ubah perhitungan total pokok (biru + hijau + orange)
-    const totalPokok = (legendStats.blue.count + legendStats.green.count + legendStats.orange.count).toLocaleString('id-ID');
-    
-    const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
-    
-    // Update stand/ha sesuai total pokok baru
-    const standPerHa = legendStats.track.area > 0 
-      ? (legendStats.blue.count + legendStats.green.count + legendStats.orange.count) / legendStats.track.area
-      : 0;
-    const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2
     });
-    
-    legendElement.innerHTML = `
-      <h4>Legenda:</h4>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: blue;"></div>
-        <span>TM (Biru+Merah) = ${blueCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: green;"></div>
-        <span>TBM (Hijau) = ${greenCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: orange;"></div>
-        <span>Sisipan (Orange) = ${orangeCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: black;"></div>
-        <span>Titik Kosong + Abnormal (Hitam) = ${blackCount} Pkk</span>
-      </div>
-      <div class="legend-item total">
-        <div class="legend-color" style="background-color: transparent;"></div>
-        <span>Jumlah Pokok = ${totalPokok} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: red;"></div>
-        <span>Luas = ${areaHa} ha</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: transparent;"></div>
-        <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
-      </div>
-    `;
-  }
-
-  // Modify the loading display in the processFiles function
-  async function processFiles() {
-      console.log('Daftar file track:', trackUrls);
-      console.log('Jumlah file track:', trackUrls.length);
-      const loadedFilesList = document.getElementById('loaded-files');
-      const loading = document.getElementById('loading');
-      let hasData = false;
-      
-      // Ensure loading is visible and on top
-      loading.style.display = 'block';
-      loading.style.zIndex = '1001';
-      
-      // Proses waypoints
-      for (const url of waypointUrls) {
-          const li = document.createElement('li');
-          const fileName = getFileName(url);
-          
-          try {
-              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
-              li.textContent = `🔄 Memuat ${fileName}...`;
-              loadedFilesList.appendChild(li);
-              
-              const gpxContent = await fetchFile(url);
-              await addGpxToMap(gpxContent, 'waypoint', fileName);
-              
-              li.textContent = `✅ ${fileName}`;
-              li.className = 'success';
-              hasData = true;
-          } catch (error) {
-              li.textContent = `❌ ${fileName} (${error.message})`;
-              li.className = 'error';
-          }
-          updateControlsView();
-      }
-      
-      // Proses tracks
-      for (const url of trackUrls) {
-          const li = document.createElement('li');
-          const fileName = getFileName(url);
-          
-          try {
-              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
-              li.textContent = `🔄 Memuat ${fileName}...`;
-              loadedFilesList.appendChild(li);
-              
-              const gpxContent = await fetchFile(url);
-              await addGpxToMap(gpxContent, 'track', fileName);
-              
-              li.textContent = `✅ ${fileName}`;
-              li.className = 'success';
-              hasData = true;
-          } catch (error) {
-              li.textContent = `❌ ${fileName} (${error.message})`;
-              li.className = 'error';
-          }
-          updateControlsView();
-      }
-      
-      // Hitung luas total setelah semua track diproses
-      if (trackPolygons.length > 0) {
-          const totalArea = calculateTotalAreaFromPolygons();
-          legendStats.track.area = totalArea;
-          updateLegend();
-          
-          // Fit bounds untuk semua track
-          const allBounds = trackPolygons.flat();
-          if (allBounds.length > 0) {
-              map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
-          }
-      }
-      
-      if (!hasData) {
-          const li = document.createElement('li');
-          li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
-          li.className = 'error';
-          loadedFilesList.appendChild(li);
-      }
-      
-      loading.style.display = 'none';
-      updateControlsView();
-  }
-
-  // Fungsi untuk mengupdate tampilan kontrol
-  function updateControlsView() {
-    const fileListElement = document.getElementById('file-list');
-    const loadedFilesList = document.getElementById('loaded-files');
-    const hasErrors = Array.from(loadedFilesList.children).some(li => li.className === 'error');
-    
-    if (!hasErrors) {
-      // Jika semua file berhasil dimuat, sembunyikan daftar file
-      fileListElement.classList.add('collapsed');
-    } else {
-      // Jika ada error, tetap tampilkan daftar file
-      fileListElement.classList.remove('collapsed');
-    }
-  }
-
-  // Event listener untuk resize window
-  window.addEventListener('resize', adjustForMobile);
-
-  // Di bagian inisialisasi, tambahkan:
-  document.addEventListener('DOMContentLoaded', function() {
-      // Sembunyikan loading jika tidak ada file yang akan diproses
-      if (waypointUrls.length === 0 && trackUrls.length === 0) {
-          document.getElementById('loading').style.display = 'none';
-          document.getElementById('file-list').innerHTML = `
-              <h4>Tidak ada file yang perlu dimuat</h4>
-          `;
-      } else {
-          // Sesuaikan tampilan awal berdasarkan ukuran layar
-          adjustForMobile();
-          processFiles();
-      }
-
-     // Tambahkan event listener untuk toggle controls
-    const titleElement = document.querySelector('.sensus-title');
-    const controlsElement = document.querySelector('.map-controls');
-    
-    titleElement.addEventListener('click', function() {
-        controlsElement.classList.toggle('collapsed');
-    });
-    
-    // Sembunyikan controls secara default di mobile
-    if (window.innerWidth <= 768) {
-        controlsElement.classList.add('collapsed');
-    }
-  });
-
-  // Tambahkan fungsi ini di bagian script
-  function getCategoryName(symbol) {
-    const sym = (symbol || '').toLowerCase().trim();
-    
-    if (sym === 'flag, green' || sym === 'city (small)') {
-      return 'Tanaman Belum Menghasilkan (TBM)';
-    } else if (sym === 'navaid, black') {
-      return 'Titik Kosong/Abnormal';
-    } else if (sym === 'navaid, orange') {
-      return 'Sisipan';
-    } else if (sym === 'navaid, red') {
-      return 'Tanaman Menghasilkan (TM)'; // Red now counts as TM
-    } else if (sym === 'custom 7') {
-      return 'Tanaman Menghasilkan (TM)';
-    } else {
-      return 'Tanaman Menghasilkan (TM)'; // Default
-    }
-  }
-
-  function calculateTotalAreaFromPolygons() {
-    if (trackPolygons.length === 0) return 0;
-    
-    let totalArea = 0;
-    
-    trackPolygons.forEach(polygonPoints => {
-        if (polygonPoints.length < 3) return;
-        
-        // Convert to GeoJSON format
-        const coordinates = polygonPoints.map(ll => [ll.lng, ll.lat]);
-        coordinates.push(coordinates[0]); // Tutup polygon
-        
-        try {
-            const polygon = turf.polygon([coordinates]);
-            const area = turf.area(polygon) / 10000; // Konversi ke hektar
-            totalArea += area;
-        } catch (error) {
-            console.error('Error calculating polygon area:', error);
-        }
-    });
-    
-    console.log('Total area from all polygons:', totalArea.toFixed(4), 'hectares');
-    return totalArea;
-}
-  
-</script>
+  </script>
 </body>
 </html>
