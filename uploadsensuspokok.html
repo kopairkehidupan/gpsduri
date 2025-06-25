@@ -924,6 +924,69 @@
         loading.style.display = 'none';
       }
     });
+
+    // Helper function to read file as text
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+    
+    // Function to calculate stats from GPX content
+    function calculateGpxStats(gpxContent) {
+      const stats = {
+        blue: 0,
+        green: 0,
+        orange: 0,
+        black: 0,
+        area: 0
+      };
+    
+      try {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(gpxContent, "application/xml");
+        
+        // Count waypoints
+        const waypoints = xml.getElementsByTagName('wpt');
+        for (let wpt of waypoints) {
+          const sym = (wpt.getElementsByTagName('sym')[0]?.textContent || '').toLowerCase();
+          
+          if (sym.includes('green') || sym.includes('city (small)')) {
+            stats.green++;
+          } else if (sym.includes('black')) {
+            stats.black++;
+          } else if (sym.includes('orange')) {
+            stats.orange++;
+          } else {
+            stats.blue++; // Default to blue (TM)
+          }
+        }
+        
+        // Calculate track area
+        const trkpts = xml.getElementsByTagName('trkpt');
+        const latLngs = [];
+        for (let i = 0; i < trkpts.length; i++) {
+          const trkpt = trkpts[i];
+          const lat = parseFloat(trkpt.getAttribute('lat'));
+          const lon = parseFloat(trkpt.getAttribute('lon'));
+          latLngs.push([lon, lat]);
+        }
+        
+        if (latLngs.length >= 3) {
+          latLngs.push(latLngs[0]); // Close polygon
+          const polygon = turf.polygon([latLngs]);
+          stats.area = turf.area(polygon) / 10000; // Convert to hectares
+        }
+        
+      } catch (error) {
+        console.error('Error calculating GPX stats:', error);
+      }
+      
+      return stats;
+    }
   </script>
 </body>
 </html>
