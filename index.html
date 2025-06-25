@@ -533,14 +533,20 @@
         const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok, luasHa, standPerHa] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
         
+        // Konversi format angka yang menggunakan koma sebagai desimal
+        const parseNumber = (str) => {
+          if (!str) return 0;
+          return parseFloat(str.replace(',', '.')) || 0;
+        };
+        
         statsData[key] = {
           tm: parseInt(tm) || 0,
           tbm: parseInt(tbm) || 0,
           sisipan: parseInt(sisipan) || 0,
           abnormal: parseInt(abnormal) || 0,
           totalPokok: parseInt(totalPokok) || 0,
-          luasHa: parseFloat(luasHa) || 0,
-          standPerHa: parseFloat(standPerHa) || 0
+          luasHa: parseNumber(luasHa), // Gunakan fungsi parseNumber khusus
+          standPerHa: parseNumber(standPerHa) // Gunakan fungsi parseNumber khusus
         };
       });
 
@@ -1031,6 +1037,11 @@
     function formatNumber(num, decimalPlaces = 0) {
       // Handle kasus ketika num null/undefined
       if (num === null || num === undefined) return '0';
+      
+      // Jika num adalah string dengan koma sebagai desimal, konversi ke float
+      if (typeof num === 'string' && num.includes(',')) {
+        num = parseFloat(num.replace(',', '.')) || 0;
+      }
       
       // Bulatkan angka dan format dengan separator ribuan
       const rounded = decimalPlaces > 0 ? 
