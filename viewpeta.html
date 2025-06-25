@@ -381,6 +381,9 @@
   const waypointUrls = urlParams.getAll('waypoints');
   const trackUrls = urlParams.getAll('tracks');
 
+  // Variabel global untuk menyimpan semua track sebagai polygon terpisah
+  const trackPolygons = [];
+
   // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
     try {
@@ -609,13 +612,10 @@
                 latLngs.push(L.latLng(lat, lon));
             }
             
-            // Calculate area
-            const area = calculateOpenTrackArea(latLngs);
-            console.log(`Track area: ${area.toFixed(4)} ha`);
-            
-            // Update legend
-            legendStats.track.area = area;
-            updateLegend();
+            // Simpan sebagai polygon terpisah
+            if (latLngs.length >= 3) {
+                trackPolygons.push(latLngs);
+            }
             
             // Add to map
             const polyline = L.polyline(latLngs, {
@@ -625,7 +625,7 @@
                 lineCap: 'round'
             }).addTo(map);
             
-            // Fit bounds
+            // Fit bounds untuk track ini
             map.fitBounds(polyline.getBounds());
             
         } catch (error) {
@@ -752,6 +752,19 @@
           updateControlsView();
       }
       
+      // Hitung luas total setelah semua track diproses
+      if (trackPolygons.length > 0) {
+          const totalArea = calculateTotalAreaFromPolygons();
+          legendStats.track.area = totalArea;
+          updateLegend();
+          
+          // Fit bounds untuk semua track
+          const allBounds = trackPolygons.flat();
+          if (allBounds.length > 0) {
+              map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
+          }
+      }
+      
       if (!hasData) {
           const li = document.createElement('li');
           li.textContent = '⚠ Tidak ada data yang berhasil dimuat';
@@ -827,6 +840,31 @@
       return 'Tanaman Menghasilkan (TM)'; // Default
     }
   }
+
+  function calculateTotalAreaFromPolygons() {
+    if (trackPolygons.length === 0) return 0;
+    
+    let totalArea = 0;
+    
+    trackPolygons.forEach(polygonPoints => {
+        if (polygonPoints.length < 3) return;
+        
+        // Convert to GeoJSON format
+        const coordinates = polygonPoints.map(ll => [ll.lng, ll.lat]);
+        coordinates.push(coordinates[0]); // Tutup polygon
+        
+        try {
+            const polygon = turf.polygon([coordinates]);
+            const area = turf.area(polygon) / 10000; // Konversi ke hektar
+            totalArea += area;
+        } catch (error) {
+            console.error('Error calculating polygon area:', error);
+        }
+    });
+    
+    console.log('Total area from all polygons:', totalArea.toFixed(4), 'hectares');
+    return totalArea;
+}
   
 </script>
 </body>
