@@ -389,6 +389,20 @@
       vertical-align: top;
       text-align: left;
     }
+
+    /* Style untuk statistik */
+    .stats-container {
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+    
+    .stats-container div {
+      margin: 0.1rem 0;
+    }
+    
+    .stats-container strong {
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -407,6 +421,7 @@
               <th>Divisi</th>
               <th>Blok</th>
               <th>Data Tersedia</th>
+              <th>Hasil Sensus Pokok</th> <!-- Kolom baru -->
               <th>Aksi</th>
             </tr>
           </thead>
@@ -498,18 +513,42 @@
     }
 
     function loadAndDisplayData() {
-    fetch(SHEET_CSV_URL)
+    // URL untuk kedua spreadsheet
+    const MAIN_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
+    const STATS_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/[PUBLISHED_STATS_SHEET_URL]/pub?output=csv"; // Ganti dengan URL publik STATS_SHEET
+    
+    Promise.all([fetch(MAIN_SHEET_CSV), fetch(STATS_SHEET_CSV)])
     .then(res => res.text())
     .then(csv => {
-      const rows = csv.trim().split("\n").slice(1);
-      const dataByBlok = {};
+      .then(responses => Promise.all(responses.map(res => res.text())))
+      .then(([mainCsv, statsCsv]) => {
+      const mainRows = mainCsv.trim().split("\n").slice(1);
+      const statsRows = statsCsv.trim().split("\n").slice(1);
       const tbody = document.querySelector("#blokTable tbody");
-      
-      // Clear loading row
       tbody.innerHTML = '';
 
       // Proses data dari CSV
-      rows.forEach(row => {
+      // Proses data statistik ke dalam object
+      const statsData = {};
+      statsRows.forEach(row => {
+        const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
+        const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok, luasHa, standPerHa] = cols;
+        const key = `${kebun}|${divisi}|${blok}`;
+        
+        statsData[key] = {
+          tm: parseInt(tm) || 0,
+          tbm: parseInt(tbm) || 0,
+          sisipan: parseInt(sisipan) || 0,
+          abnormal: parseInt(abnormal) || 0,
+          totalPokok: parseInt(totalPokok) || 0,
+          luasHa: parseFloat(luasHa) || 0,
+          standPerHa: parseFloat(standPerHa) || 0
+        };
+      });
+
+      // Proses data utama seperti sebelumnya, tapi tambahkan statsData
+      const dataByBlok = {};
+      mainRows.forEach(row => {
         const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
         const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
@@ -522,7 +561,8 @@
             waypoints: [], 
             tracks: [],
             hasWaypoints: false,
-            hasTracks: false
+            hasTracks: false,
+            stats: statsData[key] || null // Tambahkan data statistik
           };
         }
         
@@ -623,6 +663,30 @@
         const tdBlok = document.createElement("td");
         tdBlok.textContent = firstItem.blok;
         firstRow.appendChild(tdBlok);
+
+        // Kolom Hasil Sensus Pokok
+        const tdStats = document.createElement("td");
+        const firstItem = group.items[0];
+        
+        if (firstItem.stats) {
+          const stats = firstItem.stats;
+          tdStats.innerHTML = `
+            <div style="font-size: 0.8rem; line-height: 1.4;">
+              <div>TM: <strong>${stats.tm}</strong></div>
+              <div>TBM: <strong>${stats.tbm}</strong></div>
+              <div>Sisipan: <strong>${stats.sisipan}</strong></div>
+              <div>Abnormal: <strong>${stats.abnormal}</strong></div>
+              <div>Total: <strong>${stats.totalPokok}</strong></div>
+              <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
+              <div>Stand: <strong>${stats.standPerHa.toFixed(0)}/Ha</strong></div>
+            </div>
+          `;
+        } else {
+          tdStats.textContent = "Data tidak tersedia";
+          tdStats.style.color = "var(--dark-gray)";
+          tdStats.style.fontStyle = "italic";
+        }
+        firstRow.appendChild(tdStats);
         
         // Kolom Data Tersedia
         const tdData = document.createElement("td");
@@ -686,6 +750,28 @@
           const tdBlok = document.createElement("td");
           tdBlok.textContent = item.blok;
           row.appendChild(tdBlok);
+
+          // Kolom Hasil Sensus Pokok
+          const tdStats = document.createElement("td");
+          if (item.stats) {
+            const stats = item.stats;
+            tdStats.innerHTML = `
+              <div style="font-size: 0.8rem; line-height: 1.4;">
+                <div>TM: <strong>${stats.tm}</strong></div>
+                <div>TBM: <strong>${stats.tbm}</strong></div>
+                <div>Sisipan: <strong>${stats.sisipan}</strong></div>
+                <div>Abnormal: <strong>${stats.abnormal}</strong></div>
+                <div>Total: <strong>${stats.totalPokok}</strong></div>
+                <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
+                <div>Stand: <strong>${stats.standPerHa.toFixed(0)}/Ha</strong></div>
+              </div>
+            `;
+          } else {
+            tdStats.textContent = "Data tidak tersedia";
+            tdStats.style.color = "var(--dark-gray)";
+            tdStats.style.fontStyle = "italic";
+          }
+          row.appendChild(tdStats);
           
           // Kolom Data Tersedia
           const tdData = document.createElement("td");
