@@ -746,16 +746,6 @@
       const statusEl = document.getElementById("status");
       const legenda = document.getElementById("legenda").value;
       const catatan = document.getElementById("catatan").value;
-
-      const payload = {
-        kebun,
-        divisi,
-        blok,
-        files: filesData,
-        legenda,
-        catatan
-      };
-
       
       try {
         submitBtn.disabled = true;
@@ -834,7 +824,9 @@
           kebun,
           divisi,
           blok,
-          files: filesData
+          files: filesData,
+          legenda,
+          catatan
         };
     
         // Submit the form data to Google Apps Script
