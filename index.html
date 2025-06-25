@@ -515,7 +515,7 @@
     function loadAndDisplayData() {
     // URL untuk kedua spreadsheet
     const MAIN_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTYyCf6JfGComZrmquPZ487oZPME6IE1YOdQ530KQN2OQsP_aWxTx8CYvKjGjHB7riZnIh3pArGw8t2/pub?output=csv";
-    const STATS_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/[PUBLISHED_STATS_SHEET_URL]/pub?output=csv"; // Ganti dengan URL publik STATS_SHEET
+    const STATS_SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuuPuKJaBpe4syPOqlfp7FJgDXI8zsH49Rc39tGGmNCAo467ny5XzsC8L1riXTbcHzitL5FG_7ROCx/pub?output=csv"; // Ganti dengan URL publik STATS_SHEET
     
     Promise.all([fetch(MAIN_SHEET_CSV), fetch(STATS_SHEET_CSV)])
     .then(res => res.text())
