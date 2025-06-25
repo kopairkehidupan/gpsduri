@@ -681,18 +681,17 @@
 
         // Kolom Hasil Sensus Pokok
         const tdStats = document.createElement("td");
-        
         if (firstItem.stats) {
           const stats = firstItem.stats;
           tdStats.innerHTML = `
             <div style="font-size: 0.8rem; line-height: 1.4;">
-              <div>TM: <strong>${stats.tm} Pkk</strong></div>
-              <div>TBM: <strong>${stats.tbm} Pkk</strong></div>
-              <div>Sisipan: <strong>${stats.sisipan} Pkk</strong></div>
-              <div>Kosong/Abnormal: <strong>${stats.abnormal} Titik</strong></div>
-              <div>Total: <strong>${stats.totalPokok} Pkk</strong></div>
-              <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
-              <div>Stand: <strong>${stats.standPerHa.toFixed(0)} Pkk/Ha</strong></div>
+              <div>TM: <strong>${formatNumber(stats.tm)} Pkk</strong></div>
+              <div>TBM: <strong>${formatNumber(stats.tbm)} Pkk</strong></div>
+              <div>Sisipan: <strong>${formatNumber(stats.sisipan)} Pkk</strong></div>
+              <div>Kosong/Abnormal: <strong>${formatNumber(stats.abnormal)} Titik</strong></div>
+              <div>Total: <strong>${formatNumber(stats.totalPokok)} Pkk</strong></div>
+              <div>Luas: <strong>${formatNumber(stats.luasHa, 2)} Ha</strong></div>
+              <div>Stand: <strong>${formatNumber(stats.standPerHa)} Pkk/Ha</strong></div>
             </div>
           `;
         } else {
@@ -771,13 +770,13 @@
             const stats = item.stats;
             tdStats.innerHTML = `
               <div style="font-size: 0.8rem; line-height: 1.4;">
-                <div>TM: <strong>${stats.tm} Pkk</strong></div>
-                <div>TBM: <strong>${stats.tbm} Pkk</strong></div>
-                <div>Sisipan: <strong>${stats.sisipan} Pkk</strong></div>
-                <div>Kosong/Abnormal: <strong>${stats.abnormal} Titik</strong></div>
-                <div>Total: <strong>${stats.totalPokok} Pkk</strong></div>
-                <div>Luas: <strong>${stats.luasHa.toFixed(2)} Ha</strong></div>
-                <div>Stand: <strong>${stats.standPerHa.toFixed(0)} Pkk/Ha</strong></div>
+                <div>TM: <strong>${formatNumber(stats.tm)} Pkk</strong></div>
+                <div>TBM: <strong>${formatNumber(stats.tbm)} Pkk</strong></div>
+                <div>Sisipan: <strong>${formatNumber(stats.sisipan)} Pkk</strong></div>
+                <div>Kosong/Abnormal: <strong>${formatNumber(stats.abnormal)} Titik</strong></div>
+                <div>Total: <strong>${formatNumber(stats.totalPokok)} Pkk</strong></div>
+                <div>Luas: <strong>${formatNumber(stats.luasHa, 2)} Ha</strong></div>
+                <div>Stand: <strong>${formatNumber(stats.standPerHa)} Pkk/Ha</strong></div>
               </div>
             `;
           } else {
@@ -1026,6 +1025,19 @@
     function afterUploadSuccess() {
       alert('Upload berhasil! Data akan diperbarui.');
       loadAndDisplayData(); // Atau bisa juga window.location.reload()
+    }
+
+    // Fungsi helper untuk format angka
+    function formatNumber(num, decimalPlaces = 0) {
+      // Handle kasus ketika num null/undefined
+      if (num === null || num === undefined) return '0';
+      
+      // Bulatkan angka dan format dengan separator ribuan
+      const rounded = decimalPlaces > 0 ? 
+        parseFloat(num.toFixed(decimalPlaces)) : 
+        Math.round(num);
+      
+      return rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
   </script>
 </body>
