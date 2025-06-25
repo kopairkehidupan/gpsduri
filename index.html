@@ -403,11 +403,12 @@
         <table id="blokTable">
           <thead>
             <tr>
-              <th>Kebun</th>
-              <th>Divisi</th>
-              <th>Blok</th>
-              <th>Data Tersedia</th>
-              <th>Aksi</th>
+                <th>Kebun</th>
+                <th>Divisi</th>
+                <th>Blok</th>
+                <th>Data Tersedia</th>
+                <th>Hasil Sensus Pokok</th>
+                <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -498,14 +499,10 @@
     }
 
     function loadAndDisplayData() {
-    fetch(SHEET_CSV_URL)
-    .then(res => res.text())
-    .then(csv => {
-      const rows = csv.trim().split("\n").slice(1);
-      const dataByBlok = {};
+    fetch("https://script.google.com/macros/s/AKfycbyEEr70Qbi_ETP3AAlavRQXb2ZTcU5IGcKP8grLHDERQCEI364Jw1gTI9yESuP-zjwH0A/exec?action=getCombinedData")
+    .then(res => res.json())
+    .then(data => {
       const tbody = document.querySelector("#blokTable tbody");
-      
-      // Clear loading row
       tbody.innerHTML = '';
 
       // Proses data dari CSV
@@ -513,6 +510,7 @@
         const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
         const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
         const key = `${kebun}|${divisi}|${blok}`;
+        const row = document.createElement("tr");
 
         if (!dataByBlok[key]) {
           dataByBlok[key] = { 
@@ -534,6 +532,22 @@
           dataByBlok[key].hasTracks = true;
         }
       });
+
+      // Kolom Hasil Sensus Pokok
+        const tdSensus = document.createElement("td");
+        if (item.sensusData) {
+          tdSensus.innerHTML = `
+            <div><strong>TM:</strong> ${item.sensusData.tm}</div>
+            <div><strong>TBM:</strong> ${item.sensusData.tbm}</div>
+            <div><strong>Sisipan:</strong> ${item.sensusData.sisipan}</div>
+            <div><strong>Total:</strong> ${item.sensusData.total}</div>
+            <div><strong>Luas:</strong> ${item.sensusData.luas} ha</div>
+            <div><strong>Stand/Ha:</strong> ${item.sensusData.standPerHa}</div>
+          `;
+        } else {
+          tdSensus.textContent = "Data belum tersedia";
+        }
+        row.appendChild(tdSensus);
 
       // Konversi object ke array dan urutkan
       const sortedData = Object.values(dataByBlok).sort((a, b) => {
