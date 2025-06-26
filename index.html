@@ -529,11 +529,19 @@
       // Proses data statistik ke dalam object
       const statsData = {};
       statsRows.forEach(row => {
-        const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
+        // Gunakan split yang lebih robust untuk handle quoted values
+        const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, ''));
+        
         const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok] = cols;
-        const luasHa = cols[9] || '0'; // Ambil kolom 9 secara eksplisit
-        console.log('LuasHa raw:', luasHa); // Debug
-        const standPerHa = cols[10] || '0'; // Kolom 10
+        
+        // Ambil nilai luasHa dengan handle khusus
+        let luasHa = cols[9] || '0';
+        console.log('Raw luasHa:', luasHa); // Debug
+        
+        // Handle kasus nilai yang mungkin dalam quotes atau format aneh
+        luasHa = luasHa.toString().trim();
+        
+        const standPerHa = cols[10] || '0';
         const key = `${kebun}|${divisi}|${blok}`;
         
         statsData[key] = {
@@ -542,9 +550,11 @@
           sisipan: parseInt(sisipan) || 0,
           abnormal: parseInt(abnormal) || 0,
           totalPokok: parseInt(totalPokok) || 0,
-          luasHa: parseNumber(luasHa, 2), // Gunakan parseNumber dengan 2 desimal
-          standPerHa: parseNumber(standPerHa, 2) // Gunakan parseNumber dengan 2 desimal
+          luasHa: parseNumber(luasHa, 2),
+          standPerHa: parseNumber(standPerHa, 2)
         };
+        
+        console.log('Processed luasHa:', statsData[key].luasHa); // Debug
       });
 
       // Proses data utama seperti sebelumnya, tapi tambahkan statsData
@@ -1040,17 +1050,17 @@
       // Handle kasus ketika sudah berupa number
       if (typeof str === 'number') return parseFloat(str.toFixed(decimalPlaces));
       
-      // Bersihkan karakter non-numerik kecuali koma dan titik
-      let cleanStr = str.toString().replace(/[^0-9,.]/g, '');
+      // Bersihkan karakter non-numerik kecuali koma, titik, dan minus
+      let cleanStr = str.toString().replace(/[^0-9,\-.]/g, '');
       
-      // Jika ada koma dan titik, asumsikan koma adalah desimal
-      if (cleanStr.includes(',') && cleanStr.includes('.')) {
+      // Jika ada koma sebagai desimal (format Indonesia)
+      if (cleanStr.includes(',') && !cleanStr.includes('.')) {
+        cleanStr = cleanStr.replace(',', '.');
+      }
+      // Jika ada koma dan titik (mungkin titik sebagai ribuan)
+      else if (cleanStr.includes(',') && cleanStr.includes('.')) {
         cleanStr = cleanStr.replace(/\./g, ''); // Hapus titik ribuan
         cleanStr = cleanStr.replace(',', '.');   // Ganti koma dengan titik
-      } 
-      // Jika hanya ada koma, anggap sebagai desimal
-      else if (cleanStr.includes(',')) {
-        cleanStr = cleanStr.replace(',', '.');
       }
       
       const num = parseFloat(cleanStr);
