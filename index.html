@@ -561,8 +561,8 @@
       const dataByBlok = {};
       mainRows.forEach(row => {
         const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, ''));
-        
-        const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok] = cols;
+  
+  const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols; // Pastikan struktur kolom sesuai
         
         // Ambil nilai luasHa dengan handle khusus
         let luasHa = cols[9] || '0';
@@ -587,13 +587,13 @@
           };
         }
         
-        if (dataType.toUpperCase() === 'WAYPOINT') {
-          dataByBlok[key].waypoints.push(fileUrl);
-          dataByBlok[key].hasWaypoints = true;
-        } else if (dataType.toUpperCase() === 'TRACK') {
-          dataByBlok[key].tracks.push(fileUrl);
-          dataByBlok[key].hasTracks = true;
-        }
+         if (dataType && dataType.toUpperCase() === 'WAYPOINT') {
+            dataByBlok[key].waypoints.push(fileUrl);
+            dataByBlok[key].hasWaypoints = true;
+          } else if (dataType && dataType.toUpperCase() === 'TRACK') {
+            dataByBlok[key].tracks.push(fileUrl);
+            dataByBlok[key].hasTracks = true;
+          }
       });
 
       // Konversi object ke array dan urutkan
