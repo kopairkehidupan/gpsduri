@@ -1078,14 +1078,16 @@
     function formatNumber(num, decimalPlaces = 2) {
       if (num === null || num === undefined) return '0';
       
-      // Jika num adalah string, parse dulu
+      // Pastikan num adalah number
       if (typeof num === 'string') {
         num = parseNumber(num, decimalPlaces);
       }
       
-      // Format angka dengan:
-      // - Titik sebagai pemisah ribuan
-      // - Koma sebagai pemisah desimal
+      // Pastikan num adalah number dan tidak NaN
+      num = Number(num);
+      if (isNaN(num)) return '0';
+      
+      // Format dengan locale Indonesia dan pastikan desimal ditampilkan
       return num.toLocaleString('id-ID', {
         minimumFractionDigits: decimalPlaces,
         maximumFractionDigits: decimalPlaces
