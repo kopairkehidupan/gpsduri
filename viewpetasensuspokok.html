@@ -530,112 +530,113 @@
   }
   
   // Function to parse GPX and add to map
-  function addGpxToMap(gpxContent, type, fileName) {
-    // Validasi awal
-    if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
-      throw new Error('File tidak valid - Terdeteksi halaman HTML');
-    }
-    
-    if (!gpxContent.trim().startsWith('<') || !gpxContent.includes('<gpx')) {
-      throw new Error('Format GPX tidak valid');
-    }
-    
-    try {
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(gpxContent, "application/xml");
-      
-      // Check for XML parsing errors
-      const parserError = xml.getElementsByTagName('parsererror');
-      if (parserError.length > 0) {
-        throw new Error('Format GPX tidak valid');
+  function addGpxToMap(gpxContent, fileName) {
+      // Validasi awal
+      if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
+          throw new Error('File tidak valid - Terdeteksi halaman HTML');
       }
       
-      if (type === 'waypoint') {
-        const waypoints = xml.getElementsByTagName('wpt');
-        console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
-        
-        const bounds = [];
-        for (let wpt of waypoints) {
-          const lat = parseFloat(wpt.getAttribute('lat'));
-          const lon = parseFloat(wpt.getAttribute('lon'));
+      if (!gpxContent.trim().startsWith('<') || !gpxContent.includes('<gpx')) {
+          throw new Error('Format GPX tidak valid');
+      }
+      
+      try {
+          const parser = new DOMParser();
+          const xml = parser.parseFromString(gpxContent, "application/xml");
           
-          if (isNaN(lat)) throw new Error('Latitude tidak valid');
-          if (isNaN(lon)) throw new Error('Longitude tidak valid');
-          
-          const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
-          const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-          
-          // Hitung waypoint berdasarkan warna
-          if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
-            legendStats.green.count++;
-          } else if (sym.toLowerCase().includes('black')) {
-            legendStats.black.count++; // Hitam saja untuk Titik Kosong + Abnormal
-          } else if (sym.toLowerCase().includes('orange')) {
-            legendStats.orange.count++;
-          } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
-            legendStats.blue.count++; // Merah sekarang masuk TM (biru)
-          } else {
-            legendStats.blue.count++; // Default blue
+          // Check for XML parsing errors
+          const parserError = xml.getElementsByTagName('parsererror');
+          if (parserError.length > 0) {
+              throw new Error('Format GPX tidak valid');
           }
-  
-          const marker = L.marker([lat, lon], {
-            icon: getWaypointIcon(sym)
-          }).addTo(map);
-  
-          marker.bindPopup(`
-              <b>Waypoint:</b> ${name}<br>
-              <b>Kategori:</b> ${getCategoryName(sym)}<br>
-              <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
-          `);
-          bounds.push([lat, lon]);
-        }
-        
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
-        }
-        
-        // Update legend setelah memproses waypoints
-        updateLegend();
-      } 
-      else if (type === 'track') {
-        console.log(`Processing track from ${fileName}`);
-        
-        try {
-            // Parse the GPX track points
-            const trkpts = xml.getElementsByTagName('trkpt');
-            const latLngs = [];
-            
-            for (let i = 0; i < trkpts.length; i++) {
-                const trkpt = trkpts[i];
-                const lat = parseFloat(trkpt.getAttribute('lat'));
-                const lon = parseFloat(trkpt.getAttribute('lon'));
-                latLngs.push(L.latLng(lat, lon));
-            }
-            
-            // Simpan sebagai polygon terpisah
-            if (latLngs.length >= 3) {
-                trackPolygons.push(latLngs);
-            }
-            
-            // Add to map
-            const polyline = L.polyline(latLngs, {
-                color: 'red',
-                weight: 4,
-                opacity: 0.75,
-                lineCap: 'round'
-            }).addTo(map);
-            
-            // Fit bounds untuk track ini
-            map.fitBounds(polyline.getBounds());
-            
-        } catch (error) {
-            console.error(`Failed to process track ${fileName}:`, error);
-        }
-    }
-    } catch (error) {
-      console.error(`Gagal memproses ${type} dari ${fileName}:`, error);
-      throw error;
-    }
+          
+          // Proses waypoints
+          const waypoints = xml.getElementsByTagName('wpt');
+          if (waypoints.length > 0) {
+              console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
+              
+              const bounds = [];
+              for (let wpt of waypoints) {
+                  const lat = parseFloat(wpt.getAttribute('lat'));
+                  const lon = parseFloat(wpt.getAttribute('lon'));
+                  
+                  if (isNaN(lat)) throw new Error('Latitude tidak valid');
+                  if (isNaN(lon)) throw new Error('Longitude tidak valid');
+                  
+                  const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
+                  const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+                  
+                  // Hitung waypoint berdasarkan warna
+                  if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
+                      legendStats.green.count++;
+                  } else if (sym.toLowerCase().includes('black')) {
+                      legendStats.black.count++;
+                  } else if (sym.toLowerCase().includes('orange')) {
+                      legendStats.orange.count++;
+                  } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
+                      legendStats.blue.count++;
+                  } else {
+                      legendStats.blue.count++;
+                  }
+      
+                  const marker = L.marker([lat, lon], {
+                      icon: getWaypointIcon(sym)
+                  }).addTo(map);
+      
+                  marker.bindPopup(`
+                      <b>Waypoint:</b> ${name}<br>
+                      <b>Kategori:</b> ${getCategoryName(sym)}<br>
+                      <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
+                  `);
+                  bounds.push([lat, lon]);
+              }
+              
+              if (bounds.length > 0) {
+                  map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
+              }
+          }
+          
+          // Proses tracks
+          const tracks = xml.getElementsByTagName('trk');
+          if (tracks.length > 0) {
+              console.log(`Menemukan ${tracks.length} tracks di ${fileName}`);
+              
+              for (let trk of tracks) {
+                  const trkpts = trk.getElementsByTagName('trkpt');
+                  const latLngs = [];
+                  
+                  for (let i = 0; i < trkpts.length; i++) {
+                      const trkpt = trkpts[i];
+                      const lat = parseFloat(trkpt.getAttribute('lat'));
+                      const lon = parseFloat(trkpt.getAttribute('lon'));
+                      latLngs.push(L.latLng(lat, lon));
+                  }
+                  
+                  // Simpan sebagai polygon terpisah
+                  if (latLngs.length >= 3) {
+                      trackPolygons.push(latLngs);
+                  }
+                  
+                  // Add to map
+                  const polyline = L.polyline(latLngs, {
+                      color: 'red',
+                      weight: 4,
+                      opacity: 0.75,
+                      lineCap: 'round'
+                  }).addTo(map);
+                  
+                  // Fit bounds untuk track ini
+                  map.fitBounds(polyline.getBounds());
+              }
+          }
+          
+          // Update legend setelah memproses file
+          updateLegend();
+          
+      } catch (error) {
+          console.error(`Gagal memproses file ${fileName}:`, error);
+          throw error;
+      }
   }
 
   function updateLegend() {
@@ -696,17 +697,16 @@
 
   // Modify the loading display in the processFiles function
   async function processFiles() {
-      console.log('Daftar file track:', trackUrls);
-      console.log('Jumlah file track:', trackUrls.length);
+      console.log('Daftar file:', waypointUrls);
+      console.log('Jumlah file:', waypointUrls.length);
       const loadedFilesList = document.getElementById('loaded-files');
       const loading = document.getElementById('loading');
       let hasData = false;
       
-      // Ensure loading is visible and on top
       loading.style.display = 'block';
       loading.style.zIndex = '1001';
       
-      // Proses waypoints
+      // Proses semua file (tidak lagi dipisahkan waypoint/track)
       for (const url of waypointUrls) {
           const li = document.createElement('li');
           const fileName = getFileName(url);
@@ -717,7 +717,7 @@
               loadedFilesList.appendChild(li);
               
               const gpxContent = await fetchFile(url);
-              await addGpxToMap(gpxContent, 'waypoint', fileName);
+              await addGpxToMap(gpxContent, fileName);
               
               li.textContent = `✅ ${fileName}`;
               li.className = 'success';
@@ -729,30 +729,7 @@
           updateControlsView();
       }
       
-      // Proses tracks
-      for (const url of trackUrls) {
-          const li = document.createElement('li');
-          const fileName = getFileName(url);
-          
-          try {
-              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
-              li.textContent = `🔄 Memuat ${fileName}...`;
-              loadedFilesList.appendChild(li);
-              
-              const gpxContent = await fetchFile(url);
-              await addGpxToMap(gpxContent, 'track', fileName);
-              
-              li.textContent = `✅ ${fileName}`;
-              li.className = 'success';
-              hasData = true;
-          } catch (error) {
-              li.textContent = `❌ ${fileName} (${error.message})`;
-              li.className = 'error';
-          }
-          updateControlsView();
-      }
-      
-      // Hitung luas total setelah semua track diproses
+      // Hitung luas total setelah semua file diproses
       if (trackPolygons.length > 0) {
           const totalArea = calculateTotalAreaFromPolygons();
           legendStats.track.area = totalArea;
