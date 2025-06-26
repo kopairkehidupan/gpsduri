@@ -530,7 +530,10 @@
       const statsData = {};
       statsRows.forEach(row => {
         const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
-        const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok, luasHa, standPerHa] = cols;
+        const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok] = cols;
+        const luasHa = cols[9] || '0'; // Ambil kolom 9 secara eksplisit
+        console.log('LuasHa raw:', luasHa); // Debug
+        const standPerHa = cols[10] || '0'; // Kolom 10
         const key = `${kebun}|${divisi}|${blok}`;
         
         statsData[key] = {
@@ -548,7 +551,10 @@
       const dataByBlok = {};
       mainRows.forEach(row => {
         const cols = row.split(',').map(c => c.replace(/^"|"$/g, ''));
-        const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols;
+        const [_, kebun, divisi, blok, tm, tbm, sisipan, abnormal, totalPokok] = cols;
+        const luasHa = cols[9] || '0'; // Ambil kolom 9 secara eksplisit
+        const standPerHa = cols[10] || '0'; // Kolom 10
+        console.log('LuasHa raw:', luasHa); // Debug
         const key = `${kebun}|${divisi}|${blok}`;
 
         if (!dataByBlok[key]) {
