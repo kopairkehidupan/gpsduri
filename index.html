@@ -562,7 +562,7 @@
       mainRows.forEach(row => {
         const cols = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, ''));
   
-  const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols; // Pastikan struktur kolom sesuai
+        const [_, kebun, divisi, blok, dataType, fileName, fileUrl] = cols; // Pastikan struktur kolom sesuai
         
         // Ambil nilai luasHa dengan handle khusus
         let luasHa = cols[9] || '0';
@@ -714,7 +714,7 @@
               <div>Kosong/Abnormal: <strong>${formatNumber(stats.abnormal)} Titik</strong></div>
               <div>Total: <strong>${formatNumber(stats.totalPokok)} Pkk</strong></div>
               <div>Luas: <strong>${formatNumber(stats.luasHa, 2)} Ha</strong></div>
-              <div>Stand: <strong>${formatNumber(stats.standPerHa, 2)} Pkk/Ha</strong></div>
+              <div>Stand: <strong>${formatNumber(stats.standPerHa)} Pkk/Ha</strong></div>
             </div>
           `;
         } else {
