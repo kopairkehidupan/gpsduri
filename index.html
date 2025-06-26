@@ -1051,28 +1051,17 @@
     }
 
     // Fungsi untuk parsing angka dari string (menggunakan format Indonesia)
-    function parseNumber(str, decimalPlaces = 2) {
-      if (!str || str.trim() === '') return 0;
-      
-      // Handle kasus ketika sudah berupa number
-      if (typeof str === 'number') return parseFloat(str.toFixed(decimalPlaces));
-      
-      // Bersihkan karakter non-numerik kecuali koma, titik, dan minus
-      let cleanStr = str.toString().replace(/[^0-9,\-.]/g, '');
-      
-      // Jika ada koma sebagai desimal (format Indonesia)
-      if (cleanStr.includes(',') && !cleanStr.includes('.')) {
-        cleanStr = cleanStr.replace(',', '.');
+    function formatNumber(num, decimalPlaces = 2) {
+        if (num === null || num === undefined) return '0';
+        
+        num = Number(num);
+        if (isNaN(num)) return '0';
+        
+        // Fallback manual formatting
+        const parts = num.toFixed(decimalPlaces).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return parts.join(',');
       }
-      // Jika ada koma dan titik (mungkin titik sebagai ribuan)
-      else if (cleanStr.includes(',') && cleanStr.includes('.')) {
-        cleanStr = cleanStr.replace(/\./g, ''); // Hapus titik ribuan
-        cleanStr = cleanStr.replace(',', '.');   // Ganti koma dengan titik
-      }
-      
-      const num = parseFloat(cleanStr);
-      return isNaN(num) ? 0 : parseFloat(num.toFixed(decimalPlaces));
-    }
     
     // Fungsi untuk formatting angka (format Indonesia)
     function formatNumber(num, decimalPlaces = 2) {
