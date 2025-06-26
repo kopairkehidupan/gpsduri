@@ -1028,7 +1028,7 @@
     }
 
     // Fungsi untuk parsing angka dari string (menggunakan format Indonesia)
-    function parseNumber(str, decimalPlaces = 2) {
+    function parseNumber(str, decimalPlaces = 0) {
       if (!str || str.trim() === '') return 0;
       
       // Bersihkan string dari karakter non-numerik kecuali koma dan titik
@@ -1049,7 +1049,7 @@
     }
     
     // Fungsi untuk formatting angka (format Indonesia)
-    function formatNumber(num, decimalPlaces = 2) {
+    function formatNumber(num, decimalPlaces = 0) {
       // Handle kasus ketika num null/undefined
       if (num === null || num === undefined) return '0';
       
