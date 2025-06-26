@@ -528,6 +528,9 @@
           return 0;
       }
   }
+
+  // Tambahkan variabel global untuk menyimpan semua polyline track
+  const allTrackPolylines = [];
   
   // Function to parse GPX and add to map
   function addGpxToMap(gpxContent, fileName) {
@@ -617,13 +620,16 @@
                       trackPolygons.push(latLngs);
                   }
                   
-                  // Add to map
+                  // Add to map dan simpan referensinya
                   const polyline = L.polyline(latLngs, {
                       color: 'red',
                       weight: 4,
                       opacity: 0.75,
                       lineCap: 'round'
                   }).addTo(map);
+                  
+                  // Simpan polyline ke array global
+                  allTrackPolylines.push(polyline);
                   
                   // Fit bounds untuk track ini
                   map.fitBounds(polyline.getBounds());
@@ -695,7 +701,6 @@
     `;
   }
 
-  // Modify the loading display in the processFiles function
   // Modifikasi fungsi processFiles untuk menangani kedua jenis file
   async function processFiles() {
       console.log('Daftar file waypoints:', waypointUrls);
@@ -731,6 +736,16 @@
               li.className = 'error';
           }
           updateControlsView();
+      }
+
+      // Setelah semua file diproses, pastikan semua track terlihat
+      if (allTrackPolylines.length > 0) {
+          // Buat layer group untuk semua track
+          const trackLayerGroup = L.layerGroup(allTrackPolylines);
+          trackLayerGroup.addTo(map);
+          
+          // Jika perlu, Anda bisa menambahkan kontrol layer untuk toggle track
+          layerControl.addOverlay(trackLayerGroup, "Track Lines");
       }
       
       // Hitung luas total setelah semua file diproses
