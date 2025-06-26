@@ -1031,14 +1031,24 @@
     function parseNumber(str, decimalPlaces = 2) {
       if (!str || str.trim() === '') return 0;
       
-      // Ganti semua titik (jika ada) karena dalam format Indonesia titik bukan desimal
-      let cleanStr = str.toString().replace(/\./g, '');
+      // Handle kasus ketika sudah berupa number
+      if (typeof str === 'number') return parseFloat(str.toFixed(decimalPlaces));
       
-      // Ganti koma dengan titik untuk parsing yang benar
-      cleanStr = cleanStr.replace(',', '.');
+      // Bersihkan karakter non-numerik kecuali koma dan titik
+      let cleanStr = str.toString().replace(/[^0-9,.]/g, '');
       
-      const num = parseFloat(cleanStr) || 0;
-      return parseFloat(num.toFixed(decimalPlaces));
+      // Jika ada koma dan titik, asumsikan koma adalah desimal
+      if (cleanStr.includes(',') && cleanStr.includes('.')) {
+        cleanStr = cleanStr.replace(/\./g, ''); // Hapus titik ribuan
+        cleanStr = cleanStr.replace(',', '.');   // Ganti koma dengan titik
+      } 
+      // Jika hanya ada koma, anggap sebagai desimal
+      else if (cleanStr.includes(',')) {
+        cleanStr = cleanStr.replace(',', '.');
+      }
+      
+      const num = parseFloat(cleanStr);
+      return isNaN(num) ? 0 : parseFloat(num.toFixed(decimalPlaces));
     }
     
     // Fungsi untuk formatting angka (format Indonesia)
