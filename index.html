@@ -1051,7 +1051,7 @@
     }
 
     // Fungsi untuk parsing angka dari string (menggunakan format Indonesia)
-    function parseNumber(str, decimalPlaces = 2) {
+    function parseNumber(str, decimalPlaces = 0) {
       if (!str || str.trim() === '') return 0;
       
       // Handle kasus ketika sudah berupa number
@@ -1075,7 +1075,7 @@
     }
     
     // Fungsi untuk formatting angka (format Indonesia)
-    function formatNumber(num, decimalPlaces = 2) {
+    function formatNumber(num, decimalPlaces = 0) {
       if (num === null || num === undefined) return '0';
       
       // Jika num adalah string, parse dulu
