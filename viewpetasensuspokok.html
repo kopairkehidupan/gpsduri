@@ -696,9 +696,10 @@
   }
 
   // Modify the loading display in the processFiles function
+  // Modifikasi fungsi processFiles untuk menangani kedua jenis file
   async function processFiles() {
-      console.log('Daftar file:', waypointUrls);
-      console.log('Jumlah file:', waypointUrls.length);
+      console.log('Daftar file waypoints:', waypointUrls);
+      console.log('Daftar file tracks:', trackUrls);
       const loadedFilesList = document.getElementById('loaded-files');
       const loading = document.getElementById('loading');
       let hasData = false;
@@ -706,8 +707,11 @@
       loading.style.display = 'block';
       loading.style.zIndex = '1001';
       
-      // Proses semua file (tidak lagi dipisahkan waypoint/track)
-      for (const url of waypointUrls) {
+      // Gabungkan semua URL file (waypoints dan tracks)
+      const allFileUrls = [...new Set([...waypointUrls, ...trackUrls])];
+      
+      // Proses semua file
+      for (const url of allFileUrls) {
           const li = document.createElement('li');
           const fileName = getFileName(url);
           
@@ -735,10 +739,31 @@
           legendStats.track.area = totalArea;
           updateLegend();
           
-          // Fit bounds untuk semua track
-          const allBounds = trackPolygons.flat();
+          // Fit bounds untuk semua waypoint dan track
+          const allWaypoints = [];
+          // Cari semua waypoint di peta
+          map.eachLayer(layer => {
+              if (layer instanceof L.Marker) {
+                  allWaypoints.push(layer.getLatLng());
+              }
+          });
+          
+          // Gabungkan dengan bounds track
+          const allBounds = [...allWaypoints, ...trackPolygons.flat()];
           if (allBounds.length > 0) {
               map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
+          }
+      } else if (hasData) {
+          // Jika tidak ada track tapi ada waypoint, fit ke waypoint saja
+          const waypointBounds = [];
+          map.eachLayer(layer => {
+              if (layer instanceof L.Marker) {
+                  waypointBounds.push(layer.getLatLng());
+              }
+          });
+          
+          if (waypointBounds.length > 0) {
+              map.fitBounds(L.latLngBounds(waypointBounds), { padding: [50, 50] });
           }
       }
       
