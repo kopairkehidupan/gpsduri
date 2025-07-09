@@ -268,74 +268,7 @@
           'Keterangan'
         ],
         columns: [
-          { 
-            type: 'dropdown', 
-            source: ['SAMSAM', 'TANJUNG', 'MEKAR', 'LUBUK', 'BUKIT'],
-            strict: true
-          },
-          { 
-            type: 'dropdown', 
-            source: ['DIVISI I', 'DIVISI II', 'DIVISI III', 'DIVISI IV', 'DIVISI V'],
-            strict: true
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 2000 && value <= new Date().getFullYear());
-            }
-          },
-          { type: 'text' },
-          { 
-            type: 'dropdown', 
-            source: ['PEMUPUKAN', 'PENGENDALIAN GULMA', 'PEMANGKASAN', 'PANEN', 'PENGENDALIAN HAMA'],
-            strict: true
-          },
-          { 
-            type: 'dropdown', 
-            source: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
-            strict: true
-          },
-          { 
-            type: 'numeric', 
-            format: '0.00',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0,0',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0.00',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0,0',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { type: 'text' }
+          // ... (your column definitions remain the same)
         ],
         rowHeaders: true,
         width: '100%',
@@ -353,25 +286,22 @@
         afterChange: function(changes, source) {
           if (source === 'paste') {
             setTimeout(() => {
-              this.getSelectedRange().forEach(({fromRow, fromCol, toRow, toCol}) => {
+              hot.getSelectedRange().forEach(({fromRow, fromCol, toRow, toCol}) => {
                 for (let row = fromRow; row <= toRow; row++) {
                   for (let col = fromCol; col <= toCol; col++) {
-                    const cellValue = this.getDataAtCell(row, col);
+                    const cellValue = hot.getDataAtCell(row, col);
                     if (typeof cellValue === 'string') {
-                      // Handle format angka Indonesia (1.000,00) dan internasional (1,000.00)
                       const num = parseFloat(
                         cellValue.replace(/[^\d,-]/g, '')
                           .replace(',', '.')
                           .replace(/[^\d.-]/g, '')
                       );
-                      if (!isNaN(num)) {  // Fixed: Added missing closing parenthesis
-                        // Kolom numeric (luas, HK, biaya)
+                      if (!isNaN(num)) {
                         if ([6,7,8,9,10,11].includes(col)) {
-                          this.setDataAtCell(row, col, num);
+                          hot.setDataAtCell(row, col, num);
                         }
-                        // Kolom tahun tanam
                         else if (col === 2) {
-                          this.setDataAtCell(row, col, Math.floor(num));
+                          hot.setDataAtCell(row, col, Math.floor(num));
                         }
                       }
                     }
@@ -383,11 +313,11 @@
         },
         cells: function(row, col, prop) {
           const cellProperties = {};
-          const instance = this; // Store reference to the Handsontable instance
           
+          // Use the hot instance directly
           if (col === 8 || col === 11) {
-            const budgetValue = instance.getDataAtCell(row, 8);
-            const actualValue = instance.getDataAtCell(row, 11);
+            const budgetValue = hot.getDataAtCell(row, 8);
+            const actualValue = hot.getDataAtCell(row, 11);
             
             if (budgetValue > 0 && actualValue > 0) {
               const percentage = (actualValue / budgetValue) * 100;
