@@ -209,26 +209,6 @@
     
     <div class="card">
       <h2>Input Data Massal</h2>
-      <p>Anda dapat copy-paste langsung dari Excel atau input manual di tabel berikut:</p>
-      
-      <div id="excelContainer"></div>
-      
-      <div class="btn-group">
-        <button id="saveBtn" class="btn">
-          <i class="material-icons">save</i> Simpan Semua Data
-        </button>
-        <button id="exportBtn" class="btn btn-secondary">
-          <i class="material-icons">download</i> Export ke Excel
-        </button>
-        <button id="importBtn" class="btn">
-          <i class="material-icons">upload</i> Import dari Excel
-        </button>
-        <input type="file" id="importFile" accept=".csv,.xlsx,.xls" style="display: none;">
-      </div>
-    </div>
-    
-    <div class="card">
-      <h2>Input Data Massal</h2>
       <p>Anda dapat bekerja langsung dengan spreadsheet berikut:</p>
       
       <!-- Ganti div excelContainer dengan ini -->
@@ -245,6 +225,32 @@
           <i class="material-icons">upload</i> Import dari Excel
         </button>
         <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display: none;">
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Data Tersimpan</h2>
+      <p>Berikut adalah data yang sudah tersimpan di sistem:</p>
+      
+      <div class="table-responsive">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th>Kebun</th>
+              <th>Divisi</th>
+              <th>Blok</th>
+              <th>Pekerjaan</th>
+              <th>Bulan</th>
+              <th class="numeric">Budget (Rp)</th>
+              <th class="numeric">Actual (Rp)</th>
+              <th class="numeric">Realisasi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataTable">
+            <!-- Data will be loaded here -->
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
