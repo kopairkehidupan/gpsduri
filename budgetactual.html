@@ -264,12 +264,6 @@
     // Initialize x-spreadsheet with proper merge data structure
     const initialData = { 
       name: 'Sheet1', 
-      merges: [
-        // Merges for Budget columns (H-J)
-        { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } },
-        // Merges for Actual columns (K-M)
-        { s: { r: 0, c: 10 }, e: { r: 0, c: 12 } }
-      ],
       rows: {
         0: { cells: { 
           0: { text: 'Kebun' },
@@ -280,13 +274,15 @@
           5: { text: 'Objek Kerja' },
           6: { text: 'Bulan' },
           7: { text: 'Budget (Rp)' },
-          8: { text: '' }, // Empty for merged cell
-          9: { text: '' }, // Empty for merged cell
-          10: { text: 'Actual (Rp)' },
-          11: { text: '' }, // Empty for merged cell
-          12: { text: '' }, // Empty for merged cell
-          13: { text: 'Var (%)' },
-          14: { text: 'Aksi' }
+          8: { text: 'HK' },
+          9: { text: 'Luas (Ha)' },
+          10: { text: 'Biaya' },
+          11: { text: 'Actual (Rp)' },
+          12: { text: 'HK' },
+          13: { text: 'Hasil (Ha)' },
+          14: { text: 'Biaya' },
+          15: { text: 'Var (%)' },
+          16: { text: 'Aksi' }
         }},
         1: { cells: { 
           0: { text: 'Contoh' },
@@ -296,61 +292,31 @@
           4: { text: 'P01' },
           5: { text: 'Pemupukan' },
           6: { text: 'Januari' },
-          7: { text: 'HK' },
-          8: { text: 'Luas (Ha)' },
-          9: { text: 'Biaya' },
-          10: { text: 'HK' },
-          11: { text: 'Hasil (Ha)' },
-          12: { text: 'Biaya' },
-          13: { text: '=IF(G2>0, (M2/G2)*100, 0)' }, // Formula for variance
-          14: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
-        }},
-        2: { cells: { 
-          0: { text: 'Contoh' },
-          1: { text: 'Divisi A' },
-          2: { text: 'T23' },
-          3: { text: 'A1' },
-          4: { text: 'P01' },
-          5: { text: 'Pemupukan' },
-          6: { text: 'Januari' },
-          7: { text: '5' },
-          8: { text: '10' },
-          9: { text: '5000000' },
-          10: { text: '4' },
-          11: { text: '9.5' },
-          12: { text: '4500000' },
-          13: { text: '90.00%' },
-          14: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
+          7: { text: '' },
+          8: { text: '5' },
+          9: { text: '10' },
+          10: { text: '5000000' },
+          11: { text: '' },
+          12: { text: '4' },
+          13: { text: '9.5' },
+          14: { text: '4500000' },
+          15: { text: '=IF(K2>0, (O2/K2)*100, 0)' }, // Adjusted formula
+          16: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
         }}
       }
     };
 
-    // Initialize x-spreadsheet with error handling
-    let xs;
-    try {
-      xs = x_spreadsheet('#xspreadsheet', {
-        mode: 'edit',
-        showToolbar: true,
-        showGrid: true,
-        showContextmenu: true,
-      }).loadData([initialData]);
-    } catch (error) {
-      console.error('Error initializing spreadsheet:', error);
-      // Fallback initialization without merges if there's an error
-      const fallbackData = JSON.parse(JSON.stringify(initialData));
-      delete fallbackData.merges;
-      xs = x_spreadsheet('#xspreadsheet', {
-        mode: 'edit',
-        showToolbar: true,
-        showGrid: true,
-        showContextmenu: true,
-      }).loadData([fallbackData]);
-      alert('Terdapat masalah dengan penggabungan sel, menggunakan tampilan alternatif');
-    }
+    // Initialize x-spreadsheet without merges to avoid errors
+    const xs = x_spreadsheet('#xspreadsheet', {
+      mode: 'edit',
+      showToolbar: true,
+      showGrid: true,
+      showContextmenu: true,
+    }).loadData([initialData]);
 
     // Add click handler for delete buttons in the spreadsheet
     xs.on('cell-selected', (cell, ri, ci) => {
-      if (ci === 14 && ri > 0) { // If clicked in action column (column 14) and not header row
+      if (ci === 16 && ri > 0) { // If clicked in action column and not header row
         if (confirm('Apakah Anda yakin ingin menghapus baris ini?')) {
           try {
             xs.deleteRow(ri);
@@ -361,63 +327,123 @@
       }
     });
 
-    // Previous functions remain the same until loadData()
-    
+    // Helper function to format currency
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('id-ID', { 
+        style: 'currency', 
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
+
+    // Format data for storage
+    function formatDataForStorage(sheetData) {
+      const rows = sheetData[0].rows;
+      const result = [];
+      
+      // Skip header row (index 0)
+      for (let i = 1; i < Object.keys(rows).length; i++) {
+        const row = rows[i];
+        if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
+        
+        const cells = row.cells;
+        const budgetBiaya = parseInt(cells[10]?.text) || 0;
+        const actualBiaya = parseInt(cells[14]?.text) || 0;
+        const variance = budgetBiaya > 0 ? (actualBiaya / budgetBiaya * 100) : 0;
+        
+        result.push({
+          kebun: cells[0]?.text || '',
+          divisi: cells[1]?.text || '',
+          kodeTahunTanam: cells[2]?.text || '',
+          blok: cells[3]?.text || '',
+          kodeKerja: cells[4]?.text || '',
+          objekKerja: cells[5]?.text || '',
+          bulan: cells[6]?.text || '',
+          budget: {
+            hk: parseInt(cells[8]?.text) || 0,
+            luas: parseFloat(cells[9]?.text) || 0,
+            biaya: budgetBiaya
+          },
+          actual: {
+            hk: parseInt(cells[12]?.text) || 0,
+            hasil: parseFloat(cells[13]?.text) || 0,
+            biaya: actualBiaya
+          },
+          variance: variance,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return result;
+    }
+
     // Load data from storage
     function loadData() {
-      // In a real app, you would fetch this from your backend
-      const savedData = localStorage.getItem('budgetData');
-      const data = savedData ? JSON.parse(savedData) : [];
-      
-      const tableBody = document.getElementById('dataTable');
-      tableBody.innerHTML = '';
-      
-      data.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${item.kebun}</td>
-          <td>${item.divisi}</td>
-          <td>${item.kodeTahunTanam}</td>
-          <td>${item.blok}</td>
-          <td>${item.kodeKerja}</td>
-          <td>${item.objekKerja}</td>
-          <td>${item.bulan}</td>
-          <td class="numeric">${item.budget.hk}</td>
-          <td class="numeric">${item.budget.luas.toFixed(2)}</td>
-          <td class="numeric">${formatCurrency(item.budget.biaya)}</td>
-          <td class="numeric">${item.actual.hk}</td>
-          <td class="numeric">${item.actual.hasil.toFixed(2)}</td>
-          <td class="numeric">${formatCurrency(item.actual.biaya)}</td>
-          <td class="numeric ${item.variance > 100 ? 'negative' : 'positive'}">${item.variance.toFixed(2)}%</td>
-          <td>
-            <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-              <i class="material-icons" style="font-size: 1rem;">delete</i>
-            </button>
-          </td>
-        `;
-        tableBody.appendChild(row);
-      });
-
-      // Add event listeners for delete buttons in the table
-      document.querySelectorAll('.delete-row').forEach(button => {
-        button.addEventListener('click', function() {
-          const index = this.getAttribute('data-index');
-          if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-            deleteData(index);
-          }
+      try {
+        const savedData = localStorage.getItem('budgetData');
+        const data = savedData ? JSON.parse(savedData) : [];
+        
+        const tableBody = document.getElementById('dataTable');
+        tableBody.innerHTML = '';
+        
+        data.forEach((item, index) => {
+          // Ensure all required fields exist and have default values
+          const budget = item.budget || { hk: 0, luas: 0, biaya: 0 };
+          const actual = item.actual || { hk: 0, hasil: 0, biaya: 0 };
+          const variance = item.variance || 0;
+          
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.kebun || ''}</td>
+            <td>${item.divisi || ''}</td>
+            <td>${item.kodeTahunTanam || ''}</td>
+            <td>${item.blok || ''}</td>
+            <td>${item.kodeKerja || ''}</td>
+            <td>${item.objekKerja || ''}</td>
+            <td>${item.bulan || ''}</td>
+            <td class="numeric">${budget.hk}</td>
+            <td class="numeric">${(budget.luas || 0).toFixed(2)}</td>
+            <td class="numeric">${formatCurrency(budget.biaya || 0)}</td>
+            <td class="numeric">${actual.hk}</td>
+            <td class="numeric">${(actual.hasil || 0).toFixed(2)}</td>
+            <td class="numeric">${formatCurrency(actual.biaya || 0)}</td>
+            <td class="numeric ${variance > 100 ? 'negative' : 'positive'}">${variance.toFixed(2)}%</td>
+            <td>
+              <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                <i class="material-icons" style="font-size: 1rem;">delete</i>
+              </button>
+            </td>
+          `;
+          tableBody.appendChild(row);
         });
-      });
+
+        // Add event listeners for delete buttons
+        document.querySelectorAll('.delete-row').forEach(button => {
+          button.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+              deleteData(index);
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
     }
 
     // Function to delete data
     function deleteData(index) {
-      const savedData = localStorage.getItem('budgetData');
-      const data = savedData ? JSON.parse(savedData) : [];
-      
-      if (index >= 0 && index < data.length) {
-        data.splice(index, 1);
-        localStorage.setItem('budgetData', JSON.stringify(data));
-        loadData();
+      try {
+        const savedData = localStorage.getItem('budgetData');
+        const data = savedData ? JSON.parse(savedData) : [];
+        
+        if (index >= 0 && index < data.length) {
+          data.splice(index, 1);
+          localStorage.setItem('budgetData', JSON.stringify(data));
+          loadData();
+        }
+      } catch (error) {
+        console.error('Error deleting data:', error);
       }
     }
     
@@ -452,13 +478,8 @@
             });
           });
           
-          // Add merges for header
-          const merges = [
-            { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } }, // Budget merge
-            { s: { r: 0, c: 10 }, e: { r: 0, c: 12 } } // Actual merge
-          ];
-          
-          xs.loadData([{ name: 'Sheet1', rows, merges }]);
+          // Load data without merges to avoid errors
+          xs.loadData([{ name: 'Sheet1', rows }]);
           e.target.value = '';
           alert('Data Excel berhasil diimport!');
         } catch (error) {
@@ -471,135 +492,47 @@
   
     // Fungsi Export ke Excel
     document.getElementById('exportBtn').addEventListener('click', function() {
-      const data = xs.getData();
-      const sheetData = [];
-      
-      // Convert x-spreadsheet data to 2D array
-      Object.values(data[0].rows).forEach(row => {
-        const rowData = [];
-        Object.values(row.cells).forEach(cell => {
-          rowData.push(cell.text);
+      try {
+        const data = xs.getData();
+        const sheetData = [];
+        
+        // Convert x-spreadsheet data to 2D array
+        Object.values(data[0].rows).forEach(row => {
+          const rowData = [];
+          Object.values(row.cells).forEach(cell => {
+            rowData.push(cell.text);
+          });
+          sheetData.push(rowData);
         });
-        sheetData.push(rowData);
-      });
-      
-      // Create Excel workbook
-      const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      
-      // Add merges to Excel
-      if (data[0].merges) {
-        ws['!merges'] = data[0].merges.map(merge => ({
-          s: { r: merge.s.r, c: merge.s.c },
-          e: { r: merge.e.r, c: merge.e.c }
-        }));
+        
+        // Create Excel workbook
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+        
+        // Export to file
+        XLSX.writeFile(wb, 'budget_actual.xlsx');
+      } catch (error) {
+        console.error('Error exporting:', error);
+        alert('Gagal mengekspor ke Excel');
       }
-      
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-      
-      // Export to file
-      XLSX.writeFile(wb, 'budget_actual.xlsx');
     });
   
     // Fungsi Simpan Data (simulasi)
     document.getElementById('saveBtn').addEventListener('click', function() {
-      const data = xs.getData();
-      const formattedData = formatDataForStorage(data);
-      
-      // In a real app, you would send this to your backend
-      console.log('Data to be saved:', formattedData);
-      
-      // For demo purposes, store in localStorage
-      localStorage.setItem('budgetData', JSON.stringify(formattedData));
-      alert(`Data berhasil disimpan (${formattedData.length} records)`);
-      loadData();
-    });
-    
-    // Format data for storage
-    function formatDataForStorage(sheetData) {
-      const rows = sheetData[0].rows;
-      const result = [];
-      
-      // Skip header rows (index 0-1)
-      for (let i = 2; i < Object.keys(rows).length; i++) {
-        const row = rows[i];
-        if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
+      try {
+        const data = xs.getData();
+        const formattedData = formatDataForStorage(data);
         
-        const cells = row.cells;
-        const budgetBiaya = parseInt(cells[9]?.text) || 0;
-        const actualBiaya = parseInt(cells[12]?.text) || 0;
-        const variance = budgetBiaya > 0 ? (actualBiaya / budgetBiaya * 100) : 0;
-        
-        result.push({
-          kebun: cells[0]?.text || '',
-          divisi: cells[1]?.text || '',
-          kodeTahunTanam: cells[2]?.text || '',
-          blok: cells[3]?.text || '',
-          kodeKerja: cells[4]?.text || '',
-          objekKerja: cells[5]?.text || '',
-          bulan: cells[6]?.text || '',
-          budget: {
-            hk: parseInt(cells[7]?.text) || 0,
-            luas: parseFloat(cells[8]?.text) || 0,
-            biaya: budgetBiaya
-          },
-          actual: {
-            hk: parseInt(cells[10]?.text) || 0,
-            hasil: parseFloat(cells[11]?.text) || 0,
-            biaya: actualBiaya
-          },
-          variance: variance,
-          timestamp: new Date().toISOString()
-        });
+        // For demo purposes, store in localStorage
+        localStorage.setItem('budgetData', JSON.stringify(formattedData));
+        alert(`Data berhasil disimpan (${formattedData.length} records)`);
+        loadData();
+      } catch (error) {
+        console.error('Error saving data:', error);
+        alert('Gagal menyimpan data');
       }
-      
-      return result;
-    }
-    
-    // Load data from storage
-    function loadData() {
-      // In a real app, you would fetch this from your backend
-      const savedData = localStorage.getItem('budgetData');
-      const data = savedData ? JSON.parse(savedData) : [];
-      
-      const tableBody = document.getElementById('dataTable');
-      tableBody.innerHTML = '';
-      
-      data.forEach(item => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${item.kebun}</td>
-          <td>${item.divisi}</td>
-          <td>${item.kodeTahunTanam}</td>
-          <td>${item.blok}</td>
-          <td>${item.kodeKerja}</td>
-          <td>${item.objekKerja}</td>
-          <td>${item.bulan}</td>
-          <td class="numeric">${item.budget.hk}</td>
-          <td class="numeric">${item.budget.luas.toFixed(2)}</td>
-          <td class="numeric">${formatCurrency(item.budget.biaya)}</td>
-          <td class="numeric">${item.actual.hk}</td>
-          <td class="numeric">${item.actual.hasil.toFixed(2)}</td>
-          <td class="numeric">${formatCurrency(item.actual.biaya)}</td>
-          <td class="numeric ${item.variance > 100 ? 'negative' : 'positive'}">${item.variance.toFixed(2)}%</td>
-          <td>
-            <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-              <i class="material-icons" style="font-size: 1rem;">delete</i>
-            </button>
-          </td>
-        `;
-        tableBody.appendChild(row);
-      });
-    }
-    
-    // Helper function to format currency
-    function formatCurrency(amount) {
-      return new Intl.NumberFormat('id-ID', { 
-        style: 'currency', 
-        currency: 'IDR',
-        minimumFractionDigits: 0
-      }).format(amount);
-    }
+    });
     
     // Initial data load
     loadData();
