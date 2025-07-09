@@ -383,9 +383,12 @@
         },
         cells: function(row, col, prop) {
           const cellProperties = {};
+          const instance = this; // Store reference to the Handsontable instance
+          
           if (col === 8 || col === 11) {
-            const budgetValue = this.getDataAtCell(row, 8);
-            const actualValue = this.getDataAtCell(row, 11);
+            const budgetValue = instance.getDataAtCell(row, 8);
+            const actualValue = instance.getDataAtCell(row, 11);
+            
             if (budgetValue > 0 && actualValue > 0) {
               const percentage = (actualValue / budgetValue) * 100;
               cellProperties.className = percentage >= 100 ? 'green' : 'red';
