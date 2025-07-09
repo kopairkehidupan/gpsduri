@@ -270,7 +270,18 @@
     // Initialize x-spreadsheet with proper merge format
     const initialData = { 
       name: 'Sheet1',
-      merges: ['H1:J1', 'K1:M1'],
+      merges: [
+        'H1:J1',     // Budget (Rp) horizontal merge
+        'K1:M1',     // Actual (Rp) horizontal merge
+        'A1:A2',     // Kebun
+        'B1:B2',     // Divisi
+        'C1:C2',     // Kode Tahun Tanam
+        'D1:D2',     // Blok
+        'E1:E2',     // Kode Kerja
+        'F1:F2',     // Objek Kerja
+        'G1:G2',     // Bulan
+        'N1:N2'      // Var (%)
+      ],
       rows: {
         0: { 
           height: 25,
@@ -291,25 +302,25 @@
             13: { text: 'Var (%)' }
           }
         },
-        1: { 
+        1: {
           height: 25,
-          cells: { 
-            0: { text: '' },
-            1: { text: '' },
-            2: { text: '' },
-            3: { text: '' },
-            4: { text: '' },
-            5: { text: '' },
-            6: { text: '' },
+          cells: {
+            0: { text: '' },  // A
+            1: { text: '' },  // B
+            2: { text: '' },  // C
+            3: { text: '' },  // D
+            4: { text: '' },  // E
+            5: { text: '' },  // F
+            6: { text: '' },  // G
             7: { text: 'HK' },
             8: { text: 'Luas (Ha)' },
             9: { text: 'Biaya' },
             10: { text: 'HK' },
             11: { text: 'Hasil (Ha)' },
             12: { text: 'Biaya' },
-            13: { text: '' }
+            13: { text: '' }   // N
           }
-        },
+        }
       },
       styles: [
         {
