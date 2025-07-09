@@ -6,10 +6,8 @@
   <title>Budget vs Actual - Excel Input</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <!-- Updated x-spreadsheet CDN links -->
   <link href="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.css" rel="stylesheet">
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
-  <!-- Add SheetJS for Excel import/export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -225,15 +223,25 @@
         <table class="budget-table">
           <thead>
             <tr>
-              <th>Kebun</th>
-              <th>Divisi</th>
-              <th>Blok</th>
-              <th>Pekerjaan</th>
-              <th>Bulan</th>
-              <th class="numeric">Budget (Rp)</th>
-              <th class="numeric">Actual (Rp)</th>
-              <th class="numeric">Realisasi</th>
-              <th>Aksi</th>
+              <th rowspan="2">Kebun</th>
+              <th rowspan="2">Divisi</th>
+              <th rowspan="2">Kode Tahun Tanam</th>
+              <th rowspan="2">Blok</th>
+              <th rowspan="2">Kode Kerja</th>
+              <th rowspan="2">Objek Kerja</th>
+              <th rowspan="2">Bulan</th>
+              <th colspan="3" style="text-align: center;">Budget (Rp)</th>
+              <th colspan="3" style="text-align: center;">Actual (Rp)</th>
+              <th rowspan="2">Var (%)</th>
+              <th rowspan="2">Aksi</th>
+            </tr>
+            <tr>
+              <th>HK</th>
+              <th>Luas (Ha)</th>
+              <th>Biaya</th>
+              <th>HK</th>
+              <th>Hasil (Ha)</th>
+              <th>Biaya</th>
             </tr>
           </thead>
           <tbody id="dataTable">
@@ -253,36 +261,60 @@
       showContextmenu: true,
     }).loadData([{ 
       name: 'Sheet1', 
+      merges: [
+        // Merges for Budget columns (H-J)
+        { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } },
+        // Merges for Actual columns (K-M)
+        { s: { r: 0, c: 10 }, e: { r: 0, c: 12 } }
+      ],
       rows: {
         0: { cells: { 
           0: { text: 'Kebun' },
           1: { text: 'Divisi' },
-          2: { text: 'Tahun Tanam' },
+          2: { text: 'Kode Tahun Tanam' },
           3: { text: 'Blok' },
-          4: { text: 'Pekerjaan' },
-          5: { text: 'Bulan' },
-          6: { text: 'Budget Luas' },
-          7: { text: 'Budget HK' },
-          8: { text: 'Budget Biaya' },
-          9: { text: 'Actual Luas' },
-          10: { text: 'Actual HK' },
-          11: { text: 'Actual Biaya' },
-          12: { text: 'Keterangan' }
+          4: { text: 'Kode Kerja' },
+          5: { text: 'Objek Kerja' },
+          6: { text: 'Bulan' },
+          7: { text: 'Budget (Rp)' },
+          8: { text: '' }, // Empty for merged cell
+          9: { text: '' }, // Empty for merged cell
+          10: { text: 'Actual (Rp)' },
+          11: { text: '' }, // Empty for merged cell
+          12: { text: '' }, // Empty for merged cell
+          13: { text: 'Var (%)' }
         }},
         1: { cells: { 
           0: { text: 'Contoh' },
           1: { text: 'Divisi A' },
-          2: { text: '2023' },
+          2: { text: 'T23' },
           3: { text: 'A1' },
-          4: { text: 'Pemupukan' },
-          5: { text: 'Januari' },
-          6: { text: '10' },
+          4: { text: 'P01' },
+          5: { text: 'Pemupukan' },
+          6: { text: 'Januari' },
+          7: { text: 'HK' },
+          8: { text: 'Luas (Ha)' },
+          9: { text: 'Biaya' },
+          10: { text: 'HK' },
+          11: { text: 'Hasil (Ha)' },
+          12: { text: 'Biaya' },
+          13: { text: '=IF(G2>0, (M2/G2)*100, 0)' } // Formula for variance
+        }},
+        2: { cells: { 
+          0: { text: 'Contoh' },
+          1: { text: 'Divisi A' },
+          2: { text: 'T23' },
+          3: { text: 'A1' },
+          4: { text: 'P01' },
+          5: { text: 'Pemupukan' },
+          6: { text: 'Januari' },
           7: { text: '5' },
-          8: { text: '5000000' },
-          9: { text: '9.5' },
+          8: { text: '10' },
+          9: { text: '5000000' },
           10: { text: '4' },
-          11: { text: '4500000' },
-          12: { text: 'On track' }
+          11: { text: '9.5' },
+          12: { text: '4500000' },
+          13: { text: '90.00%' }
         }}
       }
     }]);
@@ -318,7 +350,13 @@
             });
           });
           
-          xs.loadData([{ name: 'Sheet1', rows }]);
+          // Add merges for header
+          const merges = [
+            { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } }, // Budget merge
+            { s: { r: 0, c: 10 }, e: { r: 0, c: 12 } } // Actual merge
+          ];
+          
+          xs.loadData([{ name: 'Sheet1', rows, merges }]);
           e.target.value = '';
           alert('Data Excel berhasil diimport!');
         } catch (error) {
@@ -345,6 +383,15 @@
       
       // Create Excel workbook
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      
+      // Add merges to Excel
+      if (data[0].merges) {
+        ws['!merges'] = data[0].merges.map(merge => ({
+          s: { r: merge.s.r, c: merge.s.c },
+          e: { r: merge.e.r, c: merge.e.c }
+        }));
+      }
+      
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       
@@ -371,30 +418,35 @@
       const rows = sheetData[0].rows;
       const result = [];
       
-      // Skip header row (index 0)
-      for (let i = 1; i < Object.keys(rows).length; i++) {
+      // Skip header rows (index 0-1)
+      for (let i = 2; i < Object.keys(rows).length; i++) {
         const row = rows[i];
         if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
         
         const cells = row.cells;
+        const budgetBiaya = parseInt(cells[9]?.text) || 0;
+        const actualBiaya = parseInt(cells[12]?.text) || 0;
+        const variance = budgetBiaya > 0 ? (actualBiaya / budgetBiaya * 100) : 0;
+        
         result.push({
           kebun: cells[0]?.text || '',
           divisi: cells[1]?.text || '',
-          tahunTanam: cells[2]?.text || '',
+          kodeTahunTanam: cells[2]?.text || '',
           blok: cells[3]?.text || '',
-          pekerjaan: cells[4]?.text || '',
-          bulan: cells[5]?.text || '',
+          kodeKerja: cells[4]?.text || '',
+          objekKerja: cells[5]?.text || '',
+          bulan: cells[6]?.text || '',
           budget: {
-            luas: parseFloat(cells[6]?.text) || 0,
             hk: parseInt(cells[7]?.text) || 0,
-            biaya: parseInt(cells[8]?.text) || 0
+            luas: parseFloat(cells[8]?.text) || 0,
+            biaya: budgetBiaya
           },
           actual: {
-            luas: parseFloat(cells[9]?.text) || 0,
             hk: parseInt(cells[10]?.text) || 0,
-            biaya: parseInt(cells[11]?.text) || 0
+            hasil: parseFloat(cells[11]?.text) || 0,
+            biaya: actualBiaya
           },
-          keterangan: cells[12]?.text || '',
+          variance: variance,
           timestamp: new Date().toISOString()
         });
       }
@@ -412,20 +464,22 @@
       tableBody.innerHTML = '';
       
       data.forEach(item => {
-        const budgetTotal = item.budget.biaya;
-        const actualTotal = item.actual.biaya;
-        const realization = budgetTotal > 0 ? (actualTotal / budgetTotal * 100) : 0;
-        
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${item.kebun}</td>
           <td>${item.divisi}</td>
+          <td>${item.kodeTahunTanam}</td>
           <td>${item.blok}</td>
-          <td>${item.pekerjaan}</td>
+          <td>${item.kodeKerja}</td>
+          <td>${item.objekKerja}</td>
           <td>${item.bulan}</td>
-          <td class="numeric">${formatCurrency(budgetTotal)}</td>
-          <td class="numeric">${formatCurrency(actualTotal)}</td>
-          <td class="numeric ${realization > 100 ? 'negative' : 'positive'}">${realization.toFixed(2)}%</td>
+          <td class="numeric">${item.budget.hk}</td>
+          <td class="numeric">${item.budget.luas.toFixed(2)}</td>
+          <td class="numeric">${formatCurrency(item.budget.biaya)}</td>
+          <td class="numeric">${item.actual.hk}</td>
+          <td class="numeric">${item.actual.hasil.toFixed(2)}</td>
+          <td class="numeric">${formatCurrency(item.actual.biaya)}</td>
+          <td class="numeric ${item.variance > 100 ? 'negative' : 'positive'}">${item.variance.toFixed(2)}%</td>
           <td>
             <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
               <i class="material-icons" style="font-size: 1rem;">delete</i>
