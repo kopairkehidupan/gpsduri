@@ -263,7 +263,13 @@
    document.addEventListener('DOMContentLoaded', function() {
     // Initialize x-spreadsheet
     const initialData = { 
-      name: 'Sheet1', 
+      name: 'Sheet1',
+      merges: [
+        // Merge untuk header Budget (Rp) - kolom 7-9 (H-J), row 0
+        { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } },
+        // Merge untuk header Actual (Rp) - kolom 11-13 (L-N), row 0
+        { s: { r: 0, c: 11 }, e: { r: 0, c: 13 } }
+      ],
       rows: {
         0: { cells: { 
           0: { text: 'Kebun' },
@@ -273,17 +279,34 @@
           4: { text: 'Kode Kerja' },
           5: { text: 'Objek Kerja' },
           6: { text: 'Bulan' },
-          7: { text: 'Budget (Rp)' },
+          7: { text: 'Budget (Rp)' },  // Kolom H (7) - akan di-merge dengan I,J (8,9)
+          8: { text: '' },  // Kosong karena bagian dari merge
+          9: { text: '' },  // Kosong karena bagian dari merge
+          10: { text: 'Biaya' },
+          11: { text: 'Actual (Rp)' }, // Kolom L (11) - akan di-merge dengan M,N (12,13)
+          12: { text: '' },  // Kosong karena bagian dari merge
+          13: { text: '' },  // Kosong karena bagian dari merge
+          14: { text: 'Biaya' },
+          15: { text: 'Var (%)' }
+        }},
+        1: { cells: { 
+          0: { text: 'Contoh' },
+          1: { text: 'Divisi A' },
+          2: { text: 'T23' },
+          3: { text: 'A1' },
+          4: { text: 'P01' },
+          5: { text: 'Pemupukan' },
+          6: { text: 'Januari' },
+          7: { text: '' },
           8: { text: 'HK' },
           9: { text: 'Luas (Ha)' },
           10: { text: 'Biaya' },
-          11: { text: 'Actual (Rp)' },
+          11: { text: '' },
           12: { text: 'HK' },
           13: { text: 'Hasil (Ha)' },
           14: { text: 'Biaya' },
-          15: { text: 'Var (%)' }
-          // Kolom Aksi dihapus dari spreadsheet
-        }},
+          15: { text: '=IF(K2>0, (O2/K2)*100, 0)' }
+        }}
       }
     };
 
