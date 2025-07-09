@@ -261,7 +261,7 @@
   </div>
   <script>
    document.addEventListener('DOMContentLoaded', function() {
-    // Initialize x-spreadsheet with proper merge data structure
+    // Initialize x-spreadsheet
     const initialData = { 
       name: 'Sheet1', 
       rows: {
@@ -281,7 +281,8 @@
           12: { text: 'HK' },
           13: { text: 'Hasil (Ha)' },
           14: { text: 'Biaya' },
-          15: { text: 'Var (%)' },
+          15: { text: 'Var (%)' }
+          // Kolom Aksi dihapus dari spreadsheet
         }},
         1: { cells: { 
           0: { text: 'Contoh' },
@@ -299,12 +300,13 @@
           12: { text: '4' },
           13: { text: '9.5' },
           14: { text: '4500000' },
-          15: { text: '=IF(K2>0, (O2/K2)*100, 0)' }, // Adjusted formula
+          15: { text: '=IF(K2>0, (O2/K2)*100, 0)' }
+          // Tombol hapus dihapus dari spreadsheet
         }}
       }
     };
 
-    // Initialize x-spreadsheet without merges to avoid errors
+    // Initialize x-spreadsheet
     const xs = x_spreadsheet('#xspreadsheet', {
       mode: 'edit',
       showToolbar: true,
@@ -312,18 +314,8 @@
       showContextmenu: true,
     }).loadData([initialData]);
 
-    // Add click handler for delete buttons in the spreadsheet
-    xs.on('cell-selected', (cell, ri, ci) => {
-      if (ci === 16 && ri > 0) { // If clicked in action column and not header row
-        if (confirm('Apakah Anda yakin ingin menghapus baris ini?')) {
-          try {
-            xs.deleteRow(ri);
-          } catch (error) {
-            console.error('Error deleting row:', error);
-          }
-        }
-      }
-    });
+    // Hapus event listener untuk penghapusan di spreadsheet
+    // Tidak ada handler untuk menghapus dari spreadsheet
 
     // Helper function to format currency
     function formatCurrency(amount) {
@@ -415,7 +407,7 @@
           tableBody.appendChild(row);
         });
 
-        // Add event listeners for delete buttons
+        // Add event listeners for delete buttons in the table
         document.querySelectorAll('.delete-row').forEach(button => {
           button.addEventListener('click', function() {
             const index = this.getAttribute('data-index');
@@ -476,7 +468,7 @@
             });
           });
           
-          // Load data without merges to avoid errors
+          // Load data
           xs.loadData([{ name: 'Sheet1', rows }]);
           e.target.value = '';
           alert('Data Excel berhasil diimport!');
