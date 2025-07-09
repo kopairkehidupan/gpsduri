@@ -308,11 +308,44 @@
 
     // Initialize x-spreadsheet
     const xs = x_spreadsheet('#xspreadsheet', {
-      mode: 'edit',
-      showToolbar: true,
-      showGrid: true,
-      showContextmenu: true,
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
     }).loadData([initialData]);
+
+    // Fungsi untuk auto-scroll ketika cursor bergerak
+    function handleCellSelection(cell, ri, ci) {
+        const container = document.getElementById('xspreadsheet');
+        const cellElement = container.querySelector(`[data-row="${ri}"][data-col="${ci}"]`);
+        
+        if (cellElement) {
+            // Hitung posisi relatif cell terhadap container
+            const cellRect = cellElement.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Jika cell di luar viewport sebelah kanan
+            if (cellRect.right > containerRect.right) {
+                container.scrollLeft += cellRect.right - containerRect.right + 10;
+            }
+            // Jika cell di luar viewport sebelah kiri
+            else if (cellRect.left < containerRect.left) {
+                container.scrollLeft -= containerRect.left - cellRect.left + 10;
+            }
+            
+            // Jika cell di luar viewport sebelah bawah
+            if (cellRect.bottom > containerRect.bottom) {
+                container.scrollTop += cellRect.bottom - containerRect.bottom + 10;
+            }
+            // Jika cell di luar viewport sebelah atas
+            else if (cellRect.top < containerRect.top) {
+                container.scrollTop -= containerRect.top - cellRect.top + 10;
+            }
+        }
+    }
+
+    // Tambahkan event listener untuk cell selection
+    xs.on('cell-selected', handleCellSelection);
 
     // Hapus event listener untuk penghapusan di spreadsheet
     // Tidak ada handler untuk menghapus dari spreadsheet
