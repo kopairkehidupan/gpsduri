@@ -186,6 +186,14 @@
         height: 400px;
       }
     }
+    .delete-btn {
+      color: #ea4335;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .delete-btn:hover {
+      color: #d33426;
+    }
   </style>
 </head>
 <body>
@@ -282,7 +290,8 @@
           10: { text: 'Actual (Rp)' },
           11: { text: '' }, // Empty for merged cell
           12: { text: '' }, // Empty for merged cell
-          13: { text: 'Var (%)' }
+          13: { text: 'Var (%)' },
+          14: { text: 'Aksi' }
         }},
         1: { cells: { 
           0: { text: 'Contoh' },
@@ -298,7 +307,8 @@
           10: { text: 'HK' },
           11: { text: 'Hasil (Ha)' },
           12: { text: 'Biaya' },
-          13: { text: '=IF(G2>0, (M2/G2)*100, 0)' } // Formula for variance
+          13: { text: '=IF(G2>0, (M2/G2)*100, 0)' }, // Formula for variance
+          14: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
         }},
         2: { cells: { 
           0: { text: 'Contoh' },
@@ -314,10 +324,80 @@
           10: { text: '4' },
           11: { text: '9.5' },
           12: { text: '4500000' },
-          13: { text: '90.00%' }
+          13: { text: '90.00%' },
+          14: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
         }}
       }
     }]);
+
+    // Add click handler for delete buttons in the spreadsheet
+    xs.on('cell-selected', (cell, ri, ci) => {
+      if (ci === 14 && ri > 0) { // If clicked in action column (column 14) and not header row
+        if (confirm('Apakah Anda yakin ingin menghapus baris ini?')) {
+          xs.deleteRow(ri);
+        }
+      }
+    });
+
+    // Previous functions remain the same until loadData()
+    
+    // Load data from storage
+    function loadData() {
+      // In a real app, you would fetch this from your backend
+      const savedData = localStorage.getItem('budgetData');
+      const data = savedData ? JSON.parse(savedData) : [];
+      
+      const tableBody = document.getElementById('dataTable');
+      tableBody.innerHTML = '';
+      
+      data.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.kebun}</td>
+          <td>${item.divisi}</td>
+          <td>${item.kodeTahunTanam}</td>
+          <td>${item.blok}</td>
+          <td>${item.kodeKerja}</td>
+          <td>${item.objekKerja}</td>
+          <td>${item.bulan}</td>
+          <td class="numeric">${item.budget.hk}</td>
+          <td class="numeric">${item.budget.luas.toFixed(2)}</td>
+          <td class="numeric">${formatCurrency(item.budget.biaya)}</td>
+          <td class="numeric">${item.actual.hk}</td>
+          <td class="numeric">${item.actual.hasil.toFixed(2)}</td>
+          <td class="numeric">${formatCurrency(item.actual.biaya)}</td>
+          <td class="numeric ${item.variance > 100 ? 'negative' : 'positive'}">${item.variance.toFixed(2)}%</td>
+          <td>
+            <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+              <i class="material-icons" style="font-size: 1rem;">delete</i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      // Add event listeners for delete buttons in the table
+      document.querySelectorAll('.delete-row').forEach(button => {
+        button.addEventListener('click', function() {
+          const index = this.getAttribute('data-index');
+          if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+            deleteData(index);
+          }
+        });
+      });
+    }
+
+    // Function to delete data
+    function deleteData(index) {
+      const savedData = localStorage.getItem('budgetData');
+      const data = savedData ? JSON.parse(savedData) : [];
+      
+      if (index >= 0 && index < data.length) {
+        data.splice(index, 1);
+        localStorage.setItem('budgetData', JSON.stringify(data));
+        loadData();
+      }
+    }
     
     // Fungsi Import Excel
     document.getElementById('importBtn').addEventListener('click', function() {
