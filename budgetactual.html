@@ -283,61 +283,71 @@
         'N1:N2'      // Var (%)
       ],
       rows: {
-        0: { 
+        0: {
           height: 25,
-          cells: { 
-            0: { text: 'Kebun', editable: false },
-            1: { text: 'Divisi', editable: false },
-            2: { text: 'Kode Tahun Tanam', editable: false },
-            3: { text: 'Blok', editable: false },
-            4: { text: 'Kode Kerja', editable: false },
-            5: { text: 'Objek Kerja', editable: false },
-            6: { text: 'Bulan', editable: false },
-            7: { text: 'Budget (Rp)', style: 0, editable: false },
-            8: { text: '', style: 0, editable: false },
-            9: { text: '', style: 0, editable: false },
-            10: { text: 'Actual (Rp)', style: 0, editable: false },
-            11: { text: '', style: 0, editable: false },
-            12: { text: '', style: 0, editable: false },
-            13: { text: 'Var (%)', editable: false }
+          cells: {
+            0: { text: 'Kebun', style: 1 },
+            1: { text: 'Divisi', style: 1 },
+            2: { text: 'Kode Tahun Tanam', style: 1 },
+            3: { text: 'Blok', style: 1 },
+            4: { text: 'Kode Kerja', style: 1 },
+            5: { text: 'Objek Kerja', style: 1 },
+            6: { text: 'Bulan', style: 1 },
+            7: { text: 'Budget (Rp)', style: 1 },
+            8: { text: '', style: 1 },
+            9: { text: '', style: 1 },
+            10: { text: 'Actual (Rp)', style: 1 },
+            11: { text: '', style: 1 },
+            12: { text: '', style: 1 },
+            13: { text: 'Var (%)', style: 1 }
           }
         },
         1: {
           height: 25,
           cells: {
-            0: { text: '', editable: false },
-            1: { text: '', editable: false },
-            2: { text: '', editable: false },
-            3: { text: '', editable: false },
-            4: { text: '', editable: false },
-            5: { text: '', editable: false },
-            6: { text: '', editable: false },
-            7: { text: 'HK', editable: false },
-            8: { text: 'Luas (Ha)', editable: false },
-            9: { text: 'Biaya', editable: false },
-            10: { text: 'HK', editable: false },
-            11: { text: 'Hasil (Ha)', editable: false },
-            12: { text: 'Biaya', editable: false },
-            13: { text: '', editable: false }
+            0: { text: '', style: 1 },
+            1: { text: '', style: 1 },
+            2: { text: '', style: 1 },
+            3: { text: '', style: 1 },
+            4: { text: '', style: 1 },
+            5: { text: '', style: 1 },
+            6: { text: '', style: 1 },
+            7: { text: 'HK', style: 1 },
+            8: { text: 'Luas (Ha)', style: 1 },
+            9: { text: 'Biaya', style: 1 },
+            10: { text: 'HK', style: 1 },
+            11: { text: 'Hasil (Ha)', style: 1 },
+            12: { text: 'Biaya', style: 1 },
+            13: { text: '', style: 1 }
           }
         }
       },
-      styles: [
+        styles: [
         {
           align: 'center',
           valign: 'middle',
           font: { bold: true },
           textwrap: true
+        },
+        {
+          align: 'center',
+          valign: 'middle',
+          font: { bold: true },
+          bgcolor: '#e0f0ff', // biru muda
+          textwrap: true
         }
       ]
     };
-
-    // Initialize x-spreadsheet
     const xs = x_spreadsheet('#xspreadsheet', {
         mode: 'edit',
         showToolbar: true,
         showGrid: true,
         showContextmenu: true,
+        // Hook untuk mencegah edit
+        cellEditable: function (ri, ci) {
+            // Hanya izinkan edit mulai dari baris ke-2 (index ke-2)
+            return ri >= 2;
+        }
     }).loadData([initialData]);
 
     // Helper function to format currency
