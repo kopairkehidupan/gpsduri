@@ -256,168 +256,148 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Konfigurasi Handsontable
-      const container = document.getElementById('excelContainer');
-      const hot = new Handsontable(container, {
-        data: getInitialData(),
-        colHeaders: [
-          'Kebun', 'Divisi', 'Tahun Tanam', 'Blok', 
-          'Pekerjaan', 'Bulan',
-          'Budget Luas (Ha)', 'Budget HK', 'Budget Biaya (Rp)',
-          'Actual Luas (Ha)', 'Actual HK', 'Actual Biaya (Rp)',
-          'Keterangan'
-        ],
-        columns: [
-          { 
-            type: 'dropdown', 
-            source: ['SAMSAM', 'TANJUNG', 'MEKAR', 'LUBUK', 'BUKIT'],
-            strict: true
-          },
-          { 
-            type: 'dropdown', 
-            source: ['DIVISI I', 'DIVISI II', 'DIVISI III', 'DIVISI IV', 'DIVISI V'],
-            strict: true
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 2000 && value <= new Date().getFullYear());
-            }
-          },
-          { type: 'text' },
-          { 
-            type: 'dropdown', 
-            source: ['PEMUPUKAN', 'PENGENDALIAN GULMA', 'PEMANGKASAN', 'PANEN', 'PENGENDALIAN HAMA'],
-            strict: true
-          },
-          { 
-            type: 'dropdown', 
-            source: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
-            strict: true
-          },
-          { 
-            type: 'numeric', 
-            format: '0.00',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0,0',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0.00',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { 
-            type: 'numeric', 
-            format: '0,0',
-            validator: function(value, callback) {
-              callback(value >= 0);
-            }
-          },
-          { type: 'text' }
-        ],
-        rowHeaders: true,
-        width: '100%',
-        height: '100%',
-        licenseKey: 'non-commercial-and-evaluation', // Untuk penggunaan non-komersial
-        colWidths: [100, 100, 100, 100, 150, 80, 100, 80, 120, 100, 80, 120, 150],
-        manualColumnResize: true,
-        manualRowResize: true,
-        contextMenu: true,
-        filters: true,
-        dropdownMenu: true,
-        hiddenColumns: {
-          indicators: true
-        },
-
-        // Tambahkan ini untuk enable copy-paste dari Excel
-          afterChange: function(changes, source) {
-            if (source === 'paste') {
-              // Proses data yang di-paste
-              this.getSelectedRange().forEach(({fromRow, fromCol, toRow, toCol}) => {
-                for (let row = fromRow; row <= toRow; row++) {
-                  for (let col = fromCol; col <= toCol; col++) {
-                    // Konversi format angka jika diperlukan
-                    const cellValue = this.getDataAtCell(row, col);
-                    if (typeof cellValue === 'string') {
-                      // Handle angka dengan format Indonesia (1.000,00)
-                      const num = parseFloat(cellValue.replace(/\./g, '').replace(',', '.'));
-                      if (!isNaN(num)) {
-                        // Kolom dengan format numeric
-                        if ([6,7,8,9,10,11].includes(col)) {
-                          this.setDataAtCell(row, col, num);
-                        }
-                      }
-                    }
-                  }
+  // Konfigurasi Handsontable
+  const container = document.getElementById('excelContainer');
+  const hot = new Handsontable(container, {
+    data: getInitialData(),
+    colHeaders: [
+      'Kebun', 'Divisi', 'Tahun Tanam', 'Blok', 
+      'Pekerjaan', 'Bulan',
+      'Budget Luas (Ha)', 'Budget HK', 'Budget Biaya (Rp)',
+      'Actual Luas (Ha)', 'Actual HK', 'Actual Biaya (Rp)',
+      'Keterangan'
+    ],
+    columns: [
+      { 
+        type: 'dropdown', 
+        source: ['SAMSAM', 'TANJUNG', 'MEKAR', 'LUBUK', 'BUKIT'],
+        strict: true
+      },
+      { 
+        type: 'dropdown', 
+        source: ['DIVISI I', 'DIVISI II', 'DIVISI III', 'DIVISI IV', 'DIVISI V'],
+        strict: true
+      },
+      { 
+        type: 'numeric',
+        validator: function(value, callback) {
+          callback(value >= 2000 && value <= new Date().getFullYear());
+        }
+      },
+      { type: 'text' },
+      { 
+        type: 'dropdown', 
+        source: ['PEMUPUKAN', 'PENGENDALIAN GULMA', 'PEMANGKASAN', 'PANEN', 'PENGENDALIAN HAMA'],
+        strict: true
+      },
+      { 
+        type: 'dropdown', 
+        source: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+        strict: true
+      },
+      { 
+        type: 'numeric', 
+        format: '0.00',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { 
+        type: 'numeric',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { 
+        type: 'numeric', 
+        format: '0,0',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { 
+        type: 'numeric', 
+        format: '0.00',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { 
+        type: 'numeric',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { 
+        type: 'numeric', 
+        format: '0,0',
+        validator: function(value, callback) {
+          callback(value >= 0);
+        }
+      },
+      { type: 'text' }
+    ],
+    rowHeaders: true,
+    width: '100%',
+    height: '100%',
+    licenseKey: 'non-commercial-and-evaluation',
+    colWidths: [100, 100, 100, 100, 150, 80, 100, 80, 120, 100, 80, 120, 150],
+    manualColumnResize: true,
+    manualRowResize: true,
+    contextMenu: true,
+    filters: true,
+    dropdownMenu: true,
+    hiddenColumns: {
+      indicators: true
+    },
+    afterChange: function(changes, source) {
+      if (source === 'paste') {
+        this.getSelectedRange().forEach(({fromRow, fromCol, toRow, toCol}) => {
+          for (let row = fromRow; row <= toRow; row++) {
+            for (let col = fromCol; col <= toCol; col++) {
+              const cellValue = this.getDataAtCell(row, col);
+              if (typeof cellValue === 'string') {
+                const num = parseFloat(cellValue.replace(/\./g, '').replace(',', '.'));
+                if (!isNaN(num) && [6,7,8,9,10,11].includes(col)) {
+                  this.setDataAtCell(row, col, num);
                 }
-              });
+              }
             }
-          },
-          
-          // Tambahkan ini untuk handle paste khusus
-          beforePaste: function(data, coords) {
-            // Format data yang di-paste dari Excel
-            const formattedData = data.map(row => 
-              row.map(cell => {
-                if (typeof cell === 'string') {
-                  // Handle angka dengan koma (format Eropa/Indonesia)
-                  if (cell.match(/^\d{1,3}(\.\d{3})*(,\d+)?$/)) {
-                    return parseFloat(cell.replace(/\./g, '').replace(',', '.'));
-                  }
-                  // Handle angka dengan titik (format internasional)
-                  else if (cell.match(/^\d{1,3}(,\d{3})*(\.\d+)?$/)) {
-                    return parseFloat(cell.replace(/,/g, ''));
-                  }
-                }
-                return cell;
-              })
-            );
-            
-            // Proses paste dengan data yang sudah diformat
-            this.setDataAtCell(coords, formattedData);
-            return false; // Mencegah paste default
           }
         });
-      
-        cells: function(row, col) {
-          const cellProperties = {};
-          
-          // Highlight sel budget vs actual
-          if (col === 8 || col === 11) {
-            const budgetValue = this.instance.getDataAtCell(row, 8);
-            const actualValue = this.instance.getDataAtCell(row, 11);
-            
-            if (budgetValue > 0 && actualValue > 0) {
-              const percentage = (actualValue / budgetValue) * 100;
-              cellProperties.className = percentage >= 100 ? 'green' : 'red';
+      }
+    },
+    beforePaste: function(data, coords) {
+      const formattedData = data.map(row => 
+        row.map(cell => {
+          if (typeof cell === 'string') {
+            if (cell.match(/^\d{1,3}(\.\d{3})*(,\d+)?$/)) {
+              return parseFloat(cell.replace(/\./g, '').replace(',', '.'));
+            }
+            else if (cell.match(/^\d{1,3}(,\d{3})*(\.\d+)?$/)) {
+              return parseFloat(cell.replace(/,/g, ''));
             }
           }
-          
-          return cellProperties;
+          return cell;
+        })
+      );
+      
+      this.setDataAtCell(coords, formattedData);
+      return false;
+    },
+    cells: function(row, col, prop) {
+      const cellProperties = {};
+      if (col === 8 || col === 11) {
+        const budgetValue = this.getDataAtCell(row, 8);
+        const actualValue = this.getDataAtCell(row, 11);
+        if (budgetValue > 0 && actualValue > 0) {
+          const percentage = (actualValue / budgetValue) * 100;
+          cellProperties.className = percentage >= 100 ? 'green' : 'red';
         }
-      });
+      }
+      return cellProperties;
+    }
+  });
 
       // Fungsi untuk menyimpan data
       document.getElementById('saveBtn').addEventListener('click', function() {
