@@ -1,1 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budget vs Actual - Excel Input</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --secondary: #34a853;
+      --danger: #ea4335;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: var(--transition);
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+    }
+    
+    .btn {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    
+    .btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-secondary {
+      background-color: var(--secondary);
+    }
+    
+    .btn-secondary:hover {
+      background-color: #2d9246;
+    }
+    
+    .btn-danger {
+      background-color: var(--danger);
+    }
+    
+    .btn-danger:hover {
+      background-color: #d33426;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--primary);
+      margin: 1.5rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .budget-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    
+    .budget-table th, .budget-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .budget-table th {
+      background-color: var(--light-gray);
+      font-weight: 500;
+      color: var(--dark-gray);
+    }
+    
+    .budget-table tr:hover {
+      background-color: var(--light-gray);
+    }
+    
+    .numeric {
+      text-align: right;
+    }
+    
+    .positive {
+      color: var(--secondary);
+    }
+    
+    .negative {
+      color: var(--danger);
+    }
+    
+    #excelContainer {
+      height: 500px;
+      width: 100%;
+      margin: 1rem 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    
+    .handsontable .htNumeric {
+      text-align: right;
+    }
+    
+    .handsontable .green {
+      background-color: rgba(52, 168, 83, 0.1);
+    }
+    
+    .handsontable .red {
+      background-color: rgba(234, 67, 53, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .btn-group {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      #excelContainer {
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Budget vs Actual - Excel Input</h1>
+      <p class="subtitle">Input data anggaran dan realisasi secara massal dengan tampilan Excel</p>
+    </div>
+    
+    <div class="card">
+      <h2>Input Data Massal</h2>
+      <p>Anda dapat copy-paste langsung dari Excel atau input manual di tabel berikut:</p>
+      
+      <div id="excelContainer"></div>
+      
+      <div class="btn-group">
+        <button id="saveBtn" class="btn">
+          <i class="material-icons">save</i> Simpan Semua Data
+        </button>
+        <button id="exportBtn" class="btn btn-secondary">
+          <i class="material-icons">download</i> Export ke Excel
+        </button>
+        <button id="importBtn" class="btn">
+          <i class="material-icons">upload</i> Import dari Excel
+        </button>
+        <input type="file" id="importFile" accept=".csv,.xlsx,.xls" style="display: none;">
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Data Tersimpan</h2>
+      <p>Berikut adalah data yang sudah tersimpan di sistem:</p>
+      
+      <div class="table-responsive">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th>Kebun</th>
+              <th>Divisi</th>
+              <th>Blok</th>
+              <th>Pekerjaan</th>
+              <th>Bulan</th>
+              <th class="numeric">Budget (Rp)</th>
+              <th class="numeric">Actual (Rp)</th>
+              <th class="numeric">Realisasi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataTable">
+            <!-- Data will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Konfigurasi Handsontable
+      const container = document.getElementById('excelContainer');
+      const hot = new Handsontable(container, {
+        data: getInitialData(),
+        colHeaders: [
+          'Kebun', 'Divisi', 'Tahun Tanam', 'Blok', 
+          'Pekerjaan', 'Bulan',
+          'Budget Luas (Ha)', 'Budget HK', 'Budget Biaya (Rp)',
+          'Actual Luas (Ha)', 'Actual HK', 'Actual Biaya (Rp)',
+          'Keterangan'
+        ],
+        columns: [
+          { 
+            type: 'dropdown', 
+            source: ['SAMSAM', 'TANJUNG', 'MEKAR', 'LUBUK', 'BUKIT'],
+            strict: true
+          },
+          { 
+            type: 'dropdown', 
+            source: ['DIVISI I', 'DIVISI II', 'DIVISI III', 'DIVISI IV', 'DIVISI V'],
+            strict: true
+          },
+          { 
+            type: 'numeric',
+            validator: function(value, callback) {
+              callback(value >= 2000 && value <= new Date().getFullYear());
+            }
+          },
+          { type: 'text' },
+          { 
+            type: 'dropdown', 
+            source: ['PEMUPUKAN', 'PENGENDALIAN GULMA', 'PEMANGKASAN', 'PANEN', 'PENGENDALIAN HAMA'],
+            strict: true
+          },
+          { 
+            type: 'dropdown', 
+            source: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+            strict: true
+          },
+          { 
+            type: 'numeric', 
+            format: '0.00',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { 
+            type: 'numeric',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { 
+            type: 'numeric', 
+            format: '0,0',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { 
+            type: 'numeric', 
+            format: '0.00',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { 
+            type: 'numeric',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { 
+            type: 'numeric', 
+            format: '0,0',
+            validator: function(value, callback) {
+              callback(value >= 0);
+            }
+          },
+          { type: 'text' }
+        ],
+        rowHeaders: true,
+        width: '100%',
+        height: '100%',
+        licenseKey: 'non-commercial-and-evaluation', // Untuk penggunaan non-komersial
+        colWidths: [100, 100, 100, 100, 150, 80, 100, 80, 120, 100, 80, 120, 150],
+        manualColumnResize: true,
+        manualRowResize: true,
+        contextMenu: true,
+        filters: true,
+        dropdownMenu: true,
+        hiddenColumns: {
+          indicators: true
+        },
+        cells: function(row, col) {
+          const cellProperties = {};
+          
+          // Highlight sel budget vs actual
+          if (col === 8 || col === 11) {
+            const budgetValue = this.instance.getDataAtCell(row, 8);
+            const actualValue = this.instance.getDataAtCell(row, 11);
+            
+            if (budgetValue > 0 && actualValue > 0) {
+              const percentage = (actualValue / budgetValue) * 100;
+              cellProperties.className = percentage >= 100 ? 'green' : 'red';
+            }
+          }
+          
+          return cellProperties;
+        }
+      });
+
+      // Fungsi untuk menyimpan data
+      document.getElementById('saveBtn').addEventListener('click', function() {
+        const data = hot.getData();
+        const formattedData = formatDataForStorage(data);
+        saveAllData(formattedData);
+        alert(`Berhasil menyimpan ${formattedData.length} records!`);
+        loadData(); // Memperbarui tampilan tabel
+      });
+
+      // Fungsi untuk export ke Excel
+      document.getElementById('exportBtn').addEventListener('click', function() {
+        const exportPlugin = hot.getPlugin('exportFile');
+        exportPlugin.downloadFile('csv', {
+          filename: 'budget_actual_data_' + new Date().toISOString().slice(0, 10),
+          fileExtension: 'csv',
+          mimeType: 'text/csv',
+          columnDelimiter: ',',
+          columnHeaders: true
+        });
+      });
+
+      // Fungsi untuk import dari Excel
+      document.getElementById('importBtn').addEventListener('click', function() {
+        document.getElementById('importFile').click();
+      });
+
+      document.getElementById('importFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            // Load data ke Handsontable
+            hot.loadData(jsonData);
+            
+            // Reset input file
+            e.target.value = '';
+            
+            alert(`Berhasil mengimpor ${jsonData.length - 1} baris data dari Excel!`);
+          } catch (error) {
+            console.error('Error importing Excel:', error);
+            alert('Gagal mengimpor file. Pastikan format file benar!');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      // Load data saat pertama kali
+      loadData();
+    });
+
+    function getInitialData() {
+      // Ambil data existing atau return array kosong
+      const existingData = JSON.parse(localStorage.getItem('budgetActualData')) || [];
+      return existingData.length > 0 
+        ? existingData.map(item => [
+            item.kebun,
+            item.divisi,
+            item.tahunTanam,
+            item.blok,
+            item.pekerjaan,
+            item.bulan,
+            item.budget.luas,
+            item.budget.hk,
+            item.budget.biaya,
+            item.actual.luas,
+            item.actual.hk,
+            item.actual.biaya,
+            item.keterangan || ''
+          ])
+        : [ // Template data kosong
+            ['SAMSAM', 'DIVISI I', '2020', 'A1', 'PEMUPUKAN', '1', 10.5, 20, 5000000, 10.5, 20, 5000000, ''],
+            ['', '', '', '', '', '', '', '', '', '', '', '', '']
+          ];
+    }
+
+    function formatDataForStorage(excelData) {
+      return excelData
+        .filter(row => row[0]) // Filter baris yang memiliki kebun (tidak kosong)
+        .map(row => ({
+          kebun: row[0],
+          divisi: row[1],
+          tahunTanam: row[2] ? row[2].toString() : '',
+          blok: row[3],
+          pekerjaan: row[4],
+          bulan: row[5] ? row[5].toString() : '',
+          budget: {
+            luas: parseFloat(row[6]) || 0,
+            hk: parseInt(row[7]) || 0,
+            biaya: parseInt(row[8]) || 0
+          },
+          actual: {
+            luas: parseFloat(row[9]) || 0,
+            hk: parseInt(row[10]) || 0,
+            biaya: parseInt(row[11]) || 0
+          },
+          keterangan: row[12] || '',
+          timestamp: new Date().toISOString()
+        }));
+    }
+
+    function saveAllData(data) {
+      localStorage.setItem('budgetActualData', JSON.stringify(data));
+    }
+
+    function loadData() {
+      const tableBody = document.getElementById('dataTable');
+      tableBody.innerHTML = '';
+      
+      // Get data from localStorage
+      const data = JSON.parse(localStorage.getItem('budgetActualData')) || [];
+      
+      if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align: center;">Tidak ada data</td></tr>';
+        return;
+      }
+      
+      // Populate table
+      data.forEach((item, index) => {
+        const realization = (item.actual.biaya / item.budget.biaya) * 100;
+        const realizationClass = realization >= 100 ? 'positive' : 'negative';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.kebun}</td>
+          <td>${item.divisi}</td>
+          <td>${item.blok}</td>
+          <td>${item.pekerjaan}</td>
+          <td>${getMonthName(item.bulan)}</td>
+          <td class="numeric">${formatCurrency(item.budget.biaya)}</td>
+          <td class="numeric">${formatCurrency(item.actual.biaya)}</td>
+          <td class="numeric ${realizationClass}">${realization.toFixed(2)}%</td>
+          <td>
+            <button onclick="deleteData(${index})" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+              <i class="material-icons" style="font-size: 14px;">delete</i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function deleteData(index) {
+      if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+        const data = JSON.parse(localStorage.getItem('budgetActualData')) || [];
+        data.splice(index, 1);
+        localStorage.setItem('budgetActualData', JSON.stringify(data));
+        loadData();
+      }
+    }
+
+    function getMonthName(monthNumber) {
+      const months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      return months[parseInt(monthNumber) - 1] || '';
+    }
+
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
+
+    // Make functions available globally
+    window.deleteData = deleteData;
+  </script>
+</body>
+</html>
