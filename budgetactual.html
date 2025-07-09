@@ -265,8 +265,8 @@
     const initialData = { 
       name: 'Sheet1',
       merges: [
-        'H1:J1', // Budget (Rp) - kolom H sampai J
-        'K1:M1'  // Actual (Rp) - kolom K sampai M
+        { startRow: 0, startCol: 7, endRow: 0, endCol: 9 },
+        { startRow: 0, startCol: 10, endRow: 0, endCol: 12 }
       ],
       rows: {
         0: { 
