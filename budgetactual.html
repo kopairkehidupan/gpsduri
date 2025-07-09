@@ -261,13 +261,8 @@
   </div>
   <script>
    document.addEventListener('DOMContentLoaded', function() {
-    // Initialize x-spreadsheet
-    const xs = x_spreadsheet('#xspreadsheet', {
-      mode: 'edit',
-      showToolbar: true,
-      showGrid: true,
-      showContextmenu: true,
-    }).loadData([{ 
+    // Initialize x-spreadsheet with proper merge data structure
+    const initialData = { 
       name: 'Sheet1', 
       merges: [
         // Merges for Budget columns (H-J)
@@ -328,13 +323,40 @@
           14: { text: '❌', style: { color: '#ea4335', cursor: 'pointer' } }
         }}
       }
-    }]);
+    };
+
+    // Initialize x-spreadsheet with error handling
+    let xs;
+    try {
+      xs = x_spreadsheet('#xspreadsheet', {
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
+      }).loadData([initialData]);
+    } catch (error) {
+      console.error('Error initializing spreadsheet:', error);
+      // Fallback initialization without merges if there's an error
+      const fallbackData = JSON.parse(JSON.stringify(initialData));
+      delete fallbackData.merges;
+      xs = x_spreadsheet('#xspreadsheet', {
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
+      }).loadData([fallbackData]);
+      alert('Terdapat masalah dengan penggabungan sel, menggunakan tampilan alternatif');
+    }
 
     // Add click handler for delete buttons in the spreadsheet
     xs.on('cell-selected', (cell, ri, ci) => {
       if (ci === 14 && ri > 0) { // If clicked in action column (column 14) and not header row
         if (confirm('Apakah Anda yakin ingin menghapus baris ini?')) {
-          xs.deleteRow(ri);
+          try {
+            xs.deleteRow(ri);
+          } catch (error) {
+            console.error('Error deleting row:', error);
+          }
         }
       }
     });
