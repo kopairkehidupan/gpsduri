@@ -261,53 +261,98 @@
   </div>
   <script>
    document.addEventListener('DOMContentLoaded', function() {
-    // Initialize x-spreadsheet
+    // Initialize x-spreadsheet with proper merge format
     const initialData = { 
       name: 'Sheet1',
       merges: [
-        // Merge untuk header Budget (Rp) - kolom 7-9 (H-J), row 0
-        { s: { r: 0, c: 7 }, e: { r: 0, c: 9 } },
-        // Merge untuk header Actual (Rp) - kolom 11-13 (L-N), row 0
-        { s: { r: 0, c: 11 }, e: { r: 0, c: 13 } }
+        'H1:J1', // Budget (Rp) - kolom H sampai J
+        'K1:M1'  // Actual (Rp) - kolom K sampai M
       ],
       rows: {
-        0: { cells: { 
-          0: { text: 'Kebun' },
-          1: { text: 'Divisi' },
-          2: { text: 'Kode Tahun Tanam' },
-          3: { text: 'Blok' },
-          4: { text: 'Kode Kerja' },
-          5: { text: 'Objek Kerja' },
-          6: { text: 'Bulan' },
-          7: { text: 'Budget (Rp)' },  // Kolom H (7) - akan di-merge dengan I,J (8,9)
-          8: { text: '' },  // Kosong karena bagian dari merge
-          9: { text: '' },  // Kosong karena bagian dari merge
-          10: { text: 'Biaya' },
-          11: { text: 'Actual (Rp)' }, // Kolom L (11) - akan di-merge dengan M,N (12,13)
-          12: { text: '' },  // Kosong karena bagian dari merge
-          13: { text: '' },  // Kosong karena bagian dari merge
-          14: { text: 'Biaya' },
-          15: { text: 'Var (%)' }
-        }},
-        1: { cells: { 
-          0: { text: 'Contoh' },
-          1: { text: 'Divisi A' },
-          2: { text: 'T23' },
-          3: { text: 'A1' },
-          4: { text: 'P01' },
-          5: { text: 'Pemupukan' },
-          6: { text: 'Januari' },
-          7: { text: '' },
-          8: { text: 'HK' },
-          9: { text: 'Luas (Ha)' },
-          10: { text: 'Biaya' },
-          11: { text: '' },
-          12: { text: 'HK' },
-          13: { text: 'Hasil (Ha)' },
-          14: { text: 'Biaya' },
-          15: { text: '=IF(K2>0, (O2/K2)*100, 0)' }
-        }}
-      }
+        0: { 
+          height: 25,
+          cells: { 
+            0: { text: 'Kebun' },
+            1: { text: 'Divisi' },
+            2: { text: 'Kode Tahun Tanam' },
+            3: { text: 'Blok' },
+            4: { text: 'Kode Kerja' },
+            5: { text: 'Objek Kerja' },
+            6: { text: 'Bulan' },
+            7: { text: 'Budget (Rp)', style: 1 },
+            8: { text: '' },
+            9: { text: '' },
+            10: { text: 'Actual (Rp)', style: 1 },
+            11: { text: '' },
+            12: { text: '' },
+            13: { text: 'Var (%)' }
+          }
+        },
+        1: { 
+          height: 25,
+          cells: { 
+            0: { text: '' },
+            1: { text: '' },
+            2: { text: '' },
+            3: { text: '' },
+            4: { text: '' },
+            5: { text: '' },
+            6: { text: '' },
+            7: { text: 'HK' },
+            8: { text: 'Luas (Ha)' },
+            9: { text: 'Biaya' },
+            10: { text: 'HK' },
+            11: { text: 'Hasil (Ha)' },
+            12: { text: 'Biaya' },
+            13: { text: '' }
+          }
+        },
+        2: { 
+          cells: { 
+            0: { text: 'Contoh' },
+            1: { text: 'Divisi A' },
+            2: { text: 'T23' },
+            3: { text: 'A1' },
+            4: { text: 'P01' },
+            5: { text: 'Pemupukan' },
+            6: { text: 'Januari' },
+            7: { text: '10' },
+            8: { text: '5.5' },
+            9: { text: '1000000' },
+            10: { text: '12' },
+            11: { text: '5.2' },
+            12: { text: '1200000' },
+            13: { text: '120' }
+          }
+        },
+        3: { 
+          cells: { 
+            0: { text: '' },
+            1: { text: '' },
+            2: { text: '' },
+            3: { text: '' },
+            4: { text: '' },
+            5: { text: '' },
+            6: { text: '' },
+            7: { text: '' },
+            8: { text: '' },
+            9: { text: '' },
+            10: { text: '' },
+            11: { text: '' },
+            12: { text: '' },
+            13: { text: '' }
+          }
+        }
+      },
+      styles: [
+        {
+          align: 'center',
+          valign: 'middle',
+          font: {
+            bold: true
+          }
+        }
+      ]
     };
 
     // Initialize x-spreadsheet
@@ -317,42 +362,6 @@
         showGrid: true,
         showContextmenu: true,
     }).loadData([initialData]);
-
-    // Fungsi untuk auto-scroll ketika cursor bergerak
-    function handleCellSelection(cell, ri, ci) {
-        const container = document.getElementById('xspreadsheet');
-        const cellElement = container.querySelector(`[data-row="${ri}"][data-col="${ci}"]`);
-        
-        if (cellElement) {
-            // Hitung posisi relatif cell terhadap container
-            const cellRect = cellElement.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            // Jika cell di luar viewport sebelah kanan
-            if (cellRect.right > containerRect.right) {
-                container.scrollLeft += cellRect.right - containerRect.right + 10;
-            }
-            // Jika cell di luar viewport sebelah kiri
-            else if (cellRect.left < containerRect.left) {
-                container.scrollLeft -= containerRect.left - cellRect.left + 10;
-            }
-            
-            // Jika cell di luar viewport sebelah bawah
-            if (cellRect.bottom > containerRect.bottom) {
-                container.scrollTop += cellRect.bottom - containerRect.bottom + 10;
-            }
-            // Jika cell di luar viewport sebelah atas
-            else if (cellRect.top < containerRect.top) {
-                container.scrollTop -= containerRect.top - cellRect.top + 10;
-            }
-        }
-    }
-
-    // Tambahkan event listener untuk cell selection
-    xs.on('cell-selected', handleCellSelection);
-
-    // Hapus event listener untuk penghapusan di spreadsheet
-    // Tidak ada handler untuk menghapus dari spreadsheet
 
     // Helper function to format currency
     function formatCurrency(amount) {
@@ -368,14 +377,14 @@
       const rows = sheetData[0].rows;
       const result = [];
       
-      // Skip header row (index 0)
-      for (let i = 1; i < Object.keys(rows).length; i++) {
+      // Skip header rows (index 0 and 1)
+      for (let i = 2; i < Object.keys(rows).length; i++) {
         const row = rows[i];
         if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
         
         const cells = row.cells;
-        const budgetBiaya = parseInt(cells[10]?.text) || 0;
-        const actualBiaya = parseInt(cells[14]?.text) || 0;
+        const budgetBiaya = parseInt(cells[9]?.text) || 0;
+        const actualBiaya = parseInt(cells[12]?.text) || 0;
         const variance = budgetBiaya > 0 ? (actualBiaya / budgetBiaya * 100) : 0;
         
         result.push({
@@ -387,13 +396,13 @@
           objekKerja: cells[5]?.text || '',
           bulan: cells[6]?.text || '',
           budget: {
-            hk: parseInt(cells[8]?.text) || 0,
-            luas: parseFloat(cells[9]?.text) || 0,
+            hk: parseInt(cells[7]?.text) || 0,
+            luas: parseFloat(cells[8]?.text) || 0,
             biaya: budgetBiaya
           },
           actual: {
-            hk: parseInt(cells[12]?.text) || 0,
-            hasil: parseFloat(cells[13]?.text) || 0,
+            hk: parseInt(cells[10]?.text) || 0,
+            hasil: parseFloat(cells[11]?.text) || 0,
             biaya: actualBiaya
           },
           variance: variance,
@@ -407,8 +416,8 @@
     // Load data from storage
     function loadData() {
       try {
-        const savedData = localStorage.getItem('budgetData');
-        const data = savedData ? JSON.parse(savedData) : [];
+        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+        const data = Array.isArray(savedData) ? savedData : [];
         
         const tableBody = document.getElementById('dataTable');
         tableBody.innerHTML = '';
@@ -461,8 +470,8 @@
     // Function to delete data
     function deleteData(index) {
       try {
-        const savedData = localStorage.getItem('budgetData');
-        const data = savedData ? JSON.parse(savedData) : [];
+        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+        const data = Array.isArray(savedData) ? savedData : [];
         
         if (index >= 0 && index < data.length) {
           data.splice(index, 1);
@@ -474,7 +483,7 @@
       }
     }
     
-    // Fungsi Import Excel
+    // Import Excel functionality
     document.getElementById('importBtn').addEventListener('click', function() {
       document.getElementById('importFile').click();
     });
@@ -517,20 +526,30 @@
       reader.readAsArrayBuffer(file);
     });
   
-    // Fungsi Export ke Excel
+    // Export to Excel functionality
     document.getElementById('exportBtn').addEventListener('click', function() {
       try {
         const data = xs.getData();
         const sheetData = [];
         
         // Convert x-spreadsheet data to 2D array
-        Object.values(data[0].rows).forEach(row => {
+        const rows = data[0].rows;
+        const maxRow = Math.max(...Object.keys(rows).map(Number));
+        
+        for (let i = 0; i <= maxRow; i++) {
+          const row = rows[i];
           const rowData = [];
-          Object.values(row.cells).forEach(cell => {
-            rowData.push(cell.text);
-          });
+          
+          if (row && row.cells) {
+            const maxCol = Math.max(...Object.keys(row.cells).map(Number));
+            for (let j = 0; j <= maxCol; j++) {
+              const cell = row.cells[j];
+              rowData.push(cell ? cell.text : '');
+            }
+          }
+          
           sheetData.push(rowData);
-        });
+        }
         
         // Create Excel workbook
         const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -538,20 +557,21 @@
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         
         // Export to file
-        XLSX.writeFile(wb, 'budget_actual.xlsx');
+        XLSX.writeFile(wb, 'budget_actual_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        alert('Data berhasil diekspor ke Excel!');
       } catch (error) {
         console.error('Error exporting:', error);
         alert('Gagal mengekspor ke Excel');
       }
     });
   
-    // Fungsi Simpan Data (simulasi)
+    // Save data functionality
     document.getElementById('saveBtn').addEventListener('click', function() {
       try {
         const data = xs.getData();
         const formattedData = formatDataForStorage(data);
         
-        // For demo purposes, store in localStorage
+        // Store in localStorage
         localStorage.setItem('budgetData', JSON.stringify(formattedData));
         alert(`Data berhasil disimpan (${formattedData.length} records)`);
         loadData();
