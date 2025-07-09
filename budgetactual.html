@@ -368,6 +368,56 @@
         }
       });
 
+        // Tambahkan ini untuk enable copy-paste dari Excel
+    afterChange: function(changes, source) {
+      if (source === 'paste') {
+        // Proses data yang di-paste
+        this.getSelectedRange().forEach(({fromRow, fromCol, toRow, toCol}) => {
+          for (let row = fromRow; row <= toRow; row++) {
+            for (let col = fromCol; col <= toCol; col++) {
+              // Konversi format angka jika diperlukan
+              const cellValue = this.getDataAtCell(row, col);
+              if (typeof cellValue === 'string') {
+                // Handle angka dengan format Indonesia (1.000,00)
+                const num = parseFloat(cellValue.replace(/\./g, '').replace(',', '.'));
+                if (!isNaN(num)) {
+                  // Kolom dengan format numeric
+                  if ([6,7,8,9,10,11].includes(col)) {
+                    this.setDataAtCell(row, col, num);
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    },
+    
+    // Tambahkan ini untuk handle paste khusus
+    beforePaste: function(data, coords) {
+      // Format data yang di-paste dari Excel
+      const formattedData = data.map(row => 
+        row.map(cell => {
+          if (typeof cell === 'string') {
+            // Handle angka dengan koma (format Eropa/Indonesia)
+            if (cell.match(/^\d{1,3}(\.\d{3})*(,\d+)?$/)) {
+              return parseFloat(cell.replace(/\./g, '').replace(',', '.'));
+            }
+            // Handle angka dengan titik (format internasional)
+            else if (cell.match(/^\d{1,3}(,\d{3})*(\.\d+)?$/)) {
+              return parseFloat(cell.replace(/,/g, ''));
+            }
+          }
+          return cell;
+        })
+      );
+      
+      // Proses paste dengan data yang sudah diformat
+      this.setDataAtCell(coords, formattedData);
+      return false; // Mencegah paste default
+    }
+  });
+
       // Fungsi untuk menyimpan data
       document.getElementById('saveBtn').addEventListener('click', function() {
         const data = hot.getData();
