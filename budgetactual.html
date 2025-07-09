@@ -364,7 +364,7 @@
                           .replace(',', '.')
                           .replace(/[^\d.-]/g, '')
                       );
-                      if (!isNaN(num) {
+                      if (!isNaN(num)) {  // Fixed: Added missing closing parenthesis
                         // Kolom numeric (luas, HK, biaya)
                         if ([6,7,8,9,10,11].includes(col)) {
                           this.setDataAtCell(row, col, num);
