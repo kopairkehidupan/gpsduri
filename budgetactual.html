@@ -6,9 +6,11 @@
   <title>Budget vs Actual - Excel Input</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <!-- Ganti Handsontable dengan x-spreadsheet -->
-  <link href="https://cdn.jsdelivr.net/npm/x-spreadsheet/dist/xspreadsheet.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/x-spreadsheet/dist/xspreadsheet.js"></script>
+  <!-- Updated x-spreadsheet CDN links -->
+  <link href="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.css" rel="stylesheet">
+  <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
+  <!-- Add SheetJS for Excel import/export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --primary: #4285f4;
@@ -159,25 +161,13 @@
       color: var(--danger);
     }
     
-    #excelContainer {
+    #xspreadsheet {
       height: 500px;
       width: 100%;
       margin: 1rem 0;
       border-radius: 8px;
       overflow: hidden;
       box-shadow: var(--shadow);
-    }
-    
-    .handsontable .htNumeric {
-      text-align: right;
-    }
-    
-    .handsontable .green {
-      background-color: rgba(52, 168, 83, 0.1);
-    }
-    
-    .handsontable .red {
-      background-color: rgba(234, 67, 53, 0.1);
     }
     
     @media (max-width: 768px) {
@@ -194,7 +184,7 @@
         justify-content: center;
       }
       
-      #excelContainer {
+      #xspreadsheet {
         height: 400px;
       }
     }
@@ -211,8 +201,7 @@
       <h2>Input Data Massal</h2>
       <p>Anda dapat bekerja langsung dengan spreadsheet berikut:</p>
       
-      <!-- Ganti div excelContainer dengan ini -->
-      <div id="xspreadsheet" style="height: 500px;"></div>
+      <div id="xspreadsheet"></div>
       
       <div class="btn-group">
         <button id="saveBtn" class="btn">
@@ -256,20 +245,47 @@
   </div>
   <script>
    document.addEventListener('DOMContentLoaded', function() {
-    // Inisialisasi x-spreadsheet
-    const options = {
-      mode: 'edit', // 'edit' atau 'read'
+    // Initialize x-spreadsheet
+    const xs = x_spreadsheet('#xspreadsheet', {
+      mode: 'edit',
       showToolbar: true,
       showGrid: true,
       showContextmenu: true,
-      view: {
-        height: () => document.getElementById('xspreadsheet').offsetHeight,
-        width: () => document.getElementById('xspreadsheet').offsetWidth,
+    }).loadData([{ 
+      name: 'Sheet1', 
+      rows: {
+        0: { cells: { 
+          0: { text: 'Kebun' },
+          1: { text: 'Divisi' },
+          2: { text: 'Tahun Tanam' },
+          3: { text: 'Blok' },
+          4: { text: 'Pekerjaan' },
+          5: { text: 'Bulan' },
+          6: { text: 'Budget Luas' },
+          7: { text: 'Budget HK' },
+          8: { text: 'Budget Biaya' },
+          9: { text: 'Actual Luas' },
+          10: { text: 'Actual HK' },
+          11: { text: 'Actual Biaya' },
+          12: { text: 'Keterangan' }
+        }},
+        1: { cells: { 
+          0: { text: 'Contoh' },
+          1: { text: 'Divisi A' },
+          2: { text: '2023' },
+          3: { text: 'A1' },
+          4: { text: 'Pemupukan' },
+          5: { text: 'Januari' },
+          6: { text: '10' },
+          7: { text: '5' },
+          8: { text: '5000000' },
+          9: { text: '9.5' },
+          10: { text: '4' },
+          11: { text: '4500000' },
+          12: { text: 'On track' }
+        }}
       }
-    };
-    
-    const xs = x_spreadsheet('#xspreadsheet', options)
-      .loadData([{ name: 'Sheet1', rows: {} }]);
+    }]);
     
     // Fungsi Import Excel
     document.getElementById('importBtn').addEventListener('click', function() {
@@ -286,14 +302,16 @@
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           
-          // Konversi ke format x-spreadsheet
-          const sheetData = XLSX.utils.sheet_to_json(
-            workbook.Sheets[workbook.SheetNames[0]], 
-            { header: 1 }
-          );
+          // Get first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
           
+          // Convert to JSON
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          // Convert to x-spreadsheet format
           const rows = {};
-          sheetData.forEach((row, i) => {
+          jsonData.forEach((row, i) => {
             rows[i] = { cells: {} };
             row.forEach((cell, j) => {
               rows[i].cells[j] = { text: cell !== null && cell !== undefined ? cell.toString() : '' };
@@ -316,7 +334,7 @@
       const data = xs.getData();
       const sheetData = [];
       
-      // Konversi dari x-spreadsheet ke array 2D
+      // Convert x-spreadsheet data to 2D array
       Object.values(data[0].rows).forEach(row => {
         const rowData = [];
         Object.values(row.cells).forEach(cell => {
@@ -325,61 +343,109 @@
         sheetData.push(rowData);
       });
       
-      // Buat workbook Excel
+      // Create Excel workbook
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       
-      // Export ke file
+      // Export to file
       XLSX.writeFile(wb, 'budget_actual.xlsx');
     });
   
-    // Fungsi Simpan Data
+    // Fungsi Simpan Data (simulasi)
     document.getElementById('saveBtn').addEventListener('click', function() {
       const data = xs.getData();
       const formattedData = formatDataForStorage(data);
-      saveAllData(formattedData);
+      
+      // In a real app, you would send this to your backend
+      console.log('Data to be saved:', formattedData);
+      
+      // For demo purposes, store in localStorage
+      localStorage.setItem('budgetData', JSON.stringify(formattedData));
       alert(`Data berhasil disimpan (${formattedData.length} records)`);
       loadData();
     });
     
-    // Fungsi format data (sesuaikan dengan struktur x-spreadsheet)
+    // Format data for storage
     function formatDataForStorage(sheetData) {
       const rows = sheetData[0].rows;
       const result = [];
       
-      Object.values(rows).forEach((row, i) => {
-        if (i === 0) return; // Skip header
+      // Skip header row (index 0)
+      for (let i = 1; i < Object.keys(rows).length; i++) {
+        const row = rows[i];
+        if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
         
         const cells = row.cells;
-        if (cells[0] && cells[0].text) { // Pastikan ada data di kolom pertama
-          result.push({
-            kebun: cells[0]?.text || '',
-            divisi: cells[1]?.text || '',
-            tahunTanam: cells[2]?.text || '',
-            blok: cells[3]?.text || '',
-            pekerjaan: cells[4]?.text || '',
-            bulan: cells[5]?.text || '',
-            budget: {
-              luas: parseFloat(cells[6]?.text) || 0,
-              hk: parseInt(cells[7]?.text) || 0,
-              biaya: parseInt(cells[8]?.text) || 0
-            },
-            actual: {
-              luas: parseFloat(cells[9]?.text) || 0,
-              hk: parseInt(cells[10]?.text) || 0,
-              biaya: parseInt(cells[11]?.text) || 0
-            },
-            keterangan: cells[12]?.text || '',
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
+        result.push({
+          kebun: cells[0]?.text || '',
+          divisi: cells[1]?.text || '',
+          tahunTanam: cells[2]?.text || '',
+          blok: cells[3]?.text || '',
+          pekerjaan: cells[4]?.text || '',
+          bulan: cells[5]?.text || '',
+          budget: {
+            luas: parseFloat(cells[6]?.text) || 0,
+            hk: parseInt(cells[7]?.text) || 0,
+            biaya: parseInt(cells[8]?.text) || 0
+          },
+          actual: {
+            luas: parseFloat(cells[9]?.text) || 0,
+            hk: parseInt(cells[10]?.text) || 0,
+            biaya: parseInt(cells[11]?.text) || 0
+          },
+          keterangan: cells[12]?.text || '',
+          timestamp: new Date().toISOString()
+        });
+      }
       
       return result;
     }
     
-    // Load data saat pertama kali
+    // Load data from storage
+    function loadData() {
+      // In a real app, you would fetch this from your backend
+      const savedData = localStorage.getItem('budgetData');
+      const data = savedData ? JSON.parse(savedData) : [];
+      
+      const tableBody = document.getElementById('dataTable');
+      tableBody.innerHTML = '';
+      
+      data.forEach(item => {
+        const budgetTotal = item.budget.biaya;
+        const actualTotal = item.actual.biaya;
+        const realization = budgetTotal > 0 ? (actualTotal / budgetTotal * 100) : 0;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.kebun}</td>
+          <td>${item.divisi}</td>
+          <td>${item.blok}</td>
+          <td>${item.pekerjaan}</td>
+          <td>${item.bulan}</td>
+          <td class="numeric">${formatCurrency(budgetTotal)}</td>
+          <td class="numeric">${formatCurrency(actualTotal)}</td>
+          <td class="numeric ${realization > 100 ? 'negative' : 'positive'}">${realization.toFixed(2)}%</td>
+          <td>
+            <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+              <i class="material-icons" style="font-size: 1rem;">delete</i>
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // Helper function to format currency
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('id-ID', { 
+        style: 'currency', 
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
+    
+    // Initial data load
     loadData();
   });
   </script>
