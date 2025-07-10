@@ -261,244 +261,291 @@
     </div>
   </div>
   <script>
-   document.addEventListener('DOMContentLoaded', function() {
-    // Initialize x-spreadsheet
-    const initialData = { 
-      name: 'Sheet1',
-      styles: [
-        {
-          align: 'center',
-          valign: 'middle',
-          font: { bold: true },
-          textwrap: true
-        },
-        {
-          align: 'center',
-          valign: 'middle',
-          font: { bold: true },
-          bgcolor: '#e0f0ff',
-          textwrap: true
-        }
-      ],
-      rows: {
-        0: {
-          height: 25,
-          cells: {
-            0: { text: 'Kebun', style: 1 },
-            1: { text: 'Divisi', style: 1 },
-            2: { text: 'Kode Tahun Tanam', style: 1 },
-            3: { text: 'Blok', style: 1 },
-            4: { text: 'Kode Kerja', style: 1 },
-            5: { text: 'Objek Kerja', style: 1 },
-            6: { text: 'Bulan', style: 1 },
-            7: { text: 'HK', style: 1 },
-            8: { text: 'Luas (Ha)', style: 1 },
-            9: { text: 'Biaya (Rp)', style: 1 }
+  document.addEventListener('DOMContentLoaded', function() {
+      // Initialize x-spreadsheet
+      const initialData = { 
+          name: 'Sheet1',
+          styles: [
+              {
+                  align: 'center',
+                  valign: 'middle',
+                  font: { bold: true },
+                  textwrap: true
+              },
+              {
+                  align: 'center',
+                  valign: 'middle',
+                  font: { bold: true },
+                  bgcolor: '#e0f0ff',
+                  textwrap: true
+              }
+          ],
+          rows: {
+              0: {
+                  height: 25,
+                  cells: {
+                      0: { text: 'Kebun', style: 1 },
+                      1: { text: 'Divisi', style: 1 },
+                      2: { text: 'Kode Tahun Tanam', style: 1 },
+                      3: { text: 'Blok', style: 1 },
+                      4: { text: 'Kode Kerja', style: 1 },
+                      5: { text: 'Objek Kerja', style: 1 },
+                      6: { text: 'Bulan', style: 1 },
+                      7: { text: 'HK', style: 1 },
+                      8: { text: 'Luas (Ha)', style: 1 },
+                      9: { text: 'Biaya (Rp)', style: 1 }
+                  }
+              }
           }
-        }
-      }
-    };
-    
-    const xs = x_spreadsheet('#xspreadsheet', {
-        mode: 'edit',
-        showToolbar: true,
-        showGrid: true,
-        showContextmenu: true,
-        cellEditable: function (ri, ci) {
-            return ri >= 1; // Hanya izinkan edit mulai dari baris ke-2
-        }
-    }).loadData([initialData]);
-
-    // Helper function to format currency
-    function formatCurrency(amount) {
-      return new Intl.NumberFormat('id-ID', { 
-        style: 'currency', 
-        currency: 'IDR',
-        minimumFractionDigits: 0
-      }).format(amount);
-    }
-
-    // Format data for storage
-    function formatDataForStorage(sheetData) {
-      const rows = sheetData[0].rows;
-      const result = [];
-      
-      // Skip header row (index 0)
-      for (let i = 1; i < Object.keys(rows).length; i++) {
-        const row = rows[i];
-        if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
-        
-        const cells = row.cells;
-        const biaya = parseInt(cells[9]?.text) || 0;
-        
-        result.push({
-          kebun: cells[0]?.text || '',
-          divisi: cells[1]?.text || '',
-          kodeTahunTanam: cells[2]?.text || '',
-          blok: cells[3]?.text || '',
-          kodeKerja: cells[4]?.text || '',
-          objekKerja: cells[5]?.text || '',
-          bulan: cells[6]?.text || '',
-          hk: parseInt(cells[7]?.text) || 0,
-          luas: parseFloat(cells[8]?.text) || 0,
-          biaya: biaya,
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      return result;
-    }
-
-    // Load data from storage
-    function loadData() {
-      try {
-        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-        const data = Array.isArray(savedData) ? savedData : [];
-        
-        const tableBody = document.getElementById('dataTable');
-        tableBody.innerHTML = '';
-        
-        data.forEach((item, index) => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${item.kebun || ''}</td>
-            <td>${item.divisi || ''}</td>
-            <td>${item.kodeTahunTanam || ''}</td>
-            <td>${item.blok || ''}</td>
-            <td>${item.kodeKerja || ''}</td>
-            <td>${item.objekKerja || ''}</td>
-            <td>${item.bulan || ''}</td>
-            <td class="numeric">${item.hk || 0}</td>
-            <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
-            <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
-            <td>
-              <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                <i class="material-icons" style="font-size: 1rem;">delete</i>
-              </button>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        });
-
-        // Add event listeners for delete buttons
-        document.querySelectorAll('.delete-row').forEach(button => {
-          button.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
-            if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-              deleteData(index);
-            }
-          });
-        });
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    }
-
-    // Function to delete data
-    function deleteData(index) {
-      try {
-        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-        const data = Array.isArray(savedData) ? savedData : [];
-        
-        if (index >= 0 && index < data.length) {
-          data.splice(index, 1);
-          localStorage.setItem('budgetData', JSON.stringify(data));
-          loadData();
-        }
-      } catch (error) {
-        console.error('Error deleting data:', error);
-      }
-    }
-    
-    // Import Excel functionality
-    document.getElementById('importBtn').addEventListener('click', function() {
-      document.getElementById('importFile').click();
-    });
-  
-    document.getElementById('importFile').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-  
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
-          const rows = {};
-          jsonData.forEach((row, i) => {
-            rows[i] = { cells: {} };
-            row.forEach((cell, j) => {
-              rows[i].cells[j] = { text: cell !== null && cell !== undefined ? cell.toString() : '' };
-            });
-          });
-          
-          xs.loadData([{ name: 'Sheet1', rows }]);
-          e.target.value = '';
-          alert('Data Excel berhasil diimport!');
-        } catch (error) {
-          console.error('Error:', error);
-          alert('Gagal mengimport file Excel');
-        }
       };
-      reader.readAsArrayBuffer(file);
-    });
   
-    // Export to Excel functionality
-    document.getElementById('exportBtn').addEventListener('click', function() {
-      try {
-        const data = xs.getData();
-        const sheetData = [];
-        
-        const rows = data[0].rows;
-        const maxRow = Math.max(...Object.keys(rows).map(Number));
-        
-        for (let i = 0; i <= maxRow; i++) {
-          const row = rows[i];
-          const rowData = [];
+      const xs = x_spreadsheet('#xspreadsheet', {
+          mode: 'edit',
+          showToolbar: true,
+          showGrid: true,
+          showContextmenu: true,
+          cellEditable: function (ri, ci) {
+              return ri >= 1; // Hanya izinkan edit mulai dari baris ke-2
+          }
+      });
+  
+      // Load existing data into spreadsheet when page loads
+      function loadDataIntoSpreadsheet() {
+          try {
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || [];
+              if (savedData.length > 0) {
+                  // Clone initial data
+                  const sheetData = JSON.parse(JSON.stringify(initialData));
+                  
+                  // Add existing data as rows
+                  savedData.forEach((item, index) => {
+                      sheetData.rows[index + 1] = {
+                          cells: {
+                              0: { text: item.kebun || '' },
+                              1: { text: item.divisi || '' },
+                              2: { text: item.kodeTahunTanam || '' },
+                              3: { text: item.blok || '' },
+                              4: { text: item.kodeKerja || '' },
+                              5: { text: item.objekKerja || '' },
+                              6: { text: item.bulan || '' },
+                              7: { text: item.hk?.toString() || '0' },
+                              8: { text: item.luas?.toString() || '0' },
+                              9: { text: item.biaya?.toString() || '0' }
+                          }
+                      };
+                  });
+                  
+                  xs.loadData([sheetData]);
+              } else {
+                  xs.loadData([initialData]);
+              }
+          } catch (error) {
+              console.error('Error loading data into spreadsheet:', error);
+              xs.loadData([initialData]);
+          }
+      }
+  
+      // Helper function to format currency
+      function formatCurrency(amount) {
+          return new Intl.NumberFormat('id-ID', { 
+              style: 'currency', 
+              currency: 'IDR',
+              minimumFractionDigits: 0
+          }).format(amount);
+      }
+  
+      // Format data for storage
+      function formatDataForStorage(sheetData) {
+          const rows = sheetData[0].rows;
+          const result = [];
           
-          if (row && row.cells) {
-            const maxCol = Math.max(...Object.keys(row.cells).map(Number));
-            for (let j = 0; j <= maxCol; j++) {
-              const cell = row.cells[j];
-              rowData.push(cell ? cell.text : '');
-            }
+          // Skip header row (index 0)
+          for (let i = 1; i < Object.keys(rows).length; i++) {
+              const row = rows[i];
+              if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
+              
+              const cells = row.cells;
+              const biaya = parseInt(cells[9]?.text) || 0;
+              
+              result.push({
+                  kebun: cells[0]?.text || '',
+                  divisi: cells[1]?.text || '',
+                  kodeTahunTanam: cells[2]?.text || '',
+                  blok: cells[3]?.text || '',
+                  kodeKerja: cells[4]?.text || '',
+                  objekKerja: cells[5]?.text || '',
+                  bulan: cells[6]?.text || '',
+                  hk: parseInt(cells[7]?.text) || 0,
+                  luas: parseFloat(cells[8]?.text) || 0,
+                  biaya: biaya,
+                  timestamp: new Date().toISOString()
+              });
           }
           
-          sheetData.push(rowData);
-        }
-        
-        const ws = XLSX.utils.aoa_to_sheet(sheetData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-        XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
-        alert('Data berhasil diekspor ke Excel!');
-      } catch (error) {
-        console.error('Error exporting:', error);
-        alert('Gagal mengekspor ke Excel');
+          return result;
       }
-    });
   
-    // Save data functionality
-    document.getElementById('saveBtn').addEventListener('click', function() {
-      try {
-        const data = xs.getData();
-        const formattedData = formatDataForStorage(data);
-        
-        localStorage.setItem('budgetData', JSON.stringify(formattedData));
-        alert(`Data budget berhasil disimpan (${formattedData.length} records)`);
-        loadData();
-      } catch (error) {
-        console.error('Error saving data:', error);
-        alert('Gagal menyimpan data');
+      // Load data from storage to table
+      function loadDataToTable() {
+          try {
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+              const data = Array.isArray(savedData) ? savedData : [];
+              
+              const tableBody = document.getElementById('dataTable');
+              tableBody.innerHTML = '';
+              
+              data.forEach((item, index) => {
+                  const row = document.createElement('tr');
+                  row.innerHTML = `
+                      <td>${item.kebun || ''}</td>
+                      <td>${item.divisi || ''}</td>
+                      <td>${item.kodeTahunTanam || ''}</td>
+                      <td>${item.blok || ''}</td>
+                      <td>${item.kodeKerja || ''}</td>
+                      <td>${item.objekKerja || ''}</td>
+                      <td>${item.bulan || ''}</td>
+                      <td class="numeric">${item.hk || 0}</td>
+                      <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
+                      <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+                      <td>
+                          <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                              <i class="material-icons" style="font-size: 1rem;">delete</i>
+                          </button>
+                      </td>
+                  `;
+                  tableBody.appendChild(row);
+              });
+  
+              // Add event listeners for delete buttons
+              document.querySelectorAll('.delete-row').forEach(button => {
+                  button.addEventListener('click', function() {
+                      const index = this.getAttribute('data-index');
+                      if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+                          deleteData(index);
+                      }
+                  });
+              });
+          } catch (error) {
+              console.error('Error loading data:', error);
+          }
       }
-    });
+  
+      // Function to delete data
+      function deleteData(index) {
+          try {
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+              const data = Array.isArray(savedData) ? savedData : [];
+              
+              if (index >= 0 && index < data.length) {
+                  data.splice(index, 1);
+                  localStorage.setItem('budgetData', JSON.stringify(data));
+                  loadDataToTable();
+                  loadDataIntoSpreadsheet(); // Update spreadsheet after deletion
+              }
+          } catch (error) {
+              console.error('Error deleting data:', error);
+          }
+      }
+      
+      // Save data functionality - MODIFIED TO MERGE WITH EXISTING DATA
+      document.getElementById('saveBtn').addEventListener('click', function() {
+          try {
+              const currentData = xs.getData();
+              const newData = formatDataForStorage(currentData);
+              
+              // Get existing data
+              const existingData = JSON.parse(localStorage.getItem('budgetData') || [];
+              
+              // Combine existing data with new data
+              const combinedData = [...existingData, ...newData];
+              
+              // Save combined data
+              localStorage.setItem('budgetData', JSON.stringify(combinedData));
+              alert(`Data budget berhasil disimpan. Total records: ${combinedData.length}`);
+              
+              // Refresh table and spreadsheet
+              loadDataToTable();
+              loadDataIntoSpreadsheet();
+          } catch (error) {
+              console.error('Error saving data:', error);
+              alert('Gagal menyimpan data');
+          }
+      });
+  
+      // Initialize the page
+      loadDataIntoSpreadsheet();
+      loadDataToTable();
+  
+      // Rest of your code (import/export) remains the same...
+      document.getElementById('importBtn').addEventListener('click', function() {
+          document.getElementById('importFile').click();
+      });
     
-    // Initial data load
-    loadData();
+      document.getElementById('importFile').addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (!file) return;
+      
+          const reader = new FileReader();
+          reader.onload = function(e) {
+              try {
+                  const data = new Uint8Array(e.target.result);
+                  const workbook = XLSX.read(data, { type: 'array' });
+                  const firstSheetName = workbook.SheetNames[0];
+                  const worksheet = workbook.Sheets[firstSheetName];
+                  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                  
+                  const rows = {};
+                  jsonData.forEach((row, i) => {
+                      rows[i] = { cells: {} };
+                      row.forEach((cell, j) => {
+                          rows[i].cells[j] = { text: cell !== null && cell !== undefined ? cell.toString() : '' };
+                      });
+                  });
+                  
+                  xs.loadData([{ name: 'Sheet1', rows }]);
+                  e.target.value = '';
+                  alert('Data Excel berhasil diimport!');
+              } catch (error) {
+                  console.error('Error:', error);
+                  alert('Gagal mengimport file Excel');
+              }
+          };
+          reader.readAsArrayBuffer(file);
+      });
+    
+      document.getElementById('exportBtn').addEventListener('click', function() {
+          try {
+              const data = xs.getData();
+              const sheetData = [];
+              
+              const rows = data[0].rows;
+              const maxRow = Math.max(...Object.keys(rows).map(Number));
+              
+              for (let i = 0; i <= maxRow; i++) {
+                  const row = rows[i];
+                  const rowData = [];
+                  
+                  if (row && row.cells) {
+                      const maxCol = Math.max(...Object.keys(row.cells).map(Number));
+                      for (let j = 0; j <= maxCol; j++) {
+                          const cell = row.cells[j];
+                          rowData.push(cell ? cell.text : '');
+                      }
+                  }
+                  
+                  sheetData.push(rowData);
+              }
+              
+              const ws = XLSX.utils.aoa_to_sheet(sheetData);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+              XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+              alert('Data berhasil diekspor ke Excel!');
+          } catch (error) {
+              console.error('Error exporting:', error);
+              alert('Gagal mengekspor ke Excel');
+          }
+      });
   });
   </script>
 </body>
