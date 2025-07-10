@@ -312,7 +312,7 @@
       // Load existing data into spreadsheet when page loads
       function loadDataIntoSpreadsheet() {
           try {
-              const savedData = JSON.parse(localStorage.getItem('budgetData') || [];
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
               if (savedData.length > 0) {
                   // Clone initial data
                   const sheetData = JSON.parse(JSON.stringify(initialData));
