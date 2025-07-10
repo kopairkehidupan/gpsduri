@@ -262,6 +262,10 @@
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
+      // Konfigurasi
+      const SYNC_INTERVAL = 30000; // 30 detik
+      const BATCH_SIZE = 50; // Jumlah data per batch ke server
+    
       // Initialize x-spreadsheet with empty template
       const initialData = { 
           name: 'Sheet1',
@@ -337,22 +341,20 @@
           }).format(amount);
       }
 
-      // Format data for storage with ID generation
+      // Format data untuk penyimpanan - TAMBAHKAN syncStatus
       function formatDataForStorage(sheetData) {
           const rows = sheetData[0].rows;
           const result = [];
           
-          // Skip header row (index 0)
           for (let i = 1; i < Object.keys(rows).length; i++) {
               const row = rows[i];
-              // Skip if both first and second columns are empty
               if (!row || !row.cells || (!row.cells[0]?.text && !row.cells[1]?.text)) continue;
               
               const cells = row.cells;
               const biaya = parseInt(cells[9]?.text) || 0;
               
               result.push({
-                  id: generateId(), // Generate unique ID
+                  id: generateId(),
                   kebun: cells[0]?.text || '',
                   divisi: cells[1]?.text || '',
                   kodeTahunTanam: cells[2]?.text || '',
@@ -363,14 +365,14 @@
                   hk: parseInt(cells[7]?.text) || 0,
                   luas: parseFloat(cells[8]?.text) || 0,
                   biaya: biaya,
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
+                  syncStatus: "pending" // Status sync baru
               });
           }
-          
           return result;
       }
 
-      // Load data from storage to table
+      // Load data ke tabel - TAMBAHKAN indicator sync status
       function loadDataToTable() {
           try {
               const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
@@ -381,6 +383,8 @@
               
               data.forEach((item) => {
                   const row = document.createElement('tr');
+                  // Tambahkan class berdasarkan syncStatus
+                  row.className = item.syncStatus === "pending" ? "pending-sync" : "";
                   row.innerHTML = `
                       <td>${item.kebun || ''}</td>
                       <td>${item.divisi || ''}</td>
@@ -393,6 +397,9 @@
                       <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
                       <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                       <td>
+                          ${item.syncStatus === "pending" ? 
+                            '<span class="sync-indicator" title="Menunggu sync ke server">🔄</span>' : 
+                            '<span class="sync-indicator" title="Tersimpan di server">✅</span>'}
                           <button class="btn btn-danger delete-row" data-id="${item.id}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
                               <i class="material-icons" style="font-size: 1rem;">delete</i>
                           </button>
@@ -401,7 +408,7 @@
                   tableBody.appendChild(row);
               });
 
-              // Add event listeners for delete buttons
+              // Event listeners untuk delete buttons
               document.querySelectorAll('.delete-row').forEach(button => {
                   button.addEventListener('click', function() {
                       const id = this.getAttribute('data-id');
@@ -415,12 +422,27 @@
           }
       }
 
-      // Function to delete data by ID
-      function deleteData(id) {
+      // Fungsi hapus data - PERBAIKI untuk sync ke server
+      async function deleteData(id) {
           try {
               const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-              const updatedData = savedData.filter(item => item.id !== id);
+              const itemToDelete = savedData.find(item => item.id === id);
               
+              if (!itemToDelete) return;
+              
+              // Jika data sudah sync ke server, hapus juga dari server
+              if (itemToDelete.syncStatus === "synced") {
+                  try {
+                      await fetch(`/api/budget/${id}`, {
+                          method: 'DELETE'
+                      });
+                  } catch (error) {
+                      console.error('Gagal menghapus dari server:', error);
+                  }
+              }
+              
+              // Update LocalStorage
+              const updatedData = savedData.filter(item => item.id !== id);
               localStorage.setItem('budgetData', JSON.stringify(updatedData));
               loadDataToTable();
           } catch (error) {
@@ -428,8 +450,8 @@
           }
       }
       
-      // Save data functionality - Appends new data to existing data
-      document.getElementById('saveBtn').addEventListener('click', function() {
+      // Fungsi save data - MODIFIKASI untuk hybrid system
+      document.getElementById('saveBtn').addEventListener('click', async function() {
           try {
               const currentData = xs.getData();
               const newData = formatDataForStorage(currentData);
@@ -439,26 +461,80 @@
                   return;
               }
               
-              // Get existing data
+              // Simpan ke LocalStorage
               const existingData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-              
-              // Combine existing data with new data
               const combinedData = [...existingData, ...newData];
-              
-              // Save combined data
               localStorage.setItem('budgetData', JSON.stringify(combinedData));
-              alert(`Data budget berhasil disimpan. Total records: ${combinedData.length}`);
               
-              // Refresh table
+              // Coba sync ke server
+              await syncToServer();
+              
+              alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               loadDataToTable();
-              
-              // Clear spreadsheet after save
               xs.loadData([initialData]);
           } catch (error) {
               console.error('Error saving data:', error);
               alert('Gagal menyimpan data');
           }
       });
+
+      // Fungsi utama sync ke server
+      async function syncToServer() {
+          try {
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+              const pendingData = savedData.filter(item => item.syncStatus === "pending");
+              
+              if (pendingData.length === 0) return;
+              
+              // Kirim per batch untuk optimasi
+              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+                  const batch = pendingData.slice(i, i + BATCH_SIZE);
+                  
+                  try {
+                      const response = await fetch("/api/save-budget", {
+                          method: "POST",
+                          headers: {
+                              'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify(batch)
+                      });
+                      
+                      if (response.ok) {
+                          // Update status di LocalStorage
+                          const allData = JSON.parse(localStorage.getItem('budgetData'));
+                          const updatedData = allData.map(item => 
+                              batch.some(batchItem => batchItem.id === item.id) 
+                                  ? { ...item, syncStatus: "synced" } 
+                                  : item
+                          );
+                          localStorage.setItem('budgetData', JSON.stringify(updatedData));
+                      } else {
+                          console.error("Sync gagal untuk batch", i);
+                      }
+                  } catch (error) {
+                      console.error("Error sync batch", i, error);
+                  }
+              }
+          } catch (error) {
+              console.error("Sync error:", error);
+          }
+      }
+
+      // Manual sync button (tambahkan di HTML)
+      document.getElementById('manualSyncBtn').addEventListener('click', async function() {
+          this.disabled = true;
+          this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+          await syncToServer();
+          loadDataToTable();
+          this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+          this.disabled = false;
+      });
+
+      // Periodic sync
+      setInterval(async () => {
+          await syncToServer();
+          loadDataToTable();
+      }, SYNC_INTERVAL);
 
       // Initialize the page - only load data to table
       loadDataToTable();
