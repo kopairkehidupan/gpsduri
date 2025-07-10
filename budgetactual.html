@@ -403,7 +403,7 @@
     // Load data from storage
     function loadData() {
       try {
-        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+        const savedData = JSON.parse(localStorage.getItem('biayaData') || '[]');
         const data = Array.isArray(savedData) ? savedData : [];
         
         const tableBody = document.getElementById('dataTable');
@@ -457,12 +457,12 @@
     // Function to delete data
     function deleteData(index) {
       try {
-        const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
+        const savedData = JSON.parse(localStorage.getItem('biayaData') || '[]');
         const data = Array.isArray(savedData) ? savedData : [];
         
         if (index >= 0 && index < data.length) {
           data.splice(index, 1);
-          localStorage.setItem('budgetData', JSON.stringify(data));
+          localStorage.setItem('biayaData', JSON.stringify(data));
           loadData();
         }
       } catch (error) {
@@ -559,7 +559,7 @@
         const formattedData = formatDataForStorage(data);
         
         // Store in localStorage
-        localStorage.setItem('budgetData', JSON.stringify(formattedData));
+        localStorage.setItem('biayaData', JSON.stringify(formattedData));
         alert(`Data berhasil disimpan (${formattedData.length} records)`);
         loadData();
       } catch (error) {
