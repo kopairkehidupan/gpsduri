@@ -262,7 +262,7 @@
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
-      // Initialize x-spreadsheet
+      // Initialize x-spreadsheet dengan template kosong
       const initialData = { 
           name: 'Sheet1',
           styles: [
@@ -295,6 +295,20 @@
                       8: { text: 'Luas (Ha)', style: 1 },
                       9: { text: 'Biaya (Rp)', style: 1 }
                   }
+              },
+              1: { // Baris kosong pertama untuk input data baru
+                  cells: {
+                      0: { text: '' },
+                      1: { text: '' },
+                      2: { text: '' },
+                      3: { text: '' },
+                      4: { text: '' },
+                      5: { text: '' },
+                      6: { text: '' },
+                      7: { text: '' },
+                      8: { text: '' },
+                      9: { text: '' }
+                  }
               }
           }
       };
@@ -307,44 +321,8 @@
           cellEditable: function (ri, ci) {
               return ri >= 1; // Hanya izinkan edit mulai dari baris ke-2
           }
-      });
-  
-      // Load existing data into spreadsheet when page loads
-      function loadDataIntoSpreadsheet() {
-          try {
-              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-              if (savedData.length > 0) {
-                  // Clone initial data
-                  const sheetData = JSON.parse(JSON.stringify(initialData));
-                  
-                  // Add existing data as rows
-                  savedData.forEach((item, index) => {
-                      sheetData.rows[index + 1] = {
-                          cells: {
-                              0: { text: item.kebun || '' },
-                              1: { text: item.divisi || '' },
-                              2: { text: item.kodeTahunTanam || '' },
-                              3: { text: item.blok || '' },
-                              4: { text: item.kodeKerja || '' },
-                              5: { text: item.objekKerja || '' },
-                              6: { text: item.bulan || '' },
-                              7: { text: item.hk?.toString() || '0' },
-                              8: { text: item.luas?.toString() || '0' },
-                              9: { text: item.biaya?.toString() || '0' }
-                          }
-                      };
-                  });
-                  
-                  xs.loadData([sheetData]);
-              } else {
-                  xs.loadData([initialData]);
-              }
-          } catch (error) {
-              console.error('Error loading data into spreadsheet:', error);
-              xs.loadData([initialData]);
-          }
-      }
-  
+      }).loadData([initialData]);
+
       // Helper function to format currency
       function formatCurrency(amount) {
           return new Intl.NumberFormat('id-ID', { 
@@ -353,7 +331,7 @@
               minimumFractionDigits: 0
           }).format(amount);
       }
-  
+
       // Format data for storage
       function formatDataForStorage(sheetData) {
           const rows = sheetData[0].rows;
@@ -362,7 +340,7 @@
           // Skip header row (index 0)
           for (let i = 1; i < Object.keys(rows).length; i++) {
               const row = rows[i];
-              if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
+              if (!row || !row.cells || (!row.cells[0]?.text && !row.cells[1]?.text)) continue;
               
               const cells = row.cells;
               const biaya = parseInt(cells[9]?.text) || 0;
@@ -384,7 +362,7 @@
           
           return result;
       }
-  
+
       // Load data from storage to table
       function loadDataToTable() {
           try {
@@ -415,7 +393,7 @@
                   `;
                   tableBody.appendChild(row);
               });
-  
+
               // Add event listeners for delete buttons
               document.querySelectorAll('.delete-row').forEach(button => {
                   button.addEventListener('click', function() {
@@ -429,7 +407,7 @@
               console.error('Error loading data:', error);
           }
       }
-  
+
       // Function to delete data
       function deleteData(index) {
           try {
@@ -440,18 +418,22 @@
                   data.splice(index, 1);
                   localStorage.setItem('budgetData', JSON.stringify(data));
                   loadDataToTable();
-                  loadDataIntoSpreadsheet(); // Update spreadsheet after deletion
               }
           } catch (error) {
               console.error('Error deleting data:', error);
           }
       }
       
-      // Save data functionality - MODIFIED TO MERGE WITH EXISTING DATA
+      // Save data functionality - Menambahkan data baru ke data yang sudah ada
       document.getElementById('saveBtn').addEventListener('click', function() {
           try {
               const currentData = xs.getData();
               const newData = formatDataForStorage(currentData);
+              
+              if (newData.length === 0) {
+                  alert('Tidak ada data baru untuk disimpan!');
+                  return;
+              }
               
               // Get existing data
               const existingData = JSON.parse(localStorage.getItem('budgetData') || '[]');
@@ -463,20 +445,21 @@
               localStorage.setItem('budgetData', JSON.stringify(combinedData));
               alert(`Data budget berhasil disimpan. Total records: ${combinedData.length}`);
               
-              // Refresh table and spreadsheet
+              // Refresh table
               loadDataToTable();
-              loadDataIntoSpreadsheet();
+              
+              // Kosongkan spreadsheet setelah disimpan
+              xs.loadData([initialData]);
           } catch (error) {
               console.error('Error saving data:', error);
               alert('Gagal menyimpan data');
           }
       });
-  
-      // Initialize the page
-      loadDataIntoSpreadsheet();
+
+      // Initialize the page - hanya load data ke tabel
       loadDataToTable();
-  
-      // Rest of your code (import/export) remains the same...
+
+      // Import Excel functionality
       document.getElementById('importBtn').addEventListener('click', function() {
           document.getElementById('importFile').click();
       });
@@ -515,26 +498,30 @@
     
       document.getElementById('exportBtn').addEventListener('click', function() {
           try {
-              const data = xs.getData();
-              const sheetData = [];
+              // Export semua data yang ada di localStorage
+              const savedData = JSON.parse(localStorage.getItem('budgetData') || []);
               
-              const rows = data[0].rows;
-              const maxRow = Math.max(...Object.keys(rows).map(Number));
+              // Siapkan header
+              const sheetData = [
+                  ['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Kode Kerja', 
+                   'Objek Kerja', 'Bulan', 'HK', 'Luas (Ha)', 'Biaya (Rp)']
+              ];
               
-              for (let i = 0; i <= maxRow; i++) {
-                  const row = rows[i];
-                  const rowData = [];
-                  
-                  if (row && row.cells) {
-                      const maxCol = Math.max(...Object.keys(row.cells).map(Number));
-                      for (let j = 0; j <= maxCol; j++) {
-                          const cell = row.cells[j];
-                          rowData.push(cell ? cell.text : '');
-                      }
-                  }
-                  
-                  sheetData.push(rowData);
-              }
+              // Tambahkan data
+              savedData.forEach(item => {
+                  sheetData.push([
+                      item.kebun || '',
+                      item.divisi || '',
+                      item.kodeTahunTanam || '',
+                      item.blok || '',
+                      item.kodeKerja || '',
+                      item.objekKerja || '',
+                      item.bulan || '',
+                      item.hk || 0,
+                      item.luas || 0,
+                      item.biaya || 0
+                  ]);
+              });
               
               const ws = XLSX.utils.aoa_to_sheet(sheetData);
               const wb = XLSX.utils.book_new();
