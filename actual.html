@@ -323,6 +323,11 @@
           }
       }).loadData([initialData]);
 
+      // Helper function to generate unique ID
+      function generateId() {
+          return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      }
+
       // Helper function to format currency
       function formatCurrency(amount) {
           return new Intl.NumberFormat('id-ID', { 
@@ -332,7 +337,7 @@
           }).format(amount);
       }
 
-      // Format data for storage
+      // Format data for storage with ID generation
       function formatDataForStorage(sheetData) {
           const rows = sheetData[0].rows;
           const result = [];
@@ -347,6 +352,7 @@
               const biaya = parseInt(cells[9]?.text) || 0;
               
               result.push({
+                  id: generateId(), // Generate unique ID
                   kebun: cells[0]?.text || '',
                   divisi: cells[1]?.text || '',
                   kodeTahunTanam: cells[2]?.text || '',
@@ -373,7 +379,7 @@
               const tableBody = document.getElementById('dataTable');
               tableBody.innerHTML = '';
               
-              data.forEach((item, index) => {
+              data.forEach((item) => {
                   const row = document.createElement('tr');
                   row.innerHTML = `
                       <td>${item.kebun || ''}</td>
@@ -387,7 +393,7 @@
                       <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
                       <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                       <td>
-                          <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                          <button class="btn btn-danger delete-row" data-id="${item.id}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
                               <i class="material-icons" style="font-size: 1rem;">delete</i>
                           </button>
                       </td>
@@ -398,9 +404,9 @@
               // Add event listeners for delete buttons
               document.querySelectorAll('.delete-row').forEach(button => {
                   button.addEventListener('click', function() {
-                      const index = this.getAttribute('data-index');
+                      const id = this.getAttribute('data-id');
                       if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-                          deleteData(index);
+                          deleteData(id);
                       }
                   });
               });
@@ -409,17 +415,14 @@
           }
       }
 
-      // Function to delete data
-      function deleteData(index) {
+      // Function to delete data by ID
+      function deleteData(id) {
           try {
               const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
-              const data = Array.isArray(savedData) ? savedData : [];
+              const updatedData = savedData.filter(item => item.id !== id);
               
-              if (index >= 0 && index < data.length) {
-                  data.splice(index, 1);
-                  localStorage.setItem('actualData', JSON.stringify(data));
-                  loadDataToTable();
-              }
+              localStorage.setItem('actualData', JSON.stringify(updatedData));
+              loadDataToTable();
           } catch (error) {
               console.error('Error deleting data:', error);
           }
@@ -460,7 +463,7 @@
       // Initialize the page - only load data to table
       loadDataToTable();
 
-      // Import Excel functionality
+      // Import Excel functionality with ID generation
       document.getElementById('importBtn').addEventListener('click', function() {
           document.getElementById('importFile').click();
       });
@@ -478,17 +481,39 @@
                   const worksheet = workbook.Sheets[firstSheetName];
                   const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                   
-                  const rows = {};
-                  jsonData.forEach((row, i) => {
-                      rows[i] = { cells: {} };
-                      row.forEach((cell, j) => {
-                          rows[i].cells[j] = { text: cell !== null && cell !== undefined ? cell.toString() : '' };
-                      });
-                  });
+                  // Get existing data
+                  const existingData = JSON.parse(localStorage.getItem('actualData') || []);
                   
-                  xs.loadData([{ name: 'Sheet1', rows }]);
+                  // Process imported data
+                  const importedData = [];
+                  // Skip header row (index 0)
+                  for (let i = 1; i < jsonData.length; i++) {
+                      const row = jsonData[i];
+                      if (!row || (!row[0] && !row[1])) continue;
+                      
+                      importedData.push({
+                          id: generateId(),
+                          kebun: row[0] || '',
+                          divisi: row[1] || '',
+                          kodeTahunTanam: row[2] || '',
+                          blok: row[3] || '',
+                          kodeKerja: row[4] || '',
+                          objekKerja: row[5] || '',
+                          bulan: row[6] || '',
+                          hk: parseInt(row[7]) || 0,
+                          hasil: parseFloat(row[8]) || 0,
+                          biaya: parseInt(row[9]) || 0,
+                          timestamp: new Date().toISOString()
+                      });
+                  }
+                  
+                  // Combine with existing data
+                  const combinedData = [...existingData, ...importedData];
+                  localStorage.setItem('actualData', JSON.stringify(combinedData));
+                  
+                  alert(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
+                  loadDataToTable();
                   e.target.value = '';
-                  alert('Data Excel berhasil diimport!');
               } catch (error) {
                   console.error('Error:', error);
                   alert('Gagal mengimport file Excel');
@@ -497,7 +522,7 @@
           reader.readAsArrayBuffer(file);
       });
     
-      // Export to Excel functionality - exports all data from localStorage
+      // Export to Excel functionality
       document.getElementById('exportBtn').addEventListener('click', function() {
           try {
               const savedData = JSON.parse(localStorage.getItem('actualData') || []);
@@ -508,7 +533,7 @@
                    'Objek Kerja', 'Bulan', 'HK', 'Hasil (Ha)', 'Biaya (Rp)']
               ];
               
-              // Add data rows
+              // Add data rows (excluding the ID)
               savedData.forEach(item => {
                   sheetData.push([
                       item.kebun || '',
