@@ -207,6 +207,9 @@
     .pending-sync {
       background-color: #fff9e6;
     }
+    .sync-error {
+      background-color: #ffebee;
+    }
   </style>
 </head>
 <body>
@@ -377,6 +380,7 @@
                   biaya: biaya,
                   timestamp: new Date().toISOString(),
                   syncStatus: "pending" // Status sync baru
+                  syncError: null // Untuk menyimpan pesan error jika sync gagal
               });
           }
           return result;
@@ -394,7 +398,12 @@
               data.forEach((item) => {
                   const row = document.createElement('tr');
                   // Tambahkan class berdasarkan syncStatus
-                  row.className = item.syncStatus === "pending" ? "pending-sync" : "";
+                  if (item.syncStatus === "pending") {
+                      row.className = "pending-sync";
+                  } else if (item.syncError) {
+                      row.className = "sync-error";
+                  }
+                
                   row.innerHTML = `
                       <td>${item.kebun || ''}</td>
                       <td>${item.divisi || ''}</td>
@@ -407,9 +416,7 @@
                       <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
                       <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                       <td>
-                          ${item.syncStatus === "pending" ? 
-                            '<span class="sync-indicator" title="Menunggu sync ke server">🔄</span>' : 
-                            '<span class="sync-indicator" title="Tersimpan di server">✅</span>'}
+                          ${getSyncIndicator(item)}
                           <button class="btn btn-danger delete-row" data-id="${item.id}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
                               <i class="material-icons" style="font-size: 1rem;">delete</i>
                           </button>
@@ -430,6 +437,16 @@
           } catch (error) {
               console.error('Error loading data:', error);
           }
+      }
+
+       // Helper untuk menentukan indikator sync
+      function getSyncIndicator(item) {
+          if (item.syncError) {
+              return `<span class="sync-indicator" title="Gagal sync: ${item.syncError}">❌</span>`;
+          }
+          return item.syncStatus === "synced" 
+              ? '<span class="sync-indicator" title="Tersimpan di server">✅</span>'
+              : '<span class="sync-indicator" title="Menunggu sync ke server">🔄</span>';
       }
 
       // Fungsi hapus data - PERBAIKI untuk sync ke server
@@ -519,15 +536,30 @@
                           );
                           localStorage.setItem('budgetData', JSON.stringify(updatedData));
                       } else {
-                          console.error("Sync gagal untuk batch", i);
+                          const errorMsg = await response.text();
+                          updateSyncErrorStatus(batch, errorMsg);
+                          console.error("Sync gagal untuk batch", i, errorMsg);
                       }
                   } catch (error) {
+                      updateSyncErrorStatus(batch, error.message);
                       console.error("Error sync batch", i, error);
                   }
               }
+            loadDataToTable();
           } catch (error) {
               console.error("Sync error:", error);
           }
+      }
+
+      // Update status error jika sync gagal
+      function updateSyncErrorStatus(batch, errorMsg) {
+          const allData = JSON.parse(localStorage.getItem('budgetData'));
+          const updatedData = allData.map(item => 
+              batch.some(batchItem => batchItem.id === item.id) 
+                  ? { ...item, syncError: errorMsg.substring(0, 100) } // Batasi panjang error message
+                  : item
+          );
+          localStorage.setItem('budgetData', JSON.stringify(updatedData));
       }
 
       // Manual sync button (tambahkan di HTML)
