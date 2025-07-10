@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actual Input - Excel</title>
+  <!-- Same CSS and JS imports as budget.html -->
+  <style>
+    /* Same styles as budget.html */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Actual Input - Excel</h1>
+      <p class="subtitle">Input data realisasi secara massal dengan tampilan Excel</p>
+    </div>
+    
+    <div class="card">
+      <h2>Input Data Actual</h2>
+      <p>Anda dapat bekerja langsung dengan spreadsheet berikut:</p>
+      
+      <div id="xspreadsheet"></div>
+      
+      <div class="btn-group">
+        <button id="saveBtn" class="btn">
+          <i class="material-icons">save</i> Simpan Data
+        </button>
+        <button id="exportBtn" class="btn btn-secondary">
+          <i class="material-icons">download</i> Export ke Excel
+        </button>
+        <button id="importBtn" class="btn">
+          <i class="material-icons">upload</i> Import dari Excel
+        </button>
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display: none;">
+        <a href="budget.html" class="btn">
+          <i class="material-icons">swap_horiz</i> Ke Halaman Budget
+        </a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Data Actual Tersimpan</h2>
+      <p>Berikut adalah data actual yang sudah tersimpan di sistem:</p>
+      
+      <div class="table-responsive">
+        <table class="budget-table">
+          <thead>
+            <tr>
+              <th>Kebun</th>
+              <th>Divisi</th>
+              <th>Kode Tahun Tanam</th>
+              <th>Blok</th>
+              <th>Kode Kerja</th>
+              <th>Objek Kerja</th>
+              <th>Bulan</th>
+              <th>HK</th>
+              <th>Hasil (Ha)</th>
+              <th>Biaya (Rp)</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="dataTable">
+            <!-- Data will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script>
+   document.addEventListener('DOMContentLoaded', function() {
+    // Initialize x-spreadsheet
+    const initialData = { 
+      name: 'Sheet1',
+      styles: [
+        {
+          align: 'center',
+          valign: 'middle',
+          font: { bold: true },
+          textwrap: true
+        },
+        {
+          align: 'center',
+          valign: 'middle',
+          font: { bold: true },
+          bgcolor: '#e0f0ff',
+          textwrap: true
+        }
+      ],
+      rows: {
+        0: {
+          height: 25,
+          cells: {
+            0: { text: 'Kebun', style: 1 },
+            1: { text: 'Divisi', style: 1 },
+            2: { text: 'Kode Tahun Tanam', style: 1 },
+            3: { text: 'Blok', style: 1 },
+            4: { text: 'Kode Kerja', style: 1 },
+            5: { text: 'Objek Kerja', style: 1 },
+            6: { text: 'Bulan', style: 1 },
+            7: { text: 'HK', style: 1 },
+            8: { text: 'Hasil (Ha)', style: 1 },
+            9: { text: 'Biaya (Rp)', style: 1 }
+          }
+        }
+      }
+    };
+    
+    const xs = x_spreadsheet('#xspreadsheet', {
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
+        cellEditable: function (ri, ci) {
+            return ri >= 1;
+        }
+    }).loadData([initialData]);
+
+    // Helper function to format currency
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('id-ID', { 
+        style: 'currency', 
+        currency: 'IDR',
+        minimumFractionDigits: 0
+      }).format(amount);
+    }
+
+    // Format data for storage
+    function formatDataForStorage(sheetData) {
+      const rows = sheetData[0].rows;
+      const result = [];
+      
+      for (let i = 1; i < Object.keys(rows).length; i++) {
+        const row = rows[i];
+        if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
+        
+        const cells = row.cells;
+        const biaya = parseInt(cells[9]?.text) || 0;
+        
+        result.push({
+          kebun: cells[0]?.text || '',
+          divisi: cells[1]?.text || '',
+          kodeTahunTanam: cells[2]?.text || '',
+          blok: cells[3]?.text || '',
+          kodeKerja: cells[4]?.text || '',
+          objekKerja: cells[5]?.text || '',
+          bulan: cells[6]?.text || '',
+          hk: parseInt(cells[7]?.text) || 0,
+          hasil: parseFloat(cells[8]?.text) || 0,
+          biaya: biaya,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      return result;
+    }
+
+    // Load data from storage
+    function loadData() {
+      try {
+        const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
+        const data = Array.isArray(savedData) ? savedData : [];
+        
+        const tableBody = document.getElementById('dataTable');
+        tableBody.innerHTML = '';
+        
+        data.forEach((item, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.kebun || ''}</td>
+            <td>${item.divisi || ''}</td>
+            <td>${item.kodeTahunTanam || ''}</td>
+            <td>${item.blok || ''}</td>
+            <td>${item.kodeKerja || ''}</td>
+            <td>${item.objekKerja || ''}</td>
+            <td>${item.bulan || ''}</td>
+            <td class="numeric">${item.hk || 0}</td>
+            <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
+            <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+            <td>
+              <button class="btn btn-danger delete-row" data-index="${index}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                <i class="material-icons" style="font-size: 1rem;">delete</i>
+              </button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+
+        document.querySelectorAll('.delete-row').forEach(button => {
+          button.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+              deleteData(index);
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    }
+
+    // Function to delete data
+    function deleteData(index) {
+      try {
+        const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
+        const data = Array.isArray(savedData) ? savedData : [];
+        
+        if (index >= 0 && index < data.length) {
+          data.splice(index, 1);
+          localStorage.setItem('actualData', JSON.stringify(data));
+          loadData();
+        }
+      } catch (error) {
+        console.error('Error deleting data:', error);
+      }
+    }
+    
+    // Import/Export functions (same as budget.html)
+    document.getElementById('importBtn').addEventListener('click', function() {
+      document.getElementById('importFile').click();
+    });
+  
+    document.getElementById('importFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+  
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          const rows = {};
+          jsonData.forEach((row, i) => {
+            rows[i] = { cells: {} };
+            row.forEach((cell, j) => {
+              rows[i].cells[j] = { text: cell !== null && cell !== undefined ? cell.toString() : '' };
+            });
+          });
+          
+          xs.loadData([{ name: 'Sheet1', rows }]);
+          e.target.value = '';
+          alert('Data Excel berhasil diimport!');
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Gagal mengimport file Excel');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  
+    document.getElementById('exportBtn').addEventListener('click', function() {
+      try {
+        const data = xs.getData();
+        const sheetData = [];
+        
+        const rows = data[0].rows;
+        const maxRow = Math.max(...Object.keys(rows).map(Number));
+        
+        for (let i = 0; i <= maxRow; i++) {
+          const row = rows[i];
+          const rowData = [];
+          
+          if (row && row.cells) {
+            const maxCol = Math.max(...Object.keys(row.cells).map(Number));
+            for (let j = 0; j <= maxCol; j++) {
+              const cell = row.cells[j];
+              rowData.push(cell ? cell.text : '');
+            }
+          }
+          
+          sheetData.push(rowData);
+        }
+        
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+        XLSX.writeFile(wb, 'actual_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        alert('Data berhasil diekspor ke Excel!');
+      } catch (error) {
+        console.error('Error exporting:', error);
+        alert('Gagal mengekspor ke Excel');
+      }
+    });
+  
+    document.getElementById('saveBtn').addEventListener('click', function() {
+      try {
+        const data = xs.getData();
+        const formattedData = formatDataForStorage(data);
+        
+        localStorage.setItem('actualData', JSON.stringify(formattedData));
+        alert(`Data actual berhasil disimpan (${formattedData.length} records)`);
+        loadData();
+      } catch (error) {
+        console.error('Error saving data:', error);
+        alert('Gagal menyimpan data');
+      }
+    });
+    
+    // Initial data load
+    loadData();
+  });
+  </script>
+</body>
+</html>
