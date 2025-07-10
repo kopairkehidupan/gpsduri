@@ -200,6 +200,13 @@
       justify-content: center !important;
       align-items: center !important;
     }
+    .sync-indicator {
+      margin-right: 8px;
+      cursor: help;
+    }
+    .pending-sync {
+      background-color: #fff9e6;
+    }
   </style>
 </head>
 <body>
@@ -224,6 +231,9 @@
         </button>
         <button id="importBtn" class="btn">
           <i class="material-icons">upload</i> Import dari Excel
+        </button>
+        <button id="manualSyncBtn" class="btn">
+          <i class="material-icons">sync</i> Sinkronkan Sekarang
         </button>
         <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display: none;">
         <a href="actual.html" class="btn">
