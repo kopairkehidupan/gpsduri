@@ -310,44 +310,40 @@
     });
 
     // Load existing data into spreadsheet when page loads
-    function loadDataIntoSpreadsheet() {
-        try {
-            const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
-            const sheetData = JSON.parse(JSON.stringify(initialData));
-            
-            // Selalu mulai dari row 1 (setelah header)
-            let currentRow = 1;
-            
-            // Tambahkan data yang sudah ada
-            savedData.forEach(item => {
-                sheetData.rows[currentRow] = {
-                    cells: {
-                      0: { text: item.kebun || '' },
-                      1: { text: item.divisi || '' },
-                      2: { text: item.kodeTahunTanam || '' },
-                      3: { text: item.blok || '' },
-                      4: { text: item.kodeKerja || '' },
-                      5: { text: item.objekKerja || '' },
-                      6: { text: item.bulan || '' },
-                      7: { text: item.hk?.toString() || '0' },
-                      8: { text: item.hasil?.toString() || '0' },
-                      9: { text: item.biaya?.toString() || '0' }
-                    }
-                };
-                currentRow++;
-            });
-            
-            // Tambahkan 5 baris kosong setelah data yang ada
-            for(let i = 0; i < 5; i++) {
-                sheetData.rows[currentRow + i] = { cells: {} };
-            }
-            
-            xs.loadData([sheetData]);
-        } catch (error) {
-            console.error('Error loading data:', error);
-            xs.loadData([initialData]);
-        }
-    }
+     function loadDataIntoSpreadsheet() {
+          try {
+              const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
+              if (savedData.length > 0) {
+                  // Clone initial data
+                  const sheetData = JSON.parse(JSON.stringify(initialData));
+                  
+                  // Add existing data as rows
+                  savedData.forEach((item, index) => {
+                      sheetData.rows[index + 1] = {
+                          cells: {
+                              0: { text: item.kebun || '' },
+                              1: { text: item.divisi || '' },
+                              2: { text: item.kodeTahunTanam || '' },
+                              3: { text: item.blok || '' },
+                              4: { text: item.kodeKerja || '' },
+                              5: { text: item.objekKerja || '' },
+                              6: { text: item.bulan || '' },
+                              7: { text: item.hk?.toString() || '0' },
+                              8: { text: item.hasil?.toString() || '0' },
+                              9: { text: item.biaya?.toString() || '0' }
+                          }
+                      };
+                  });
+                  
+                  xs.loadData([sheetData]);
+              } else {
+                  xs.loadData([initialData]);
+              }
+          } catch (error) {
+              console.error('Error loading data into spreadsheet:', error);
+              xs.loadData([initialData]);
+          }
+      }
 
     // Helper function to format currency
     function formatCurrency(amount) {
