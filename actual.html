@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Budget Input - Excel</title>
+  <title>Actual Input - Excel</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link href="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.css" rel="stylesheet">
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
+    /* CSS sama persis dengan budget.html */
     :root {
       --primary: #4285f4;
       --primary-hover: #3367d6;
@@ -194,7 +195,6 @@
     .delete-btn:hover {
       color: #d33426;
     }
-    /* Force vertical centering for merged header cells */
     .x-spreadsheet .x-cell {
       display: flex !important;
       justify-content: center !important;
@@ -307,7 +307,43 @@
         cellEditable: function (ri, ci) {
             return ri >= 1;
         }
-    }).loadData([initialData]);
+    });
+
+    // Load existing data into spreadsheet when page loads
+    function loadDataIntoSpreadsheet() {
+      try {
+        const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
+        if (savedData.length > 0) {
+          // Clone initial data
+          const sheetData = JSON.parse(JSON.stringify(initialData));
+          
+          // Add existing data as rows
+          savedData.forEach((item, index) => {
+            sheetData.rows[index + 1] = {
+              cells: {
+                0: { text: item.kebun || '' },
+                1: { text: item.divisi || '' },
+                2: { text: item.kodeTahunTanam || '' },
+                3: { text: item.blok || '' },
+                4: { text: item.kodeKerja || '' },
+                5: { text: item.objekKerja || '' },
+                6: { text: item.bulan || '' },
+                7: { text: item.hk?.toString() || '0' },
+                8: { text: item.hasil?.toString() || '0' },
+                9: { text: item.biaya?.toString() || '0' }
+              }
+            };
+          });
+          
+          xs.loadData([sheetData]);
+        } else {
+          xs.loadData([initialData]);
+        }
+      } catch (error) {
+        console.error('Error loading data into spreadsheet:', error);
+        xs.loadData([initialData]);
+      }
+    }
 
     // Helper function to format currency
     function formatCurrency(amount) {
@@ -323,6 +359,7 @@
       const rows = sheetData[0].rows;
       const result = [];
       
+      // Skip header row (index 0)
       for (let i = 1; i < Object.keys(rows).length; i++) {
         const row = rows[i];
         if (!row || !row.cells || !row.cells[0] || !row.cells[0].text) continue;
@@ -348,8 +385,8 @@
       return result;
     }
 
-    // Load data from storage
-    function loadData() {
+    // Load data from storage to table
+    function loadDataToTable() {
       try {
         const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
         const data = Array.isArray(savedData) ? savedData : [];
@@ -379,6 +416,7 @@
           tableBody.appendChild(row);
         });
 
+        // Add event listeners for delete buttons
         document.querySelectorAll('.delete-row').forEach(button => {
           button.addEventListener('click', function() {
             const index = this.getAttribute('data-index');
@@ -401,14 +439,44 @@
         if (index >= 0 && index < data.length) {
           data.splice(index, 1);
           localStorage.setItem('actualData', JSON.stringify(data));
-          loadData();
+          loadDataToTable();
+          loadDataIntoSpreadsheet(); // Update spreadsheet after deletion
         }
       } catch (error) {
         console.error('Error deleting data:', error);
       }
     }
     
-    // Import/Export functions (same as budget.html)
+    // Save data functionality - MODIFIED TO MERGE WITH EXISTING DATA
+    document.getElementById('saveBtn').addEventListener('click', function() {
+      try {
+        const currentData = xs.getData();
+        const newData = formatDataForStorage(currentData);
+        
+        // Get existing data
+        const existingData = JSON.parse(localStorage.getItem('actualData') || '[]');
+        
+        // Combine existing data with new data
+        const combinedData = [...existingData, ...newData];
+        
+        // Save combined data
+        localStorage.setItem('actualData', JSON.stringify(combinedData));
+        alert(`Data actual berhasil disimpan. Total records: ${combinedData.length}`);
+        
+        // Refresh table and spreadsheet
+        loadDataToTable();
+        loadDataIntoSpreadsheet();
+      } catch (error) {
+        console.error('Error saving data:', error);
+        alert('Gagal menyimpan data');
+      }
+    });
+
+    // Initialize the page
+    loadDataIntoSpreadsheet();
+    loadDataToTable();
+
+    // Import Excel functionality
     document.getElementById('importBtn').addEventListener('click', function() {
       document.getElementById('importFile').click();
     });
@@ -445,6 +513,7 @@
       reader.readAsArrayBuffer(file);
     });
   
+    // Export to Excel functionality
     document.getElementById('exportBtn').addEventListener('click', function() {
       try {
         const data = xs.getData();
@@ -478,23 +547,6 @@
         alert('Gagal mengekspor ke Excel');
       }
     });
-  
-    document.getElementById('saveBtn').addEventListener('click', function() {
-      try {
-        const data = xs.getData();
-        const formattedData = formatDataForStorage(data);
-        
-        localStorage.setItem('actualData', JSON.stringify(formattedData));
-        alert(`Data actual berhasil disimpan (${formattedData.length} records)`);
-        loadData();
-      } catch (error) {
-        console.error('Error saving data:', error);
-        alert('Gagal menyimpan data');
-      }
-    });
-    
-    // Initial data load
-    loadData();
   });
   </script>
 </body>
