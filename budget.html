@@ -634,10 +634,12 @@
                       } else {
                           const errorMsg = await response.text();
                           await updateSyncStatus(batchIds, "pending", errorMsg);
+                          await updateSyncErrorStatus(batch, errorMsg);
                           console.error("Sync gagal untuk batch", i, errorMsg);
                       }
                   } catch (error) {
                       await updateSyncStatus(batchIds, "pending", error.message);
+                      await updateSyncErrorStatus(batch, error.message);
                       console.error("Error sync batch", i, error);
                   }
               }
