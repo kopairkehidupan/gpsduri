@@ -512,8 +512,16 @@
                 
                 row.innerHTML = `
                     <td>${item.kebun || ''}</td>
-                    <td>${item.divisi || ''}</td>
-                    <!-- ... kolom lainnya tetap sama ... -->
+                      <td>${item.divisi || ''}</td>
+                      <td>${item.kodeTahunTanam || ''}</td>
+                      <td>${item.blok || ''}</td>
+                      <td>${item.kodeKerja || ''}</td>
+                      <td>${item.objekKerja || ''}</td>
+                      <td>${item.bulan || ''}</td>
+                      <td class="numeric">${item.hk || 0}</td>
+                      <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
+                      <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+                      <td>
                     <td>
                         ${getSyncIndicator(item)}
                         <button class="btn btn-danger delete-row" data-id="${item.id}">
