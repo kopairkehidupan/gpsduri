@@ -454,7 +454,7 @@
               const newData = formatDataForStorage(currentData);
               
               // Get existing data
-              const existingData = JSON.parse(localStorage.getItem('budgetData') || [];
+              const existingData = JSON.parse(localStorage.getItem('budgetData') || '[]');
               
               // Combine existing data with new data
               const combinedData = [...existingData, ...newData];
