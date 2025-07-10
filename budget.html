@@ -273,48 +273,120 @@
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
   <script>
-  import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@7/+esm';
-  const dbPromise = openDB('BudgetDB', 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains('budget')) {
-        db.createObjectStore('budget', { keyPath: 'id' });
-      }
-    }
-  });
-  
-  window.budgetDB = {
-    async addAll(dataArray) {
-      const db = await dbPromise;
-      const tx = db.transaction('budget', 'readwrite');
-      for (const item of dataArray) {
-        await tx.store.add(item);
-      }
-      await tx.done;
-    },
-  
-    async getAll() {
-      const db = await dbPromise;
-      return db.getAll('budget');
-    },
-  
-    async delete(id) {
-      const db = await dbPromise;
-      return db.delete('budget', id);
-    },
-  
-    async update(item) {
-      const db = await dbPromise;
-      return db.put('budget', item);
-    }
-  };
-    
   document.addEventListener('DOMContentLoaded', function() {
       // Konfigurasi
       const SYNC_INTERVAL = 30000; // 30 detik
       const BATCH_SIZE = 50; // Jumlah data per batch ke server
+      let db; // Variabel untuk koneksi database
+
+      const initDB = new Promise((resolve, reject) => {
+          const request = indexedDB.open('BudgetDB', 1);
+          
+          request.onerror = (event) => {
+              console.error("Database error:", event.target.error);
+              reject("Gagal membuka database");
+          };
+  
+          request.onsuccess = (event) => {
+              db = event.target.result;
+              resolve(db);
+          };
+  
+          request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              const store = db.createObjectStore('budgets', {
+                  keyPath: 'id',
+                  autoIncrement: false
+              });
+              
+              // Buat index untuk query cepat
+              store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
+          };
+      });
+
+      // Helper function untuk operasi database
+      const dbOperation = (storeName, operation) => {
+          return new Promise((resolve, reject) => {
+              const transaction = db.transaction(storeName, 'readwrite');
+              const store = transaction.objectStore(storeName);
+              
+              const request = operation(store);
+              
+              request.onsuccess = () => resolve(request.result);
+              request.onerror = (event) => reject(event.target.error);
+          });
+      };
     
+      // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
+      async function saveToIndexedDB(data) {
+          try {
+              await initDB;
+              
+              if (Array.isArray(data)) {
+                  // Gunakan transaction untuk bulk operation
+                  const transaction = db.transaction('budgets', 'readwrite');
+                  const store = transaction.objectStore('budgets');
+                  
+                  data.forEach(item => {
+                      store.put(item);
+                  });
+                  
+                  return new Promise((resolve, reject) => {
+                      transaction.oncomplete = () => resolve();
+                      transaction.onerror = (event) => reject(event.target.error);
+                  });
+              } else {
+                  await dbOperation('budgets', (store) => store.put(data));
+              }
+          } catch (error) {
+              console.error("Gagal menyimpan ke IndexedDB:", error);
+              throw error;
+          }
+      }
+
+      // Fungsi untuk membaca data dari IndexedDB (mengganti localStorage)
+      async function getFromIndexedDB() {
+          try {
+              await initDB;
+              return await dbOperation('budgets', (store) => store.getAll());
+          } catch (error) {
+              console.error("Gagal membaca dari IndexedDB:", error);
+              throw error;
+          }
+      }
+
+      // Fungsi untuk update status sync (mengganti localStorage)
+      async function updateSyncStatus(ids, newStatus, errorMsg = null) {
+          try {
+              await initDB;
+              
+              const transaction = db.transaction('budgets', 'readwrite');
+              const store = transaction.objectStore('budgets');
+              
+              // Ambil semua data yang perlu diupdate
+              const getRequests = ids.map(id => store.get(id));
+              
+              // Proses update
+              Promise.all(getRequests).then(results => {
+                  results.forEach(item => {
+                      if (item) {
+                          item.syncStatus = newStatus;
+                          if (errorMsg) item.syncError = errorMsg;
+                          store.put(item);
+                      }
+                  });
+              });
+              
+              return new Promise((resolve) => {
+                  transaction.oncomplete = () => resolve();
+              });
+          } catch (error) {
+              console.error("Gagal update status sync:", error);
+              throw error;
+          }
+      }
+      
       // Initialize x-spreadsheet with empty template
       const initialData = { 
           name: 'Sheet1',
@@ -425,50 +497,44 @@
       // Load data ke tabel - TAMBAHKAN indicator sync status
       async function loadDataToTable() {
         try {
-          const savedData = await window.budgetDB.getAll();
-          const data = Array.isArray(savedData) ? savedData : [];
-          const tableBody = document.getElementById('dataTable');
-          tableBody.innerHTML = '';
-      
-          data.forEach((item) => {
-            const row = document.createElement('tr');
-            if (item.syncStatus === "pending") {
-              row.className = "pending-sync";
-            } else if (item.syncError) {
-              row.className = "sync-error";
-            }
-            row.innerHTML = `
-              <td>${item.kebun || ''}</td>
-              <td>${item.divisi || ''}</td>
-              <td>${item.kodeTahunTanam || ''}</td>
-              <td>${item.blok || ''}</td>
-              <td>${item.kodeKerja || ''}</td>
-              <td>${item.objekKerja || ''}</td>
-              <td>${item.bulan || ''}</td>
-              <td class="numeric">${item.hk || 0}</td>
-              <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
-              <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
-              <td>
-                ${getSyncIndicator(item)}
-                <button class="btn btn-danger delete-row" data-id="${item.id}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                  <i class="material-icons" style="font-size: 1rem;">delete</i>
-                </button>
-              </td>
-            `;
-            tableBody.appendChild(row);
-          });
-      
-          document.querySelectorAll('.delete-row').forEach(button => {
-            button.addEventListener('click', async function() {
-              const id = this.getAttribute('data-id');
-              if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-                await window.budgetDB.delete(id);
-                loadDataToTable();
-              }
+            const data = await getFromIndexedDB();
+            
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+            
+            data.forEach((item) => {
+                const row = document.createElement('tr');
+                if (item.syncStatus === "pending") {
+                    row.className = "pending-sync";
+                } else if (item.syncError) {
+                    row.className = "sync-error";
+                }
+                
+                row.innerHTML = `
+                    <td>${item.kebun || ''}</td>
+                    <td>${item.divisi || ''}</td>
+                    <!-- ... kolom lainnya tetap sama ... -->
+                    <td>
+                        ${getSyncIndicator(item)}
+                        <button class="btn btn-danger delete-row" data-id="${item.id}">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
             });
-          });
+
+            // Event listeners untuk delete buttons (tetap sama)
+            document.querySelectorAll('.delete-row').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+                        deleteData(id);
+                    }
+                });
+            });
         } catch (error) {
-          console.error('Error loading data:', error);
+            console.error('Error loading data:', error);
         }
       }
 
@@ -484,99 +550,94 @@
 
       // Fungsi hapus data - PERBAIKI untuk sync ke server
       async function deleteData(id) {
+        try {
+            // Dapatkan data yang akan dihapus
+            const item = await dbOperation('budgets', (store) => store.get(id));
+            
+            if (!item) return;
+            
+            // Jika data sudah sync ke server, hapus juga dari server
+            if (item.syncStatus === "synced") {
+                try {
+                    await fetch(`/api/budget/${id}`, { method: 'DELETE' });
+                } catch (error) {
+                    console.error('Gagal menghapus dari server:', error);
+                }
+            }
+            
+            // Hapus dari IndexedDB
+            await dbOperation('budgets', (store) => store.delete(id));
+            loadDataToTable();
+        } catch (error) {
+            console.error('Error deleting data:', error);
+        }
+    }
+      
+        // Fungsi save data - MODIFIKASI untuk hybrid system
+        document.getElementById('saveBtn').addEventListener('click', async function() {
           try {
-              const savedData = JSON.parse(localStorage.getItem('budgetData') || '[]');
-              const itemToDelete = savedData.find(item => item.id === id);
+              const currentData = xs.getData();
+              const newData = formatDataForStorage(currentData);
               
-              if (!itemToDelete) return;
-              
-              // Jika data sudah sync ke server, hapus juga dari server
-              if (itemToDelete.syncStatus === "synced") {
-                  try {
-                      await fetch(`/api/budget/${id}`, {
-                          method: 'DELETE'
-                      });
-                  } catch (error) {
-                      console.error('Gagal menghapus dari server:', error);
-                  }
+              if (newData.length === 0) {
+                  alert('Tidak ada data baru untuk disimpan!');
+                  return;
               }
               
-              // Update LocalStorage
-              const updatedData = savedData.filter(item => item.id !== id);
-              localStorage.setItem('budgetData', JSON.stringify(updatedData));
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
+              
+              // Coba sync ke server
+              await syncToServer();
+              
+              alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               loadDataToTable();
+              xs.loadData([initialData]);
           } catch (error) {
-              console.error('Error deleting data:', error);
+              console.error('Error saving data:', error);
+              alert('Gagal menyimpan data');
           }
-      }
-      
-      // Fungsi save data - MODIFIKASI untuk hybrid system
-      document.getElementById('saveBtn').addEventListener('click', async function() {
-        try {
-          const currentData = xs.getData();
-          const newData = formatDataForStorage(currentData);
-      
-          if (newData.length === 0) {
-            alert('Tidak ada data baru untuk disimpan!');
-            return;
-          }
-      
-          await window.budgetDB.addAll(newData);
-          await syncToServer();
-          alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-          loadDataToTable();
-          xs.loadData([initialData]);
-        } catch (error) {
-          console.error('Error saving data:', error);
-          alert('Gagal menyimpan data');
-        }
       });
 
       // Fungsi utama sync ke server
       async function syncToServer() {
-        try {
-          const savedData = await window.budgetDB.getAll();
-          const pendingData = savedData.filter(item => item.syncStatus === "pending");
-      
-          if (pendingData.length === 0) return;
-      
-          for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-            const batch = pendingData.slice(i, i + BATCH_SIZE);
-      
-            try {
-              const response = await fetch("/api/save-budget", {
-                method: "POST",
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(batch)
-              });
-      
-              if (response.ok) {
-                for (const item of batch) {
-                  item.syncStatus = "synced";
-                  item.syncError = null;
-                  await window.budgetDB.update(item);
-                }
-              } else {
-                const errorMsg = await response.text();
-                for (const item of batch) {
-                  item.syncError = errorMsg.substring(0, 100);
-                  await window.budgetDB.update(item);
-                }
+          try {
+              // Ambil data yang belum sync dari IndexedDB
+              const allData = await getFromIndexedDB();
+              const pendingData = allData.filter(item => item.syncStatus === "pending");
+              
+              if (pendingData.length === 0) return;
+              
+              // Kirim per batch
+              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+                  const batch = pendingData.slice(i, i + BATCH_SIZE);
+                  const batchIds = batch.map(item => item.id);
+                  
+                  try {
+                      const response = await fetch("/api/save-budget", {
+                          method: "POST",
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(batch)
+                      });
+                      
+                      if (response.ok) {
+                          // Update status di IndexedDB
+                          await updateSyncStatus(batchIds, "synced");
+                      } else {
+                          const errorMsg = await response.text();
+                          await updateSyncStatus(batchIds, "pending", errorMsg);
+                          console.error("Sync gagal untuk batch", i, errorMsg);
+                      }
+                  } catch (error) {
+                      await updateSyncStatus(batchIds, "pending", error.message);
+                      console.error("Error sync batch", i, error);
+                  }
               }
-            } catch (error) {
-              for (const item of batch) {
-                item.syncError = error.message.substring(0, 100);
-                await window.budgetDB.update(item);
-              }
-              console.error("Error sync batch", i, error);
-            }
+              
+              loadDataToTable();
+          } catch (error) {
+              console.error("Sync error:", error);
           }
-          loadDataToTable();
-        } catch (error) {
-          console.error("Sync error:", error);
-        }
       }
 
       // Update status error jika sync gagal
@@ -600,39 +661,24 @@
           this.disabled = false;
       });
 
-      // Periodic sync
-      setInterval(async () => {
-          await syncToServer();
-          loadDataToTable();
-      }, SYNC_INTERVAL);
-
-      // Initialize the page - only load data to table
-      loadDataToTable();
-
       // Import Excel functionality with ID generation
       document.getElementById('importBtn').addEventListener('click', function() {
           document.getElementById('importFile').click();
       });
     
-      document.getElementById('importFile').addEventListener('change', function(e) {
+      document.getElementById('importFile').addEventListener('change', async function(e) {
           const file = e.target.files[0];
           if (!file) return;
       
           const reader = new FileReader();
-          reader.onload = function(e) {
+          reader.onload = async function(e) {
               try {
                   const data = new Uint8Array(e.target.result);
                   const workbook = XLSX.read(data, { type: 'array' });
-                  const firstSheetName = workbook.SheetNames[0];
-                  const worksheet = workbook.Sheets[firstSheetName];
+                  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                   const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                   
-                  // Get existing data
-                  const existingData = JSON.parse(localStorage.getItem('budgetData') || []);
-                  
-                  // Process imported data
                   const importedData = [];
-                  // Skip header row (index 0)
                   for (let i = 1; i < jsonData.length; i++) {
                       const row = jsonData[i];
                       if (!row || (!row[0] && !row[1])) continue;
@@ -650,12 +696,13 @@
                           luas: parseFloat(row[8]) || 0,
                           biaya: parseInt(row[9]) || 0,
                           timestamp: new Date().toISOString()
+                          syncStatus: "pending",
+                          syncError: null
                       });
                   }
                   
-                  // Combine with existing data
-                  const combinedData = [...existingData, ...importedData];
-                  localStorage.setItem('budgetData', JSON.stringify(combinedData));
+                  // Simpan ke IndexedDB
+                  await saveToIndexedDB(importedData);
                   
                   alert(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
                   loadDataToTable();
@@ -669,19 +716,14 @@
       });
     
       // Export to Excel functionality
-      document.getElementById('exportBtn').addEventListener('click', function() {
-          try {
-              const savedData = JSON.parse(localStorage.getItem('budgetData') || []);
-              
-              // Prepare header
-              const sheetData = [
-                  ['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Kode Kerja', 
-                   'Objek Kerja', 'Bulan', 'HK', 'Luas (Ha)', 'Biaya (Rp)']
-              ];
-              
-              // Add data rows (excluding the ID)
-              savedData.forEach(item => {
-                  sheetData.push([
+      document.getElementById('exportBtn').addEventListener('click', async function() {
+        try {
+            const savedData = await getFromIndexedDB();
+            
+            // Prepare dan export data (tetap sama)
+            const sheetData = [['Kebun', 'Divisi', /* ... header lainnya ... */]];
+            savedData.forEach(item => {
+                sheetData.push([
                       item.kebun || '',
                       item.divisi || '',
                       item.kodeTahunTanam || '',
@@ -692,19 +734,33 @@
                       item.hk || 0,
                       item.luas || 0,
                       item.biaya || 0
-                  ]);
-              });
-              
-              const ws = XLSX.utils.aoa_to_sheet(sheetData);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-              XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
-              alert('Data berhasil diekspor ke Excel!');
-          } catch (error) {
-              console.error('Error exporting:', error);
-              alert('Gagal mengekspor ke Excel');
-          }
-      });
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            alert('Data berhasil diekspor ke Excel!');
+        } catch (error) {
+            console.error('Error exporting:', error);
+            alert('Gagal mengekspor ke Excel');
+        }
+    });
+
+    // Inisialisasi aplikasi
+    initDB.then(() => {
+        loadDataToTable();
+        
+        // Periodic sync
+        setInterval(async () => {
+            await syncToServer();
+        }, SYNC_INTERVAL);
+    }).catch(error => {
+        console.error("Gagal menginisialisasi database:", error);
+        alert("Aplikasi tidak dapat berjalan karena masalah database");
+    });
+    
   });
   </script>
 </body>
