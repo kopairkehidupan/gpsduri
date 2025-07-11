@@ -115,6 +115,7 @@
       display: flex;
       gap: 1rem;
       margin-top: 1.5rem;
+      flex-wrap: wrap; /* Memungkinkan tombol wrap ke baris baru di layar kecil */
     }
     
     .section-title {
@@ -301,63 +302,47 @@
       }
     }
 
-   /* Warna untuk tombol-tombol */
-    .btn-group .btn:nth-child(1) {
-      background-color: #4285f4; /* Biru - untuk Simpan */
+   .btn-group .btn, 
+    .btn-group a.btn {
+      flex: 1 1 auto; /* Fleksibel tapi bisa menyusut jika perlu */
+      min-width: 120px; /* Lebar minimum untuk semua tombol */
+      max-width: 100%; /* Mencegah overflow */
+      text-align: center;
+      justify-content: center;
+      white-space: nowrap; /* Mencegah text wrapping */
+      padding: 0.75rem 0.5rem; /* Padding yang konsisten */
     }
-    .btn-group .btn:nth-child(1):hover {
-      background-color: #3367d6;
+
+   /* Warna khusus untuk setiap tombol */
+    .btn-group .btn:nth-child(1) { background-color: #4285f4; } /* Simpan */
+    .btn-group .btn:nth-child(2) { background-color: #34a853; } /* Export */
+    .btn-group .btn:nth-child(3) { background-color: #fbbc05; color: #202124; } /* Import */
+    .btn-group .btn:nth-child(4) { background-color: #673ab7; } /* Sync */
+    .btn-group a.btn { background-color: #ea4335; } /* Navigasi */
+    
+    /* Efek hover */
+    .btn-group .btn:hover, 
+    .btn-group a.btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     
-    .btn-group .btn:nth-child(2) {
-      background-color: #34a853; /* Hijau - untuk Export */
+    /* Responsif untuk mobile */
+    @media (max-width: 768px) {
+      .btn-group {
+        flex-direction: column;
+      }
+      
+      .btn-group .btn, 
+      .btn-group a.btn {
+        width: 100%; /* Full width di mobile */
+        min-width: 100%; /* Pastikan full width */
+      }
     }
-    .btn-group .btn:nth-child(2):hover {
-      background-color: #2d9246;
-    }
-    
-    .btn-group .btn:nth-child(3) {
-      background-color: #fbbc05; /* Kuning - untuk Import */
-      color: #202124;
-    }
-    .btn-group .btn:nth-child(3):hover {
-      background-color: #e8ac04;
-    }
-    
-    .btn-group .btn:nth-child(4) {
-      background-color: #673ab7; /* Ungu - untuk Sync */
-    }
-    .btn-group .btn:nth-child(4):hover {
-      background-color: #5e35b1;
-    }
-    
-    .btn-group .btn:nth-child(5) a {
-      background-color: #ea4335; /* Merah - untuk Navigasi */
-      color: white;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      border-radius: 6px;
-    }
-    .btn-group .btn:nth-child(5):hover a {
-      background-color: #d33426;
-    }
-    
     /* Style untuk input file yang tersembunyi */
     #importFile {
       display: none;
     }
-
-   .btn-group .btn, 
-      .btn-group a.btn {
-        flex: 1; /* Membuat semua tombol memiliki lebar yang sama */
-        min-width: 0; /* Memastikan teks yang panjang tidak memaksa lebar tombol */
-        text-align: center;
-        justify-content: center;
-        white-space: nowrap; /* Mencegah text wrapping */
-      }
 </style>
 </head>
 <body>
@@ -385,8 +370,8 @@
         <button id="manualSyncBtn" class="btn">
           <i class="material-icons">sync</i> Sinkronkan Sekarang
         </button>
-        <input type="file" id="importFile" accept=".xlsx,.xls,.csv">
-        <a href="budget.html" class="btn">
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display: none;">
+        <a href="actual.html" class="btn">
           <i class="material-icons">swap_horiz</i> Ke Halaman Actual
         </a>
       </div>
