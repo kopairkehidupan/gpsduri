@@ -800,7 +800,7 @@
     // Inisialisasi aplikasi
     initDB.then(() => {
         loadDataToTable();
-        
+        syncToServer(); // Sync segera saat pertama load
         // Periodic sync
         setInterval(async () => {
             await syncToServer();
