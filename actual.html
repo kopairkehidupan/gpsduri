@@ -238,7 +238,7 @@
       width: 100%;
       margin: 1rem 0;
       border-radius: 8px;
-      overflow: hidden;
+      overflow: auto; /* Pastikan ini 'auto' bukan 'hidden' */
       box-shadow: var(--shadow);
     }
     
@@ -413,6 +413,39 @@
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
+      // Variabel untuk melacak posisi mouse
+      let isMouseInsideSpreadsheet = false;
+      
+      // Dapatkan elemen spreadsheet
+      const spreadsheetElement = document.getElementById('xspreadsheet');
+      
+      // Event listener untuk mengetahui ketika mouse masuk ke spreadsheet
+      spreadsheetElement.addEventListener('mouseenter', function() {
+        isMouseInsideSpreadsheet = true;
+      });
+      
+      // Event listener untuk mengetahui ketika mouse keluar dari spreadsheet
+      spreadsheetElement.addEventListener('mouseleave', function() {
+        isMouseInsideSpreadsheet = false;
+      });
+      
+      // Event listener untuk mencegah scroll halaman ketika mouse di dalam spreadsheet
+      document.addEventListener('wheel', function(e) {
+        if (isMouseInsideSpreadsheet) {
+          // Cek apakah scroll terjadi di atas spreadsheet
+          const spreadsheetRect = spreadsheetElement.getBoundingClientRect();
+          const isMouseOverSpreadsheet = 
+            e.clientX >= spreadsheetRect.left && 
+            e.clientX <= spreadsheetRect.right && 
+            e.clientY >= spreadsheetRect.top && 
+            e.clientY <= spreadsheetRect.bottom;
+          
+          if (isMouseOverSpreadsheet) {
+            e.preventDefault();
+          }
+        }
+      }, { passive: false });
+    
       // Konfigurasi
       const SYNC_INTERVAL = 30000; // 30 detik
       const BATCH_SIZE = 50; // Jumlah data per batch ke server
