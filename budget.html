@@ -618,28 +618,29 @@
               
               if (pendingData.length === 0) return;
               
-              // Kirim per batch
               for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
                   const batch = pendingData.slice(i, i + BATCH_SIZE);
                   const batchIds = batch.map(item => item.id);
                   
                   try {
-                      const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                      // Tambahkan timestamp unik untuk menghindari cache
+                      const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
+                      
+                      console.log("Mengirim data:", batch); // Debug log
+                      
+                      await fetch(url, {
                           method: "POST",
-                          headers: { 
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json'
-                          },
+                          headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                               action: "saveBudget",
                               data: batch
                           }),
-                          mode: 'no-cors' // Mode no-cors untuk menghindari CORS issues
+                          mode: 'no-cors',
+                          redirect: 'follow'
                       });
                       
-                      // Karena mode no-cors, kita tidak bisa membaca response langsung
-                      // Asumsikan selalu berhasil untuk Google Sheets
                       await updateSyncStatus(batchIds, "synced");
+                      console.log("Sync berhasil untuk batch", i); // Debug log
                       
                   } catch (error) {
                       await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
