@@ -129,23 +129,118 @@
     .budget-table {
       width: 100%;
       border-collapse: collapse;
+      font-size: 0.9rem;
       margin-top: 1rem;
     }
     
-    .budget-table th, .budget-table td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--medium-gray);
+    .budget-table thead {
+      background-color: var(--primary);
+      color: var(--white);
     }
     
     .budget-table th {
-      background-color: var(--light-gray);
+      padding: 0.75rem;
+      text-align: left;
       font-weight: 500;
-      color: var(--dark-gray);
+    }
+    
+    .budget-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--medium-gray);
+      vertical-align: top;
+    }
+    
+    .budget-table tr:last-child td {
+      border-bottom: none;
     }
     
     .budget-table tr:hover {
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    /* Style untuk sel numerik */
+    .budget-table .numeric {
+      text-align: right;
+    }
+    
+    /* Style untuk sel dengan merge */
+    .budget-table .merged-cell {
+      vertical-align: top;
+      text-align: left;
+    }
+    
+    /* Style untuk container responsive */
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Style untuk badge */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
       background-color: var(--light-gray);
+      color: var(--dark-gray);
+      margin: 0.1rem 0;
+    }
+    
+    /* Style untuk tombol aksi */
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    /* Style untuk loading */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(66, 133, 244, 0.2);
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Style untuk sel statistik */
+    .stats-container {
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+    
+    .stats-container div {
+      margin: 0.1rem 0;
+    }
+    
+    .stats-container strong {
+      font-weight: 500;
+    }
+    
+    /* Media queries untuk responsivitas */
+    @media (max-width: 600px) {
+      .budget-table th, 
+      .budget-table td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+      }
+      
+      .actions {
+        flex-direction: column;
+      }
     }
     
     .numeric {
@@ -269,6 +364,12 @@
           </thead>
           <tbody id="dataTable">
             <!-- Data will be loaded here -->
+            <tr>
+            <td colspan="11" class="loading">
+              <div class="spinner"></div>
+              <span style="margin-left: 1rem;">Memuat data...</span>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
@@ -491,55 +592,122 @@
       // Load data ke tabel - TAMBAHKAN indicator sync status
       async function loadDataToTable() {
         try {
-            const data = await getFromIndexedDB();
-            
-            const tableBody = document.getElementById('dataTable');
-            tableBody.innerHTML = '';
-            
-            data.forEach((item) => {
-                const row = document.createElement('tr');
-                if (item.syncStatus === "pending") {
-                    row.className = "pending-sync";
-                } else if (item.syncError) {
-                    row.className = "sync-error";
-                }
-                
+          const data = await getFromIndexedDB();
+          
+          const tableBody = document.getElementById('dataTable');
+          tableBody.innerHTML = '';
+          
+          if (data.length === 0) {
+            tableBody.innerHTML = `
+              <tr>
+                <td colspan="11" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
+                  <i class="material-icons" style="font-size: 36px; color: var(--medium-gray);">info_outline</i>
+                  <p style="margin-top: 1rem;">Tidak ada data budget tersimpan</p>
+                </td>
+              </tr>
+            `;
+            return;
+          }
+          
+          // Kelompokkan data untuk merge cell (opsional)
+          const groupedData = groupDataForMerge(data);
+          
+          groupedData.forEach(group => {
+            group.items.forEach((item, index) => {
+              const row = document.createElement('tr');
+              if (item.syncStatus === "pending") {
+                row.className = "pending-sync";
+              } else if (item.syncError) {
+                row.className = "sync-error";
+              }
+              
+              // Baris pertama dalam grup
+              if (index === 0) {
                 row.innerHTML = `
-                    <td>${item.kebun || ''}</td>
-                      <td>${item.divisi || ''}</td>
-                      <td>${item.kodeTahunTanam || ''}</td>
-                      <td>${item.blok || ''}</td>
-                      <td>${item.kodeKerja || ''}</td>
-                      <td>${item.objekKerja || ''}</td>
-                      <td>${item.bulan || ''}</td>
-                      <td class="numeric">${item.hk || 0}</td>
-                      <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
-                      <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
-                      <td>
-                    <td>
-                        ${getSyncIndicator(item)}
-                        <button class="btn btn-danger delete-row" data-id="${item.id}">
-                            <i class="material-icons">delete</i>
-                        </button>
-                    </td>
+                  <td class="merged-cell" rowspan="${group.items.length}">${item.kebun || ''}</td>
+                  <td class="merged-cell" rowspan="${group.items.length}">${item.divisi || ''}</td>
+                  <td>${item.kodeTahunTanam || ''}</td>
+                  <td>${item.blok || ''}</td>
+                  <td>${item.kodeKerja || ''}</td>
+                  <td>${item.objekKerja || ''}</td>
+                  <td>${item.bulan || ''}</td>
+                  <td class="numeric">${item.hk || 0}</td>
+                  <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
+                  <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+                  <td class="actions">
+                    ${getSyncIndicator(item)}
+                    <button class="btn btn-danger delete-row" data-id="${item.id}">
+                      <i class="material-icons">delete</i>
+                    </button>
+                  </td>
                 `;
-                tableBody.appendChild(row);
+              } else {
+                // Baris berikutnya dalam grup
+                row.innerHTML = `
+                  <td>${item.kodeTahunTanam || ''}</td>
+                  <td>${item.blok || ''}</td>
+                  <td>${item.kodeKerja || ''}</td>
+                  <td>${item.objekKerja || ''}</td>
+                  <td>${item.bulan || ''}</td>
+                  <td class="numeric">${item.hk || 0}</td>
+                  <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
+                  <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+                  <td class="actions">
+                    ${getSyncIndicator(item)}
+                    <button class="btn btn-danger delete-row" data-id="${item.id}">
+                      <i class="material-icons">delete</i>
+                    </button>
+                  </td>
+                `;
+              }
+              
+              tableBody.appendChild(row);
             });
-
-            // Event listeners untuk delete buttons (tetap sama)
-            document.querySelectorAll('.delete-row').forEach(button => {
-              button.addEventListener('click', async function() {
-                  const id = this.getAttribute('data-id');
-                  const item = await dbOperation('budgets', (store) => store.get(id));
-                  
-                  if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
-                      await deleteData(id);
-                  }
-              });
+          });
+      
+          // Tambahkan event listeners untuk tombol delete
+          document.querySelectorAll('.delete-row').forEach(button => {
+            button.addEventListener('click', async function() {
+              const id = this.getAttribute('data-id');
+              const item = await dbOperation('budgets', (store) => store.get(id));
+              
+              if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
+                await deleteData(id);
+              }
+            });
           });
         } catch (error) {
-            console.error('Error loading data:', error);
+          console.error('Error loading data:', error);
+          const tableBody = document.getElementById('dataTable');
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="11" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
+                <i class="material-icons" style="font-size: 36px; color: var(--medium-gray);">error_outline</i>
+                <p style="margin-top: 1rem;">Gagal memuat data. Silakan coba lagi.</p>
+                <p style="font-size: 0.8rem;">${error.message}</p>
+              </td>
+            </tr>
+          `;
         }
+      }
+      
+      // Fungsi helper untuk mengelompokkan data (opsional)
+      function groupDataForMerge(data) {
+        const groups = {};
+        
+        data.forEach(item => {
+          const key = `${item.kebun}|${item.divisi}`;
+          if (!groups[key]) {
+            groups[key] = {
+              kebun: item.kebun,
+              divisi: item.divisi,
+              items: []
+            };
+          }
+          groups[key].items.push(item);
+        });
+        
+        return Object.values(groups);
       }
 
        // Helper untuk menentukan indikator sync
