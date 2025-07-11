@@ -349,6 +349,15 @@
     #importFile {
       display: none;
     }
+
+   .btn-group .btn, 
+      .btn-group a.btn {
+        flex: 1; /* Membuat semua tombol memiliki lebar yang sama */
+        min-width: 0; /* Memastikan teks yang panjang tidak memaksa lebar tombol */
+        text-align: center;
+        justify-content: center;
+        white-space: nowrap; /* Mencegah text wrapping */
+      }
 </style>
 </head>
 <body>
