@@ -680,13 +680,33 @@
       }
 
       // Manual sync button (tambahkan di HTML)
+      let isSyncing = false;
+
       document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-          this.disabled = true;
-          this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
-          await syncToServer();
-          loadDataToTable();
-          this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-          this.disabled = false;
+          if (isSyncing) {
+              console.log("Sync sudah berjalan, tunggu...");
+              return;
+          }
+          
+          try {
+              isSyncing = true;
+              this.disabled = true;
+              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+              
+              await syncToServer();
+              
+              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+              this.disabled = false;
+              isSyncing = false;
+          } catch (error) {
+              console.error("Manual sync error:", error);
+              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
+              setTimeout(() => {
+                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+                  this.disabled = false;
+                  isSyncing = false;
+              }, 2000);
+          }
       });
 
       // Import Excel functionality with ID generation
