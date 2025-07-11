@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer-when-downgrade">
   <title>Actual Input - Excel</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -10,7 +11,7 @@
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    /* CSS sama persis dengan budget.html */
+    /* CSS sama persis dengan actual.html */
     :root {
       --primary: #4285f4;
       --primary-hover: #3367d6;
@@ -278,6 +279,107 @@
       // Konfigurasi
       const SYNC_INTERVAL = 30000; // 30 detik
       const BATCH_SIZE = 50; // Jumlah data per batch ke server
+      let db; // Variabel untuk koneksi database
+
+      const initDB = new Promise((resolve, reject) => {
+          const request = indexedDB.open('ActualDB', 1);
+          
+          request.onerror = (event) => {
+              console.error("Database error:", event.target.error);
+              reject("Gagal membuka database");
+          };
+  
+          request.onsuccess = (event) => {
+              db = event.target.result;
+              resolve(db);
+          };
+  
+          request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              const store = db.createObjectStore('actuals', {
+                  keyPath: 'id',
+                  autoIncrement: false
+              });
+              
+              // Buat index untuk query cepat
+              store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
+          };
+      });
+
+      // Helper function untuk operasi database
+      const dbOperation = (storeName, operation) => {
+          return new Promise((resolve, reject) => {
+              const transaction = db.transaction(storeName, 'readwrite');
+              const store = transaction.objectStore(storeName);
+              
+              const request = operation(store);
+              
+              request.onsuccess = () => resolve(request.result);
+              request.onerror = (event) => reject(event.target.error);
+          });
+      };
+    
+      // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
+      async function saveToIndexedDB(data) {
+          try {
+              await initDB;
+              
+              if (Array.isArray(data)) {
+                  // Gunakan transaction untuk bulk operation
+                  const transaction = db.transaction('actuals', 'readwrite');
+                  const store = transaction.objectStore('actuals');
+                  
+                  data.forEach(item => {
+                      store.put(item);
+                  });
+                  
+                  return new Promise((resolve, reject) => {
+                      transaction.oncomplete = () => resolve();
+                      transaction.onerror = (event) => reject(event.target.error);
+                  });
+              } else {
+                  await dbOperation('actuals', (store) => store.put(data));
+              }
+          } catch (error) {
+              console.error("Gagal menyimpan ke IndexedDB:", error);
+              throw error;
+          }
+      }
+
+      // Fungsi untuk membaca data dari IndexedDB (mengganti localStorage)
+      async function getFromIndexedDB() {
+          try {
+              await initDB;
+              return await dbOperation('actuals', (store) => store.getAll());
+          } catch (error) {
+              console.error("Gagal membaca dari IndexedDB:", error);
+              throw error;
+          }
+      }
+
+      // Fungsi untuk update status sync (mengganti localStorage)
+      async function updateSyncStatus(ids, newStatus, errorMsg = null) {
+          try {
+              await initDB;
+              
+              const transaction = db.transaction('actuals', 'readwrite');
+              const store = transaction.objectStore('actuals');
+              
+              // Gunakan Promise.all untuk menunggu semua operasi selesai
+              await Promise.all(ids.map(async (id) => {
+                  const item = await dbOperation('actuals', (store) => store.get(id));
+                  if (item) {
+                      item.syncStatus = newStatus;
+                      if (errorMsg) item.syncError = errorMsg;
+                      await dbOperation('actuals', (store) => store.put(item));
+                  }
+              }));
+              
+          } catch (error) {
+              console.error("Gagal update status sync:", error);
+              throw error;
+          }
+      }
       
       // Initialize x-spreadsheet with empty template
       const initialData = { 
@@ -387,25 +489,23 @@
       }
 
       // Load data ke tabel - TAMBAHKAN indicator sync status
-      function loadDataToTable() {
-          try {
-              const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
-              const data = Array.isArray(savedData) ? savedData : [];
-              
-              const tableBody = document.getElementById('dataTable');
-              tableBody.innerHTML = '';
-              
-              data.forEach((item) => {
-                  const row = document.createElement('tr');
-                  // Tambahkan class berdasarkan syncStatus
-                  if (item.syncStatus === "pending") {
-                      row.className = "pending-sync";
-                  } else if (item.syncError) {
-                      row.className = "sync-error";
-                  }
-                  
-                  row.innerHTML = `
-                      <td>${item.kebun || ''}</td>
+      async function loadDataToTable() {
+        try {
+            const data = await getFromIndexedDB();
+            
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+            
+            data.forEach((item) => {
+                const row = document.createElement('tr');
+                if (item.syncStatus === "pending") {
+                    row.className = "pending-sync";
+                } else if (item.syncError) {
+                    row.className = "sync-error";
+                }
+                
+                row.innerHTML = `
+                     <td>${item.kebun || ''}</td>
                       <td>${item.divisi || ''}</td>
                       <td>${item.kodeTahunTanam || ''}</td>
                       <td>${item.blok || ''}</td>
@@ -416,27 +516,29 @@
                       <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
                       <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                       <td>
-                          ${getSyncIndicator(item)}
-                          <button class="btn btn-danger delete-row" data-id="${item.id}" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                              <i class="material-icons" style="font-size: 1rem;">delete</i>
-                          </button>
-                      </td>
-                  `;
-                  tableBody.appendChild(row);
-              });
+                        ${getSyncIndicator(item)}
+                        <button class="btn btn-danger delete-row" data-id="${item.id}">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
 
-              // Event listeners untuk delete buttons
-              document.querySelectorAll('.delete-row').forEach(button => {
-                  button.addEventListener('click', function() {
-                      const id = this.getAttribute('data-id');
-                      if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-                          deleteData(id);
-                      }
-                  });
+            // Event listeners untuk delete buttons (tetap sama)
+            document.querySelectorAll('.delete-row').forEach(button => {
+              button.addEventListener('click', async function() {
+                  const id = this.getAttribute('data-id');
+                  const item = await dbOperation('actuals', (store) => store.get(id));
+                  
+                  if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
+                      await deleteData(id);
+                  }
               });
-          } catch (error) {
-              console.error('Error loading data:', error);
-          }
+          });
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
       }
 
       // Helper untuk menentukan indikator sync
@@ -450,33 +552,69 @@
       }
 
       // Fungsi hapus data - PERBAIKI untuk sync ke server
-      async function deleteData(id) {
-          try {
-              const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
-              const itemToDelete = savedData.find(item => item.id === id);
-              
-              if (!itemToDelete) return;
-              
-              // Jika data sudah sync ke server, hapus juga dari server
-              if (itemToDelete.syncStatus === "synced") {
-                  try {
-                      await fetch(`/api/actual/${id}`, {
-                          method: 'DELETE'
-                      });
-                  } catch (error) {
-                      console.error('Gagal menghapus dari server:', error);
-                      alert('Data dihapus dari lokal tapi gagal dihapus dari server');
-                  }
+       async function deleteData(id) {
+            const deleteBtn = document.querySelector(`.delete-row[data-id="${id}"]`);
+            if (deleteBtn) {
+                deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i>';
+                deleteBtn.disabled = true;
+            }
+        
+            try {
+                const item = await dbOperation('actuals', (store) => store.get(id));
+                
+                if (!item) {
+                    console.log('Data tidak ditemukan di IndexedDB');
+                    return;
+                }
+                
+                // Hapus dari IndexedDB terlebih dahulu
+                await dbOperation('actuals', (store) => store.delete(id));
+                console.log('Data berhasil dihapus dari IndexedDB');
+                
+                // Jika data sudah sync ke server, hapus juga dari Google Sheet
+                if (item.syncStatus === "synced") {
+                    try {
+                        console.log('Mencoba menghapus dari Google Sheet...');
+                        const response = await fetch("https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec", {
+                            method: "POST",
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: "deleteActual",
+                                id: id
+                            }),
+                            mode: 'no-cors'
+                        });
+                        console.log('Permintaan penghapusan ke Google Sheet berhasil dikirim');
+                    } catch (error) {
+                        console.error('Gagal menghapus dari Google Sheet:', error);
+                        // Jika gagal, simpan kembali data ke IndexedDB dengan status error
+                        item.syncError = "Gagal menghapus dari server";
+                        await saveToIndexedDB(item);
+                    }
+                }
+                
+                // Perbarui tampilan tabel
+                loadDataToTable();
+                alert('Data berhasil dihapus');
+
+                if (deleteBtn) {
+                    deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                    deleteBtn.disabled = false;
+                }
+                
+            } catch (error) {
+               if (deleteBtn) {
+                  deleteBtn.innerHTML = '<i class="material-icons">error</i>';
+                  setTimeout(() => {
+                      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                      deleteBtn.disabled = false;
+                  }, 2000);
               }
-              
-              // Update LocalStorage
-              const updatedData = savedData.filter(item => item.id !== id);
-              localStorage.setItem('actualData', JSON.stringify(updatedData));
-              loadDataToTable();
-          } catch (error) {
-              console.error('Error deleting data:', error);
-          }
-      }
+            }
+        }
       
       // Fungsi save data - MODIFIKASI untuk hybrid system
       document.getElementById('saveBtn').addEventListener('click', async function() {
@@ -489,10 +627,8 @@
                   return;
               }
               
-              // Simpan ke LocalStorage
-              const existingData = JSON.parse(localStorage.getItem('actualData') || '[]');
-              const combinedData = [...existingData, ...newData];
-              localStorage.setItem('actualData', JSON.stringify(combinedData));
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
               
               // Coba sync ke server
               await syncToServer();
@@ -509,43 +645,46 @@
       // Fungsi utama sync ke server
       async function syncToServer() {
           try {
-              const savedData = JSON.parse(localStorage.getItem('actualData') || '[]');
-              const pendingData = savedData.filter(item => item.syncStatus === "pending");
+              const allData = await getFromIndexedDB();
+              const pendingData = allData.filter(item => item.syncStatus === "pending");
               
-              if (pendingData.length === 0) return;
+              if (pendingData.length === 0) {
+                  console.log("Tidak ada data pending untuk sync");
+                  return;
+              }
               
-              // Kirim per batch untuk optimasi
+              console.log("Memulai sync dengan", pendingData.length, "data");
+              
               for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
                   const batch = pendingData.slice(i, i + BATCH_SIZE);
+                  const batchIds = batch.map(item => item.id);
                   
                   try {
-                      const response = await fetch("/api/save-actual", {
+                      const url = `https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec?t=${Date.now()}`;
+                      
+                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
+                      
+                      // Gunakan try-catch untuk handle error fetch
+                      const response = await fetch(url, {
                           method: "POST",
-                          headers: {
-                              'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify(batch)
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              action: "saveActual",
+                              data: batch
+                          }),
+                          mode: 'no-cors'
                       });
                       
-                      if (response.ok) {
-                          // Update status di LocalStorage
-                          const allData = JSON.parse(localStorage.getItem('actualData'));
-                          const updatedData = allData.map(item => 
-                              batch.some(batchItem => batchItem.id === item.id) 
-                                  ? { ...item, syncStatus: "synced", syncError: null } 
-                                  : item
-                          );
-                          localStorage.setItem('actualData', JSON.stringify(updatedData));
-                      } else {
-                          const errorMsg = await response.text();
-                          updateSyncErrorStatus(batch, errorMsg);
-                          console.error("Sync gagal untuk batch", i, errorMsg);
-                      }
+                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
+                      await updateSyncStatus(batchIds, "synced");
+                      console.log("Sync berhasil untuk batch", i);
+                      
                   } catch (error) {
-                      updateSyncErrorStatus(batch, error.message);
                       console.error("Error sync batch", i, error);
+                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
                   }
               }
+              
               loadDataToTable();
           } catch (error) {
               console.error("Sync error:", error);
@@ -553,57 +692,73 @@
       }
 
       // Update status error jika sync gagal
-      function updateSyncErrorStatus(batch, errorMsg) {
-          const allData = JSON.parse(localStorage.getItem('actualData'));
-          const updatedData = allData.map(item => 
-              batch.some(batchItem => batchItem.id === item.id) 
-                  ? { ...item, syncError: errorMsg.substring(0, 100) } // Batasi panjang error message
-                  : item
-          );
-          localStorage.setItem('actualData', JSON.stringify(updatedData));
+      async function updateSyncErrorStatus(batch, errorMsg) {
+          try {
+              await initDB;
+              
+              await Promise.all(batch.map(async (item) => {
+                  const existingData = await dbOperation('actuals', (store) => store.get(item.id));
+                  if (existingData) {
+                      existingData.syncStatus = "pending";
+                      existingData.syncError = errorMsg.substring(0, 100);
+                      await dbOperation('actuals', (store) => store.put(existingData));
+                  }
+              }));
+              
+          } catch (error) {
+              console.error("Gagal update error status:", error);
+              throw error;
+          }
       }
 
       // Manual sync button
+      let isSyncing = false;
+
       document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-          this.disabled = true;
-          this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
-          await syncToServer();
-          this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-          this.disabled = false;
+          if (isSyncing) {
+              console.log("Sync sudah berjalan, tunggu...");
+              return;
+          }
+          
+          try {
+              isSyncing = true;
+              this.disabled = true;
+              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+              
+              await syncToServer();
+              
+              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+              this.disabled = false;
+              isSyncing = false;
+          } catch (error) {
+              console.error("Manual sync error:", error);
+              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
+              setTimeout(() => {
+                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+                  this.disabled = false;
+                  isSyncing = false;
+              }, 2000);
+          }
       });
-
-      // Periodic sync
-      setInterval(async () => {
-          await syncToServer();
-      }, SYNC_INTERVAL);
-
-      // Initialize the page - only load data to table
-      loadDataToTable();
-
+     
       // Import Excel functionality with ID generation
       document.getElementById('importBtn').addEventListener('click', function() {
           document.getElementById('importFile').click();
       });
     
-      document.getElementById('importFile').addEventListener('change', function(e) {
+       document.getElementById('importFile').addEventListener('change', async function(e) {
           const file = e.target.files[0];
           if (!file) return;
       
           const reader = new FileReader();
-          reader.onload = function(e) {
+          reader.onload = async function(e) {
               try {
                   const data = new Uint8Array(e.target.result);
                   const workbook = XLSX.read(data, { type: 'array' });
-                  const firstSheetName = workbook.SheetNames[0];
-                  const worksheet = workbook.Sheets[firstSheetName];
+                  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                   const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                   
-                  // Get existing data
-                  const existingData = JSON.parse(localStorage.getItem('actualData') || []);
-                  
-                  // Process imported data
                   const importedData = [];
-                  // Skip header row (index 0)
                   for (let i = 1; i < jsonData.length; i++) {
                       const row = jsonData[i];
                       if (!row || (!row[0] && !row[1])) continue;
@@ -620,13 +775,14 @@
                           hk: parseInt(row[7]) || 0,
                           hasil: parseFloat(row[8]) || 0,
                           biaya: parseInt(row[9]) || 0,
-                          timestamp: new Date().toISOString()
+                          timestamp: new Date().toISOString(),
+                          syncStatus: "pending",
+                          syncError: null
                       });
                   }
                   
-                  // Combine with existing data
-                  const combinedData = [...existingData, ...importedData];
-                  localStorage.setItem('actualData', JSON.stringify(combinedData));
+                  // Simpan ke IndexedDB
+                  await saveToIndexedDB(importedData);
                   
                   alert(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
                   loadDataToTable();
@@ -640,19 +796,15 @@
       });
     
       // Export to Excel functionality
-      document.getElementById('exportBtn').addEventListener('click', function() {
-          try {
-              const savedData = JSON.parse(localStorage.getItem('actualData') || []);
-              
-              // Prepare header
-              const sheetData = [
-                  ['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Kode Kerja', 
-                   'Objek Kerja', 'Bulan', 'HK', 'Hasil (Ha)', 'Biaya (Rp)']
-              ];
-              
-              // Add data rows (excluding the ID)
-              savedData.forEach(item => {
-                  sheetData.push([
+      document.getElementById('exportBtn').addEventListener('click', async function() {
+        try {
+            const savedData = await getFromIndexedDB();
+            
+            // Prepare dan export data (tetap sama)
+            const sheetData = [['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Kode Kerja', 
+                   'Objek Kerja', 'Bulan', 'HK', 'Hasil (Ha)', 'Biaya (Rp)']];
+            savedData.forEach(item => {
+                sheetData.push([
                       item.kebun || '',
                       item.divisi || '',
                       item.kodeTahunTanam || '',
@@ -663,19 +815,32 @@
                       item.hk || 0,
                       item.hasil || 0,
                       item.biaya || 0
-                  ]);
-              });
-              
-              const ws = XLSX.utils.aoa_to_sheet(sheetData);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-              XLSX.writeFile(wb, 'actual_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
-              alert('Data berhasil diekspor ke Excel!');
-          } catch (error) {
-              console.error('Error exporting:', error);
-              alert('Gagal mengekspor ke Excel');
-          }
-      });
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(sheetData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, 'actual_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            alert('Data berhasil diekspor ke Excel!');
+        } catch (error) {
+            console.error('Error exporting:', error);
+            alert('Gagal mengekspor ke Excel');
+        }
+    });
+
+    // Inisialisasi aplikasi
+    initDB.then(() => {
+        loadDataToTable();
+        syncToServer(); // Sync segera saat pertama load
+        // Periodic sync
+        setInterval(async () => {
+            await syncToServer();
+        }, SYNC_INTERVAL);
+    }).catch(error => {
+        console.error("Gagal menginisialisasi database:", error);
+        alert("Aplikasi tidak dapat berjalan karena masalah database");
+    });
   });
   </script>
 </body>
