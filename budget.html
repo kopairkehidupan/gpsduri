@@ -802,7 +802,8 @@
             const savedData = await getFromIndexedDB();
             
             // Prepare dan export data (tetap sama)
-            const sheetData = [['Kebun', 'Divisi', /* ... header lainnya ... */]];
+            const sheetData = [['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Kode Kerja', 
+                   'Objek Kerja', 'Bulan', 'HK', 'Luas (Ha)', 'Biaya (Rp)']];
             savedData.forEach(item => {
                 sheetData.push([
                       item.kebun || '',
