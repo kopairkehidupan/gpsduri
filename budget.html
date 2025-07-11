@@ -616,35 +616,40 @@
               const allData = await getFromIndexedDB();
               const pendingData = allData.filter(item => item.syncStatus === "pending");
               
-              if (pendingData.length === 0) return;
+              if (pendingData.length === 0) {
+                  console.log("Tidak ada data pending untuk sync");
+                  return;
+              }
+              
+              console.log("Memulai sync dengan", pendingData.length, "data");
               
               for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
                   const batch = pendingData.slice(i, i + BATCH_SIZE);
                   const batchIds = batch.map(item => item.id);
                   
                   try {
-                      // Tambahkan timestamp unik untuk menghindari cache
                       const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
                       
-                      console.log("Mengirim data:", batch); // Debug log
+                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
                       
-                      await fetch(url, {
+                      // Gunakan try-catch untuk handle error fetch
+                      const response = await fetch(url, {
                           method: "POST",
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                               action: "saveBudget",
                               data: batch
                           }),
-                          mode: 'no-cors',
-                          redirect: 'follow'
+                          mode: 'no-cors'
                       });
                       
+                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
                       await updateSyncStatus(batchIds, "synced");
-                      console.log("Sync berhasil untuk batch", i); // Debug log
+                      console.log("Sync berhasil untuk batch", i);
                       
                   } catch (error) {
-                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
                       console.error("Error sync batch", i, error);
+                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
                   }
               }
               
