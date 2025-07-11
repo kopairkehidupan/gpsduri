@@ -258,17 +258,119 @@
       align-items: center !important;
     }
     
+    /* Style untuk sync indicator */
     .sync-indicator {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
       margin-right: 8px;
+      font-size: 14px;
+      transition: all 0.3s ease;
       cursor: help;
+      position: relative;
     }
     
-    .pending-sync {
-      background-color: #fff9e6;
+    .sync-indicator.pending {
+      background-color: #FFC107;
+      color: #333;
+      animation: pulse 1.5s infinite;
     }
     
-    .sync-error {
-      background-color: #ffebee;
+    .sync-indicator.synced {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    .sync-indicator.error {
+      background-color: #F44336;
+      color: white;
+      animation: shake 0.5s;
+    }
+    
+    /* Style untuk tombol delete */
+    .btn-danger {
+      background-color: var(--danger);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover {
+      background-color: #d33426;
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3);
+    }
+    
+    .btn-danger .material-icons {
+      transition: transform 0.3s ease;
+    }
+    
+    .btn-danger:hover .material-icons {
+      transform: scale(1.2);
+    }
+    
+    .btn-danger::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1, 1) translate(-50%, -50%);
+      transform-origin: 50% 50%;
+    }
+    
+    .btn-danger:focus:not(:active)::after {
+      animation: ripple 0.6s ease-out;
+    }
+    
+    /* Animations */
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
+    }
+    
+    @keyframes ripple {
+      0% { transform: scale(0, 0); opacity: 0.5; }
+      100% { transform: scale(20, 20); opacity: 0; }
+    }
+    
+    /* Tooltip untuk sync indicator */
+    .sync-indicator::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    
+    .sync-indicator:hover::before {
+      opacity: 1;
+      visibility: visible;
+      bottom: calc(100% + 5px);
     }
 
     /* Media queries untuk responsivitas */
@@ -343,6 +445,15 @@
     #importFile {
       display: none;
     }
+
+  .btn-text {
+    margin-left: 5px;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-danger:hover .btn-text {
+    transform: translateX(2px);
+  }
 </style>
 </head>
 <body>
@@ -707,6 +818,7 @@
                     ${getSyncIndicator(item)}
                     <button class="btn btn-danger delete-row" data-id="${item.id}">
                       <i class="material-icons">delete</i>
+                      <span class="btn-text">Hapus</span>
                     </button>
                   </td>
                 `;
@@ -725,6 +837,7 @@
                     ${getSyncIndicator(item)}
                     <button class="btn btn-danger delete-row" data-id="${item.id}">
                       <i class="material-icons">delete</i>
+                      <span class="btn-text">Hapus</span>
                     </button>
                   </td>
                 `;
@@ -781,12 +894,15 @@
 
       // Helper untuk menentukan indikator sync
       function getSyncIndicator(item) {
-          if (item.syncError) {
-              return `<span class="sync-indicator" title="Gagal sync: ${item.syncError}">❌</span>`;
-          }
-          return item.syncStatus === "synced" 
-              ? '<span class="sync-indicator" title="Tersimpan di server">✅</span>'
-              : '<span class="sync-indicator" title="Menunggu sync ke server">🔄</span>';
+        let indicator;
+        if (item.syncError) {
+          indicator = `<span class="sync-indicator error" data-tooltip="Gagal sync: ${item.syncError}">❌</span>`;
+        } else if (item.syncStatus === "synced") {
+          indicator = `<span class="sync-indicator synced" data-tooltip="Data tersinkronisasi">✓</span>`;
+        } else {
+          indicator = `<span class="sync-indicator pending" data-tooltip="Menunggu sinkronisasi">↻</span>`;
+        }
+        return indicator;
       }
 
       // Fungsi hapus data - PERBAIKI untuk sync ke server
