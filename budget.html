@@ -365,23 +365,16 @@
               const transaction = db.transaction('budgets', 'readwrite');
               const store = transaction.objectStore('budgets');
               
-              // Ambil semua data yang perlu diupdate
-              const getRequests = ids.map(id => store.get(id));
+              // Gunakan Promise.all untuk menunggu semua operasi selesai
+              await Promise.all(ids.map(async (id) => {
+                  const item = await dbOperation('budgets', (store) => store.get(id));
+                  if (item) {
+                      item.syncStatus = newStatus;
+                      if (errorMsg) item.syncError = errorMsg;
+                      await dbOperation('budgets', (store) => store.put(item));
+                  }
+              }));
               
-              // Proses update
-              Promise.all(getRequests).then(results => {
-                  results.forEach(item => {
-                      if (item) {
-                          item.syncStatus = newStatus;
-                          if (errorMsg) item.syncError = errorMsg;
-                          store.put(item);
-                      }
-                  });
-              });
-              
-              return new Promise((resolve) => {
-                  transaction.oncomplete = () => resolve();
-              });
           } catch (error) {
               console.error("Gagal update status sync:", error);
               throw error;
@@ -663,37 +656,17 @@
       // Update status error jika sync gagal (Versi IndexedDB)
       async function updateSyncErrorStatus(batch, errorMsg) {
           try {
-              await initDB; // Pastikan DB sudah terinisialisasi
+              await initDB;
               
-              const transaction = db.transaction('budgets', 'readwrite');
-              const store = transaction.objectStore('budgets');
+              await Promise.all(batch.map(async (item) => {
+                  const existingData = await dbOperation('budgets', (store) => store.get(item.id));
+                  if (existingData) {
+                      existingData.syncStatus = "pending";
+                      existingData.syncError = errorMsg.substring(0, 100);
+                      await dbOperation('budgets', (store) => store.put(existingData));
+                  }
+              }));
               
-              // Untuk setiap item dalam batch
-              batch.forEach(item => {
-                  // Ambil data yang ada
-                  const request = store.get(item.id);
-                  
-                  request.onsuccess = () => {
-                      const existingData = request.result;
-                      if (existingData) {
-                          // Update status dan error
-                          existingData.syncStatus = "pending";
-                          existingData.syncError = errorMsg.substring(0, 100); // Batasi panjang error
-                          
-                          // Simpan kembali
-                          store.put(existingData);
-                      }
-                  };
-              });
-              
-              // Tunggu sampai transaksi selesai
-              await new Promise((resolve, reject) => {
-                  transaction.oncomplete = resolve;
-                  transaction.onerror = (event) => {
-                      console.error("Transaction error:", event.target.error);
-                      reject(event.target.error);
-                  };
-              });
           } catch (error) {
               console.error("Gagal update error status:", error);
               throw error;
