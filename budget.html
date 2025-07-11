@@ -528,13 +528,15 @@
 
             // Event listeners untuk delete buttons (tetap sama)
             document.querySelectorAll('.delete-row').forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-                        deleteData(id);
-                    }
-                });
-            });
+              button.addEventListener('click', async function() {
+                  const id = this.getAttribute('data-id');
+                  const item = await dbOperation('budgets', (store) => store.get(id));
+                  
+                  if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
+                      await deleteData(id);
+                  }
+              });
+          });
         } catch (error) {
             console.error('Error loading data:', error);
         }
@@ -552,15 +554,29 @@
 
       // Fungsi hapus data - PERBAIKI untuk sync ke server
       async function deleteData(id) {
+            const deleteBtn = document.querySelector(`.delete-row[data-id="${id}"]`);
+            if (deleteBtn) {
+                deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i>';
+                deleteBtn.disabled = true;
+            }
+        
             try {
                 const item = await dbOperation('budgets', (store) => store.get(id));
                 
-                if (!item) return;
+                if (!item) {
+                    console.log('Data tidak ditemukan di IndexedDB');
+                    return;
+                }
+                
+                // Hapus dari IndexedDB terlebih dahulu
+                await dbOperation('budgets', (store) => store.delete(id));
+                console.log('Data berhasil dihapus dari IndexedDB');
                 
                 // Jika data sudah sync ke server, hapus juga dari Google Sheet
                 if (item.syncStatus === "synced") {
                     try {
-                        await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                        console.log('Mencoba menghapus dari Google Sheet...');
+                        const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
                             method: "POST",
                             headers: { 
                                 'Content-Type': 'application/json',
@@ -572,15 +588,32 @@
                             }),
                             mode: 'no-cors'
                         });
+                        console.log('Permintaan penghapusan ke Google Sheet berhasil dikirim');
                     } catch (error) {
                         console.error('Gagal menghapus dari Google Sheet:', error);
+                        // Jika gagal, simpan kembali data ke IndexedDB dengan status error
+                        item.syncError = "Gagal menghapus dari server";
+                        await saveToIndexedDB(item);
                     }
                 }
                 
-                await dbOperation('budgets', (store) => store.delete(id));
+                // Perbarui tampilan tabel
                 loadDataToTable();
+                alert('Data berhasil dihapus');
+
+                if (deleteBtn) {
+                    deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                    deleteBtn.disabled = false;
+                }
+                
             } catch (error) {
-                console.error('Error deleting data:', error);
+               if (deleteBtn) {
+                  deleteBtn.innerHTML = '<i class="material-icons">error</i>';
+                  setTimeout(() => {
+                      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                      deleteBtn.disabled = false;
+                  }, 2000);
+              }
             }
         }
       
