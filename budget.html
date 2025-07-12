@@ -1,3 +1,4 @@
+budget.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -453,19 +454,6 @@
     .btn-danger:hover .btn-text {
       transform: translateX(2px);
     }
-
-    /* Style untuk checkbox */
-    .budget-table th:first-child, 
-    .budget-table td:first-child {
-      width: 40px;
-      text-align: center;
-    }
-    
-    /* Style untuk tombol hapus massal */
-    #bulkDeleteBtn {
-      margin-top: 1rem;
-      display: none; /* Awalnya disembunyikan */
-    }
 </style>
 </head>
 <body>
@@ -508,7 +496,6 @@
         <table class="budget-table">
           <thead>
             <tr>
-              <th><input type="checkbox" id="selectAll"></th>
               <th>Kebun</th>
               <th>Divisi</th>
               <th>Kode Tahun Tanam</th>
@@ -537,8 +524,6 @@
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
-      // Untuk menyimpan ID yang dipilih
-      let selectedItems = new Set(); 
       // Variabel untuk melacak posisi mouse
       let isMouseInsideSpreadsheet = false;
       
@@ -578,55 +563,27 @@
       let db; // Variabel untuk koneksi database
 
       const initDB = new Promise((resolve, reject) => {
-          const request = indexedDB.open('BudgetDB', 2); // Versi dinaikkan ke 2
+          const request = indexedDB.open('BudgetDB', 1);
           
           request.onerror = (event) => {
               console.error("Database error:", event.target.error);
               reject("Gagal membuka database");
           };
-      
+  
           request.onsuccess = (event) => {
               db = event.target.result;
-              
-              // Periksa apakah object store syncQueue ada
-              if (!db.objectStoreNames.contains('syncQueue')) {
-                  // Jika tidak ada, tutup database dan buka kembali dengan versi yang lebih tinggi
-                  db.close();
-                  const newRequest = indexedDB.open('BudgetDB', 3);
-                  newRequest.onupgradeneeded = function(e) {
-                      const db = e.target.result;
-                      if (!db.objectStoreNames.contains('syncQueue')) {
-                          db.createObjectStore('syncQueue', { keyPath: 'id' });
-                      }
-                  };
-                  newRequest.onsuccess = function(e) {
-                      db = e.target.result;
-                      resolve(db);
-                  };
-                  newRequest.onerror = reject;
-              } else {
-                  resolve(db);
-              }
+              resolve(db);
           };
-      
+  
           request.onupgradeneeded = (event) => {
               const db = event.target.result;
+              const store = db.createObjectStore('budgets', {
+                  keyPath: 'id',
+                  autoIncrement: false
+              });
               
-              // Buat store untuk data budget jika belum ada
-              if (!db.objectStoreNames.contains('budgets')) {
-                  const store = db.createObjectStore('budgets', {
-                      keyPath: 'id',
-                      autoIncrement: false
-                  });
-                  store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
-              }
-              
-              // Buat store untuk antrian sync jika belum ada
-              if (!db.objectStoreNames.contains('syncQueue')) {
-                  db.createObjectStore('syncQueue', {
-                      keyPath: 'id'
-                  });
-              }
+              // Buat index untuk query cepat
+              store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
           };
       });
 
@@ -702,103 +659,6 @@
           } catch (error) {
               console.error("Gagal update status sync:", error);
               throw error;
-          }
-      }
-
-      // Fungsi untuk membuat antrian sync penghapusan
-      async function createSyncQueueForDeletion(ids) {
-          try {
-              await initDB;
-              
-              // Dapatkan data yang akan dihapus untuk mengetahui sync status
-              const allData = await getFromIndexedDB();
-              const itemsData = allData.filter(item => ids.includes(item.id));
-              const syncedItems = itemsData.filter(item => item.syncStatus === "synced");
-              
-              if (syncedItems.length > 0) {
-                  // Simpan ke antrian sync
-                  const newQueueItems = syncedItems.map(item => ({
-                      id: item.id + '-delete', // ID unik untuk operasi delete
-                      type: 'delete',
-                      targetId: item.id,
-                      timestamp: new Date().toISOString(),
-                      attempts: 0
-                  }));
-                  
-                  await Promise.all(newQueueItems.map(item => 
-                      dbOperation('syncQueue', (store) => store.put(item))
-                  ));
-              }
-          } catch (error) {
-              console.error('Error creating sync queue:', error);
-              throw error;
-          }
-      }
-
-      // Fungsi untuk memproses antrian sync
-      async function processSyncQueue() {
-          if (!navigator.onLine) return;
-          
-          try {
-              await initDB;
-              
-              // Periksa apakah object store syncQueue ada
-              if (!db.objectStoreNames.contains('syncQueue')) {
-                  console.log('Object store syncQueue tidak ditemukan');
-                  return;
-              }
-              
-              const queue = await dbOperation('syncQueue', (store) => store.getAll()) || [];
-              
-              if (queue.length === 0) return;
-              
-              console.log('Memproses antrian sync:', queue.length, 'item');
-              
-              // Kelompokkan berdasarkan jenis operasi
-              const deletes = queue.filter(item => item.type === 'delete');
-              
-              // Proses penghapusan
-              if (deletes.length > 0) {
-                  const deleteIds = deletes.map(item => item.targetId);
-                  try {
-                      const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
-                          method: "POST",
-                          headers: { 
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json'
-                          },
-                          body: JSON.stringify({
-                              action: "deleteMultipleBudgets",
-                              ids: deleteIds
-                          })
-                      });
-                      
-                      if (response.ok) {
-                          // Hapus dari antrian jika berhasil
-                          await Promise.all(deletes.map(item => 
-                              dbOperation('syncQueue', (store) => store.delete(item.id))
-                          ));
-                          console.log('Berhasil sync penghapusan:', deleteIds.length, 'item');
-                      } else {
-                          throw new Error('Response not OK');
-                      }
-                  } catch (error) {
-                      console.error('Gagal sync penghapusan:', error);
-                      // Update jumlah percobaan
-                      await Promise.all(deletes.map(async (item) => {
-                          item.attempts += 1;
-                          if (item.attempts < 5) { // Maksimal 5 percobaan
-                              await dbOperation('syncQueue', (store) => store.put(item));
-                          } else {
-                              // Hapus dari antrian jika sudah maksimal percobaan
-                              await dbOperation('syncQueue', (store) => store.delete(item.id));
-                              console.log('Gagal sync setelah 5 percobaan:', item.targetId);
-                          }
-                      }));
-                  }
-              }
-          } catch (error) {
-              console.error('Error processing sync queue:', error);
           }
       }
       
@@ -930,14 +790,6 @@
           
           const tableBody = document.getElementById('dataTable');
           tableBody.innerHTML = '';
-
-          // Tambahkan tombol hapus massal
-          const bulkDeleteBtn = document.createElement('button');
-          bulkDeleteBtn.id = 'bulkDeleteBtn';
-          bulkDeleteBtn.className = 'btn btn-danger';
-          bulkDeleteBtn.innerHTML = '<i class="material-icons">delete_forever</i> Hapus Data Terpilih';
-          bulkDeleteBtn.addEventListener('click', deleteSelectedItems);
-          tableBody.parentElement.insertBefore(bulkDeleteBtn, tableBody.nextSibling);
           
           if (data.length === 0) {
             tableBody.innerHTML = `
@@ -948,7 +800,6 @@
                 </td>
               </tr>
             `;
-            bulkDeleteBtn.style.display = 'none';
             return;
           }
           
@@ -967,7 +818,6 @@
               // Baris pertama dalam grup
               if (index === 0) {
                 row.innerHTML = `
-                  <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
                   <td class="merged-cell" rowspan="${group.items.length}">${item.kebun || ''}</td>
                   <td class="merged-cell" rowspan="${group.items.length}">${item.divisi || ''}</td>
                   <td>${item.kodeTahunTanam || ''}</td>
@@ -989,7 +839,6 @@
               } else {
                 // Baris berikutnya dalam grup
                 row.innerHTML = `
-                  <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
                   <td>${item.kodeTahunTanam || ''}</td>
                   <td>${item.blok || ''}</td>
                   <td>${item.kodeKerja || ''}</td>
@@ -1011,35 +860,18 @@
               tableBody.appendChild(row);
             });
           });
-
-          // Event listener untuk checkbox
-          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
+      
+          // Tambahkan event listeners untuk tombol delete
+          document.querySelectorAll('.delete-row').forEach(button => {
+            button.addEventListener('click', async function() {
               const id = this.getAttribute('data-id');
-              if (this.checked) {
-                selectedItems.add(id);
-              } else {
-                selectedItems.delete(id);
-              }
-              updateBulkDeleteButton();
-            });
-          });
-          
-          // Event listener untuk select all
-          document.getElementById('selectAll').addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('.row-checkbox');
-            checkboxes.forEach(checkbox => {
-              checkbox.checked = this.checked;
-              const id = checkbox.getAttribute('data-id');
-              if (this.checked) {
-                selectedItems.add(id);
-              } else {
-                selectedItems.clear();
+              const item = await dbOperation('budgets', (store) => store.get(id));
+              
+              if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
+                await deleteData(id);
               }
             });
-            updateBulkDeleteButton();
           });
-          
         } catch (error) {
           console.error('Error loading data:', error);
           const tableBody = document.getElementById('dataTable');
@@ -1052,16 +884,6 @@
               </td>
             </tr>
           `;
-        }
-      }
-
-      function updateBulkDeleteButton() {
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-        if (selectedItems.size > 0) {
-          bulkDeleteBtn.style.display = 'inline-flex';
-          bulkDeleteBtn.textContent = `Hapus ${selectedItems.size} Data Terpilih`;
-        } else {
-          bulkDeleteBtn.style.display = 'none';
         }
       }
       
@@ -1097,50 +919,68 @@
         return indicator;
       }
 
-      // Fungsi untuk menghapus data terpilih (diperbarui)
-      async function deleteSelectedItems() {
-            if (selectedItems.size === 0) return;
-            
-            const count = selectedItems.size;
-            if (!confirm(`Anda yakin ingin menghapus ${count} data terpilih?`)) {
-                return;
+      // Fungsi hapus data - PERBAIKI untuk sync ke server
+      async function deleteData(id) {
+            const deleteBtn = document.querySelector(`.delete-row[data-id="${id}"]`);
+            if (deleteBtn) {
+                deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i>';
+                deleteBtn.disabled = true;
             }
-            
-            const deleteBtn = document.getElementById('bulkDeleteBtn');
-            const originalText = deleteBtn.innerHTML;
-            deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
-            deleteBtn.disabled = true;
-            
+        
             try {
-                // Konversi Set ke Array
-                const itemsToDelete = Array.from(selectedItems);
+                const item = await dbOperation('budgets', (store) => store.get(id));
                 
-                // 1. Hapus dari IndexedDB terlebih dahulu
-                await Promise.all(itemsToDelete.map(id => 
-                    dbOperation('budgets', (store) => store.delete(id))
-                ));
-                
-                // 2. Buat antrian sync untuk penghapusan di Google Sheet
-                await createSyncQueueForDeletion(itemsToDelete);
-                
-                // 3. Jika online, coba sync sekarang
-                if (navigator.onLine) {
-                    await processSyncQueue();
+                if (!item) {
+                    console.log('Data tidak ditemukan di IndexedDB');
+                    return;
                 }
                 
-                // 4. Update UI
-                selectedItems.clear();
-                document.getElementById('selectAll').checked = false;
-                await loadDataToTable();
+                // Hapus dari IndexedDB terlebih dahulu
+                await dbOperation('budgets', (store) => store.delete(id));
+                console.log('Data berhasil dihapus dari IndexedDB');
                 
-                alert(`${count} data berhasil dihapus${!navigator.onLine ? ' (perubahan akan disinkronkan ketika online)' : ''}`);
+                // Jika data sudah sync ke server, hapus juga dari Google Sheet
+                if (item.syncStatus === "synced") {
+                    try {
+                        console.log('Mencoba menghapus dari Google Sheet...');
+                        const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                            method: "POST",
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: "deleteBudget",
+                                id: id
+                            }),
+                            mode: 'no-cors'
+                        });
+                        console.log('Permintaan penghapusan ke Google Sheet berhasil dikirim');
+                    } catch (error) {
+                        console.error('Gagal menghapus dari Google Sheet:', error);
+                        // Jika gagal, simpan kembali data ke IndexedDB dengan status error
+                        item.syncError = "Gagal menghapus dari server";
+                        await saveToIndexedDB(item);
+                    }
+                }
+                
+                // Perbarui tampilan tabel
+                loadDataToTable();
+                alert('Data berhasil dihapus');
+
+                if (deleteBtn) {
+                    deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                    deleteBtn.disabled = false;
+                }
                 
             } catch (error) {
-                console.error('Error deleting items:', error);
-                alert('Gagal menghapus data terpilih: ' + error.message);
-            } finally {
-                deleteBtn.innerHTML = originalText;
-                deleteBtn.disabled = false;
+               if (deleteBtn) {
+                  deleteBtn.innerHTML = '<i class="material-icons">error</i>';
+                  setTimeout(() => {
+                      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+                      deleteBtn.disabled = false;
+                  }, 2000);
+              }
             }
         }
       
@@ -1171,59 +1011,54 @@
           }
       });
 
-      // Fungsi utama sync ke server (diperbarui)
+      // Fungsi utama sync ke server
       async function syncToServer() {
           try {
-              // 1. Sync data baru/update
               const allData = await getFromIndexedDB();
               const pendingData = allData.filter(item => item.syncStatus === "pending");
               
-              if (pendingData.length > 0) {
-                  console.log("Memulai sync dengan", pendingData.length, "data");
-                  
-                  for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-                      const batch = pendingData.slice(i, i + BATCH_SIZE);
-                      const batchIds = batch.map(item => item.id);
-                      
-                      try {
-                          const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
-                          
-                          console.log("Mengirim batch", i, "dengan", batch.length, "data");
-                          
-                          const response = await fetch(url, {
-                              method: "POST",
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                  action: "saveBudget",
-                                  data: batch
-                              }),
-                              mode: 'no-cors'
-                          });
-                          
-                          await updateSyncStatus(batchIds, "synced");
-                          console.log("Sync berhasil untuk batch", i);
-                          
-                      } catch (error) {
-                          console.error("Error sync batch", i, error);
-                          await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
-                      }
-                  }
+              if (pendingData.length === 0) {
+                  console.log("Tidak ada data pending untuk sync");
+                  return;
               }
               
-              // 2. Proses antrian sync (termasuk penghapusan)
-              await processSyncQueue();
+              console.log("Memulai sync dengan", pendingData.length, "data");
+              
+              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+                  const batch = pendingData.slice(i, i + BATCH_SIZE);
+                  const batchIds = batch.map(item => item.id);
+                  
+                  try {
+                      const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
+                      
+                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
+                      
+                      // Gunakan try-catch untuk handle error fetch
+                      const response = await fetch(url, {
+                          method: "POST",
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              action: "saveBudget",
+                              data: batch
+                          }),
+                          mode: 'no-cors'
+                      });
+                      
+                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
+                      await updateSyncStatus(batchIds, "synced");
+                      console.log("Sync berhasil untuk batch", i);
+                      
+                  } catch (error) {
+                      console.error("Error sync batch", i, error);
+                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+                  }
+              }
               
               loadDataToTable();
           } catch (error) {
               console.error("Sync error:", error);
           }
       }
-
-      // Event listener untuk status online
-      window.addEventListener('online', function() {
-          console.log('Koneksi online, mencoba sinkronisasi...');
-          syncToServer();
-      });
 
       // Update status error jika sync gagal (Versi IndexedDB)
       async function updateSyncErrorStatus(batch, errorMsg) {
@@ -1365,17 +1200,16 @@
 
     // Inisialisasi aplikasi
     initDB.then(() => {
-          loadDataToTable();
-          syncToServer(); // Sync segera saat pertama load
-          
-          // Periodic sync
-          setInterval(async () => {
-              await syncToServer();
-          }, SYNC_INTERVAL);
-      }).catch(error => {
-          console.error("Gagal menginisialisasi database:", error);
-          alert("Aplikasi tidak dapat berjalan karena masalah database");
-      });
+        loadDataToTable();
+        syncToServer(); // Sync segera saat pertama load
+        // Periodic sync
+        setInterval(async () => {
+            await syncToServer();
+        }, SYNC_INTERVAL);
+    }).catch(error => {
+        console.error("Gagal menginisialisasi database:", error);
+        alert("Aplikasi tidak dapat berjalan karena masalah database");
+    });
     
   });
   </script>
