@@ -970,20 +970,24 @@
         try {
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
-          // 1. Hapus dari IndexedDB
+          // 1. Hapus dari IndexedDB terlebih dahulu
           await deleteMultipleFromIndexedDB(idsToDelete);
           
-          // 2. Hapus dari Google Sheet (hanya yang sudah sync)
-          await deleteMultipleFromGoogleSheet(idsToDelete);
+          // 2. Coba hapus dari Google Sheet
+          try {
+            await deleteMultipleFromGoogleSheet(idsToDelete);
+            alert(`${idsToDelete.length} data berhasil dihapus!`);
+          } catch (error) {
+            // Jika gagal hapus dari Google Sheet, tampilkan pesan khusus
+            alert(`${idsToDelete.length} data dihapus dari penyimpanan lokal, tetapi beberapa gagal dihapus dari server. Error: ${error.message}`);
+          }
           
           // 3. Refresh tabel
           await loadDataToTable();
           
-          alert(`${idsToDelete.length} data berhasil dihapus!`);
-          
         } catch (error) {
           console.error('Error deleting multiple rows:', error);
-          alert('Gagal menghapus beberapa data');
+          alert(`Gagal menghapus data: ${error.message}`);
         } finally {
           deleteBtn.innerHTML = originalText;
           deleteBtn.disabled = false;
@@ -1021,33 +1025,73 @@
         try {
           // Dapatkan data dari IndexedDB untuk cek status sync
           const allData = await getFromIndexedDB();
+          
+          // Perbaikan: Perbaiki sintaks filter yang salah
           const syncedIds = allData
             .filter(item => ids.includes(item.id) && item.syncStatus === "synced")
             .map(item => item.id);
           
-          if (syncedIds.length === 0) return;
+          if (syncedIds.length === 0) {
+            console.log('Tidak ada data yang perlu dihapus dari Google Sheet');
+            return;
+          }
+          
+          console.log('Mencoba menghapus dari Google Sheet:', syncedIds);
           
           // Kirim permintaan batch delete ke Google Apps Script
           const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
             method: "POST",
             headers: { 
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               action: "deleteMultipleBudgets",
               ids: syncedIds
-            }),
-            mode: 'no-cors'
+            })
+            // Hapus mode: 'no-cors' untuk bisa membaca response
           });
+      
+          // Jika response tidak ok, lempar error
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+      
+          const result = await response.json();
+          console.log('Response dari Google Sheet:', result);
           
-          console.log('Batch delete request sent for', syncedIds.length, 'items');
+          if (result.status !== "success") {
+            throw new Error(`Gagal menghapus: ${result.message}`);
+          }
+          
+          console.log('Berhasil menghapus', result.count, 'data dari Google Sheet');
           
         } catch (error) {
           console.error('Error deleting from Google Sheet:', error);
+          // Simpan error ke IndexedDB untuk data yang gagal dihapus
+          await markFailedDeletions(ids, error.message);
           throw error;
         }
       }
+
+      // Fungsi untuk menandai data yang gagal dihapus
+      async function markFailedDeletions(ids, errorMsg) {
+        try {
+          await initDB;
+          const transaction = db.transaction('budgets', 'readwrite');
+          const store = transaction.objectStore('budgets');
+          
+          await Promise.all(ids.map(async (id) => {
+            const item = await dbOperation('budgets', (store) => store.get(id));
+            if (item) {
+              item.syncError = `Gagal hapus: ${errorMsg.substring(0, 100)}`;
+              await dbOperation('budgets', (store) => store.put(item));
+            }
+          }));
+        } catch (error) {
+          console.error('Gagal menandai error:', error);
+        }
+      }
+
 
       // Fungsi helper untuk mengelompokkan data (opsional)
       function groupDataForMerge(data) {
