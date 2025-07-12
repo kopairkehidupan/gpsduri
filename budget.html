@@ -1011,7 +1011,7 @@
         }
         
         const deleteBtn = document.getElementById('deleteSelectedBtn');
-        const originalText = deleteBtn.innerHTML;
+        const originalContent = deleteBtn.innerHTML;
         deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
         deleteBtn.disabled = true;
         
@@ -1068,9 +1068,9 @@
           await loadDataToTable();
           
         } finally {
-          deleteBtn.innerHTML = originalText;
-          deleteBtn.style.display = 'none';
-          deleteBtn.disabled = false;
+           deleteBtn.innerHTML = originalContent;
+           deleteBtn.style.display = 'none';
+           deleteBtn.disabled = false;
         }
       }
 
