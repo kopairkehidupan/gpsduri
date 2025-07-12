@@ -987,9 +987,8 @@
               await syncToServer();
               
               alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-              loadDataToTable();
-              xs.reset();
               xs.loadData([initialData]);
+              loadDataToTable();
           } catch (error) {
               console.error('Error saving data:', error);
               alert('Gagal menyimpan data');
