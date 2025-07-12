@@ -1011,19 +1011,27 @@
           }
       }
 
-      // Fungsi untuk menghapus data terpilih
+      // 1. Tambahkan variabel untuk melacak status penghapusan
+      let isDeleting = false;
+      
+      // 2. Modifikasi fungsi deleteSelectedRows
       async function deleteSelectedRows() {
+          if (isDeleting) return; // Jika sedang dalam proses penghapusan, abaikan
+          isDeleting = true;
+          
           const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
           if (idsToDelete.length === 0) {
               alert('Tidak ada data yang dipilih untuk dihapus!');
+              isDeleting = false;
               return;
           }
           
           // Konfirmasi penghapusan (hanya sekali)
           const userConfirmed = confirm(`Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`);
           if (!userConfirmed) {
+              isDeleting = false;
               return;
           }
           
@@ -1045,6 +1053,7 @@
               // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
               if (syncedItems.length > 0) {
                   try {
+                      console.log('Mencoba menghapus dari Google Sheet', syncedItems.map(item => item.id));
                       const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
                       console.log('Penghapusan dari Google Sheet berhasil:', result);
                   } catch (error) {
@@ -1055,6 +1064,7 @@
               }
               
               // 4. Hapus dari IndexedDB (semua data terpilih)
+              console.log('Menghapus dari IndexedDB:', idsToDelete);
               await deleteMultipleFromIndexedDB(idsToDelete);
               console.log('Penghapusan dari IndexedDB berhasil');
               
@@ -1076,33 +1086,36 @@
               deleteBtn.innerHTML = originalContent;
               deleteBtn.style.display = 'none';
               deleteBtn.disabled = false;
+              isDeleting = false;
           }
       }
 
-      // Fungsi untuk menghapus banyak data dari IndexedDB
-      async function deleteMultipleFromIndexedDB(ids) {
-        try {
-          await initDB;
-          const transaction = db.transaction('budgets', 'readwrite');
-          const store = transaction.objectStore('budgets');
+      // 3. Modifikasi fungsi deleteMultipleFromGoogleSheet
+      async function deleteMultipleFromGoogleSheet(ids) {
+          // Pastikan ids unik untuk menghindari duplikasi
+          const uniqueIds = [...new Set(ids)];
+          console.log('Mengirim permintaan penghapusan ke Google Sheet:', uniqueIds);
           
-          await Promise.all(ids.map(id => {
-            return new Promise((resolve, reject) => {
-              const request = store.delete(id);
-              request.onsuccess = resolve;
-              request.onerror = reject;
-            });
-          }));
-          
-          return new Promise((resolve, reject) => {
-            transaction.oncomplete = resolve;
-            transaction.onerror = reject;
-          });
-          
-        } catch (error) {
-          console.error('Error deleting from IndexedDB:', error);
-          throw error;
-        }
+          try {
+              const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                  method: "POST",
+                  headers: { 
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      action: "deleteMultipleBudgets",
+                      ids: uniqueIds
+                  }),
+                  mode: 'no-cors'
+              });
+              
+              console.log('Permintaan penghapusan terkirim (mode no-cors)');
+              return { status: "success" };
+              
+          } catch (error) {
+              console.error('Gagal menghapus dari Google Sheet:', error);
+              throw error;
+          }
       }
 
       // Fungsi untuk menghapus banyak data dari Google Sheet
