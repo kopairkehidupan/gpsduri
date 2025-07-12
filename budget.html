@@ -982,15 +982,24 @@
           // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
           if (syncedItems.length > 0) {
             try {
-              await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+              const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+              console.log('Penghapusan dari Google Sheet berhasil:', result);
             } catch (error) {
               console.error('Gagal menghapus dari Google Sheet:', error);
+              // Jika gagal, simpan error ke data yang bersangkutan
+              await markFailedDeletions(syncedItems.map(item => item.id), error.message);
               throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
             }
           }
           
-          // 4. Hapus dari IndexedDB
-          await deleteMultipleFromIndexedDB(idsToDelete);
+          // 4. Hapus dari IndexedDB (semua data terpilih)
+          try {
+            await deleteMultipleFromIndexedDB(idsToDelete);
+            console.log('Penghapusan dari IndexedDB berhasil');
+          } catch (error) {
+            console.error('Gagal menghapus dari IndexedDB:', error);
+            throw new Error('Gagal menghapus data dari penyimpanan lokal');
+          }
           
           // 5. Refresh tabel
           await loadDataToTable();
@@ -1005,6 +1014,11 @@
         } catch (error) {
           console.error('Error deleting multiple rows:', error);
           alert(`Gagal menghapus data: ${error.message}`);
+          
+          // Jika ada data yang gagal dihapus dari server tapi sudah dihapus dari IndexedDB,
+          // kita perlu memulihkannya (rollback)
+          await loadDataToTable();
+          
         } finally {
           deleteBtn.innerHTML = originalText;
           deleteBtn.disabled = false;
@@ -1050,12 +1064,18 @@
             body: JSON.stringify({
               action: "deleteMultipleBudgets",
               ids: ids
-            }),
-            mode: 'no-cors'
+            })
+            //mode: 'no-cors'
           });
       
+          // Jika response tidak OK, throw error dengan message dari server jika ada
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorMsg = `HTTP error! status: ${response.status}`;
+            try {
+              const result = await response.json();
+              errorMsg = result.message || errorMsg;
+            } catch (e) {}
+            throw new Error(errorMsg);
           }
       
           const result = await response.json();
