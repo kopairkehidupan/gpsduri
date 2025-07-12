@@ -970,20 +970,37 @@
         try {
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
-          // 1. Hapus dari IndexedDB terlebih dahulu
-          await deleteMultipleFromIndexedDB(idsToDelete);
+          // 1. Dapatkan data yang akan dihapus untuk cek status sync
+          const itemsToDelete = await Promise.all(
+            idsToDelete.map(id => dbOperation('budgets', store => store.get(id)))
+          );
           
-          // 2. Coba hapus dari Google Sheet
-          try {
-            await deleteMultipleFromGoogleSheet(idsToDelete);
-            alert(`${idsToDelete.length} data berhasil dihapus!`);
-          } catch (error) {
-            // Jika gagal hapus dari Google Sheet, tampilkan pesan khusus
-            alert(`${idsToDelete.length} data dihapus dari penyimpanan lokal, tetapi beberapa gagal dihapus dari server. Error: ${error.message}`);
+          // 2. Pisahkan data yang sudah sync dan belum
+          const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
+          const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
+          
+          // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
+          if (syncedItems.length > 0) {
+            try {
+              await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+            } catch (error) {
+              console.error('Gagal menghapus dari Google Sheet:', error);
+              throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
+            }
           }
           
-          // 3. Refresh tabel
+          // 4. Hapus dari IndexedDB
+          await deleteMultipleFromIndexedDB(idsToDelete);
+          
+          // 5. Refresh tabel
           await loadDataToTable();
+          
+          // 6. Beri feedback ke user
+          let message = `${idsToDelete.length} data berhasil dihapus.`;
+          if (unsyncedItems.length > 0) {
+            message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
+          }
+          alert(message);
           
         } catch (error) {
           console.error('Error deleting multiple rows:', error);
@@ -1023,22 +1040,8 @@
       // Fungsi untuk menghapus banyak data dari Google Sheet
       async function deleteMultipleFromGoogleSheet(ids) {
         try {
-          // Dapatkan data dari IndexedDB untuk cek status sync
-          const allData = await getFromIndexedDB();
+          console.log('Mencoba menghapus dari Google Sheet:', ids);
           
-          // Perbaikan: Perbaiki sintaks filter yang salah
-          const syncedIds = allData
-            .filter(item => ids.includes(item.id) && item.syncStatus === "synced")
-            .map(item => item.id);
-          
-          if (syncedIds.length === 0) {
-            console.log('Tidak ada data yang perlu dihapus dari Google Sheet');
-            return;
-          }
-          
-          console.log('Mencoba menghapus dari Google Sheet:', syncedIds);
-          
-          // Kirim permintaan batch delete ke Google Apps Script
           const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
             method: "POST",
             headers: { 
@@ -1046,12 +1049,10 @@
             },
             body: JSON.stringify({
               action: "deleteMultipleBudgets",
-              ids: syncedIds
+              ids: ids
             })
-            // Hapus mode: 'no-cors' untuk bisa membaca response
           });
       
-          // Jika response tidak ok, lempar error
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -1060,15 +1061,13 @@
           console.log('Response dari Google Sheet:', result);
           
           if (result.status !== "success") {
-            throw new Error(`Gagal menghapus: ${result.message}`);
+            throw new Error(result.message || "Gagal menghapus data dari Google Sheet");
           }
           
-          console.log('Berhasil menghapus', result.count, 'data dari Google Sheet');
+          return result;
           
         } catch (error) {
           console.error('Error deleting from Google Sheet:', error);
-          // Simpan error ke IndexedDB untuk data yang gagal dihapus
-          await markFailedDeletions(ids, error.message);
           throw error;
         }
       }
