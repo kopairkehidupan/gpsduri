@@ -1024,7 +1024,7 @@
             // Hapus dari IndexedDB setelah berhasil menghapus dari Google Sheet
             await Promise.all(Array.from(selectedItems).map(id => 
               dbOperation('budgets', (store) => store.delete(id))
-            );
+            ));
             
             // Reset seleksi
             selectedItems.clear();
