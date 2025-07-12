@@ -973,74 +973,69 @@
       }
 
       async function deleteSelectedItems() {
-          if (selectedItems.size === 0) return;
-          
-          const count = selectedItems.size;
-          if (!confirm(`Anda yakin ingin menghapus ${count} data terpilih?`)) {
-            return;
-          }
-          
-          const deleteBtn = document.getElementById('bulkDeleteBtn');
-          const originalText = deleteBtn.innerHTML;
-          deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
-          deleteBtn.disabled = true;
-          
-          try {
-            // Ambil data sebelum dihapus untuk memeriksa sync status
-            const allData = await getFromIndexedDB();
-            const itemsToDelete = allData.filter(item => selectedItems.has(item.id));
+            if (selectedItems.size === 0) return;
             
-            // Pisahkan data yang sudah sync dan belum
-            const syncedItems = itemsToDelete.filter(item => item.syncStatus === "synced");
-            const unsyncedItems = itemsToDelete.filter(item => item.syncStatus !== "synced");
-            
-            // Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
-            if (syncedItems.length > 0) {
-              try {
-                const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
-                  method: "POST",
-                  headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                  },
-                  body: JSON.stringify({
-                    action: "deleteMultipleBudgets",
-                    ids: syncedItems.map(item => item.id)
-                  }),
-                  mode: 'no-cors'
-                });
-                
-                // Jika ada error dari server
-                if (!response.ok) {
-                  throw new Error('Gagal menghapus dari Google Sheet');
-                }
-              } catch (error) {
-                console.error('Gagal menghapus dari Google Sheet:', error);
-                // Batalkan penghapusan jika gagal sync dengan server
-                throw new Error('Gagal menghapus data dari server. Operasi dibatalkan.');
-              }
+            const count = selectedItems.size;
+            if (!confirm(`Anda yakin ingin menghapus ${count} data terpilih?`)) {
+                return;
             }
             
-            // Hapus dari IndexedDB setelah berhasil menghapus dari Google Sheet
-            await Promise.all(Array.from(selectedItems).map(id => 
-              dbOperation('budgets', (store) => store.delete(id))
-            ));
+            const deleteBtn = document.getElementById('bulkDeleteBtn');
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
+            deleteBtn.disabled = true;
             
-            // Reset seleksi
-            selectedItems.clear();
-            document.getElementById('selectAll').checked = false;
-            
-            // Reload data
-            await loadDataToTable();
-            alert(`${count} data berhasil dihapus`);
-            
-          } catch (error) {
-            console.error('Error deleting items:', error);
-            alert(error.message || 'Gagal menghapus data terpilih');
-          } finally {
-            deleteBtn.innerHTML = originalText;
-            deleteBtn.disabled = false;
-          }
+            try {
+                // Konversi Set ke Array
+                const itemsToDelete = Array.from(selectedItems);
+                
+                // Langsung hapus dari IndexedDB terlebih dahulu
+                await Promise.all(itemsToDelete.map(id => 
+                    dbOperation('budgets', (store) => store.delete(id))
+                ));
+                
+                // Coba sinkronkan penghapusan dengan Google Sheet
+                try {
+                    // Ambil data sebelum dihapus untuk memeriksa sync status
+                    const allData = await getFromIndexedDB();
+                    const itemsData = allData.filter(item => itemsToDelete.includes(item.id));
+                    const syncedItems = itemsData.filter(item => item.syncStatus === "synced");
+                    
+                    // Hanya sync yang sudah tersinkronisasi sebelumnya
+                    if (syncedItems.length > 0) {
+                        await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                            method: "POST",
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                action: "deleteMultipleBudgets",
+                                ids: syncedItems.map(item => item.id)
+                            })
+                            // Hapus mode: 'no-cors' untuk bisa membaca response
+                        });
+                    }
+                } catch (error) {
+                    console.error('Gagal sync penghapusan dengan Google Sheet:', error);
+                    // Tidak perlu throw error di sini, karena data sudah dihapus dari IndexedDB
+                }
+                
+                // Reset seleksi
+                selectedItems.clear();
+                document.getElementById('selectAll').checked = false;
+                
+                // Reload data
+                await loadDataToTable();
+                alert(`${count} data berhasil dihapus`);
+                
+            } catch (error) {
+                console.error('Error deleting items:', error);
+                alert('Gagal menghapus data terpilih: ' + error.message);
+            } finally {
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.disabled = false;
+            }
         }
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
