@@ -578,30 +578,51 @@
       let db; // Variabel untuk koneksi database
 
       const initDB = new Promise((resolve, reject) => {
-          const request = indexedDB.open('BudgetDB', 1);
+          const request = indexedDB.open('BudgetDB', 2); // Versi dinaikkan ke 2
           
           request.onerror = (event) => {
               console.error("Database error:", event.target.error);
               reject("Gagal membuka database");
           };
-  
+      
           request.onsuccess = (event) => {
               db = event.target.result;
-              resolve(db);
+              
+              // Periksa apakah object store syncQueue ada
+              if (!db.objectStoreNames.contains('syncQueue')) {
+                  // Jika tidak ada, tutup database dan buka kembali dengan versi yang lebih tinggi
+                  db.close();
+                  const newRequest = indexedDB.open('BudgetDB', 3);
+                  newRequest.onupgradeneeded = function(e) {
+                      const db = e.target.result;
+                      if (!db.objectStoreNames.contains('syncQueue')) {
+                          db.createObjectStore('syncQueue', { keyPath: 'id' });
+                      }
+                  };
+                  newRequest.onsuccess = function(e) {
+                      db = e.target.result;
+                      resolve(db);
+                  };
+                  newRequest.onerror = reject;
+              } else {
+                  resolve(db);
+              }
           };
-  
+      
           request.onupgradeneeded = (event) => {
               const db = event.target.result;
-              const store = db.createObjectStore('budgets', {
-                  keyPath: 'id',
-                  autoIncrement: false
-              });
               
-              // Buat index untuk query cepat
-              store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
-
-              // Tambahkan store untuk antrian sync (versi 2)
-              if (event.oldVersion < 2) {
+              // Buat store untuk data budget jika belum ada
+              if (!db.objectStoreNames.contains('budgets')) {
+                  const store = db.createObjectStore('budgets', {
+                      keyPath: 'id',
+                      autoIncrement: false
+                  });
+                  store.createIndex('by_syncStatus', 'syncStatus', { unique: false });
+              }
+              
+              // Buat store untuk antrian sync jika belum ada
+              if (!db.objectStoreNames.contains('syncQueue')) {
                   db.createObjectStore('syncQueue', {
                       keyPath: 'id'
                   });
@@ -720,6 +741,13 @@
           
           try {
               await initDB;
+              
+              // Periksa apakah object store syncQueue ada
+              if (!db.objectStoreNames.contains('syncQueue')) {
+                  console.log('Object store syncQueue tidak ditemukan');
+                  return;
+              }
+              
               const queue = await dbOperation('syncQueue', (store) => store.getAll()) || [];
               
               if (queue.length === 0) return;
