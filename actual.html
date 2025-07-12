@@ -471,6 +471,30 @@
     flex-wrap: wrap;
     align-items: center;
   }
+
+  /* Tambahkan di bagian CSS */
+  #deleteSelectedBtn {
+    display: none; /* Sembunyikan secara default */
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  #deleteSelectedBtn .badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
@@ -502,9 +526,10 @@
         <a href="budget.html" class="btn">
           <i class="material-icons">swap_horiz</i> Ke Halaman Budget
         </a>
-        <button id="deleteSelectedBtn" class="btn btn-danger">
-          <i class="material-icons">delete_sweep</i> Hapus Terpilih
-        </button
+        <button id="deleteSelectedBtn" class="btn btn-danger" style="display: none;">
+          <i class="material-icons">delete_sweep</i>
+          <span class="btn-text">Hapus Terpilih</span>
+        </button>
       </div>
     </div>
     
@@ -927,103 +952,144 @@
         }
       }
 
+      // Fungsi untuk mengupdate tampilan tombol delete selected
+      function updateDeleteSelectedButton() {
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const count = selectedCheckboxes.length;
+        
+        if (count > 0) {
+          deleteBtn.style.display = 'inline-flex';
+          deleteBtn.innerHTML = `
+            <i class="material-icons">delete_sweep</i>
+            <span class="btn-text">Hapus Terpilih</span>
+            <span class="badge">${count}</span>
+          `;
+        } else {
+          deleteBtn.style.display = 'none';
+        }
+      }
+
       // Fungsi untuk setup event checkbox
       function setupCheckboxEvents() {
-        // Select All checkbox
-        document.getElementById('selectAllCheckbox')?.addEventListener('change', function() {
-          const checkboxes = document.querySelectorAll('.row-checkbox');
-          checkboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
+          // Hapus event listener sebelumnya jika ada
+          document.getElementById('selectAllCheckbox')?.removeEventListener('change', handleSelectAll);
+          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+              checkbox.removeEventListener('change', handleRowCheckboxChange);
           });
-        });
-        
-        // Individual row checkboxes
-        document.querySelectorAll('.row-checkbox').forEach(checkbox => {
-          checkbox.addEventListener('change', function() {
-            if (!this.checked) {
-              document.getElementById('selectAllCheckbox').checked = false;
-            }
+          document.getElementById('deleteSelectedBtn')?.removeEventListener('click', handleDeleteSelected);
+      
+          // Select All checkbox
+          document.getElementById('selectAllCheckbox')?.addEventListener('change', handleSelectAll);
+          
+          // Individual row checkboxes
+          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+              checkbox.addEventListener('change', handleRowCheckboxChange);
           });
-        });
-        
-        // Tombol hapus terpilih
-        document.getElementById('deleteSelectedBtn')?.addEventListener('click', deleteSelectedRows);
+          
+          // Tombol hapus terpilih
+          document.getElementById('deleteSelectedBtn')?.addEventListener('click', handleDeleteSelected);
+      
+          function handleSelectAll() {
+              const checkboxes = document.querySelectorAll('.row-checkbox');
+              checkboxes.forEach(checkbox => {
+                  checkbox.checked = this.checked;
+              });
+              updateDeleteSelectedButton();
+          }
+      
+          function handleRowCheckboxChange() {
+              if (!this.checked) {
+                  document.getElementById('selectAllCheckbox').checked = false;
+              }
+              updateDeleteSelectedButton();
+          }
+      
+          async function handleDeleteSelected() {
+              await deleteSelectedRows();
+              // Setelah penghapusan selesai, sembunyikan tombol
+              this.style.display = 'none';
+          }
       }
 
       // Fungsi untuk menghapus data terpilih
+      // 1. Tambahkan variabel untuk melacak status penghapusan
+      let isDeleting = false;
+      
+      // 2. Modifikasi fungsi deleteSelectedRows
       async function deleteSelectedRows() {
-        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
-        
-        if (selectedCheckboxes.length === 0) {
-          alert('Tidak ada data yang dipilih untuk dihapus!');
-          return;
-        }
-        
-        if (!confirm(`Anda yakin ingin menghapus ${selectedCheckboxes.length} data terpilih?`)) {
-          return;
-        }
-        
-        const deleteBtn = document.getElementById('deleteSelectedBtn');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
-        deleteBtn.disabled = true;
-        
-        try {
+          if (isDeleting) return; // Jika sedang dalam proses penghapusan, abaikan
+          isDeleting = true;
+          
+          const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
-          // 1. Dapatkan data yang akan dihapus untuk cek status sync
-          const itemsToDelete = await Promise.all(
-            idsToDelete.map(id => dbOperation('actuals', store => store.get(id)))
-          );
-          
-          // 2. Pisahkan data yang sudah sync dan belum
-          const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
-          const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
-          
-          // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
-          if (syncedItems.length > 0) {
-            try {
-              const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
-              console.log('Penghapusan dari Google Sheet berhasil:', result);
-            } catch (error) {
-              console.error('Gagal menghapus dari Google Sheet:', error);
-              // Jika gagal, simpan error ke data yang bersangkutan
-              await markFailedDeletions(syncedItems.map(item => item.id), error.message);
-              throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
-            }
+          if (idsToDelete.length === 0) {
+              alert('Tidak ada data yang dipilih untuk dihapus!');
+              isDeleting = false;
+              return;
           }
           
-          // 4. Hapus dari IndexedDB (semua data terpilih)
+          // Konfirmasi penghapusan (hanya sekali)
+          const userConfirmed = confirm(`Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`);
+          if (!userConfirmed) {
+              isDeleting = false;
+              return;
+          }
+          
+          const deleteBtn = document.getElementById('deleteSelectedBtn');
+          const originalContent = deleteBtn.innerHTML;
+          deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
+          deleteBtn.disabled = true;
+          
           try {
-            await deleteMultipleFromIndexedDB(idsToDelete);
-            console.log('Penghapusan dari IndexedDB berhasil');
+              // 1. Dapatkan data yang akan dihapus untuk cek status sync
+              const itemsToDelete = await Promise.all(
+                  idsToDelete.map(id => dbOperation('actuals', store => store.get(id)))
+              );
+              
+              // 2. Pisahkan data yang sudah sync dan belum
+              const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
+              const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
+              
+              // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
+              if (syncedItems.length > 0) {
+                  try {
+                      console.log('Mencoba menghapus dari Google Sheet', syncedItems.map(item => item.id));
+                      const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+                      console.log('Penghapusan dari Google Sheet berhasil:', result);
+                  } catch (error) {
+                      console.error('Gagal menghapus dari Google Sheet:', error);
+                      await markFailedDeletions(syncedItems.map(item => item.id), error.message);
+                      throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
+                  }
+              }
+              
+              // 4. Hapus dari IndexedDB (semua data terpilih)
+              console.log('Menghapus dari IndexedDB:', idsToDelete);
+              await deleteMultipleFromIndexedDB(idsToDelete);
+              console.log('Penghapusan dari IndexedDB berhasil');
+              
+              // 5. Refresh tabel
+              await loadDataToTable();
+              
+              // 6. Beri feedback ke user
+              let message = `${idsToDelete.length} data berhasil dihapus.`;
+              if (unsyncedItems.length > 0) {
+                  message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
+              }
+              alert(message);
+              
           } catch (error) {
-            console.error('Gagal menghapus dari IndexedDB:', error);
-            throw new Error('Gagal menghapus data dari penyimpanan lokal');
+              console.error('Error deleting multiple rows:', error);
+              alert(`Gagal menghapus data: ${error.message}`);
+              await loadDataToTable();
+          } finally {
+              deleteBtn.innerHTML = originalContent;
+              deleteBtn.style.display = 'none';
+              deleteBtn.disabled = false;
+              isDeleting = false;
           }
-          
-          // 5. Refresh tabel
-          await loadDataToTable();
-          
-          // 6. Beri feedback ke user
-          let message = `${idsToDelete.length} data berhasil dihapus.`;
-          if (unsyncedItems.length > 0) {
-            message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
-          }
-          alert(message);
-          
-        } catch (error) {
-          console.error('Error deleting multiple rows:', error);
-          alert(`Gagal menghapus data: ${error.message}`);
-          
-          // Jika ada data yang gagal dihapus dari server tapi sudah dihapus dari IndexedDB,
-          // kita perlu memulihkannya (rollback)
-          await loadDataToTable();
-          
-        } finally {
-          deleteBtn.innerHTML = originalText;
-          deleteBtn.disabled = false;
-        }
       }
 
       // Fungsi untuk menghapus banyak data dari IndexedDB
@@ -1052,35 +1118,32 @@
         }
       }
 
-      // Fungsi untuk menghapus banyak data dari Google Sheet
-      async function deleteMultipleFromGoogleSheet(ids, retries = 3) {
-        for (let i = 0; i < retries; i++) {
+      // 3. Modifikasi fungsi deleteMultipleFromGoogleSheet
+      async function deleteMultipleFromGoogleSheet(ids) {
+          // Pastikan ids unik untuk menghindari duplikasi
+          const uniqueIds = [...new Set(ids)];
+          console.log('Mengirim permintaan penghapusan ke Google Sheet:', uniqueIds);
+          
           try {
-            console.log(`Mencoba menghapus dari Google Sheet (percobaan ${i + 1})`, ids);
-            
-            await fetch("https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec", {
-              method: "POST",
-              headers: { 
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                action: "deleteMultipleActuals",
-                ids: ids
-              }),
-              mode: 'no-cors'
-            });
-            
-            console.log('Permintaan terkirim (mode no-cors)');
-            return { status: "success" };
-            
+              const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                  method: "POST",
+                  headers: { 
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      action: "deleteMultipleActuals",
+                      ids: uniqueIds
+                  }),
+                  mode: 'no-cors'
+              });
+              
+              console.log('Permintaan penghapusan terkirim (mode no-cors)');
+              return { status: "success" };
+              
           } catch (error) {
-            console.error(`Percobaan ${i + 1} gagal:`, error);
-            if (i === retries - 1) throw error;
-            
-            // Tunggu sebentar sebelum mencoba lagi
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+              console.error('Gagal menghapus dari Google Sheet:', error);
+              throw error;
           }
-        }
       }
 
       // Fungsi untuk menandai data yang gagal dihapus
