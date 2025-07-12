@@ -453,6 +453,19 @@
     .btn-danger:hover .btn-text {
       transform: translateX(2px);
     }
+
+    /* Style untuk checkbox */
+    .budget-table th:first-child, 
+    .budget-table td:first-child {
+      width: 40px;
+      text-align: center;
+    }
+    
+    /* Style untuk tombol hapus massal */
+    #bulkDeleteBtn {
+      margin-top: 1rem;
+      display: none; /* Awalnya disembunyikan */
+    }
 </style>
 </head>
 <body>
@@ -495,6 +508,7 @@
         <table class="budget-table">
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAll"></th>
               <th>Kebun</th>
               <th>Divisi</th>
               <th>Kode Tahun Tanam</th>
@@ -523,6 +537,8 @@
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
+      // Untuk menyimpan ID yang dipilih
+      let selectedItems = new Set(); 
       // Variabel untuk melacak posisi mouse
       let isMouseInsideSpreadsheet = false;
       
@@ -789,6 +805,14 @@
           
           const tableBody = document.getElementById('dataTable');
           tableBody.innerHTML = '';
+
+          // Tambahkan tombol hapus massal
+          const bulkDeleteBtn = document.createElement('button');
+          bulkDeleteBtn.id = 'bulkDeleteBtn';
+          bulkDeleteBtn.className = 'btn btn-danger';
+          bulkDeleteBtn.innerHTML = '<i class="material-icons">delete_forever</i> Hapus Data Terpilih';
+          bulkDeleteBtn.addEventListener('click', deleteSelectedItems);
+          tableBody.parentElement.insertBefore(bulkDeleteBtn, tableBody.nextSibling);
           
           if (data.length === 0) {
             tableBody.innerHTML = `
@@ -799,6 +823,7 @@
                 </td>
               </tr>
             `;
+            bulkDeleteBtn.style.display = 'none';
             return;
           }
           
@@ -817,6 +842,7 @@
               // Baris pertama dalam grup
               if (index === 0) {
                 row.innerHTML = `
+                  <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
                   <td class="merged-cell" rowspan="${group.items.length}">${item.kebun || ''}</td>
                   <td class="merged-cell" rowspan="${group.items.length}">${item.divisi || ''}</td>
                   <td>${item.kodeTahunTanam || ''}</td>
@@ -838,6 +864,7 @@
               } else {
                 // Baris berikutnya dalam grup
                 row.innerHTML = `
+                  <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
                   <td>${item.kodeTahunTanam || ''}</td>
                   <td>${item.blok || ''}</td>
                   <td>${item.kodeKerja || ''}</td>
@@ -859,18 +886,35 @@
               tableBody.appendChild(row);
             });
           });
-      
-          // Tambahkan event listeners untuk tombol delete
-          document.querySelectorAll('.delete-row').forEach(button => {
-            button.addEventListener('click', async function() {
+
+          // Event listener untuk checkbox
+          document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
               const id = this.getAttribute('data-id');
-              const item = await dbOperation('budgets', (store) => store.get(id));
-              
-              if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
-                await deleteData(id);
+              if (this.checked) {
+                selectedItems.add(id);
+              } else {
+                selectedItems.delete(id);
               }
+              updateBulkDeleteButton();
             });
           });
+          
+          // Event listener untuk select all
+          document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.row-checkbox');
+            checkboxes.forEach(checkbox => {
+              checkbox.checked = this.checked;
+              const id = checkbox.getAttribute('data-id');
+              if (this.checked) {
+                selectedItems.add(id);
+              } else {
+                selectedItems.clear();
+              }
+            });
+            updateBulkDeleteButton();
+          });
+          
         } catch (error) {
           console.error('Error loading data:', error);
           const tableBody = document.getElementById('dataTable');
@@ -883,6 +927,16 @@
               </td>
             </tr>
           `;
+        }
+      }
+
+      function updateBulkDeleteButton() {
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (selectedItems.size > 0) {
+          bulkDeleteBtn.style.display = 'inline-flex';
+          bulkDeleteBtn.textContent = `Hapus ${selectedItems.size} Data Terpilih`;
+        } else {
+          bulkDeleteBtn.style.display = 'none';
         }
       }
       
@@ -918,69 +972,65 @@
         return indicator;
       }
 
-      // Fungsi hapus data - PERBAIKI untuk sync ke server
-      async function deleteData(id) {
-            const deleteBtn = document.querySelector(`.delete-row[data-id="${id}"]`);
-            if (deleteBtn) {
-                deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i>';
-                deleteBtn.disabled = true;
-            }
-        
-            try {
-                const item = await dbOperation('budgets', (store) => store.get(id));
-                
-                if (!item) {
-                    console.log('Data tidak ditemukan di IndexedDB');
-                    return;
-                }
-                
-                // Hapus dari IndexedDB terlebih dahulu
-                await dbOperation('budgets', (store) => store.delete(id));
-                console.log('Data berhasil dihapus dari IndexedDB');
-                
-                // Jika data sudah sync ke server, hapus juga dari Google Sheet
-                if (item.syncStatus === "synced") {
-                    try {
-                        console.log('Mencoba menghapus dari Google Sheet...');
-                        const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
-                            method: "POST",
-                            headers: { 
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                action: "deleteBudget",
-                                id: id
-                            }),
-                            mode: 'no-cors'
-                        });
-                        console.log('Permintaan penghapusan ke Google Sheet berhasil dikirim');
-                    } catch (error) {
-                        console.error('Gagal menghapus dari Google Sheet:', error);
-                        // Jika gagal, simpan kembali data ke IndexedDB dengan status error
-                        item.syncError = "Gagal menghapus dari server";
-                        await saveToIndexedDB(item);
-                    }
-                }
-                
-                // Perbarui tampilan tabel
-                loadDataToTable();
-                alert('Data berhasil dihapus');
-
-                if (deleteBtn) {
-                    deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
-                    deleteBtn.disabled = false;
-                }
-                
-            } catch (error) {
-               if (deleteBtn) {
-                  deleteBtn.innerHTML = '<i class="material-icons">error</i>';
-                  setTimeout(() => {
-                      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
-                      deleteBtn.disabled = false;
-                  }, 2000);
+      async function deleteSelectedItems() {
+          if (selectedItems.size === 0) return;
+          
+          const count = selectedItems.size;
+          if (!confirm(`Anda yakin ingin menghapus ${count} data terpilih?`)) {
+            return;
+          }
+          
+          const deleteBtn = document.getElementById('bulkDeleteBtn');
+          const originalText = deleteBtn.innerHTML;
+          deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
+          deleteBtn.disabled = true;
+          
+          try {
+            // Hapus dari IndexedDB
+            await Promise.all(Array.from(selectedItems).map(id => 
+              dbOperation('budgets', (store) => store.delete(id))
+            ));
+            
+            // Hapus dari Google Sheet (hanya yang sudah sync)
+            const allData = await getFromIndexedDB();
+            const syncedItems = allData.filter(item => 
+              selectedItems.has(item.id) && item.syncStatus === "synced"
+            );
+            
+            if (syncedItems.length > 0) {
+              try {
+                const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+                  method: "POST",
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    action: "deleteMultipleBudgets",
+                    ids: Array.from(selectedItems)
+                  }),
+                  mode: 'no-cors'
+                });
+              } catch (error) {
+                console.error('Gagal menghapus dari Google Sheet:', error);
               }
             }
+            
+            // Reset seleksi
+            selectedItems.clear();
+            document.getElementById('selectAll').checked = false;
+            
+            // Reload data
+            await loadDataToTable();
+            alert(`${count} data berhasil dihapus`);
+            
+          } catch (error) {
+            console.error('Error deleting items:', error);
+            alert('Gagal menghapus data terpilih');
+          } finally {
+            deleteBtn.innerHTML = originalText;
+            deleteBtn.disabled = false;
+          }
         }
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
