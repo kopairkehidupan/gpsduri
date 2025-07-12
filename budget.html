@@ -1052,44 +1052,33 @@
       }
 
       // Fungsi untuk menghapus banyak data dari Google Sheet
-      async function deleteMultipleFromGoogleSheet(ids) {
-        try {
-          console.log('Mencoba menghapus dari Google Sheet:', ids);
-          
-          const response = await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
-            method: "POST",
-            headers: { 
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              action: "deleteMultipleBudgets",
-              ids: ids
-            })
-            //mode: 'no-cors'
-          });
-      
-          // Jika response tidak OK, throw error dengan message dari server jika ada
-          if (!response.ok) {
-            let errorMsg = `HTTP error! status: ${response.status}`;
-            try {
-              const result = await response.json();
-              errorMsg = result.message || errorMsg;
-            } catch (e) {}
-            throw new Error(errorMsg);
+      async function deleteMultipleFromGoogleSheet(ids, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+          try {
+            console.log(`Mencoba menghapus dari Google Sheet (percobaan ${i + 1})`, ids);
+            
+            await fetch("https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec", {
+              method: "POST",
+              headers: { 
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                action: "deleteMultipleBudgets",
+                ids: ids
+              }),
+              mode: 'no-cors'
+            });
+            
+            console.log('Permintaan terkirim (mode no-cors)');
+            return { status: "success" };
+            
+          } catch (error) {
+            console.error(`Percobaan ${i + 1} gagal:`, error);
+            if (i === retries - 1) throw error;
+            
+            // Tunggu sebentar sebelum mencoba lagi
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
           }
-      
-          const result = await response.json();
-          console.log('Response dari Google Sheet:', result);
-          
-          if (result.status !== "success") {
-            throw new Error(result.message || "Gagal menghapus data dari Google Sheet");
-          }
-          
-          return result;
-          
-        } catch (error) {
-          console.error('Error deleting from Google Sheet:', error);
-          throw error;
         }
       }
 
