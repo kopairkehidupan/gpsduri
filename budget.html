@@ -455,21 +455,45 @@
     }
 
    /* Tambahkan di bagian CSS */
-    .budget-table input[type="checkbox"] {
-      transform: scale(1.2);
-      cursor: pointer;
-    }
-    
-    #selectAllCheckbox {
-      margin-left: 8px;
-    }
-    
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+  .budget-table input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+  }
+  
+  #selectAllCheckbox {
+    margin-left: 8px;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* Tambahkan di bagian CSS */
+  #deleteSelectedBtn {
+    display: none; /* Sembunyikan secara default */
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  #deleteSelectedBtn .badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
@@ -501,7 +525,7 @@
         <a href="actual.html" class="btn">
           <i class="material-icons">swap_horiz</i> Ke Halaman Actual
         </a>
-        <button id="deleteSelectedBtn" class="btn btn-danger">
+        <button id="deleteSelectedBtn" class="btn btn-danger" style="display: none;">
           <i class="material-icons">delete_sweep</i> Hapus Terpilih
         </button>
       </div>
@@ -926,6 +950,24 @@
         }
       }
 
+      // Fungsi untuk mengupdate tampilan tombol delete selected
+      function updateDeleteSelectedButton() {
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const count = selectedCheckboxes.length;
+        
+        if (count > 0) {
+          deleteBtn.style.display = 'inline-flex';
+          deleteBtn.innerHTML = `
+            <i class="material-icons">delete_sweep</i>
+            <span class="btn-text">Hapus Terpilih</span>
+            <span class="badge">${count}</span>
+          `;
+        } else {
+          deleteBtn.style.display = 'none';
+        }
+      }
+
       // Fungsi untuk setup event checkbox
       function setupCheckboxEvents() {
         // Select All checkbox
@@ -934,6 +976,7 @@
           checkboxes.forEach(checkbox => {
             checkbox.checked = this.checked;
           });
+          updateDeleteSelectedButton();
         });
         
         // Individual row checkboxes
@@ -942,11 +985,16 @@
             if (!this.checked) {
               document.getElementById('selectAllCheckbox').checked = false;
             }
+            updateDeleteSelectedButton();
           });
         });
         
         // Tombol hapus terpilih
-        document.getElementById('deleteSelectedBtn')?.addEventListener('click', deleteSelectedRows);
+        document.getElementById('deleteSelectedBtn')?.addEventListener('click', async function() {
+          await deleteSelectedRows();
+          // Setelah penghapusan selesai, sembunyikan tombol
+          this.style.display = 'none';
+        });
       }
 
       // Fungsi untuk menghapus data terpilih
@@ -1021,6 +1069,7 @@
           
         } finally {
           deleteBtn.innerHTML = originalText;
+          deleteBtn.style.display = 'none';
           deleteBtn.disabled = false;
         }
       }
