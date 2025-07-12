@@ -988,6 +988,7 @@
               
               alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               loadDataToTable();
+              xs.reset();
               xs.loadData([initialData]);
           } catch (error) {
               console.error('Error saving data:', error);
