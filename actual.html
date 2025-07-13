@@ -10,6 +10,8 @@
   <link href="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.css" rel="stylesheet">
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link href="budgetstyle.css" rel="stylesheet">
+  <script src="budget.js"></script>
   <style>
     :root {
       --primary: #4285f4;
@@ -569,6 +571,8 @@
         </table>
       </div>
     </div>
+    <div class="confirm-toast-container" id="confirmToastContainer"></div>
+    <div class="simple-toast-container" id="simpleToastContainer"></div>
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -932,9 +936,12 @@
               const id = this.getAttribute('data-id');
               const item = await dbOperation('actuals', (store) => store.get(id));
               
-              if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
-                await deleteData(id);
-              }
+              const shouldDelete = await showConfirmToast(
+                `Apakah Anda yakin ingin menghapus data ini?<br><br>Kebun: ${item.kebun}<br>Divisi: ${item.divisi}`,
+                async () => {
+                  await deleteData(id);
+                }
+              );
             });
           });
         } catch (error) {
@@ -1025,16 +1032,18 @@
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
           if (idsToDelete.length === 0) {
-              alert('Tidak ada data yang dipilih untuk dihapus!');
+              showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
               isDeleting = false;
               return;
           }
           
           // Konfirmasi penghapusan (hanya sekali)
-          const userConfirmed = confirm(`Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`);
+          const userConfirmed = await showConfirmToast(
+            `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+          );
           if (!userConfirmed) {
-              isDeleting = false;
-              return;
+            isDeleting = false;
+            return;
           }
           
           const deleteBtn = document.getElementById('deleteSelectedBtn');
@@ -1078,11 +1087,11 @@
               if (unsyncedItems.length > 0) {
                   message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
               }
-              alert(message);
+              showSimpleToast(message);
               
           } catch (error) {
               console.error('Error deleting multiple rows:', error);
-              alert(`Gagal menghapus data: ${error.message}`);
+              showSimpleToast(`Gagal menghapus data: ${error.message}`);
               await loadDataToTable();
           } finally {
               deleteBtn.innerHTML = originalContent;
@@ -1244,7 +1253,7 @@
                 
                 // Perbarui tampilan tabel
                 loadDataToTable();
-                alert('Data berhasil dihapus');
+                showSimpleToast('Data berhasil dihapus');
 
                 if (deleteBtn) {
                     deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
@@ -1269,7 +1278,7 @@
               const newData = formatDataForStorage(currentData);
               
               if (newData.length === 0) {
-                  alert('Tidak ada data baru untuk disimpan!');
+                  showSimpleToast('Tidak ada data baru untuk disimpan!');
                   return;
               }
               
@@ -1279,13 +1288,13 @@
               // Coba sync ke server
               await syncToServer();
               
-              alert(`Data actual berhasil disimpan. ${newData.length} records ditambahkan.`);
+              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               //xs.loadData([initialData]);
               loadDataToTable();
               clearSpreadsheet();
           } catch (error) {
               console.error('Error saving data:', error);
-              alert('Gagal menyimpan data');
+              showSimpleToast('Gagal menyimpan data');
           }
       });
 
@@ -1431,12 +1440,12 @@
                   // Simpan ke IndexedDB
                   await saveToIndexedDB(importedData);
                   
-                  alert(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
+                  showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
                   loadDataToTable();
                   e.target.value = '';
               } catch (error) {
                   console.error('Error:', error);
-                  alert('Gagal mengimport file Excel');
+                  showSimpleToast('Gagal mengimport file Excel');
               }
           };
           reader.readAsArrayBuffer(file);
@@ -1469,10 +1478,10 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
             XLSX.writeFile(wb, 'actual_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
-            alert('Data berhasil diekspor ke Excel!');
+            showSimpleToast('Data berhasil diekspor ke Excel!');
         } catch (error) {
             console.error('Error exporting:', error);
-            alert('Gagal mengekspor ke Excel');
+            showSimpleToast('Gagal mengekspor ke Excel');
         }
     });
 
@@ -1486,7 +1495,7 @@
         }, SYNC_INTERVAL);
     }).catch(error => {
         console.error("Gagal menginisialisasi database:", error);
-        alert("Aplikasi tidak dapat berjalan karena masalah database");
+        showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
     });
   });
   </script>
