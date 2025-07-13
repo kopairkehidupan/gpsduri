@@ -1031,7 +1031,7 @@
           const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
           
           if (idsToDelete.length === 0) {
-              alert('Tidak ada data yang dipilih untuk dihapus!');
+              showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
               isDeleting = false;
               return;
           }
@@ -1090,7 +1090,7 @@
               
           } catch (error) {
               console.error('Error deleting multiple rows:', error);
-              alert(`Gagal menghapus data: ${error.message}`);
+              showSimpleToast(`Gagal menghapus data: ${error.message}`);
               await loadDataToTable();
           } finally {
               deleteBtn.innerHTML = originalContent;
@@ -1278,7 +1278,7 @@
               const newData = formatDataForStorage(currentData);
               
               if (newData.length === 0) {
-                  alert('Tidak ada data baru untuk disimpan!');
+                  showSimpleToast('Tidak ada data baru untuk disimpan!');
                   return;
               }
               
@@ -1294,7 +1294,7 @@
               clearSpreadsheet();
           } catch (error) {
               console.error('Error saving data:', error);
-              alert('Gagal menyimpan data');
+              showSimpleToast('Gagal menyimpan data');
           }
       });
 
@@ -1445,7 +1445,7 @@
                   e.target.value = '';
               } catch (error) {
                   console.error('Error:', error);
-                  alert('Gagal mengimport file Excel');
+                  showSimpleToast('Gagal mengimport file Excel');
               }
           };
           reader.readAsArrayBuffer(file);
@@ -1481,7 +1481,7 @@
             showSimpleToast('Data berhasil diekspor ke Excel!');
         } catch (error) {
             console.error('Error exporting:', error);
-            alert('Gagal mengekspor ke Excel');
+            showSimpleToast('Gagal mengekspor ke Excel');
         }
     });
 
