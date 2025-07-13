@@ -1,0 +1,113 @@
+/* Toast Notification Styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 350px;
+}
+
+.toast {
+  position: relative;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  color: white;
+  background-color: #333;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  transform: translateX(150%);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.toast.show {
+  transform: translateX(0);
+}
+
+.toast.success {
+  background-color: var(--secondary);
+}
+
+.toast.warning {
+  background-color: #FFA000;
+}
+
+.toast.error {
+  background-color: var(--danger);
+}
+
+.toast.info {
+  background-color: var(--primary);
+}
+
+.toast .toast-message {
+  flex: 1;
+  padding-right: 20px;
+}
+
+.toast .toast-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.toast .toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.4);
+  width: 100%;
+}
+
+.toast .toast-progress-bar {
+  height: 100%;
+  background-color: white;
+  width: 100%;
+  animation: progressBar linear forwards;
+}
+
+@keyframes progressBar {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Toast Action Buttons */
+.toast-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.toast-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 1;
+  transition: all 0.2s;
+}
+
+.toast-btn.confirm {
+  background-color: white;
+  color: var(--secondary);
+}
+
+.toast-btn.cancel {
+  background-color: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.toast-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
