@@ -570,6 +570,36 @@
     </div>
   </div>
   <script>
+  // Pastikan Service Worker didukung
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful');
+          
+          // Inisialisasi setelah Service Worker aktif
+          if (registration.active) {
+            initApp();
+          } else {
+            registration.addEventListener('updatefound', function() {
+              registration.installing.addEventListener('statechange', function() {
+                if (this.state === 'activated') {
+                  initApp();
+                }
+              });
+            });
+          }
+        })
+        .catch(function(err) {
+          console.log('ServiceWorker registration failed: ', err);
+          initApp(); // Tetap jalankan app tanpa Service Worker
+        });
+    });
+  } else {
+    initApp(); // Fallback jika Service Worker tidak didukung
+  }
+
+  function initApp() {
   document.addEventListener('DOMContentLoaded', function() {
       // Variabel untuk melacak posisi mouse
       let isMouseInsideSpreadsheet = false;
@@ -1262,81 +1292,141 @@
             }
         }
       
-        // Fungsi save data - MODIFIKASI untuk hybrid system
+        // Modifikasi fungsi saveBtn click handler
         document.getElementById('saveBtn').addEventListener('click', async function() {
-          try {
-              const currentData = xs.getData();
-              const newData = formatDataForStorage(currentData);
-              
-              if (newData.length === 0) {
-                  alert('Tidak ada data baru untuk disimpan!');
-                  return;
-              }
-              
-              // Simpan ke IndexedDB
-              await saveToIndexedDB(newData);
-              
-              // Coba sync ke server
-              await syncToServer();
-              
-              alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-              //xs.loadData([initialData]);
-              loadDataToTable();
-              clearSpreadsheet();
-          } catch (error) {
-              console.error('Error saving data:', error);
-              alert('Gagal menyimpan data');
+          const currentData = xs.getData();
+          const newData = formatDataForStorage(currentData);
+          
+          if (newData.length === 0) {
+            showToast('Tidak ada data baru untuk disimpan!', true);
+            return;
           }
-      });
+          
+          // Simpan ke IndexedDB
+          try {
+            await saveToIndexedDB(newData);
+            showToast(`${newData.length} data berhasil disimpan`);
+            
+            // Trigger sync
+            await triggerBackgroundSync();
+            
+            loadDataToTable();
+            clearSpreadsheet();
+          } catch (error) {
+            console.error('Save error:', error);
+            showToast('Gagal menyimpan data: ' + error.message, true);
+          }
+        });
 
-      // Fungsi utama sync ke server
-      async function syncToServer() {
+      // Ganti fungsi syncToServer dengan ini:
+      async function triggerBackgroundSync() {
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
           try {
-              const allData = await getFromIndexedDB();
-              const pendingData = allData.filter(item => item.syncStatus === "pending");
-              
-              if (pendingData.length === 0) {
-                  console.log("Tidak ada data pending untuk sync");
-                  return;
-              }
-              
-              console.log("Memulai sync dengan", pendingData.length, "data");
-              
-              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-                  const batch = pendingData.slice(i, i + BATCH_SIZE);
-                  const batchIds = batch.map(item => item.id);
-                  
-                  try {
-                      const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
-                      
-                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
-                      
-                      // Gunakan try-catch untuk handle error fetch
-                      const response = await fetch(url, {
-                          method: "POST",
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                              action: "saveBudget",
-                              data: batch
-                          }),
-                          mode: 'no-cors'
-                      });
-                      
-                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
-                      await updateSyncStatus(batchIds, "synced");
-                      console.log("Sync berhasil untuk batch", i);
-                      
-                  } catch (error) {
-                      console.error("Error sync batch", i, error);
-                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
-                  }
-              }
-              
-              loadDataToTable();
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Periksa permission
+            const permissionStatus = await navigator.permissions.query({
+              name: 'periodic-background-sync'
+            });
+            
+            if (permissionStatus.state === 'granted') {
+              await registration.sync.register('sync-budget-data');
+              showToast('Data akan disinkronkan di background');
+            } else {
+              // Fallback ke sync manual jika permission tidak diberikan
+              await manualSyncToServer();
+            }
           } catch (error) {
-              console.error("Sync error:", error);
+            console.error('Background sync failed:', error);
+            // Fallback ke sync manual
+            await manualSyncToServer();
           }
+        } else {
+          // Fallback untuk browser yang tidak mendukung
+          await manualSyncToServer();
+        }
       }
+
+    // Fungsi sync manual (fallback)
+    async function manualSyncToServer() {
+      const loadingIndicator = document.getElementById('sync-loading');
+      if (loadingIndicator) loadingIndicator.style.display = 'block';
+      
+      try {
+        const allData = await getFromIndexedDB();
+        const pendingData = allData.filter(item => item.syncStatus === "pending");
+        
+        if (pendingData.length === 0) {
+          showToast('Tidak ada data yang perlu disinkronkan');
+          return;
+        }
+        
+        const BATCH_SIZE = 50;
+        for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+          const batch = pendingData.slice(i, i + BATCH_SIZE);
+          await sendBatchToServer(batch);
+        }
+        
+        showToast(`${pendingData.length} data berhasil disinkronkan`);
+        loadDataToTable();
+      } catch (error) {
+        console.error('Manual sync error:', error);
+        showToast('Gagal menyinkronkan: ' + error.message, true);
+      } finally {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+      }
+    }
+    
+    // Fungsi untuk mengirim batch data
+    async function sendBatchToServer(batch) {
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbz.../exec", {
+          method: "POST",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: "saveBudget",
+            data: batch
+          }),
+          mode: 'no-cors'
+        });
+        
+        // Meskipun no-cors, kita anggap berhasil jika tidak ada error
+        await updateSyncStatus(
+          batch.map(item => item.id),
+          "synced"
+        );
+      } catch (error) {
+        await updateSyncStatus(
+          batch.map(item => item.id),
+          "pending",
+          error.message
+        );
+        throw error;
+      }
+    }
+    
+    // Tambahkan listener untuk pesan dari Service Worker
+    navigator.serviceWorker?.addEventListener('message', event => {
+      if (event.data.type === 'sync-complete') {
+        showToast(`${event.data.count} data berhasil disinkronkan di background`);
+        loadDataToTable();
+      }
+    });
+    
+    // Fungsi helper untuk toast notification
+    function showToast(message, isError = false) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'error' : 'success'}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add('show');
+        setTimeout(() => {
+          toast.remove();
+        }, 3000);
+      }, 100);
+    }
 
       // Update status error jika sync gagal (Versi IndexedDB)
       async function updateSyncErrorStatus(batch, errorMsg) {
@@ -1359,34 +1449,8 @@
       }
 
       // Manual sync button (tambahkan di HTML)
-      let isSyncing = false;
-
-      document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-          if (isSyncing) {
-              console.log("Sync sudah berjalan, tunggu...");
-              return;
-          }
-          
-          try {
-              isSyncing = true;
-              this.disabled = true;
-              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
-              
-              await syncToServer();
-              
-              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-              this.disabled = false;
-              isSyncing = false;
-          } catch (error) {
-              console.error("Manual sync error:", error);
-              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
-              setTimeout(() => {
-                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-                  this.disabled = false;
-                  isSyncing = false;
-              }, 2000);
-          }
-      });
+      // Modifikasi manual sync button
+      document.getElementById('manualSyncBtn').addEventListener('click', triggerBackgroundSync);
 
       // Import Excel functionality with ID generation
       document.getElementById('importBtn').addEventListener('click', function() {
@@ -1490,6 +1554,7 @@
     });
     
   });
+  }
   </script>
 </body>
 </html>
