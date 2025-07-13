@@ -570,145 +570,39 @@
     </div>
   </div>
   <script>
-  // Variabel untuk melacak posisi mouse
-  let isMouseInsideSpreadsheet = false;
-  
-  // Dapatkan elemen spreadsheet
-  const spreadsheetElement = document.getElementById('xspreadsheet');
-  
-  // Event listener untuk mengetahui ketika mouse masuk ke spreadsheet
-  spreadsheetElement.addEventListener('mouseenter', function() {
-    isMouseInsideSpreadsheet = true;
-  });
-  
-  // Event listener untuk mengetahui ketika mouse keluar dari spreadsheet
-  spreadsheetElement.addEventListener('mouseleave', function() {
-    isMouseInsideSpreadsheet = false;
-  });
-  
-  // Event listener untuk mencegah scroll halaman ketika mouse di dalam spreadsheet
-  document.addEventListener('wheel', function(e) {
-    if (isMouseInsideSpreadsheet) {
-      // Cek apakah scroll terjadi di atas spreadsheet
-      const spreadsheetRect = spreadsheetElement.getBoundingClientRect();
-      const isMouseOverSpreadsheet = 
-        e.clientX >= spreadsheetRect.left && 
-        e.clientX <= spreadsheetRect.right && 
-        e.clientY >= spreadsheetRect.top && 
-        e.clientY <= spreadsheetRect.bottom;
-      
-      if (isMouseOverSpreadsheet) {
-        e.preventDefault();
-      }
-    }
-  }, { passive: false });
-
-   // Initialize x-spreadsheet with empty template
-  const initialData = { 
-      name: 'Sheet1',
-      styles: [
-          {
-              align: 'center',
-              valign: 'middle',
-              font: { bold: true },
-              textwrap: true
-          },
-          {
-              align: 'center',
-              valign: 'middle',
-              font: { bold: true },
-              bgcolor: '#e0f0ff',
-              textwrap: true
-          }
-      ],
-      rows: {
-          0: {
-              height: 25,
-              cells: {
-                  0: { text: 'Kebun', style: 1 },
-                  1: { text: 'Divisi', style: 1 },
-                  2: { text: 'Kode Tahun Tanam', style: 1 },
-                  3: { text: 'Blok', style: 1 },
-                  4: { text: 'Kode Kerja', style: 1 },
-                  5: { text: 'Objek Kerja', style: 1 },
-                  6: { text: 'Bulan', style: 1 },
-                  7: { text: 'HK', style: 1 },
-                  8: { text: 'Luas (Ha)', style: 1 },
-                  9: { text: 'Biaya (Rp)', style: 1 }
-              }
-          }
-      }
-  };
-
-  function clearSpreadsheet() {
-      const clearedRows = {
-          0: initialData.rows[0] // tetap gunakan header dari initialData
-      };
-  
-      // Jika ingin 1 baris kosong untuk input berikutnya
-      clearedRows[1] = {
-          cells: {
-              0: { text: '' },
-              1: { text: '' },
-              2: { text: '' },
-              3: { text: '' },
-              4: { text: '' },
-              5: { text: '' },
-              6: { text: '' },
-              7: { text: '' },
-              8: { text: '' },
-              9: { text: '' }
-          }
-      };
-  
-      xs.loadData([{
-          name: 'Sheet1',
-          styles: initialData.styles,
-          rows: clearedRows
-      }]);
-  }
-
-  const xs = x_spreadsheet('#xspreadsheet', {
-      mode: 'edit',
-      showToolbar: true,
-      showGrid: true,
-      showContextmenu: true,
-      cellEditable: function (ri, ci) {
-          return ri >= 1; // Only allow editing from row 2 onwards
-      }
-  }).loadData([initialData]);
-    
-  // Pastikan Service Worker didukung
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/gpsduri/sw.js')
-        .then(function(registration) {
-          console.log('ServiceWorker registration successful');
-          
-          // Inisialisasi setelah Service Worker aktif
-          if (registration.active) {
-            initApp();
-          } else {
-            registration.addEventListener('updatefound', function() {
-              registration.installing.addEventListener('statechange', function() {
-                if (this.state === 'activated') {
-                  initApp();
-                }
-              });
-            });
-          }
-        })
-        .catch(function(err) {
-          console.log('ServiceWorker registration failed: ', err);
-          initApp(); // Tetap jalankan app tanpa Service Worker
-        });
-    });
-  } else {
-    initApp(); // Fallback jika Service Worker tidak didukung
-  }
-
-  function initApp() {
   document.addEventListener('DOMContentLoaded', function() {
+      // Variabel untuk melacak posisi mouse
+      let isMouseInsideSpreadsheet = false;
+      
+      // Dapatkan elemen spreadsheet
+      const spreadsheetElement = document.getElementById('xspreadsheet');
+      
+      // Event listener untuk mengetahui ketika mouse masuk ke spreadsheet
+      spreadsheetElement.addEventListener('mouseenter', function() {
+        isMouseInsideSpreadsheet = true;
+      });
+      
+      // Event listener untuk mengetahui ketika mouse keluar dari spreadsheet
+      spreadsheetElement.addEventListener('mouseleave', function() {
+        isMouseInsideSpreadsheet = false;
+      });
+      
+      // Event listener untuk mencegah scroll halaman ketika mouse di dalam spreadsheet
+      document.addEventListener('wheel', function(e) {
+        if (isMouseInsideSpreadsheet) {
+          // Cek apakah scroll terjadi di atas spreadsheet
+          const spreadsheetRect = spreadsheetElement.getBoundingClientRect();
+          const isMouseOverSpreadsheet = 
+            e.clientX >= spreadsheetRect.left && 
+            e.clientX <= spreadsheetRect.right && 
+            e.clientY >= spreadsheetRect.top && 
+            e.clientY <= spreadsheetRect.bottom;
+          
+          if (isMouseOverSpreadsheet) {
+            e.preventDefault();
+          }
+        }
+      }, { passive: false });
     
       // Konfigurasi
       const SYNC_INTERVAL = 30000; // 30 detik
@@ -814,6 +708,81 @@
               throw error;
           }
       }
+      
+      // Initialize x-spreadsheet with empty template
+      const initialData = { 
+          name: 'Sheet1',
+          styles: [
+              {
+                  align: 'center',
+                  valign: 'middle',
+                  font: { bold: true },
+                  textwrap: true
+              },
+              {
+                  align: 'center',
+                  valign: 'middle',
+                  font: { bold: true },
+                  bgcolor: '#e0f0ff',
+                  textwrap: true
+              }
+          ],
+          rows: {
+              0: {
+                  height: 25,
+                  cells: {
+                      0: { text: 'Kebun', style: 1 },
+                      1: { text: 'Divisi', style: 1 },
+                      2: { text: 'Kode Tahun Tanam', style: 1 },
+                      3: { text: 'Blok', style: 1 },
+                      4: { text: 'Kode Kerja', style: 1 },
+                      5: { text: 'Objek Kerja', style: 1 },
+                      6: { text: 'Bulan', style: 1 },
+                      7: { text: 'HK', style: 1 },
+                      8: { text: 'Luas (Ha)', style: 1 },
+                      9: { text: 'Biaya (Rp)', style: 1 }
+                  }
+              }
+          }
+      };
+
+      function clearSpreadsheet() {
+          const clearedRows = {
+              0: initialData.rows[0] // tetap gunakan header dari initialData
+          };
+      
+          // Jika ingin 1 baris kosong untuk input berikutnya
+          clearedRows[1] = {
+              cells: {
+                  0: { text: '' },
+                  1: { text: '' },
+                  2: { text: '' },
+                  3: { text: '' },
+                  4: { text: '' },
+                  5: { text: '' },
+                  6: { text: '' },
+                  7: { text: '' },
+                  8: { text: '' },
+                  9: { text: '' }
+              }
+          };
+      
+          xs.loadData([{
+              name: 'Sheet1',
+              styles: initialData.styles,
+              rows: clearedRows
+          }]);
+      }
+  
+      const xs = x_spreadsheet('#xspreadsheet', {
+          mode: 'edit',
+          showToolbar: true,
+          showGrid: true,
+          showContextmenu: true,
+          cellEditable: function (ri, ci) {
+              return ri >= 1; // Only allow editing from row 2 onwards
+          }
+      }).loadData([initialData]);
 
       // Helper function to generate unique ID
       function generateId() {
@@ -1293,141 +1262,81 @@
             }
         }
       
-        // Modifikasi fungsi saveBtn click handler
+        // Fungsi save data - MODIFIKASI untuk hybrid system
         document.getElementById('saveBtn').addEventListener('click', async function() {
-          const currentData = xs.getData();
-          const newData = formatDataForStorage(currentData);
-          
-          if (newData.length === 0) {
-            showToast('Tidak ada data baru untuk disimpan!', true);
-            return;
-          }
-          
-          // Simpan ke IndexedDB
           try {
-            await saveToIndexedDB(newData);
-            showToast(`${newData.length} data berhasil disimpan`);
-            
-            // Trigger sync
-            await triggerBackgroundSync();
-            
-            loadDataToTable();
-            clearSpreadsheet();
+              const currentData = xs.getData();
+              const newData = formatDataForStorage(currentData);
+              
+              if (newData.length === 0) {
+                  alert('Tidak ada data baru untuk disimpan!');
+                  return;
+              }
+              
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
+              
+              // Coba sync ke server
+              await syncToServer();
+              
+              alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              //xs.loadData([initialData]);
+              loadDataToTable();
+              clearSpreadsheet();
           } catch (error) {
-            console.error('Save error:', error);
-            showToast('Gagal menyimpan data: ' + error.message, true);
+              console.error('Error saving data:', error);
+              alert('Gagal menyimpan data');
           }
-        });
+      });
 
-      // Ganti fungsi syncToServer dengan ini:
-      async function triggerBackgroundSync() {
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      // Fungsi utama sync ke server
+      async function syncToServer() {
           try {
-            const registration = await navigator.serviceWorker.ready;
-            
-            // Periksa permission
-            const permissionStatus = await navigator.permissions.query({
-              name: 'periodic-background-sync'
-            });
-            
-            if (permissionStatus.state === 'granted') {
-              await registration.sync.register('sync-budget-data');
-              showToast('Data akan disinkronkan di background');
-            } else {
-              // Fallback ke sync manual jika permission tidak diberikan
-              await manualSyncToServer();
-            }
+              const allData = await getFromIndexedDB();
+              const pendingData = allData.filter(item => item.syncStatus === "pending");
+              
+              if (pendingData.length === 0) {
+                  console.log("Tidak ada data pending untuk sync");
+                  return;
+              }
+              
+              console.log("Memulai sync dengan", pendingData.length, "data");
+              
+              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+                  const batch = pendingData.slice(i, i + BATCH_SIZE);
+                  const batchIds = batch.map(item => item.id);
+                  
+                  try {
+                      const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
+                      
+                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
+                      
+                      // Gunakan try-catch untuk handle error fetch
+                      const response = await fetch(url, {
+                          method: "POST",
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                              action: "saveBudget",
+                              data: batch
+                          }),
+                          mode: 'no-cors'
+                      });
+                      
+                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
+                      await updateSyncStatus(batchIds, "synced");
+                      console.log("Sync berhasil untuk batch", i);
+                      
+                  } catch (error) {
+                      console.error("Error sync batch", i, error);
+                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+                  }
+              }
+              
+              loadDataToTable();
           } catch (error) {
-            console.error('Background sync failed:', error);
-            // Fallback ke sync manual
-            await manualSyncToServer();
+              console.error("Sync error:", error);
           }
-        } else {
-          // Fallback untuk browser yang tidak mendukung
-          await manualSyncToServer();
-        }
       }
-
-    // Fungsi sync manual (fallback)
-    async function manualSyncToServer() {
-      const loadingIndicator = document.getElementById('sync-loading');
-      if (loadingIndicator) loadingIndicator.style.display = 'block';
-      
-      try {
-        const allData = await getFromIndexedDB();
-        const pendingData = allData.filter(item => item.syncStatus === "pending");
-        
-        if (pendingData.length === 0) {
-          showToast('Tidak ada data yang perlu disinkronkan');
-          return;
-        }
-        
-        const BATCH_SIZE = 50;
-        for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-          const batch = pendingData.slice(i, i + BATCH_SIZE);
-          await sendBatchToServer(batch);
-        }
-        
-        showToast(`${pendingData.length} data berhasil disinkronkan`);
-        loadDataToTable();
-      } catch (error) {
-        console.error('Manual sync error:', error);
-        showToast('Gagal menyinkronkan: ' + error.message, true);
-      } finally {
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
-      }
-    }
-    
-    // Fungsi untuk mengirim batch data
-    async function sendBatchToServer(batch) {
-      try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbz.../exec", {
-          method: "POST",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: "saveBudget",
-            data: batch
-          }),
-          mode: 'no-cors'
-        });
-        
-        // Meskipun no-cors, kita anggap berhasil jika tidak ada error
-        await updateSyncStatus(
-          batch.map(item => item.id),
-          "synced"
-        );
-      } catch (error) {
-        await updateSyncStatus(
-          batch.map(item => item.id),
-          "pending",
-          error.message
-        );
-        throw error;
-      }
-    }
-    
-    // Tambahkan listener untuk pesan dari Service Worker
-    navigator.serviceWorker?.addEventListener('message', event => {
-      if (event.data.type === 'sync-complete') {
-        showToast(`${event.data.count} data berhasil disinkronkan di background`);
-        loadDataToTable();
-      }
-    });
-    
-    // Fungsi helper untuk toast notification
-    function showToast(message, isError = false) {
-      const toast = document.createElement('div');
-      toast.className = `toast ${isError ? 'error' : 'success'}`;
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.classList.add('show');
-        setTimeout(() => {
-          toast.remove();
-        }, 3000);
-      }, 100);
-    }
 
       // Update status error jika sync gagal (Versi IndexedDB)
       async function updateSyncErrorStatus(batch, errorMsg) {
@@ -1450,8 +1359,34 @@
       }
 
       // Manual sync button (tambahkan di HTML)
-      // Modifikasi manual sync button
-      document.getElementById('manualSyncBtn').addEventListener('click', triggerBackgroundSync);
+      let isSyncing = false;
+
+      document.getElementById('manualSyncBtn').addEventListener('click', async function() {
+          if (isSyncing) {
+              console.log("Sync sudah berjalan, tunggu...");
+              return;
+          }
+          
+          try {
+              isSyncing = true;
+              this.disabled = true;
+              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+              
+              await syncToServer();
+              
+              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+              this.disabled = false;
+              isSyncing = false;
+          } catch (error) {
+              console.error("Manual sync error:", error);
+              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
+              setTimeout(() => {
+                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+                  this.disabled = false;
+                  isSyncing = false;
+              }, 2000);
+          }
+      });
 
       // Import Excel functionality with ID generation
       document.getElementById('importBtn').addEventListener('click', function() {
@@ -1555,7 +1490,6 @@
     });
     
   });
-  }
   </script>
 </body>
 </html>
