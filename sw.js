@@ -1,5 +1,6 @@
 const CACHE_NAME = 'budget-app-v3';
 const SYNC_TAG = 'sync-budget-data';
+const BASE_PATH = '/gpsduri/'; // Tambahkan base path
 const API_URL = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
 
 // Install Service Worker
@@ -8,9 +9,8 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then(cache => {
         return cache.addAll([
-          '/',
-          '/budget.html',
-          '/budgetstyle.css',
+          BASE_PATH + 'budget.html',
+          BASE_PATH + 'budgetstyle.css',
           'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap',
           'https://fonts.googleapis.com/icon?family=Material+Icons'
         ]);
