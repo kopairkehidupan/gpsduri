@@ -39,7 +39,8 @@
 
 /* Style khusus untuk confirm toast */
 .confirm-toast {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out forwards;
+  transform-origin: center;
 }
 
 .confirm-toast .toast-actions {
@@ -59,17 +60,30 @@
   animation: slideUp 0.3s ease-out forwards;
 }
 
-/* Animasi */
+/* Animasi untuk confirm toast */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, -40%); }
-  to { opacity: 1; transform: translate(-50%, -50%); }
+  from { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.9); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; transform: translate(-50%, -50%); }
-  to { opacity: 0; transform: translate(-50%, -40%); }
+  from { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
+  to { 
+    opacity: 0; 
+    transform: translate(-50%, -50%) scale(0.9); 
+  }
 }
 
+/* Animasi untuk simple toast */
 @keyframes slideDown {
   from { 
     opacity: 0;
