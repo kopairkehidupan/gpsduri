@@ -654,29 +654,44 @@
     
       // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
       async function saveToIndexedDB(data) {
-          try {
-              await initDB;
-              
-              if (Array.isArray(data)) {
-                  // Gunakan transaction untuk bulk operation
-                  const transaction = db.transaction('actuals', 'readwrite');
-                  const store = transaction.objectStore('actuals');
-                  
-                  data.forEach(item => {
-                      store.put(item);
-                  });
-                  
-                  return new Promise((resolve, reject) => {
-                      transaction.oncomplete = () => resolve();
-                      transaction.onerror = (event) => reject(event.target.error);
-                  });
-              } else {
-                  await dbOperation('actuals', (store) => store.put(data));
-              }
-          } catch (error) {
-              console.error("Gagal menyimpan ke IndexedDB:", error);
-              throw error;
+        try {
+          await initDB;
+          
+          if (Array.isArray(data)) {
+            showProgress('Menyimpan ke Database Lokal', data.length);
+            
+            const transaction = db.transaction('actuals', 'readwrite');
+            const store = transaction.objectStore('actuals');
+            
+            let processed = 0;
+            
+            // Gunakan Promise.all untuk bulk operation dengan progress
+            const promises = data.map((item, index) => {
+              return new Promise((resolve, reject) => {
+                const request = store.put(item);
+                request.onsuccess = () => {
+                  processed++;
+                  updateProgress(processed, data.length, `Menyimpan data ${index + 1} dari ${data.length}`);
+                  resolve();
+                };
+                request.onerror = (event) => reject(event.target.error);
+              });
+            });
+            
+            await Promise.all(promises);
+            hideProgress();
+            return;
+          } else {
+            showProgress('Menyimpan ke Database Lokal', 1);
+            await dbOperation('actuals', (store) => store.put(data));
+            updateProgress(1, 1, 'Data tersimpan');
+            setTimeout(hideProgress, 500);
           }
+        } catch (error) {
+          hideProgress();
+          console.error("Gagal menyimpan ke IndexedDB:", error);
+          throw error;
+        }
       }
 
       // Fungsi untuk membaca data dari IndexedDB (mengganti localStorage)
@@ -1025,80 +1040,72 @@
       
       // 2. Modifikasi fungsi deleteSelectedRows
       async function deleteSelectedRows() {
-          if (isDeleting) return; // Jika sedang dalam proses penghapusan, abaikan
-          isDeleting = true;
-          
-          const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
-          const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
-          
-          if (idsToDelete.length === 0) {
-              showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
-              isDeleting = false;
-              return;
-          }
-          
-          // Konfirmasi penghapusan (hanya sekali)
-          const userConfirmed = await showConfirmToast(
-            `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+        if (isDeleting) return;
+        isDeleting = true;
+        
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
+        
+        if (idsToDelete.length === 0) {
+          showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
+          isDeleting = false;
+          return;
+        }
+        
+        const userConfirmed = await showConfirmToast(
+          `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+        );
+        if (!userConfirmed) {
+          isDeleting = false;
+          return;
+        }
+        
+        showProgress('Menghapus Data', idsToDelete.length);
+        
+        try {
+          const itemsToDelete = await Promise.all(
+            idsToDelete.map(id => dbOperation('budgets', store => store.get(id)))
           );
-          if (!userConfirmed) {
-            isDeleting = false;
-            return;
+          
+          const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
+          const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
+          
+          // Hapus dari Google Sheet (jika sudah sync)
+          if (syncedItems.length > 0) {
+            updateProgress(0, idsToDelete.length, 'Menghapus dari server...');
+            
+            try {
+              const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+              updateProgress(unsyncedItems.length, idsToDelete.length, 'Menghapus dari database lokal...');
+            } catch (error) {
+              await markFailedDeletions(syncedItems.map(item => item.id), error.message);
+            }
           }
           
+          // Hapus dari IndexedDB
+          let deletedCount = 0;
+          await deleteMultipleFromIndexedDB(idsToDelete);
+          deletedCount = idsToDelete.length;
+          
+          updateProgress(deletedCount, idsToDelete.length, 'Memperbarui tampilan...');
+          await loadDataToTable();
+          
+          let message = `${idsToDelete.length} data berhasil dihapus.`;
+          if (unsyncedItems.length > 0) {
+            message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
+          }
+          showSimpleToast(message);
+          
+        } catch (error) {
+          console.error('Error deleting multiple rows:', error);
+          showSimpleToast(`Gagal menghapus data: ${error.message}`);
+          await loadDataToTable();
+        } finally {
+          hideProgress();
           const deleteBtn = document.getElementById('deleteSelectedBtn');
-          const originalContent = deleteBtn.innerHTML;
-          deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
-          deleteBtn.disabled = true;
-          
-          try {
-              // 1. Dapatkan data yang akan dihapus untuk cek status sync
-              const itemsToDelete = await Promise.all(
-                  idsToDelete.map(id => dbOperation('actuals', store => store.get(id)))
-              );
-              
-              // 2. Pisahkan data yang sudah sync dan belum
-              const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
-              const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
-              
-              // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
-              if (syncedItems.length > 0) {
-                  try {
-                      console.log('Mencoba menghapus dari Google Sheet', syncedItems.map(item => item.id));
-                      const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
-                      console.log('Penghapusan dari Google Sheet berhasil:', result);
-                  } catch (error) {
-                      console.error('Gagal menghapus dari Google Sheet:', error);
-                      await markFailedDeletions(syncedItems.map(item => item.id), error.message);
-                      throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
-                  }
-              }
-              
-              // 4. Hapus dari IndexedDB (semua data terpilih)
-              console.log('Menghapus dari IndexedDB:', idsToDelete);
-              await deleteMultipleFromIndexedDB(idsToDelete);
-              console.log('Penghapusan dari IndexedDB berhasil');
-              
-              // 5. Refresh tabel
-              await loadDataToTable();
-              
-              // 6. Beri feedback ke user
-              let message = `${idsToDelete.length} data berhasil dihapus.`;
-              if (unsyncedItems.length > 0) {
-                  message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
-              }
-              showSimpleToast(message);
-              
-          } catch (error) {
-              console.error('Error deleting multiple rows:', error);
-              showSimpleToast(`Gagal menghapus data: ${error.message}`);
-              await loadDataToTable();
-          } finally {
-              deleteBtn.innerHTML = originalContent;
-              deleteBtn.style.display = 'none';
-              deleteBtn.disabled = false;
-              isDeleting = false;
-          }
+          deleteBtn.style.display = 'none';
+          isDeleting = false;
+        }
       }
 
       // Fungsi untuk menghapus banyak data dari IndexedDB
@@ -1300,53 +1307,57 @@
 
       // Fungsi utama sync ke server
       async function syncToServer() {
-          try {
-              const allData = await getFromIndexedDB();
-              const pendingData = allData.filter(item => item.syncStatus === "pending");
-              
-              if (pendingData.length === 0) {
-                  console.log("Tidak ada data pending untuk sync");
-                  return;
-              }
-              
-              console.log("Memulai sync dengan", pendingData.length, "data");
-              
-              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-                  const batch = pendingData.slice(i, i + BATCH_SIZE);
-                  const batchIds = batch.map(item => item.id);
-                  
-                  try {
-                      const url = `https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec?t=${Date.now()}`;
-                      
-                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
-                      
-                      // Gunakan try-catch untuk handle error fetch
-                      const response = await fetch(url, {
-                          method: "POST",
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                              action: "saveActual",
-                              data: batch
-                          }),
-                          mode: 'no-cors'
-                      });
-                      
-                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
-                      await updateSyncStatus(batchIds, "synced");
-                      console.log("Sync berhasil untuk batch", i);
-                      
-                  } catch (error) {
-                      console.error("Error sync batch", i, error);
-                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
-                  }
-              }
-              
-              loadDataToTable();
-          } catch (error) {
-              console.error("Sync error:", error);
+        try {
+          const allData = await getFromIndexedDB();
+          const pendingData = allData.filter(item => item.syncStatus === "pending");
+          
+          if (pendingData.length === 0) {
+            console.log("Tidak ada data pending untuk sync");
+            return;
           }
+          
+          showProgress('Menyinkronkan ke Server', pendingData.length);
+          
+          console.log("Memulai sync dengan", pendingData.length, "data");
+          
+          for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+            const batch = pendingData.slice(i, i + BATCH_SIZE);
+            const batchIds = batch.map(item => item.id);
+            
+            try {
+              const url = `https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec?t=${Date.now()}`;
+              
+              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1} dari ${Math.ceil(pendingData.length/BATCH_SIZE)}`);
+              
+              const response = await fetch(url, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: "saveActual",
+                  data: batch
+                }),
+                mode: 'no-cors'
+              });
+              
+              await updateSyncStatus(batchIds, "synced");
+              console.log("Sync berhasil untuk batch", i);
+              
+            } catch (error) {
+              console.error("Error sync batch", i, error);
+              await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+            }
+            
+            updateProgress(Math.min(i + BATCH_SIZE, pendingData.length), pendingData.length);
+          }
+          
+          hideProgress();
+          loadDataToTable();
+        } catch (error) {
+          hideProgress();
+          console.error("Sync error:", error);
+        }
       }
-
+  
       // Update status error jika sync gagal
       async function updateSyncErrorStatus(batch, errorMsg) {
           try {
