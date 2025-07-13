@@ -1,11 +1,11 @@
-// Fungsi untuk menampilkan toast konfirmasi
+// Fungsi untuk menampilkan toast konfirmasi (tengah layar)
 function showConfirmToast(message, confirmCallback, cancelCallback = null) {
   return new Promise((resolve) => {
-    const toastContainer = document.getElementById('toastContainer');
+    const toastContainer = document.getElementById('confirmToastContainer');
     
     // Buat elemen toast
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = 'toast confirm-toast';
     toast.innerHTML = `
       <div>${message}</div>
       <div class="toast-actions">
@@ -42,12 +42,12 @@ function showConfirmToast(message, confirmCallback, cancelCallback = null) {
   });
 }
 
-// Fungsi untuk menampilkan toast informasi sederhana
+// Fungsi untuk menampilkan toast informasi sederhana (kanan atas)
 function showSimpleToast(message, duration = 3000) {
-  const toastContainer = document.getElementById('toastContainer');
+  const toastContainer = document.getElementById('simpleToastContainer');
   
   const toast = document.createElement('div');
-  toast.className = 'toast';
+  toast.className = 'toast simple-toast';
   toast.textContent = message;
   
   toastContainer.appendChild(toast);
