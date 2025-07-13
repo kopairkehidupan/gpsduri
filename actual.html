@@ -1064,7 +1064,7 @@
         
         try {
           const itemsToDelete = await Promise.all(
-            idsToDelete.map(id => dbOperation('budgets', store => store.get(id)))
+            idsToDelete.map(id => dbOperation('actuals', store => store.get(id)))
           );
           
           const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
@@ -1295,7 +1295,7 @@
               // Coba sync ke server
               await syncToServer();
               
-              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              showSimpleToast(`Data actual berhasil disimpan. ${newData.length} records ditambahkan.`);
               //xs.loadData([initialData]);
               loadDataToTable();
               clearSpreadsheet();
