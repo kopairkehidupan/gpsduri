@@ -573,7 +573,7 @@
   // Pastikan Service Worker didukung
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('sw.js')
+      navigator.serviceWorker.register('/gpsduri/sw.js')
         .then(function(registration) {
           console.log('ServiceWorker registration successful');
           
