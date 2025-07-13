@@ -570,10 +570,18 @@
         </table>
       </div>
     </div>
-    <div class="progress-container" id="progressContainer" style="display: none;">
-      <div class="progress-bar" id="progressBar"></div>
-      <div class="progress-text" id="progressText">0%</div>
-      <div class="progress-details" id="progressDetails"></div>
+    <div id="progressContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+      <div style="background-color: white; padding: 2rem; border-radius: 8px; width: 80%; max-width: 500px;">
+        <h3 id="progressTitle" style="margin-top: 0;">Menyimpan Data...</h3>
+        <div style="width: 100%; background-color: #f0f0f0; border-radius: 4px; margin: 1rem 0;">
+          <div id="progressBar" style="height: 20px; width: 0%; background-color: #4285f4; border-radius: 4px; transition: width 0.3s ease;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span id="progressText">0%</span>
+          <span id="progressCount">0/0 data diproses</span>
+        </div>
+        <div id="progressMessage" style="margin-top: 1rem; font-size: 0.9rem; color: #666;"></div>
+      </div>
     </div>
     <div class="confirm-toast-container" id="confirmToastContainer"></div>
     <div class="simple-toast-container" id="simpleToastContainer"></div>
@@ -656,72 +664,78 @@
           });
       };
 
-      // Fungsi untuk update progress bar
-      function updateProgress(percentage, message = "") {
+      // Fungsi untuk menampilkan progress bar
+      function showProgress(title, total) {
+        const container = document.getElementById('progressContainer');
+        const progressTitle = document.getElementById('progressTitle');
+        const progressCount = document.getElementById('progressCount');
+        
+        progressTitle.textContent = title;
+        progressCount.textContent = `0/${total} data diproses`;
+        container.style.display = 'flex';
+      }
+      
+      // Fungsi untuk mengupdate progress bar
+      function updateProgress(current, total, message = '') {
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
-        const progressDetails = document.getElementById('progressDetails');
-        const progressContainer = document.getElementById('progressContainer');
+        const progressCount = document.getElementById('progressCount');
+        const progressMessage = document.getElementById('progressMessage');
         
-        progressContainer.style.display = 'block';
+        const percentage = Math.round((current / total) * 100);
         progressBar.style.width = `${percentage}%`;
-        progressText.textContent = `${Math.round(percentage)}%`;
+        progressText.textContent = `${percentage}%`;
+        progressCount.textContent = `${current}/${total} data diproses`;
         
         if (message) {
-          progressDetails.textContent = message;
+          progressMessage.textContent = message;
         }
-        
-        // Sembunyikan progress bar jika selesai
-        if (percentage >= 100) {
-          setTimeout(() => {
-            progressContainer.style.display = 'none';
-          }, 1000);
-        }
+      }
+      
+      // Fungsi untuk menyembunyikan progress bar
+      function hideProgress() {
+        const container = document.getElementById('progressContainer');
+        container.style.display = 'none';
       }
     
       // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
-      async function saveToIndexedDB(data, batchSize = 50) {
+      async function saveToIndexedDB(data) {
         try {
           await initDB;
           
-          if (!Array.isArray(data)) {
-            throw new Error("Data harus berupa array");
-          }
-          
-          const totalItems = data.length;
-          let processed = 0;
-          
-          // Tampilkan progress bar
-          updateProgress(0, "Menyimpan data ke penyimpanan lokal...");
-          
-          // Proses dalam batch untuk menghindari blocking UI
-          for (let i = 0; i < totalItems; i += batchSize) {
-            const batch = data.slice(i, i + batchSize);
+          if (Array.isArray(data)) {
+            showProgress('Menyimpan ke Database Lokal', data.length);
+            
             const transaction = db.transaction('budgets', 'readwrite');
             const store = transaction.objectStore('budgets');
             
-            await Promise.all(batch.map(item => {
-              return new Promise((resolve) => {
+            let processed = 0;
+            
+            // Gunakan Promise.all untuk bulk operation dengan progress
+            const promises = data.map((item, index) => {
+              return new Promise((resolve, reject) => {
                 const request = store.put(item);
                 request.onsuccess = () => {
                   processed++;
-                  const progress = (processed / totalItems) * 100;
-                  updateProgress(
-                    progress, 
-                    `Menyimpan data ke penyimpanan lokal... (${processed}/${totalItems})`
-                  );
+                  updateProgress(processed, data.length, `Menyimpan data ${index + 1} dari ${data.length}`);
                   resolve();
                 };
-                request.onerror = resolve; // Lanjut meskipun ada error
+                request.onerror = (event) => reject(event.target.error);
               });
-            }));
+            });
+            
+            await Promise.all(promises);
+            hideProgress();
+            return;
+          } else {
+            showProgress('Menyimpan ke Database Lokal', 1);
+            await dbOperation('budgets', (store) => store.put(data));
+            updateProgress(1, 1, 'Data tersimpan');
+            setTimeout(hideProgress, 500);
           }
-          
-          updateProgress(100, "Data berhasil disimpan ke penyimpanan lokal");
-          return true;
         } catch (error) {
+          hideProgress();
           console.error("Gagal menyimpan ke IndexedDB:", error);
-          updateProgress(0, "Gagal menyimpan data");
           throw error;
         }
       }
@@ -1072,80 +1086,72 @@
       
       // 2. Modifikasi fungsi deleteSelectedRows
       async function deleteSelectedRows() {
-          if (isDeleting) return; // Jika sedang dalam proses penghapusan, abaikan
-          isDeleting = true;
-          
-          const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
-          const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
-          
-          if (idsToDelete.length === 0) {
-              showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
-              isDeleting = false;
-              return;
-          }
-          
-          // Konfirmasi penghapusan (hanya sekali)
-          const userConfirmed = await showConfirmToast(
-            `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+        if (isDeleting) return;
+        isDeleting = true;
+        
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        const idsToDelete = Array.from(selectedCheckboxes).map(checkbox => checkbox.dataset.id);
+        
+        if (idsToDelete.length === 0) {
+          showSimpleToast('Tidak ada data yang dipilih untuk dihapus!');
+          isDeleting = false;
+          return;
+        }
+        
+        const userConfirmed = await showConfirmToast(
+          `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+        );
+        if (!userConfirmed) {
+          isDeleting = false;
+          return;
+        }
+        
+        showProgress('Menghapus Data', idsToDelete.length);
+        
+        try {
+          const itemsToDelete = await Promise.all(
+            idsToDelete.map(id => dbOperation('budgets', store => store.get(id)))
           );
-          if (!userConfirmed) {
-            isDeleting = false;
-            return;
+          
+          const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
+          const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
+          
+          // Hapus dari Google Sheet (jika sudah sync)
+          if (syncedItems.length > 0) {
+            updateProgress(0, idsToDelete.length, 'Menghapus dari server...');
+            
+            try {
+              const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
+              updateProgress(unsyncedItems.length, idsToDelete.length, 'Menghapus dari database lokal...');
+            } catch (error) {
+              await markFailedDeletions(syncedItems.map(item => item.id), error.message);
+            }
           }
           
+          // Hapus dari IndexedDB
+          let deletedCount = 0;
+          await deleteMultipleFromIndexedDB(idsToDelete);
+          deletedCount = idsToDelete.length;
+          
+          updateProgress(deletedCount, idsToDelete.length, 'Memperbarui tampilan...');
+          await loadDataToTable();
+          
+          let message = `${idsToDelete.length} data berhasil dihapus.`;
+          if (unsyncedItems.length > 0) {
+            message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
+          }
+          showSimpleToast(message);
+          
+        } catch (error) {
+          console.error('Error deleting multiple rows:', error);
+          showSimpleToast(`Gagal menghapus data: ${error.message}`);
+          await loadDataToTable();
+        } finally {
+          hideProgress();
           const deleteBtn = document.getElementById('deleteSelectedBtn');
-          const originalContent = deleteBtn.innerHTML;
-          deleteBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Menghapus...';
-          deleteBtn.disabled = true;
-          
-          try {
-              // 1. Dapatkan data yang akan dihapus untuk cek status sync
-              const itemsToDelete = await Promise.all(
-                  idsToDelete.map(id => dbOperation('budgets', store => store.get(id)))
-              );
-              
-              // 2. Pisahkan data yang sudah sync dan belum
-              const syncedItems = itemsToDelete.filter(item => item?.syncStatus === "synced");
-              const unsyncedItems = itemsToDelete.filter(item => !item || item.syncStatus !== "synced");
-              
-              // 3. Hapus dari Google Sheet terlebih dahulu (hanya yang sudah sync)
-              if (syncedItems.length > 0) {
-                  try {
-                      console.log('Mencoba menghapus dari Google Sheet', syncedItems.map(item => item.id));
-                      const result = await deleteMultipleFromGoogleSheet(syncedItems.map(item => item.id));
-                      console.log('Penghapusan dari Google Sheet berhasil:', result);
-                  } catch (error) {
-                      console.error('Gagal menghapus dari Google Sheet:', error);
-                      await markFailedDeletions(syncedItems.map(item => item.id), error.message);
-                      throw new Error(`Gagal menghapus ${syncedItems.length} data dari server: ${error.message}`);
-                  }
-              }
-              
-              // 4. Hapus dari IndexedDB (semua data terpilih)
-              console.log('Menghapus dari IndexedDB:', idsToDelete);
-              await deleteMultipleFromIndexedDB(idsToDelete);
-              console.log('Penghapusan dari IndexedDB berhasil');
-              
-              // 5. Refresh tabel
-              await loadDataToTable();
-              
-              // 6. Beri feedback ke user
-              let message = `${idsToDelete.length} data berhasil dihapus.`;
-              if (unsyncedItems.length > 0) {
-                  message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
-              }
-              showSimpleToast(message);
-              
-          } catch (error) {
-              console.error('Error deleting multiple rows:', error);
-              showSimpleToast(`Gagal menghapus data: ${error.message}`);
-              await loadDataToTable();
-          } finally {
-              deleteBtn.innerHTML = originalContent;
-              deleteBtn.style.display = 'none';
-              deleteBtn.disabled = false;
-              isDeleting = false;
-          }
+          deleteBtn.style.display = 'none';
+          isDeleting = false;
+        }
       }
 
       // Fungsi untuk menghapus banyak data dari IndexedDB
@@ -1321,39 +1327,30 @@
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
         document.getElementById('saveBtn').addEventListener('click', async function() {
-          const saveBtn = this;
-          const originalText = saveBtn.innerHTML;
-          
           try {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Memproses...';
-            
-            const currentData = xs.getData();
-            const newData = formatDataForStorage(currentData);
-            
-            if (newData.length === 0) {
-              showSimpleToast('Tidak ada data baru untuk disimpan!');
-              return;
-            }
-            
-            // Simpan ke IndexedDB dengan progress bar
-            await saveToIndexedDB(newData);
-            
-            // Coba sync ke server dengan progress bar
-            await syncToServer();
-            
-            showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-            loadDataToTable();
-            clearSpreadsheet();
-            
+              const currentData = xs.getData();
+              const newData = formatDataForStorage(currentData);
+              
+              if (newData.length === 0) {
+                  showSimpleToast('Tidak ada data baru untuk disimpan!');
+                  return;
+              }
+              
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
+              
+              // Coba sync ke server
+              await syncToServer();
+              
+              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              //xs.loadData([initialData]);
+              loadDataToTable();
+              clearSpreadsheet();
           } catch (error) {
-            console.error('Error saving data:', error);
-            showSimpleToast('Gagal menyimpan data');
-          } finally {
-            saveBtn.innerHTML = originalText;
-            saveBtn.disabled = false;
+              console.error('Error saving data:', error);
+              showSimpleToast('Gagal menyimpan data');
           }
-        });
+      });
 
       // Fungsi utama sync ke server
       async function syncToServer() {
@@ -1366,24 +1363,20 @@
             return;
           }
           
-          const totalItems = pendingData.length;
-          let syncedItems = 0;
+          showProgress('Menyinkronkan ke Server', pendingData.length);
           
-          updateProgress(0, "Menyiapkan sinkronisasi ke server...");
+          console.log("Memulai sync dengan", pendingData.length, "data");
           
           for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
             const batch = pendingData.slice(i, i + BATCH_SIZE);
             const batchIds = batch.map(item => item.id);
             
             try {
-              updateProgress(
-                (i / pendingData.length) * 100,
-                `Mengirim data ke server... (${i}/${pendingData.length})`
-              );
-              
               const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
               
-              await fetch(url, {
+              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1} dari ${Math.ceil(pendingData.length/BATCH_SIZE)}`);
+              
+              const response = await fetch(url, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1394,32 +1387,21 @@
               });
               
               await updateSyncStatus(batchIds, "synced");
-              syncedItems += batch.length;
-              
-              updateProgress(
-                ((i + batch.length) / pendingData.length) * 100,
-                `Data terkirim ke server... (${i + batch.length}/${pendingData.length})`
-              );
+              console.log("Sync berhasil untuk batch", i);
               
             } catch (error) {
               console.error("Error sync batch", i, error);
               await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
-              
-              updateProgress(
-                (i / pendingData.length) * 100,
-                `Gagal mengirim batch, mencoba lagi... (${i}/${pendingData.length})`
-              );
             }
             
-            // Beri jeda antar batch untuk menghindari rate limiting
-            await new Promise(resolve => setTimeout(resolve, 500));
+            updateProgress(Math.min(i + BATCH_SIZE, pendingData.length), pendingData.length);
           }
           
-          updateProgress(100, `Sinkronisasi selesai! ${syncedItems} data terkirim`);
+          hideProgress();
           loadDataToTable();
         } catch (error) {
+          hideProgress();
           console.error("Sync error:", error);
-          updateProgress(0, "Gagal sinkronisasi ke server");
         }
       }
 
@@ -1447,33 +1429,30 @@
       let isSyncing = false;
 
       document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-        if (isSyncing) {
-          console.log("Sync sudah berjalan, tunggu...");
-          return;
-        }
-        
-        const syncBtn = this;
-        const originalText = syncBtn.innerHTML;
-        
-        try {
-          isSyncing = true;
-          syncBtn.disabled = true;
-          syncBtn.innerHTML = '<i class="material-icons">sync</i> Memproses...';
+          if (isSyncing) {
+              console.log("Sync sudah berjalan, tunggu...");
+              return;
+          }
           
-          await syncToServer();
-          
-          syncBtn.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-          syncBtn.disabled = false;
-          isSyncing = false;
-        } catch (error) {
-          console.error("Manual sync error:", error);
-          syncBtn.innerHTML = '<i class="material-icons">sync_problem</i> Error, Coba Lagi';
-          setTimeout(() => {
-            syncBtn.innerHTML = originalText;
-            syncBtn.disabled = false;
-            isSyncing = false;
-          }, 2000);
-        }
+          try {
+              isSyncing = true;
+              this.disabled = true;
+              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+              
+              await syncToServer();
+              
+              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+              this.disabled = false;
+              isSyncing = false;
+          } catch (error) {
+              console.error("Manual sync error:", error);
+              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
+              setTimeout(() => {
+                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+                  this.disabled = false;
+                  isSyncing = false;
+              }, 2000);
+          }
       });
 
       // Import Excel functionality with ID generation
