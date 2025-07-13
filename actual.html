@@ -651,6 +651,40 @@
               request.onerror = (event) => reject(event.target.error);
           });
       };
+
+      // Fungsi untuk menampilkan progress bar
+      function showProgress(title, total) {
+        const container = document.getElementById('progressContainer');
+        const progressTitle = document.getElementById('progressTitle');
+        const progressCount = document.getElementById('progressCount');
+        
+        progressTitle.textContent = title;
+        progressCount.textContent = `0/${total} data diproses`;
+        container.style.display = 'flex';
+      }
+      
+      // Fungsi untuk mengupdate progress bar
+      function updateProgress(current, total, message = '') {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressCount = document.getElementById('progressCount');
+        const progressMessage = document.getElementById('progressMessage');
+        
+        const percentage = Math.round((current / total) * 100);
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${percentage}%`;
+        progressCount.textContent = `${current}/${total} data diproses`;
+        
+        if (message) {
+          progressMessage.textContent = message;
+        }
+      }
+      
+      // Fungsi untuk menyembunyikan progress bar
+      function hideProgress() {
+        const container = document.getElementById('progressContainer');
+        container.style.display = 'none';
+      }
     
       // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
       async function saveToIndexedDB(data) {
