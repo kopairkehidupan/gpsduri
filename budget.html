@@ -570,6 +570,11 @@
         </table>
       </div>
     </div>
+    <div class="progress-container" id="progressContainer" style="display: none;">
+      <div class="progress-bar" id="progressBar"></div>
+      <div class="progress-text" id="progressText">0%</div>
+      <div class="progress-details" id="progressDetails"></div>
+    </div>
     <div class="confirm-toast-container" id="confirmToastContainer"></div>
     <div class="simple-toast-container" id="simpleToastContainer"></div>
   </div>
@@ -650,32 +655,75 @@
               request.onerror = (event) => reject(event.target.error);
           });
       };
+
+      // Fungsi untuk update progress bar
+      function updateProgress(percentage, message = "") {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressDetails = document.getElementById('progressDetails');
+        const progressContainer = document.getElementById('progressContainer');
+        
+        progressContainer.style.display = 'block';
+        progressBar.style.width = `${percentage}%`;
+        progressText.textContent = `${Math.round(percentage)}%`;
+        
+        if (message) {
+          progressDetails.textContent = message;
+        }
+        
+        // Sembunyikan progress bar jika selesai
+        if (percentage >= 100) {
+          setTimeout(() => {
+            progressContainer.style.display = 'none';
+          }, 1000);
+        }
+      }
     
       // Fungsi untuk menyimpan data ke IndexedDB (mengganti localStorage)
-      async function saveToIndexedDB(data) {
-          try {
-              await initDB;
-              
-              if (Array.isArray(data)) {
-                  // Gunakan transaction untuk bulk operation
-                  const transaction = db.transaction('budgets', 'readwrite');
-                  const store = transaction.objectStore('budgets');
-                  
-                  data.forEach(item => {
-                      store.put(item);
-                  });
-                  
-                  return new Promise((resolve, reject) => {
-                      transaction.oncomplete = () => resolve();
-                      transaction.onerror = (event) => reject(event.target.error);
-                  });
-              } else {
-                  await dbOperation('budgets', (store) => store.put(data));
-              }
-          } catch (error) {
-              console.error("Gagal menyimpan ke IndexedDB:", error);
-              throw error;
+      async function saveToIndexedDB(data, batchSize = 50) {
+        try {
+          await initDB;
+          
+          if (!Array.isArray(data)) {
+            throw new Error("Data harus berupa array");
           }
+          
+          const totalItems = data.length;
+          let processed = 0;
+          
+          // Tampilkan progress bar
+          updateProgress(0, "Menyimpan data ke penyimpanan lokal...");
+          
+          // Proses dalam batch untuk menghindari blocking UI
+          for (let i = 0; i < totalItems; i += batchSize) {
+            const batch = data.slice(i, i + batchSize);
+            const transaction = db.transaction('budgets', 'readwrite');
+            const store = transaction.objectStore('budgets');
+            
+            await Promise.all(batch.map(item => {
+              return new Promise((resolve) => {
+                const request = store.put(item);
+                request.onsuccess = () => {
+                  processed++;
+                  const progress = (processed / totalItems) * 100;
+                  updateProgress(
+                    progress, 
+                    `Menyimpan data ke penyimpanan lokal... (${processed}/${totalItems})`
+                  );
+                  resolve();
+                };
+                request.onerror = resolve; // Lanjut meskipun ada error
+              });
+            }));
+          }
+          
+          updateProgress(100, "Data berhasil disimpan ke penyimpanan lokal");
+          return true;
+        } catch (error) {
+          console.error("Gagal menyimpan ke IndexedDB:", error);
+          updateProgress(0, "Gagal menyimpan data");
+          throw error;
+        }
       }
 
       // Fungsi untuk membaca data dari IndexedDB (mengganti localStorage)
@@ -1273,78 +1321,106 @@
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
         document.getElementById('saveBtn').addEventListener('click', async function() {
+          const saveBtn = this;
+          const originalText = saveBtn.innerHTML;
+          
           try {
-              const currentData = xs.getData();
-              const newData = formatDataForStorage(currentData);
-              
-              if (newData.length === 0) {
-                  showSimpleToast('Tidak ada data baru untuk disimpan!');
-                  return;
-              }
-              
-              // Simpan ke IndexedDB
-              await saveToIndexedDB(newData);
-              
-              // Coba sync ke server
-              await syncToServer();
-              
-              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-              //xs.loadData([initialData]);
-              loadDataToTable();
-              clearSpreadsheet();
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="material-icons">hourglass_empty</i> Memproses...';
+            
+            const currentData = xs.getData();
+            const newData = formatDataForStorage(currentData);
+            
+            if (newData.length === 0) {
+              showSimpleToast('Tidak ada data baru untuk disimpan!');
+              return;
+            }
+            
+            // Simpan ke IndexedDB dengan progress bar
+            await saveToIndexedDB(newData);
+            
+            // Coba sync ke server dengan progress bar
+            await syncToServer();
+            
+            showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+            loadDataToTable();
+            clearSpreadsheet();
+            
           } catch (error) {
-              console.error('Error saving data:', error);
-              showSimpleToast('Gagal menyimpan data');
+            console.error('Error saving data:', error);
+            showSimpleToast('Gagal menyimpan data');
+          } finally {
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
           }
-      });
+        });
 
       // Fungsi utama sync ke server
       async function syncToServer() {
-          try {
-              const allData = await getFromIndexedDB();
-              const pendingData = allData.filter(item => item.syncStatus === "pending");
-              
-              if (pendingData.length === 0) {
-                  console.log("Tidak ada data pending untuk sync");
-                  return;
-              }
-              
-              console.log("Memulai sync dengan", pendingData.length, "data");
-              
-              for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
-                  const batch = pendingData.slice(i, i + BATCH_SIZE);
-                  const batchIds = batch.map(item => item.id);
-                  
-                  try {
-                      const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
-                      
-                      console.log("Mengirim batch", i, "dengan", batch.length, "data");
-                      
-                      // Gunakan try-catch untuk handle error fetch
-                      const response = await fetch(url, {
-                          method: "POST",
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                              action: "saveBudget",
-                              data: batch
-                          }),
-                          mode: 'no-cors'
-                      });
-                      
-                      // Meskipun mode no-cors, kita asumsikan berhasil jika tidak error
-                      await updateSyncStatus(batchIds, "synced");
-                      console.log("Sync berhasil untuk batch", i);
-                      
-                  } catch (error) {
-                      console.error("Error sync batch", i, error);
-                      await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
-                  }
-              }
-              
-              loadDataToTable();
-          } catch (error) {
-              console.error("Sync error:", error);
+        try {
+          const allData = await getFromIndexedDB();
+          const pendingData = allData.filter(item => item.syncStatus === "pending");
+          
+          if (pendingData.length === 0) {
+            console.log("Tidak ada data pending untuk sync");
+            return;
           }
+          
+          const totalItems = pendingData.length;
+          let syncedItems = 0;
+          
+          updateProgress(0, "Menyiapkan sinkronisasi ke server...");
+          
+          for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+            const batch = pendingData.slice(i, i + BATCH_SIZE);
+            const batchIds = batch.map(item => item.id);
+            
+            try {
+              updateProgress(
+                (i / pendingData.length) * 100,
+                `Mengirim data ke server... (${i}/${pendingData.length})`
+              );
+              
+              const url = `https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec?t=${Date.now()}`;
+              
+              await fetch(url, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: "saveBudget",
+                  data: batch
+                }),
+                mode: 'no-cors'
+              });
+              
+              await updateSyncStatus(batchIds, "synced");
+              syncedItems += batch.length;
+              
+              updateProgress(
+                ((i + batch.length) / pendingData.length) * 100,
+                `Data terkirim ke server... (${i + batch.length}/${pendingData.length})`
+              );
+              
+            } catch (error) {
+              console.error("Error sync batch", i, error);
+              await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+              
+              updateProgress(
+                (i / pendingData.length) * 100,
+                `Gagal mengirim batch, mencoba lagi... (${i}/${pendingData.length})`
+              );
+            }
+            
+            // Beri jeda antar batch untuk menghindari rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          
+          updateProgress(100, `Sinkronisasi selesai! ${syncedItems} data terkirim`);
+          loadDataToTable();
+        } catch (error) {
+          console.error("Sync error:", error);
+          updateProgress(0, "Gagal sinkronisasi ke server");
+        }
       }
 
       // Update status error jika sync gagal (Versi IndexedDB)
@@ -1371,30 +1447,33 @@
       let isSyncing = false;
 
       document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-          if (isSyncing) {
-              console.log("Sync sudah berjalan, tunggu...");
-              return;
-          }
+        if (isSyncing) {
+          console.log("Sync sudah berjalan, tunggu...");
+          return;
+        }
+        
+        const syncBtn = this;
+        const originalText = syncBtn.innerHTML;
+        
+        try {
+          isSyncing = true;
+          syncBtn.disabled = true;
+          syncBtn.innerHTML = '<i class="material-icons">sync</i> Memproses...';
           
-          try {
-              isSyncing = true;
-              this.disabled = true;
-              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
-              
-              await syncToServer();
-              
-              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-              this.disabled = false;
-              isSyncing = false;
-          } catch (error) {
-              console.error("Manual sync error:", error);
-              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
-              setTimeout(() => {
-                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-                  this.disabled = false;
-                  isSyncing = false;
-              }, 2000);
-          }
+          await syncToServer();
+          
+          syncBtn.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+          syncBtn.disabled = false;
+          isSyncing = false;
+        } catch (error) {
+          console.error("Manual sync error:", error);
+          syncBtn.innerHTML = '<i class="material-icons">sync_problem</i> Error, Coba Lagi';
+          setTimeout(() => {
+            syncBtn.innerHTML = originalText;
+            syncBtn.disabled = false;
+            isSyncing = false;
+          }, 2000);
+        }
       });
 
       // Import Excel functionality with ID generation
