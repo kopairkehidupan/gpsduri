@@ -568,6 +568,7 @@
         </table>
       </div>
     </div>
+    <div class="toast-container" id="toastContainer"></div>
   </div>
   <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -931,9 +932,12 @@
               const id = this.getAttribute('data-id');
               const item = await dbOperation('budgets', (store) => store.get(id));
               
-              if (confirm(`Apakah Anda yakin ingin menghapus data ini?\nKebun: ${item.kebun}\nDivisi: ${item.divisi}`)) {
-                await deleteData(id);
-              }
+              const shouldDelete = await showConfirmToast(
+                `Apakah Anda yakin ingin menghapus data ini?<br><br>Kebun: ${item.kebun}<br>Divisi: ${item.divisi}`,
+                async () => {
+                  await deleteData(id);
+                }
+              );
             });
           });
         } catch (error) {
@@ -1030,10 +1034,12 @@
           }
           
           // Konfirmasi penghapusan (hanya sekali)
-          const userConfirmed = confirm(`Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`);
+          const userConfirmed = await showConfirmToast(
+            `Anda yakin ingin menghapus ${idsToDelete.length} data terpilih?`
+          );
           if (!userConfirmed) {
-              isDeleting = false;
-              return;
+            isDeleting = false;
+            return;
           }
           
           const deleteBtn = document.getElementById('deleteSelectedBtn');
@@ -1077,7 +1083,7 @@
               if (unsyncedItems.length > 0) {
                   message += ` ${unsyncedItems.length} data hanya dihapus dari penyimpanan lokal (belum tersinkronisasi).`;
               }
-              alert(message);
+              showSimpleToast(message);
               
           } catch (error) {
               console.error('Error deleting multiple rows:', error);
@@ -1244,7 +1250,7 @@
                 
                 // Perbarui tampilan tabel
                 loadDataToTable();
-                alert('Data berhasil dihapus');
+                showSimpleToast('Data berhasil dihapus');
 
                 if (deleteBtn) {
                     deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
@@ -1279,7 +1285,7 @@
               // Coba sync ke server
               await syncToServer();
               
-              alert(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               //xs.loadData([initialData]);
               loadDataToTable();
               clearSpreadsheet();
@@ -1431,7 +1437,7 @@
                   // Simpan ke IndexedDB
                   await saveToIndexedDB(importedData);
                   
-                  alert(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
+                  showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
                   loadDataToTable();
                   e.target.value = '';
               } catch (error) {
@@ -1469,7 +1475,7 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
             XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
-            alert('Data berhasil diekspor ke Excel!');
+            showSimpleToast('Data berhasil diekspor ke Excel!');
         } catch (error) {
             console.error('Error exporting:', error);
             alert('Gagal mengekspor ke Excel');
@@ -1486,7 +1492,7 @@
         }, SYNC_INTERVAL);
     }).catch(error => {
         console.error("Gagal menginisialisasi database:", error);
-        alert("Aplikasi tidak dapat berjalan karena masalah database");
+        showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
     });
     
   });
