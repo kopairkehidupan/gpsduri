@@ -831,32 +831,35 @@
         };
       }
 
+      // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
       function clearSpreadsheet() {
-          const clearedRows = {
-              0: initialData.rows[0] // tetap gunakan header dari initialData
+        const clearedRows = {
+          0: initialData.rows[0] // Header
+        };
+        
+        // Tambahkan 999 baris kosong
+        for (let i = 1; i <= 999; i++) {
+          clearedRows[i] = {
+            cells: {
+              0: { text: '' },
+              1: { text: '' },
+              2: { text: '' },
+              3: { text: '' },
+              4: { text: '' },
+              5: { text: '' },
+              6: { text: '' },
+              7: { text: '' },
+              8: { text: '' },
+              9: { text: '' }
+            }
           };
-      
-          // Jika ingin 1 baris kosong untuk input berikutnya
-          clearedRows[1] = {
-              cells: {
-                  0: { text: '' },
-                  1: { text: '' },
-                  2: { text: '' },
-                  3: { text: '' },
-                  4: { text: '' },
-                  5: { text: '' },
-                  6: { text: '' },
-                  7: { text: '' },
-                  8: { text: '' },
-                  9: { text: '' }
-              }
-          };
-      
-          xs.loadData([{
-              name: 'Sheet1',
-              styles: initialData.styles,
-              rows: clearedRows
-          }]);
+        }
+        
+        xs.loadData([{
+          name: 'Sheet1',
+          styles: initialData.styles,
+          rows: clearedRows
+        }]);
       }
   
      const xs = x_spreadsheet('#xspreadsheet', {
@@ -864,10 +867,18 @@
         showToolbar: true,
         showGrid: true,
         showContextmenu: true,
-        rowCount: 1000,
-        colCount: 10,
+        row: {
+          len: 1000, // Jumlah total baris yang tersedia
+          height: 25 // Tinggi setiap baris
+        },
+        col: {
+          len: 10, // Jumlah kolom
+          width: 120, // Lebar kolom
+          indexWidth: 60, // Lebar index baris
+          minWidth: 60 // Lebar minimum kolom
+        },
         view: {
-          height: () => document.getElementById('xspreadsheet').clientHeight - 40,
+          height: () => document.getElementById('xspreadsheet').clientHeight,
           width: () => document.getElementById('xspreadsheet').clientWidth,
         },
         style: {
@@ -876,6 +887,53 @@
           }
         }
       });
+
+      // Hapus event listener scroll yang lama dan ganti dengan ini:
+      let isAddingRows = false;
+      xs.on('scroll', _.throttle(function() {
+        if (isAddingRows) return;
+        
+        const scrollInfo = xs.scrollInfo();
+        const data = xs.getData();
+        const rows = data[0].rows;
+        const lastVisibleRow = Math.floor(scrollInfo.top * scrollInfo.rowHeight * 1000 / scrollInfo.height);
+        
+        // Jika user scroll mendekati 90% dari bawah, tambahkan lebih banyak baris
+        if (lastVisibleRow > Object.keys(rows).length * 0.9) {
+          isAddingRows = true;
+          
+          const currentLastRow = Object.keys(rows).reduce((max, key) => Math.max(max, parseInt(key)), 0);
+          const newRows = {};
+          
+          // Tambahkan 200 baris baru
+          for (let i = currentLastRow + 1; i <= currentLastRow + 200; i++) {
+            newRows[i] = {
+              cells: {
+                0: { text: '' },
+                1: { text: '' },
+                2: { text: '' },
+                3: { text: '' },
+                4: { text: '' },
+                5: { text: '' },
+                6: { text: '' },
+                7: { text: '' },
+                8: { text: '' },
+                9: { text: '' }
+              }
+            };
+          }
+          
+          // Gabungkan dengan data yang ada
+          const newData = [{
+            name: 'Sheet1',
+            styles: data[0].styles,
+            rows: { ...rows, ...newRows }
+          }];
+          
+          xs.loadData(newData, true); // Gunakan true untuk mempertahankan scroll position
+          isAddingRows = false;
+        }
+      }, 500)); // Throttle untuk performa
 
       // Helper function to generate unique ID
       function generateId() {
