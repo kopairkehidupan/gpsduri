@@ -10,6 +10,7 @@
   <link href="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.css" rel="stylesheet">
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
   <link href="budgetstyle.css" rel="stylesheet">
   <script src="budget.js"></script>
   <style>
@@ -497,6 +498,15 @@
     font-size: 0.7rem;
     font-weight: bold;
   }
+
+  #xspreadsheet .x-spreadsheet-header {
+    background-color: #e0f0ff;
+    font-weight: bold;
+  }
+  
+  #xspreadsheet .x-spreadsheet-cell {
+    padding: 4px;
+  }
 </style>
 </head>
 <body>
@@ -778,78 +788,153 @@
       
       // Initialize x-spreadsheet with empty template
       const initialData = { 
-          name: 'Sheet1',
-          styles: [
-              {
-                  align: 'center',
-                  valign: 'middle',
-                  font: { bold: true },
-                  textwrap: true
-              },
-              {
-                  align: 'center',
-                  valign: 'middle',
-                  font: { bold: true },
-                  bgcolor: '#e0f0ff',
-                  textwrap: true
-              }
-          ],
-          rows: {
-              0: {
-                  height: 25,
-                  cells: {
-                      0: { text: 'Kebun', style: 1 },
-                      1: { text: 'Divisi', style: 1 },
-                      2: { text: 'Kode Tahun Tanam', style: 1 },
-                      3: { text: 'Blok', style: 1 },
-                      4: { text: 'Kode Kerja', style: 1 },
-                      5: { text: 'Objek Kerja', style: 1 },
-                      6: { text: 'Bulan', style: 1 },
-                      7: { text: 'HK', style: 1 },
-                      8: { text: 'Hasil (Ha)', style: 1 },
-                      9: { text: 'Biaya (Rp)', style: 1 }
-                  }
-              }
+        name: 'Sheet1',
+        styles: [
+          {
+            align: 'center',
+            valign: 'middle',
+            font: { bold: true },
+            textwrap: true
+          },
+          {
+            align: 'center',
+            valign: 'middle',
+            font: { bold: true },
+            bgcolor: '#e0f0ff',
+            textwrap: true
           }
+        ],
+        rows: {}
       };
 
+      // Tambahkan header
+      initialData.rows[0] = {
+        height: 25,
+        cells: {
+          0: { text: 'Kebun', style: 1 },
+          1: { text: 'Divisi', style: 1 },
+          2: { text: 'Kode Tahun Tanam', style: 1 },
+          3: { text: 'Blok', style: 1 },
+          4: { text: 'Kode Kerja', style: 1 },
+          5: { text: 'Objek Kerja', style: 1 },
+          6: { text: 'Bulan', style: 1 },
+          7: { text: 'HK', style: 1 },
+          8: { text: 'Luas (Ha)', style: 1 },
+          9: { text: 'Biaya (Rp)', style: 1 }
+        }
+      };
+
+      // Tambahkan 200 baris kosong
+      for (let i = 1; i <= 1000; i++) {
+        initialData.rows[i] = {
+          cells: {
+            0: { text: '' },
+            1: { text: '' },
+            2: { text: '' },
+            3: { text: '' },
+            4: { text: '' },
+            5: { text: '' },
+            6: { text: '' },
+            7: { text: '' },
+            8: { text: '' },
+            9: { text: '' }
+          }
+        };
+      }
+
+      // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
       function clearSpreadsheet() {
-          const clearedRows = {
-              0: initialData.rows[0] // tetap gunakan header dari initialData
-          };
-      
-          // Jika ingin 1 baris kosong untuk input berikutnya
-          clearedRows[1] = {
+        const clearedData = [{
+          name: 'Sheet1',
+          styles: initialData.styles,
+          rows: {
+            0: initialData.rows[0], // Pertahankan header
+            // Tambahkan 1 baris kosong
+            1: {
               cells: {
-                  0: { text: '' },
-                  1: { text: '' },
-                  2: { text: '' },
-                  3: { text: '' },
-                  4: { text: '' },
-                  5: { text: '' },
-                  6: { text: '' },
-                  7: { text: '' },
-                  8: { text: '' },
-                  9: { text: '' }
+                0: { text: '' }, 1: { text: '' }, 2: { text: '' },
+                3: { text: '' }, 4: { text: '' }, 5: { text: '' },
+                6: { text: '' }, 7: { text: '' }, 8: { text: '' },
+                9: { text: '' }
               }
-          };
-      
-          xs.loadData([{
-              name: 'Sheet1',
-              styles: initialData.styles,
-              rows: clearedRows
-          }]);
+            }
+          }
+        }];
+        
+        xs.loadData(clearedData);
       }
   
-      const xs = x_spreadsheet('#xspreadsheet', {
-          mode: 'edit',
-          showToolbar: true,
-          showGrid: true,
-          showContextmenu: true,
-          cellEditable: function (ri, ci) {
-              return ri >= 1; // Only allow editing from row 2 onwards
+     // Ganti inisialisasi spreadsheet dengan:
+     const xs = x_spreadsheet('#xspreadsheet', {
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
+        row: {
+          len: 1000,
+          height: 25
+        },
+        col: {
+          len: 10,
+          width: 120,
+          indexWidth: 60,
+          minWidth: 60
+        }
+      });
+
+      // Load data awal setelah inisialisasi
+      xs.loadData([{
+        name: 'Sheet1',
+        styles: initialData.styles,
+        rows: initialData.rows
+      }]);
+
+      // Hapus event listener scroll yang lama dan ganti dengan ini:
+      let isAddingRows = false;
+      xs.on('scroll', _.throttle(function() {
+        if (isAddingRows) return;
+        
+        const scrollInfo = xs.scrollInfo();
+        const data = xs.getData();
+        const rows = data[0].rows;
+        const lastVisibleRow = Math.floor(scrollInfo.top * scrollInfo.rowHeight * 1000 / scrollInfo.height);
+        
+        // Jika user scroll mendekati 90% dari bawah, tambahkan lebih banyak baris
+        if (lastVisibleRow > Object.keys(rows).length * 0.9) {
+          isAddingRows = true;
+          
+          const currentLastRow = Object.keys(rows).reduce((max, key) => Math.max(max, parseInt(key)), 0);
+          const newRows = {};
+          
+          // Tambahkan 200 baris baru
+          for (let i = currentLastRow + 1; i <= currentLastRow + 200; i++) {
+            newRows[i] = {
+              cells: {
+                0: { text: '' },
+                1: { text: '' },
+                2: { text: '' },
+                3: { text: '' },
+                4: { text: '' },
+                5: { text: '' },
+                6: { text: '' },
+                7: { text: '' },
+                8: { text: '' },
+                9: { text: '' }
+              }
+            };
           }
-      }).loadData([initialData]);
+          
+          // Gabungkan dengan data yang ada
+          const newData = [{
+            name: 'Sheet1',
+            styles: data[0].styles,
+            rows: { ...rows, ...newRows }
+          }];
+          
+          xs.loadData(newData, true); // Gunakan true untuk mempertahankan scroll position
+          isAddingRows = false;
+        }
+      }, 500)); // Throttle untuk performa
 
       // Helper function to generate unique ID
       function generateId() {
