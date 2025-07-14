@@ -876,6 +876,36 @@
           return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
       }
 
+    // Auto tambah baris saat user mencapai bagian bawah
+    xs.on('scroll', function() {
+      const scrollInfo = xs.scrollInfo();
+      const data = xs.getData();
+      const rows = data[0].rows;
+      const lastRow = Object.keys(rows).reduce((max, key) => Math.max(max, parseInt(key)), 0);
+      
+      // Jika user scroll mendekati bagian bawah (80% dari total)
+      if (scrollInfo.top > 0.8) {
+        // Tambahkan 50 baris baru
+        for (let i = lastRow + 1; i <= lastRow + 50; i++) {
+          rows[i] = {
+            cells: {
+              0: { text: '' },
+              1: { text: '' },
+              2: { text: '' },
+              3: { text: '' },
+              4: { text: '' },
+              5: { text: '' },
+              6: { text: '' },
+              7: { text: '' },
+              8: { text: '' },
+              9: { text: '' }
+            }
+          };
+        }
+        xs.loadData(data);
+      }
+    });
+
       // Helper function to format currency
       function formatCurrency(amount) {
           return new Intl.NumberFormat('id-ID', { 
