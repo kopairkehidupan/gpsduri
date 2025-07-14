@@ -200,20 +200,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1rem;
-  padding: 0.5rem 0;
-  border-top: 1px solid var(--medium-gray);
+  margin: 1rem 0;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .pagination-info {
   font-size: 0.9rem;
   color: var(--dark-gray);
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  order: 2;
 }
 
 .pagination-buttons {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  order: 3;
 }
 
 .pagination-btn {
@@ -248,16 +253,10 @@
 }
 
 .page-number {
-  min-width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--light-gray);
-  color: var(--dark-gray);
+  padding: 0.5rem 0.75rem;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
+  background-color: var(--light-gray);
 }
 
 .page-number.active {
