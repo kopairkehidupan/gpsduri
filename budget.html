@@ -970,7 +970,7 @@
                   kodeKerja: cells[4]?.text || '',
                   objekKerja: cells[5]?.text || '',
                   bulan: cells[6]?.text || '',
-                  hk: parseInt(cells[7]?.text) || 0,
+                  hk: parseFloat(cells[7]?.text) || 0,
                   luas: parseFloat(cells[8]?.text) || 0,
                   biaya: biaya,
                   timestamp: new Date().toISOString(),
@@ -1036,7 +1036,7 @@
                   <td>${item.kodeKerja || ''}</td>
                   <td>${item.objekKerja || ''}</td>
                   <td>${item.bulan || ''}</td>
-                  <td class="numeric">${item.hk || 0}</td>
+                  <td class="numeric">${(item.hk || 0).toFixed(2)}</td>
                   <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
                   <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                   <td class="actions">
@@ -1056,7 +1056,7 @@
                   <td>${item.kodeKerja || ''}</td>
                   <td>${item.objekKerja || ''}</td>
                   <td>${item.bulan || ''}</td>
-                  <td class="numeric">${item.hk || 0}</td>
+                  <td class="numeric">${(item.hk || 0).toFixed(2)}</td>
                   <td class="numeric">${(item.luas || 0).toFixed(2)}</td>
                   <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
                   <td class="actions">
@@ -1571,9 +1571,9 @@
                           kodeKerja: row[4] || '',
                           objekKerja: row[5] || '',
                           bulan: row[6] || '',
-                          hk: parseInt(row[7]) || 0,
+                          hk: parseFloat(row[7]) || 0,
                           luas: parseFloat(row[8]) || 0,
-                          biaya: parseInt(row[9]) || 0,
+                          biaya: parseFloat(row[9]) || 0,
                           timestamp: new Date().toISOString(),
                           syncStatus: "pending",
                           syncError: null
