@@ -1001,6 +1001,9 @@
             `;
             return;
           }
+
+          // Kelompokkan data untuk merge cell (opsional)
+          const groupedData = groupDataForMerge(data);
           
           // Render data
           groupedData.forEach(group => {
