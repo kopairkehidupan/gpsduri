@@ -843,61 +843,50 @@
 
       // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
       function clearSpreadsheet() {
-        const clearedRows = {
-          0: initialData.rows[0] // Header
-        };
-        
-        // Tambahkan 999 baris kosong
-        for (let i = 1; i <= 999; i++) {
-          clearedRows[i] = {
-            cells: {
-              0: { text: '' },
-              1: { text: '' },
-              2: { text: '' },
-              3: { text: '' },
-              4: { text: '' },
-              5: { text: '' },
-              6: { text: '' },
-              7: { text: '' },
-              8: { text: '' },
-              9: { text: '' }
-            }
-          };
-        }
-        
-        xs.loadData([{
+        const clearedData = [{
           name: 'Sheet1',
           styles: initialData.styles,
-          rows: clearedRows
-        }]);
+          rows: {
+            0: initialData.rows[0], // Pertahankan header
+            // Tambahkan 1 baris kosong
+            1: {
+              cells: {
+                0: { text: '' }, 1: { text: '' }, 2: { text: '' },
+                3: { text: '' }, 4: { text: '' }, 5: { text: '' },
+                6: { text: '' }, 7: { text: '' }, 8: { text: '' },
+                9: { text: '' }
+              }
+            }
+          }
+        }];
+        
+        xs.loadData(clearedData);
       }
   
-     // Ganti inisialisasi spreadsheet dengan konfigurasi ini:
+     // Ganti inisialisasi spreadsheet dengan:
       const xs = x_spreadsheet('#xspreadsheet', {
         mode: 'edit',
         showToolbar: true,
         showGrid: true,
         showContextmenu: true,
         row: {
-          len: 1000, // Jumlah total baris yang tersedia
-          height: 25 // Tinggi setiap baris
+          len: 1000,
+          height: 25
         },
         col: {
-          len: 10, // Jumlah kolom
-          width: 120, // Lebar kolom
-          indexWidth: 60, // Lebar index baris
-          minWidth: 60 // Lebar minimum kolom
-        },
-        view: {
-          height: () => document.getElementById('xspreadsheet').clientHeight,
-          width: () => document.getElementById('xspreadsheet').clientWidth,
-        },
-        style: {
-          container: {
-            'max-height': 'calc(100vh - 200px)'
-          }
+          len: 10,
+          width: 120,
+          indexWidth: 60,
+          minWidth: 60
         }
       });
+      
+      // Load data awal setelah inisialisasi
+      xs.loadData([{
+        name: 'Sheet1',
+        styles: initialData.styles,
+        rows: initialData.rows
+      }]);
 
       // Hapus event listener scroll yang lama dan ganti dengan ini:
       let isAddingRows = false;
