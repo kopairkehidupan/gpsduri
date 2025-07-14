@@ -375,7 +375,6 @@
       visibility: visible;
       bottom: calc(100% + 5px);
     }
-
     /* Media queries untuk responsivitas */
     @media (max-width: 768px) {
       .container {
@@ -404,6 +403,27 @@
       
       .actions {
         flex-direction: column;
+      }
+      
+      .pagination-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #deleteSelectedBtn, 
+      .pagination-info,
+      .pagination-buttons {
+        order: initial;
+        width: 100%;
+        justify-content: center;
+      }
+
+      #deleteSelectedBtn {
+        margin-bottom: 0.5rem;
+      }
+      
+      .pagination-buttons {
+        justify-content: center;
       }
     }
 
@@ -449,16 +469,16 @@
       display: none;
     }
 
-  .btn-text {
-    margin-left: 5px;
-    transition: all 0.3s ease;
-  }
-  
-  .btn-danger:hover .btn-text {
-    transform: translateX(2px);
-  }
+   .btn-text {
+      margin-left: 5px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover .btn-text {
+      transform: translateX(2px);
+    }
 
-  /* Tambahkan di bagian CSS */
+   /* Tambahkan di bagian CSS */
   .budget-table input[type="checkbox"] {
     transform: scale(1.2);
     cursor: pointer;
@@ -481,6 +501,8 @@
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
+    order: 1;
+    margin-right: auto;
   }
   
   #deleteSelectedBtn .badge {
@@ -497,6 +519,12 @@
     justify-content: center;
     font-size: 0.7rem;
     font-weight: bold;
+  }
+
+  /* Ketika deleteSelectedBtn muncul, atur ulang margin pagination-info */
+  #deleteSelectedBtn[style*="display: inline-flex"] ~ .pagination-info {
+    margin-left: 0;
+    margin-right: 0;
   }
 
   #xspreadsheet .x-spreadsheet-header {
@@ -538,10 +566,6 @@
         <a href="budget.html" class="btn">
           <i class="material-icons">swap_horiz</i> Ke Halaman Budget
         </a>
-        <button id="deleteSelectedBtn" class="btn btn-danger" style="display: none;">
-          <i class="material-icons">delete_sweep</i>
-          <span class="btn-text">Hapus Terpilih</span>
-        </button>
       </div>
     </div>
     
@@ -551,6 +575,10 @@
 
       <!-- Tambahkan ini di bawah tabel -->
       <div class="pagination-controls">
+        <button id="deleteSelectedBtn" class="btn btn-danger" style="display: none;">
+          <i class="material-icons">delete_sweep</i>
+          <span class="btn-text">Hapus Terpilih</span>
+        </button>
         <div class="pagination-info">
           Menampilkan <span id="startItem">0</span>-<span id="endItem">0</span> dari <span id="totalItems">0</span> data
         </div>
