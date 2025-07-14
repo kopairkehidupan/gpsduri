@@ -1003,9 +1003,9 @@
                   kodeKerja: cells[4]?.text || '',
                   objekKerja: cells[5]?.text || '',
                   bulan: cells[6]?.text || '',
-                  hk: parseFloat(cells[7]?.text) || 0,
-                  hasil: parseFloat(cells[8]?.text) || 0,
-                  biaya: biaya,
+                  hk: parseNumberWithCommas(cells[7]?.text),
+                  hasil: parseNumberWithCommas(cells[8]?.text), // Kolom 8 untuk Hasil (Ha)
+                  biaya: parseNumberWithCommas(cells[9]?.text),
                   timestamp: new Date().toISOString(),
                   syncStatus: "pending",
                   syncError: null
