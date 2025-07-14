@@ -863,49 +863,51 @@
 
       // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
       function clearSpreadsheet() {
-        const clearedData = [{
-          name: 'Sheet1',
-          styles: initialData.styles,
-          rows: {
-            0: initialData.rows[0], // Pertahankan header
-            // Tambahkan 1 baris kosong
-            1: {
-              cells: {
-                0: { text: '' }, 1: { text: '' }, 2: { text: '' },
-                3: { text: '' }, 4: { text: '' }, 5: { text: '' },
-                6: { text: '' }, 7: { text: '' }, 8: { text: '' },
-                9: { text: '' }
+          const clearedData = [{
+              name: 'Sheet1',
+              styles: initialData.styles,
+              rows: {
+                  0: initialData.rows[0], // Pertahankan header
+                  1: { // Satu baris kosong
+                      cells: {
+                          0: { text: '' }, 1: { text: '' }, 2: { text: '' },
+                          3: { text: '' }, 4: { text: '' }, 5: { text: '' },
+                          6: { text: '' }, 7: { text: '' }, 8: { text: '' },
+                          9: { text: '' }
+                      }
+                  }
               }
-            }
-          }
-        }];
-        
-        xs.loadData(clearedData);
+          }];
+          
+          xs.loadData(clearedData);
       }
   
      // Ganti inisialisasi spreadsheet dengan:
       const xs = x_spreadsheet('#xspreadsheet', {
-        mode: 'edit',
-        showToolbar: true,
-        showGrid: true,
-        showContextmenu: true,
-        row: {
-          len: 1000,
-          height: 25
-        },
-        col: {
-          len: 10,
-          width: 120,
-          indexWidth: 60,
-          minWidth: 60
-        }
+          mode: 'edit',
+          showToolbar: true,
+          showGrid: true,
+          showContextmenu: true,
+          row: {
+              len: 20, // Kurangi jumlah baris awal
+              height: 25
+          },
+          col: {
+              len: 10,
+              width: 120,
+              indexWidth: 60,
+              minWidth: 60
+          }
       });
       
       // Load data awal setelah inisialisasi
       xs.loadData([{
-        name: 'Sheet1',
-        styles: initialData.styles,
-        rows: initialData.rows
+          name: 'Sheet1',
+          styles: initialData.styles,
+          rows: {
+              0: initialData.rows[0], // Header saja
+              1: { cells: {} } // Satu baris kosong
+          }
       }]);
 
       // Hapus event listener scroll yang lama dan ganti dengan ini:
@@ -977,21 +979,22 @@
           
           for (let i = 1; i < Object.keys(rows).length; i++) {
               const row = rows[i];
-              // Perubahan: Cek apakah ada data di kolom manapun (tidak hanya kolom 0 dan 1)
               if (!row || !row.cells) continue;
               
               const cells = row.cells;
               
-              // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
+              // Cek apakah baris memiliki data minimal (kebun atau divisi)
+              const hasData = cells[0]?.text || cells[1]?.text;
+              if (!hasData) continue; // Lewati baris kosong
+              
+              // Fungsi untuk mengkonversi string angka
               const parseNumberWithCommas = (str) => {
-                  if (str === undefined || str === null) return 0;
+                  if (str === undefined || str === null || str === '') return 0;
                   if (typeof str === 'number') return str;
-                  // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
                   const cleaned = str.toString().replace(/,/g, '');
                   return parseFloat(cleaned) || 0;
               };
               
-              // Pastikan indeks kolom sesuai dengan spreadsheet
               result.push({
                   id: generateId(),
                   kebun: cells[0]?.text || '',
@@ -1002,7 +1005,7 @@
                   objekKerja: cells[5]?.text || '',
                   bulan: cells[6]?.text || '',
                   hk: parseNumberWithCommas(cells[7]?.text),
-                  luas: parseNumberWithCommas(cells[8]?.text), // Kolom 8 untuk Luas (Ha)
+                  luas: parseNumberWithCommas(cells[8]?.text),
                   biaya: parseNumberWithCommas(cells[9]?.text),
                   timestamp: new Date().toISOString(),
                   syncStatus: "pending",
@@ -1470,12 +1473,18 @@
         document.getElementById('saveBtn').addEventListener('click', async function() {
           try {
               const currentData = xs.getData();
+              console.log('Data dari spreadsheet:', currentData); // Debug
+              
               const newData = formatDataForStorage(currentData);
+              console.log('Data yang akan disimpan:', newData); // Debug
               
               if (newData.length === 0) {
                   showSimpleToast('Tidak ada data baru untuk disimpan!');
                   return;
               }
+              
+              // Tampilkan jumlah data yang akan disimpan
+              showSimpleToast(`Menyimpan ${newData.length} data...`);
               
               // Simpan ke IndexedDB
               await saveToIndexedDB(newData);
@@ -1484,12 +1493,11 @@
               await syncToServer();
               
               showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
-              //xs.loadData([initialData]);
               loadDataToTable(currentPage);
               clearSpreadsheet();
           } catch (error) {
               console.error('Error saving data:', error);
-              showSimpleToast('Gagal menyimpan data');
+              showSimpleToast('Gagal menyimpan data: ' + error.message);
           }
       });
 
