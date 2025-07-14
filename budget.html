@@ -859,17 +859,23 @@
           }]);
       }
   
-      const xs = x_spreadsheet('#xspreadsheet', {
+     const xs = x_spreadsheet('#xspreadsheet', {
         mode: 'edit',
         showToolbar: true,
         showGrid: true,
         showContextmenu: true,
-        rowCount: 1000, // Jumlah maksimal baris
-        colCount: 10,   // Jumlah kolom
-        cellEditable: function (ri, ci) {
-          return ri >= 1; // Hanya baris 2+ yang bisa diedit
+        rowCount: 1000,
+        colCount: 10,
+        view: {
+          height: () => document.getElementById('xspreadsheet').clientHeight - 40,
+          width: () => document.getElementById('xspreadsheet').clientWidth,
+        },
+        style: {
+          container: {
+            'max-height': 'calc(100vh - 200px)'
+          }
         }
-      }).loadData([initialData]);
+      });
 
       // Helper function to generate unique ID
       function generateId() {
