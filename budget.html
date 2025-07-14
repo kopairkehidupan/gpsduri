@@ -977,20 +977,21 @@
           
           for (let i = 1; i < Object.keys(rows).length; i++) {
               const row = rows[i];
-              if (!row || !row.cells || (!row.cells[0]?.text && !row.cells[1]?.text)) continue;
+              // Perubahan: Cek apakah ada data di kolom manapun (tidak hanya kolom 0 dan 1)
+              if (!row || !row.cells) continue;
               
               const cells = row.cells;
               
               // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
               const parseNumberWithCommas = (str) => {
-                  if (!str) return 0;
+                  if (str === undefined || str === null) return 0;
+                  if (typeof str === 'number') return str;
                   // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
                   const cleaned = str.toString().replace(/,/g, '');
-                  return parseFloat(cleaned);
+                  return parseFloat(cleaned) || 0;
               };
               
-              const biaya = parseNumberWithCommas(cells[9]?.text);
-              
+              // Pastikan indeks kolom sesuai dengan spreadsheet
               result.push({
                   id: generateId(),
                   kebun: cells[0]?.text || '',
@@ -1000,9 +1001,9 @@
                   kodeKerja: cells[4]?.text || '',
                   objekKerja: cells[5]?.text || '',
                   bulan: cells[6]?.text || '',
-                  hk: parseFloat(cells[7]?.text) || 0,
-                  luas: parseFloat(cells[8]?.text) || 0,
-                  biaya: biaya,
+                  hk: parseNumberWithCommas(cells[7]?.text),
+                  luas: parseNumberWithCommas(cells[8]?.text), // Kolom 8 untuk Luas (Ha)
+                  biaya: parseNumberWithCommas(cells[9]?.text),
                   timestamp: new Date().toISOString(),
                   syncStatus: "pending",
                   syncError: null
