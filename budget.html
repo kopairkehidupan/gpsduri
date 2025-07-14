@@ -547,7 +547,27 @@
     <div class="card">
       <h2>Data Budget Tersimpan</h2>
       <p>Berikut adalah data budget yang sudah tersimpan di sistem:</p>
-      
+      <!-- Tambahkan ini di bawah tabel -->
+      <div class="pagination-controls">
+        <div class="pagination-info">
+          Menampilkan <span id="startItem">0</span>-<span id="endItem">0</span> dari <span id="totalItems">0</span> data
+        </div>
+        <div class="pagination-buttons">
+          <button id="firstPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">first_page</i>
+          </button>
+          <button id="prevPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">chevron_left</i>
+          </button>
+          <div id="pageNumbers" class="page-numbers"></div>
+          <button id="nextPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">chevron_right</i>
+          </button>
+          <button id="lastPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">last_page</i>
+          </button>
+        </div>
+      </div>
       <div class="table-responsive">
         <table class="budget-table">
           <thead>
@@ -578,27 +598,6 @@
           </tr>
           </tbody>
         </table>
-      </div>
-      <!-- Tambahkan ini di bawah tabel -->
-      <div class="pagination-controls">
-        <div class="pagination-info">
-          Menampilkan <span id="startItem">0</span>-<span id="endItem">0</span> dari <span id="totalItems">0</span> data
-        </div>
-        <div class="pagination-buttons">
-          <button id="firstPage" class="btn pagination-btn" disabled>
-            <i class="material-icons">first_page</i>
-          </button>
-          <button id="prevPage" class="btn pagination-btn" disabled>
-            <i class="material-icons">chevron_left</i>
-          </button>
-          <div id="pageNumbers" class="page-numbers"></div>
-          <button id="nextPage" class="btn pagination-btn" disabled>
-            <i class="material-icons">chevron_right</i>
-          </button>
-          <button id="lastPage" class="btn pagination-btn" disabled>
-            <i class="material-icons">last_page</i>
-          </button>
-        </div>
       </div>
     </div>
     <div id="progressContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
