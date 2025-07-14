@@ -920,7 +920,7 @@
           showGrid: true,
           showContextmenu: true,
           row: {
-              len: 20, // Kurangi jumlah baris awal
+              len: 1000, // Set jumlah baris awal yang besar
               height: 25
           },
           col: {
@@ -928,7 +928,8 @@
               width: 120,
               indexWidth: 60,
               minWidth: 60
-          }
+          },
+          autoAddRow: true // Aktifkan penambahan baris otomatis
       });
       
       // Load data awal setelah inisialisasi
@@ -944,48 +945,45 @@
       // Hapus event listener scroll yang lama dan ganti dengan ini:
       let isAddingRows = false;
       xs.on('scroll', _.throttle(function() {
-        if (isAddingRows) return;
-        
-        const scrollInfo = xs.scrollInfo();
-        const data = xs.getData();
-        const rows = data[0].rows;
-        const lastVisibleRow = Math.floor(scrollInfo.top * scrollInfo.rowHeight * 1000 / scrollInfo.height);
-        
-        // Jika user scroll mendekati 90% dari bawah, tambahkan lebih banyak baris
-        if (lastVisibleRow > Object.keys(rows).length * 0.9) {
-          isAddingRows = true;
+          if (isAddingRows) return;
           
-          const currentLastRow = Object.keys(rows).reduce((max, key) => Math.max(max, parseInt(key)), 0);
-          const newRows = {};
+          const scrollInfo = xs.scrollInfo();
+          const data = xs.getData();
+          const rows = data[0].rows;
           
-          // Tambahkan 200 baris baru
-          for (let i = currentLastRow + 1; i <= currentLastRow + 200; i++) {
-            newRows[i] = {
-              cells: {
-                0: { text: '' },
-                1: { text: '' },
-                2: { text: '' },
-                3: { text: '' },
-                4: { text: '' },
-                5: { text: '' },
-                6: { text: '' },
-                7: { text: '' },
-                8: { text: '' },
-                9: { text: '' }
+          // Hitung baris yang terlihat di viewport
+          const visibleRows = Math.ceil(scrollInfo.height / scrollInfo.rowHeight);
+          const lastVisibleRow = Math.floor(scrollInfo.top / scrollInfo.rowHeight) + visibleRows;
+          
+          // Jika user scroll mendekati 90% dari bawah, tambahkan lebih banyak baris
+          if (lastVisibleRow > Object.keys(rows).length * 0.9) {
+              isAddingRows = true;
+              
+              const currentLastRow = Object.keys(rows).reduce((max, key) => Math.max(max, parseInt(key)), 0);
+              const newRows = {};
+              
+              // Tambahkan 200 baris baru
+              for (let i = currentLastRow + 1; i <= currentLastRow + 200; i++) {
+                  newRows[i] = {
+                      cells: {
+                          0: { text: '' }, 1: { text: '' }, 2: { text: '' },
+                          3: { text: '' }, 4: { text: '' }, 5: { text: '' },
+                          6: { text: '' }, 7: { text: '' }, 8: { text: '' },
+                          9: { text: '' }
+                      }
+                  };
               }
-            };
+              
+              // Gabungkan dengan data yang ada
+              const newData = [{
+                  name: 'Sheet1',
+                  styles: data[0].styles,
+                  rows: { ...rows, ...newRows }
+              }];
+              
+              xs.loadData(newData, true); // Gunakan true untuk mempertahankan scroll position
+              isAddingRows = false;
           }
-          
-          // Gabungkan dengan data yang ada
-          const newData = [{
-            name: 'Sheet1',
-            styles: data[0].styles,
-            rows: { ...rows, ...newRows }
-          }];
-          
-          xs.loadData(newData, true); // Gunakan true untuk mempertahankan scroll position
-          isAddingRows = false;
-        }
       }, 500)); // Throttle untuk performa
 
       // Helper function to generate unique ID
