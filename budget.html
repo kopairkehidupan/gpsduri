@@ -243,16 +243,6 @@
       overflow: auto; /* Pastikan ini 'auto' bukan 'hidden' */
       box-shadow: var(--shadow);
     }
-
-    #xspreadsheet .x-spreadsheet-viewport {
-      will-change: transform;
-      contain: strict;
-      overflow-anchor: none;
-    }
-    
-    #xspreadsheet .x-spreadsheet-scrollbar {
-      display: none !important;
-    }
     
     .delete-btn {
       color: #ea4335;
@@ -840,8 +830,39 @@
           }
         };
       }
+
+      // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
+      function clearSpreadsheet() {
+        const clearedRows = {
+          0: initialData.rows[0] // Header
+        };
+        
+        // Tambahkan 999 baris kosong
+        for (let i = 1; i <= 999; i++) {
+          clearedRows[i] = {
+            cells: {
+              0: { text: '' },
+              1: { text: '' },
+              2: { text: '' },
+              3: { text: '' },
+              4: { text: '' },
+              5: { text: '' },
+              6: { text: '' },
+              7: { text: '' },
+              8: { text: '' },
+              9: { text: '' }
+            }
+          };
+        }
+        
+        xs.loadData([{
+          name: 'Sheet1',
+          styles: initialData.styles,
+          rows: clearedRows
+        }]);
+      }
   
-      // Ganti inisialisasi spreadsheet dengan konfigurasi ini:
+     // Ganti inisialisasi spreadsheet dengan konfigurasi ini:
       const xs = x_spreadsheet('#xspreadsheet', {
         mode: 'edit',
         showToolbar: true,
@@ -914,37 +935,6 @@
           isAddingRows = false;
         }
       }, 500)); // Throttle untuk performa
-
-      // Modifikasi fungsi clearSpreadsheet untuk mempertahankan 1000 baris:
-      function clearSpreadsheet() {
-        const clearedRows = {
-          0: initialData.rows[0] // Header
-        };
-        
-        // Tambahkan 999 baris kosong
-        for (let i = 1; i <= 999; i++) {
-          clearedRows[i] = {
-            cells: {
-              0: { text: '' },
-              1: { text: '' },
-              2: { text: '' },
-              3: { text: '' },
-              4: { text: '' },
-              5: { text: '' },
-              6: { text: '' },
-              7: { text: '' },
-              8: { text: '' },
-              9: { text: '' }
-            }
-          };
-        }
-        
-        xs.loadData([{
-          name: 'Sheet1',
-          styles: initialData.styles,
-          rows: clearedRows
-        }]);
-      }
 
       // Helper function to generate unique ID
       function generateId() {
