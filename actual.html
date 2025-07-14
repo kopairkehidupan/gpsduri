@@ -1001,77 +1001,36 @@
             `;
             return;
           }
-
-          // Tambahkan checkbox "Select All"
-          const selectAllRow = document.createElement('tr');
-          selectAllRow.innerHTML = `
-            <td colspan="11" style="text-align: right; padding: 0.5rem 1rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="selectAllCheckbox">
-                <span>Pilih Semua</span>
-              </label>
-            </td>
-          `;
-          tableBody.appendChild(selectAllRow);
           
-          // Kelompokkan data untuk merge cell (opsional)
-          const groupedData = groupDataForMerge(data);
-          
+          // Render data
           groupedData.forEach(group => {
-            group.items.forEach((item, index) => {
-              const row = document.createElement('tr');
-              if (item.syncStatus === "pending") {
-                row.className = "pending-sync";
-              } else if (item.syncError) {
-                row.className = "sync-error";
-              }
-              
-              // Baris pertama dalam grup
-              if (index === 0) {
-                row.innerHTML = `
-                   <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
-                  <td class="merged-cell" rowspan="${group.items.length}">${item.kebun || ''}</td>
-                  <td class="merged-cell" rowspan="${group.items.length}">${item.divisi || ''}</td>
-                  <td>${item.kodeTahunTanam || ''}</td>
-                  <td>${item.blok || ''}</td>
-                  <td>${item.kodeKerja || ''}</td>
-                  <td>${item.objekKerja || ''}</td>
-                  <td>${item.bulan || ''}</td>
-                  <td class="numeric">${item.hk || 0}</td>
-                  <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
-                  <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
-                  <td class="actions">
-                    ${getSyncIndicator(item)}
-                    <button class="btn btn-danger delete-row" data-id="${item.id}">
-                      <i class="material-icons">delete</i>
-                      <span class="btn-text">Hapus</span>
-                    </button>
-                  </td>
-                `;
-              } else {
-                // Baris berikutnya dalam grup
-                row.innerHTML = `
-                  <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
-                  <td>${item.kodeTahunTanam || ''}</td>
-                  <td>${item.blok || ''}</td>
-                  <td>${item.kodeKerja || ''}</td>
-                  <td>${item.objekKerja || ''}</td>
-                  <td>${item.bulan || ''}</td>
-                  <td class="numeric">${item.hk || 0}</td>
-                  <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
-                  <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
-                  <td class="actions">
-                    ${getSyncIndicator(item)}
-                    <button class="btn btn-danger delete-row" data-id="${item.id}">
-                      <i class="material-icons">delete</i>
-                      <span class="btn-text">Hapus</span>
-                    </button>
-                  </td>
-                `;
-              }
-              
-              tableBody.appendChild(row);
-            });
+              group.items.forEach((item, index) => {
+                  const row = document.createElement('tr');
+                  
+                  // Selalu tampilkan Kebun dan Divisi di setiap baris (hapus merge)
+                  row.innerHTML = `
+                      <td><input type="checkbox" class="row-checkbox" data-id="${item.id}"></td>
+                      <td>${item.kebun || ''}</td>
+                      <td>${item.divisi || ''}</td>
+                      <td>${item.kodeTahunTanam || ''}</td>
+                      <td>${item.blok || ''}</td>
+                      <td>${item.kodeKerja || ''}</td>
+                      <td>${item.objekKerja || ''}</td>
+                      <td>${item.bulan || ''}</td>
+                      <td class="numeric">${(item.hk || 0).toFixed(2)}</td>
+                      <td class="numeric">${(item.hasil || 0).toFixed(2)}</td>
+                      <td class="numeric">${formatCurrency(item.biaya || 0)}</td>
+                      <td class="actions">
+                          ${getSyncIndicator(item)}
+                          <button class="btn btn-danger delete-row" data-id="${item.id}">
+                              <i class="material-icons">delete</i>
+                              <span class="btn-text">Hapus</span>
+                          </button>
+                      </td>
+                  `;
+                  
+                  tableBody.appendChild(row);
+              });
           });
 
           // Event listener untuk checkbox
