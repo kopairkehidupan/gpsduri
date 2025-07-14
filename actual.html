@@ -946,7 +946,8 @@
           return new Intl.NumberFormat('id-ID', { 
               style: 'currency', 
               currency: 'IDR',
-              minimumFractionDigits: 0
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
           }).format(amount);
       }
 
@@ -960,7 +961,16 @@
               if (!row || !row.cells || (!row.cells[0]?.text && !row.cells[1]?.text)) continue;
               
               const cells = row.cells;
-              const biaya = parseInt(cells[9]?.text) || 0;
+              
+              // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
+              const parseNumberWithCommas = (str) => {
+                  if (!str) return 0;
+                  // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
+                  const cleaned = str.toString().replace(/,/g, '');
+                  return parseFloat(cleaned);
+              };
+              
+              const biaya = parseNumberWithCommas(cells[9]?.text);
               
               result.push({
                   id: generateId(),
@@ -971,12 +981,12 @@
                   kodeKerja: cells[4]?.text || '',
                   objekKerja: cells[5]?.text || '',
                   bulan: cells[6]?.text || '',
-                  hk: parseInt(cells[7]?.text) || 0,
+                  hk: parseFloat(cells[7]?.text) || 0,
                   hasil: parseFloat(cells[8]?.text) || 0,
                   biaya: biaya,
                   timestamp: new Date().toISOString(),
-                  syncStatus: "pending", // Status sync baru
-                  syncError: null // Untuk menyimpan pesan error jika sync gagal
+                  syncStatus: "pending",
+                  syncError: null
               });
           }
           return result;
@@ -1524,6 +1534,15 @@
                       const row = jsonData[i];
                       if (!row || (!row[0] && !row[1])) continue;
                       
+                      // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
+                      const parseNumberWithCommas = (num) => {
+                          if (typeof num === 'number') return num;
+                          if (!num) return 0;
+                          // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
+                          const cleaned = num.toString().replace(/,/g, '');
+                          return parseFloat(cleaned);
+                      };
+                      
                       importedData.push({
                           id: generateId(),
                           kebun: row[0] || '',
@@ -1533,9 +1552,9 @@
                           kodeKerja: row[4] || '',
                           objekKerja: row[5] || '',
                           bulan: row[6] || '',
-                          hk: parseInt(row[7]) || 0,
+                          hk: parseFloat(row[7]) || 0,
                           hasil: parseFloat(row[8]) || 0,
-                          biaya: parseInt(row[9]) || 0,
+                          biaya: parseNumberWithCommas(row[9]),
                           timestamp: new Date().toISOString(),
                           syncStatus: "pending",
                           syncError: null
