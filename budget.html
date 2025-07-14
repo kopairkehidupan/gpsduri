@@ -579,6 +579,27 @@
           </tbody>
         </table>
       </div>
+      <!-- Tambahkan ini di bawah tabel -->
+      <div class="pagination-controls">
+        <div class="pagination-info">
+          Menampilkan <span id="startItem">0</span>-<span id="endItem">0</span> dari <span id="totalItems">0</span> data
+        </div>
+        <div class="pagination-buttons">
+          <button id="firstPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">first_page</i>
+          </button>
+          <button id="prevPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">chevron_left</i>
+          </button>
+          <div id="pageNumbers" class="page-numbers"></div>
+          <button id="nextPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">chevron_right</i>
+          </button>
+          <button id="lastPage" class="btn pagination-btn" disabled>
+            <i class="material-icons">last_page</i>
+          </button>
+        </div>
+      </div>
     </div>
     <div id="progressContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
       <div style="background-color: white; padding: 2rem; border-radius: 8px; width: 80%; max-width: 500px;">
@@ -991,15 +1012,33 @@
           return result;
       }
 
+      // Variabel pagination
+      const ITEMS_PER_PAGE = 30;
+      let currentPage = 1;
+      let totalPages = 1;
+      let allData = [];
+    
       // Load data ke tabel - TAMBAHKAN indicator sync status
-      async function loadDataToTable() {
+      async function loadDataToTable(page = 1) {
         try {
-          const data = await getFromIndexedDB();
+          currentPage = page;
+          allData = await getFromIndexedDB();
+          totalPages = Math.ceil(allData.length / ITEMS_PER_PAGE);
+
+          // Hitung data yang akan ditampilkan
+          const startIndex = (page - 1) * ITEMS_PER_PAGE;
+          const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, allData.length);
+          const pageData = allData.slice(startIndex, endIndex);
           
           const tableBody = document.getElementById('dataTable');
           tableBody.innerHTML = '';
+
+          // Update info pagination
+          document.getElementById('startItem').textContent = startIndex + 1;
+          document.getElementById('endItem').textContent = endIndex;
+          document.getElementById('totalItems').textContent = allData.length;
           
-          if (data.length === 0) {
+          if (pageData.length === 0) {
             tableBody.innerHTML = `
               <tr>
                 <td colspan="11" style="text-align: center; color: var(--dark-gray); padding: 2rem;">
@@ -1010,21 +1049,9 @@
             `;
             return;
           }
-
-          // Tambahkan checkbox "Select All"
-          const selectAllRow = document.createElement('tr');
-          selectAllRow.innerHTML = `
-            <td colspan="11" style="text-align: right; padding: 0.5rem 1rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem;">
-                <input type="checkbox" id="selectAllCheckbox">
-                <span>Pilih Semua</span>
-              </label>
-            </td>
-          `;
-          tableBody.appendChild(selectAllRow);
           
           // Kelompokkan data untuk merge cell (opsional)
-          const groupedData = groupDataForMerge(data);
+          const groupedData = groupDataForMerge(pageData);
           
           // Render data
           groupedData.forEach(group => {
@@ -1074,6 +1101,10 @@
               );
             });
           });
+
+          // Update pagination controls
+          updatePaginationControls();
+          
         } catch (error) {
           console.error('Error loading data:', error);
           const tableBody = document.getElementById('dataTable');
@@ -1088,6 +1119,46 @@
           `;
         }
       }
+
+      // Fungsi untuk update tampilan pagination
+      function updatePaginationControls() {
+        const pageNumbersContainer = document.getElementById('pageNumbers');
+        pageNumbersContainer.innerHTML = '';
+        
+        // Tentukan range halaman yang akan ditampilkan (maks 5 halaman)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        
+        // Jika di awal, tampilkan 5 halaman pertama
+        if (currentPage <= 3) {
+          endPage = Math.min(5, totalPages);
+        }
+        // Jika di akhir, tampilkan 5 halaman terakhir
+        else if (currentPage >= totalPages - 2) {
+          startPage = Math.max(1, totalPages - 4);
+        }
+        
+        // Buat tombol halaman
+        for (let i = startPage; i <= endPage; i++) {
+          const pageBtn = document.createElement('div');
+          pageBtn.className = `page-number ${i === currentPage ? 'active' : ''}`;
+          pageBtn.textContent = i;
+          pageBtn.addEventListener('click', () => loadDataToTable(i));
+          pageNumbersContainer.appendChild(pageBtn);
+        }
+        
+        // Update status tombol navigasi
+        document.getElementById('firstPage').disabled = currentPage === 1;
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage === totalPages;
+        document.getElementById('lastPage').disabled = currentPage === totalPages;
+      }
+      
+      // Tambahkan event listeners untuk tombol pagination
+      document.getElementById('firstPage').addEventListener('click', () => loadDataToTable(1));
+      document.getElementById('prevPage').addEventListener('click', () => loadDataToTable(currentPage - 1));
+      document.getElementById('nextPage').addEventListener('click', () => loadDataToTable(currentPage + 1));
+      document.getElementById('lastPage').addEventListener('click', () => loadDataToTable(totalPages));
 
       // Fungsi untuk mengupdate tampilan tombol delete selected
       function updateDeleteSelectedButton() {
@@ -1203,7 +1274,7 @@
           deletedCount = idsToDelete.length;
           
           updateProgress(deletedCount, idsToDelete.length, 'Memperbarui tampilan...');
-          await loadDataToTable();
+          await loadDataToTable(currentPage);
           
           let message = `${idsToDelete.length} data berhasil dihapus.`;
           if (unsyncedItems.length > 0) {
@@ -1214,7 +1285,7 @@
         } catch (error) {
           console.error('Error deleting multiple rows:', error);
           showSimpleToast(`Gagal menghapus data: ${error.message}`);
-          await loadDataToTable();
+          await loadDataToTable(currentPage);
         } finally {
           hideProgress();
           const deleteBtn = document.getElementById('deleteSelectedBtn');
@@ -1375,7 +1446,8 @@
                 }
                 
                 // Perbarui tampilan tabel
-                loadDataToTable();
+                // Setelah delete selesai, muat ulang halaman saat ini
+                await loadDataToTable(currentPage);
                 showSimpleToast('Data berhasil dihapus');
 
                 if (deleteBtn) {
@@ -1413,7 +1485,7 @@
               
               showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
               //xs.loadData([initialData]);
-              loadDataToTable();
+              loadDataToTable(currentPage);
               clearSpreadsheet();
           } catch (error) {
               console.error('Error saving data:', error);
@@ -1467,7 +1539,7 @@
           }
           
           hideProgress();
-          loadDataToTable();
+          loadDataToTable(currentPage);
         } catch (error) {
           hideProgress();
           console.error("Sync error:", error);
@@ -1577,7 +1649,7 @@
                   await saveToIndexedDB(importedData);
                   
                   showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
-                  loadDataToTable();
+                  loadDataToTable(currentPage);
                   e.target.value = '';
               } catch (error) {
                   console.error('Error:', error);
@@ -1623,7 +1695,7 @@
 
     // Inisialisasi aplikasi
     initDB.then(() => {
-        loadDataToTable();
+        loadDataToTable(1);
         syncToServer(); // Sync segera saat pertama load
         // Periodic sync
         setInterval(async () => {
