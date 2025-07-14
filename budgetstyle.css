@@ -208,10 +208,12 @@
 .pagination-info {
   font-size: 0.9rem;
   color: var(--dark-gray);
+  order: 2;
   flex: 1;
   min-width: 200px;
   text-align: center;
-  order: 2;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .pagination-buttons {
@@ -219,6 +221,7 @@
   align-items: center;
   gap: 0.5rem;
   order: 3;
+  margin-left: auto;
 }
 
 .pagination-btn {
