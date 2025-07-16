@@ -540,7 +540,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Input Anggaran (Budget)</h1>
+      <h1>Input Data Anggaran (Budget)</h1>
       <p class="subtitle">Silahkan input data rencana anggaran yang sedang berjalan</p>
     </div>
     
@@ -570,7 +570,7 @@
     </div>
     
     <div class="card">
-      <h2>Data Budget Tersimpan</h2>
+      <h2>Data Rencana Budget Tersimpan</h2>
       <p>Berikut adalah data budget yang sudah tersimpan di sistem:</p>
       <!-- Tambahkan ini di bawah tabel -->
       <div class="pagination-controls">
@@ -1720,7 +1720,7 @@
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-            XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            XLSX.writeFile(wb, 'budget_rencana_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
             showSimpleToast('Data berhasil diekspor ke Excel!');
         } catch (error) {
             console.error('Error exporting:', error);
