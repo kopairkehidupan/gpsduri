@@ -1711,7 +1711,7 @@
             const ws = XLSX.utils.aoa_to_sheet(sheetData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-            XLSX.writeFile(wb, 'budget_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
+            XLSX.writeFile(wb, 'budget_produksi_data_' + new Date().toISOString().split('T')[0] + '.xlsx');
             showSimpleToast('Data berhasil diekspor ke Excel!');
         } catch (error) {
             console.error('Error exporting:', error);
