@@ -685,7 +685,7 @@
       let db; // Variabel untuk koneksi database
 
       const initDB = new Promise((resolve, reject) => {
-          const request = indexedDB.open('BudgetDB', 1);
+          const request = indexedDB.open('ProdBudgetDB', 1);
           
           request.onerror = (event) => {
               console.error("Database error:", event.target.error);
