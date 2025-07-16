@@ -610,9 +610,9 @@
               <th>Blok</th>
               <th>Luas (ha)</th>
               <th>Bulan</th>
-              <th>Produksi (Kg)</th>
-              <th>Tonase (Ton)</th>
-              <th>Ton/Ha</th>
+              <th>Budget Produksi (Kg)</th>
+              <th>Budget Tonase (Ton)</th>
+              <th>Budget Ton/Ha</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -864,9 +864,9 @@
           3: { text: 'Blok', style: 1 },
           4: { text: 'Luas (Ha)', style: 1 },
           5: { text: 'Bulan', style: 1 },
-          6: { text: 'Produksi (Kg)', style: 1 },
-          7: { text: 'Tonase (Ton)', style: 1 },
-          8: { text: 'Ton/Ha', style: 1 }
+          6: { text: 'Budget Produksi (Kg)', style: 1 },
+          7: { text: 'Budget Tonase (Ton)', style: 1 },
+          8: { text: 'Budget Ton/Ha', style: 1 }
         }
       };
       
@@ -1693,7 +1693,7 @@
             
             // Prepare dan export data (tetap sama)
             const sheetData = [['Kebun', 'Divisi', 'Kode Tahun Tanam', 'Blok', 'Luas (Ha)', 
-                   'Bulan', 'Produksi (Jg)', 'Tonase (Ton)', 'Ton/Ha']];
+                   'Bulan', 'Budget Produksi (Kg)', 'Budget Tonase (Ton)', 'Budget Ton/Ha']];
             savedData.forEach(item => {
                 sheetData.push([
                       item.kebun || '',
