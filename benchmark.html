@@ -501,7 +501,7 @@
         
         const response = await fetch(noCacheUrl, {
           method: 'GET',
-          // Hapus mode: 'no-cors' karena kita perlu membaca response
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json',
           },
