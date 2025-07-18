@@ -494,7 +494,7 @@
     async function fetchDataFromSheets(url, action) {
       try {
         const response = await fetch(url, {
-          method: 'POST',
+          method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
