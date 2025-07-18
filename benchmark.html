@@ -498,17 +498,17 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            action: action
-          })
+          body: JSON.stringify({ action: action }),
+          mode: 'cors' // explicitly set CORS mode
         });
         
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
-        const data = await response.json();
-        return data;
+        return await response.json();
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Fetch error:', error);
         throw error;
       }
     }
