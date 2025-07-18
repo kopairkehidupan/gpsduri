@@ -493,50 +493,23 @@
     // Function to fetch data from Google Sheets
     async function fetchDataFromSheets(url, action) {
       try {
-        const fullUrl = `${url}?action=${encodeURIComponent(action)}&t=${Date.now()}`;
-        
-        // Coba pertama dengan mode 'cors'
-        try {
-          const corsResponse = await fetch(fullUrl, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-          
-          if (corsResponse.ok) {
-            return await corsResponse.json();
-          }
-        } catch (corsError) {
-          console.log('CORS mode failed, trying no-cors...');
-        }
-        
-        // Fallback ke mode 'no-cors' dengan pendekatan khusus
-        const noCorsResponse = await fetch(fullUrl, {
-          method: 'GET',
-          mode: 'no-cors',
+        const response = await fetch(url, {
+          method: 'POST',
           headers: {
-            'Content-Type': 'text/plain',
-          }
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: action
+          })
         });
         
-        // Dalam mode no-cors, kita harus menggunakan text() lalu parse manual
-        const textData = await noCorsResponse.text();
-        try {
-          const jsonData = JSON.parse(textData);
-          return jsonData;
-        } catch (parseError) {
-          throw new Error('Failed to parse response');
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
         
+        const data = await response.json();
+        return data;
       } catch (error) {
-        console.error('Fetch error:', {
-          url: url,
-          action: action,
-          error: error.message
-        });
-        throw new Error('Failed to fetch data from server');
+        console.error('Error fetching data:', error);
+        throw error;
       }
     }
 
@@ -545,63 +518,49 @@
         // Open database
         await openDatabase();
         
-        // URL Web Apps yang sudah dipublish
+        // Replace these URLs with your published web app URLs
         const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
         const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
         
-        const endpoints = [
-            { url: prodActualUrl, action: 'getAllProdActual', store: STORES.PROD_ACTUAL },
-            { url: prodBudgetUrl, action: 'getAllProdBudget', store: STORES.PROD_BUDGET },
-            { url: budgetUrl, action: 'getAllBudget', store: STORES.BUDGET },
-            { url: actualUrl, action: 'getAllActual', store: STORES.ACTUAL }
-          ];
-          
-          // Proses satu per satu dengan error handling lebih baik
-          for (const endpoint of endpoints) {
-            try {
-              const data = await fetchWithRetry(endpoint.url, endpoint.action);
-              await saveToIndexedDB(endpoint.store, data);
-              console.log(`Data ${endpoint.action} loaded successfully`);
-            } catch (error) {
-              console.error(`Failed to load ${endpoint.action}:`, error);
-              throw new Error(`Gagal memuat data ${endpoint.action}`);
-            }
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('Error loading data:', error);
-          throw error;
-        }
+        // Fetch all data
+        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
+          fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
+          fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
+          fetchDataFromSheets(budgetUrl, 'getAllBudget'),
+          fetchDataFromSheets(actualUrl, 'getAllActual')
+        ]);
+        
+        // Save to IndexedDB
+        await Promise.all([
+          saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
+          saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
+          saveToIndexedDB(STORES.BUDGET, budgetData),
+          saveToIndexedDB(STORES.ACTUAL, actualData)
+        ]);
+        
+        console.log('All data loaded successfully');
+        return true;
+      } catch (error) {
+        console.error('Error loading data:', error);
+        throw error;
+      }
     }
 
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
-      const btn = this;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Memuat...';
+      this.disabled = true;
+      this.innerHTML = '<span class="spinner"></span> Memuat...';
       
       try {
         await loadAllData();
         alert('Data berhasil dimuat ke database lokal');
       } catch (error) {
-        console.error('Full error:', error);
-        
-        // Tampilkan pesan error yang lebih informatif
-        let errorMessage = 'Gagal memuat data';
-        if (error.message.includes('Network response was not ok')) {
-          errorMessage += ': Tidak dapat terhubung ke server. Pastikan Anda memiliki koneksi internet dan coba lagi.';
-        } else if (error.message.includes('Failed to fetch')) {
-          errorMessage += ': Gagal menghubungi server. Mungkin ada masalah dengan URL endpoint.';
-        } else {
-          errorMessage += `: ${error.message}`;
-        }
-        
-        alert(errorMessage);
+        console.error('Error:', error);
+        alert('Gagal memuat data: ' + error.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
+        this.disabled = false;
+        this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
       }
     });
   </script>
