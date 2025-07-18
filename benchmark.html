@@ -498,7 +498,7 @@
         
         const response = await fetch(fullUrl, {
           method: 'GET', // Gunakan GET bukan POST
-          mode: 'cors', // Mode cors
+          mode: 'no-cors', // Mode cors
           headers: {
             'Content-Type': 'application/json',
           }
