@@ -493,37 +493,26 @@
     // Function to fetch data from Google Sheets
     async function fetchDataFromSheets(url, action) {
       try {
-        // Gunakan URL dengan tambahan parameter action di query string
-        const fullUrl = `${url}?action=${encodeURIComponent(action)}`;
+        const fullUrl = `${url}?action=${encodeURIComponent(action)}&t=${Date.now()}`;
         
-        // Tambahkan timestamp untuk menghindari cache
-        const noCacheUrl = `${fullUrl}&t=${Date.now()}`;
-        
-        const response = await fetch(noCacheUrl, {
+        const response = await fetch(fullUrl, {
           method: 'GET',
-          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json',
           },
-          // Tambahkan credentials jika diperlukan
-          credentials: 'include'
+          // Mode cors penting untuk GET requests
+          mode: 'cors',
+          credentials: 'omit'
         });
         
         if (!response.ok) {
-          // Dapatkan detail error dari response jika memungkinkan
           const errorText = await response.text();
-          throw new Error(`Server responded with ${response.status}: ${errorText}`);
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
         
-        const data = await response.json();
-        return data;
+        return await response.json();
       } catch (error) {
-        console.error('Error details:', {
-          url: url,
-          action: action,
-          error: error.message,
-          stack: error.stack
-        });
+        console.error('Fetch error:', error);
         throw error;
       }
     }
