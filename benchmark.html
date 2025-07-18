@@ -499,7 +499,7 @@
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ action: action }),
-          mode: 'cors' // explicitly set CORS mode
+          mode: 'no-cors' // explicitly set CORS mode
         });
         
         if (!response.ok) {
