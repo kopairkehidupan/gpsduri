@@ -533,49 +533,86 @@
         // Open database
         await openDatabase();
         
-        // Replace these URLs with your published web app URLs
+        // URL Web Apps yang sudah dipublish
         const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
         const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
         
-        // Fetch all data
+        // Fetch data dengan error handling per endpoint
+        const fetchWithRetry = async (url, action, retries = 2) => {
+          try {
+            return await fetchDataFromSheets(url, action);
+          } catch (error) {
+            if (retries > 0) {
+              console.log(`Retrying ${action}... (${retries} attempts left)`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return fetchWithRetry(url, action, retries - 1);
+            }
+            throw error;
+          }
+        };
+        
+        // Fetch all data dengan retry mechanism
         const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-          fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
-          fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
-          fetchDataFromSheets(budgetUrl, 'getAllBudget'),
-          fetchDataFromSheets(actualUrl, 'getAllActual')
+          fetchWithRetry(prodActualUrl, 'getAllProdActual'),
+          fetchWithRetry(prodBudgetUrl, 'getAllProdBudget'),
+          fetchWithRetry(budgetUrl, 'getAllBudget'),
+          fetchWithRetry(actualUrl, 'getAllActual')
         ]);
+        
+        // Validasi data sebelum menyimpan
+        const validateData = (data, storeName) => {
+          if (!Array.isArray(data)) {
+            throw new Error(`Invalid data format for ${storeName}`);
+          }
+          return data;
+        };
         
         // Save to IndexedDB
         await Promise.all([
-          saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
-          saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
-          saveToIndexedDB(STORES.BUDGET, budgetData),
-          saveToIndexedDB(STORES.ACTUAL, actualData)
+          saveToIndexedDB(STORES.PROD_ACTUAL, validateData(prodActualData, STORES.PROD_ACTUAL)),
+          saveToIndexedDB(STORES.PROD_BUDGET, validateData(prodBudgetData, STORES.PROD_BUDGET)),
+          saveToIndexedDB(STORES.BUDGET, validateData(budgetData, STORES.BUDGET)),
+          saveToIndexedDB(STORES.ACTUAL, validateData(actualData, STORES.ACTUAL))
         ]);
         
         console.log('All data loaded successfully');
         return true;
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Detailed error loading data:', {
+          error: error.message,
+          stack: error.stack
+        });
         throw error;
       }
     }
 
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
-      this.disabled = true;
-      this.innerHTML = '<span class="spinner"></span> Memuat...';
+      const btn = this;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Memuat...';
       
       try {
         await loadAllData();
         alert('Data berhasil dimuat ke database lokal');
       } catch (error) {
-        console.error('Error:', error);
-        alert('Gagal memuat data: ' + error.message);
+        console.error('Full error:', error);
+        
+        // Tampilkan pesan error yang lebih informatif
+        let errorMessage = 'Gagal memuat data';
+        if (error.message.includes('Network response was not ok')) {
+          errorMessage += ': Tidak dapat terhubung ke server. Pastikan Anda memiliki koneksi internet dan coba lagi.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage += ': Gagal menghubungi server. Mungkin ada masalah dengan URL endpoint.';
+        } else {
+          errorMessage += `: ${error.message}`;
+        }
+        
+        alert(errorMessage);
       } finally {
-        this.disabled = false;
-        this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
       }
     });
   </script>
