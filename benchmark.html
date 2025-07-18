@@ -495,22 +495,48 @@
       try {
         const fullUrl = `${url}?action=${encodeURIComponent(action)}&t=${Date.now()}`;
         
-        const response = await fetch(fullUrl, {
+        // Coba pertama dengan mode 'cors'
+        try {
+          const corsResponse = await fetch(fullUrl, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          if (corsResponse.ok) {
+            return await corsResponse.json();
+          }
+        } catch (corsError) {
+          console.log('CORS mode failed, trying no-cors...');
+        }
+        
+        // Fallback ke mode 'no-cors' dengan pendekatan khusus
+        const noCorsResponse = await fetch(fullUrl, {
           method: 'GET',
+          mode: 'no-cors',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain',
           }
         });
         
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        // Dalam mode no-cors, kita harus menggunakan text() lalu parse manual
+        const textData = await noCorsResponse.text();
+        try {
+          const jsonData = JSON.parse(textData);
+          return jsonData;
+        } catch (parseError) {
+          throw new Error('Failed to parse response');
         }
         
-        return await response.json();
       } catch (error) {
-        console.error('Fetch error:', error);
-        throw error;
+        console.error('Fetch error:', {
+          url: url,
+          action: action,
+          error: error.message
+        });
+        throw new Error('Failed to fetch data from server');
       }
     }
 
@@ -525,53 +551,30 @@
         const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
         
-        // Fetch data dengan error handling per endpoint
-        const fetchWithRetry = async (url, action, retries = 2) => {
-          try {
-            return await fetchDataFromSheets(url, action);
-          } catch (error) {
-            if (retries > 0) {
-              console.log(`Retrying ${action}... (${retries} attempts left)`);
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              return fetchWithRetry(url, action, retries - 1);
+        const endpoints = [
+            { url: prodActualUrl, action: 'getAllProdActual', store: STORES.PROD_ACTUAL },
+            { url: prodBudgetUrl, action: 'getAllProdBudget', store: STORES.PROD_BUDGET },
+            { url: budgetUrl, action: 'getAllBudget', store: STORES.BUDGET },
+            { url: actualUrl, action: 'getAllActual', store: STORES.ACTUAL }
+          ];
+          
+          // Proses satu per satu dengan error handling lebih baik
+          for (const endpoint of endpoints) {
+            try {
+              const data = await fetchWithRetry(endpoint.url, endpoint.action);
+              await saveToIndexedDB(endpoint.store, data);
+              console.log(`Data ${endpoint.action} loaded successfully`);
+            } catch (error) {
+              console.error(`Failed to load ${endpoint.action}:`, error);
+              throw new Error(`Gagal memuat data ${endpoint.action}`);
             }
-            throw error;
           }
-        };
-        
-        // Fetch all data dengan retry mechanism
-        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-          fetchWithRetry(prodActualUrl, 'getAllProdActual'),
-          fetchWithRetry(prodBudgetUrl, 'getAllProdBudget'),
-          fetchWithRetry(budgetUrl, 'getAllBudget'),
-          fetchWithRetry(actualUrl, 'getAllActual')
-        ]);
-        
-        // Validasi data sebelum menyimpan
-        const validateData = (data, storeName) => {
-          if (!Array.isArray(data)) {
-            throw new Error(`Invalid data format for ${storeName}`);
-          }
-          return data;
-        };
-        
-        // Save to IndexedDB
-        await Promise.all([
-          saveToIndexedDB(STORES.PROD_ACTUAL, validateData(prodActualData, STORES.PROD_ACTUAL)),
-          saveToIndexedDB(STORES.PROD_BUDGET, validateData(prodBudgetData, STORES.PROD_BUDGET)),
-          saveToIndexedDB(STORES.BUDGET, validateData(budgetData, STORES.BUDGET)),
-          saveToIndexedDB(STORES.ACTUAL, validateData(actualData, STORES.ACTUAL))
-        ]);
-        
-        console.log('All data loaded successfully');
-        return true;
-      } catch (error) {
-        console.error('Detailed error loading data:', {
-          error: error.message,
-          stack: error.stack
-        });
-        throw error;
-      }
+          
+          return true;
+        } catch (error) {
+          console.error('Error loading data:', error);
+          throw error;
+        }
     }
 
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
