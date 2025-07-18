@@ -496,20 +496,34 @@
         // Gunakan URL dengan tambahan parameter action di query string
         const fullUrl = `${url}?action=${encodeURIComponent(action)}`;
         
-        const response = await fetch(fullUrl, {
-          method: 'GET', // Gunakan GET bukan POST
-          mode: 'no-cors', // Mode cors
+        // Tambahkan timestamp untuk menghindari cache
+        const noCacheUrl = `${fullUrl}&t=${Date.now()}`;
+        
+        const response = await fetch(noCacheUrl, {
+          method: 'GET',
+          // Hapus mode: 'no-cors' karena kita perlu membaca response
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          // Tambahkan credentials jika diperlukan
+          credentials: 'include'
         });
         
-        if (!response.ok) throw new Error('Network response was not ok');
+        if (!response.ok) {
+          // Dapatkan detail error dari response jika memungkinkan
+          const errorText = await response.text();
+          throw new Error(`Server responded with ${response.status}: ${errorText}`);
+        }
         
         const data = await response.json();
         return data;
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error details:', {
+          url: url,
+          action: action,
+          error: error.message,
+          stack: error.stack
+        });
         throw error;
       }
     }
