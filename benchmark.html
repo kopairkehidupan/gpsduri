@@ -493,14 +493,15 @@
     // Function to fetch data from Google Sheets
     async function fetchDataFromSheets(url, action) {
       try {
-        const response = await fetch(url, {
-          method: 'POST',
+        // Gunakan URL dengan tambahan parameter action di query string
+        const fullUrl = `${url}?action=${encodeURIComponent(action)}`;
+        
+        const response = await fetch(fullUrl, {
+          method: 'GET', // Gunakan GET bukan POST
+          mode: 'cors', // Mode cors
           headers: {
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: action
-          })
+          }
         });
         
         if (!response.ok) throw new Error('Network response was not ok');
