@@ -499,7 +499,7 @@
     }
     
     // Function to fetch data from Google Sheets
-     async function fetchDataFromSheets(url, action) {
+    async function fetchDataFromSheets(url, action) {
       const CORS_PROXY = "https://api.allorigins.win/get?url=";
       try {
         const encodedUrl = encodeURIComponent(`${url}?action=${action}`);
@@ -508,8 +508,22 @@
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
-        // Data dari AllOrigins berada di properti contents
-        return JSON.parse(data.contents);
+        
+        // Debugging: Tampilkan data mentah yang diterima
+        console.log('Raw response:', data);
+        
+        // Periksa jika contents berisi HTML
+        if (data.contents && data.contents.startsWith('<!DOCTYPE')) {
+          throw new Error('Received HTML instead of JSON. Check the URL or authentication.');
+        }
+        
+        // Coba parse JSON
+        try {
+          return JSON.parse(data.contents);
+        } catch (parseError) {
+          console.error('Failed to parse JSON:', parseError);
+          throw new Error('Invalid JSON received: ' + data.contents.substring(0, 100));
+        }
       } catch (error) {
         console.error('Fetch error:', error);
         throw error;
@@ -546,13 +560,15 @@
         await openDatabase();
         
         // Gunakan URL yang benar (tanpa /u/6/)
-        const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
+        const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';.
+        console.log('Fetching data from:', prodActualUrl);
         //const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
 
         // 1. Ambil data terlebih dahulu
         const prodActualData = await fetchDataFromSheets(prodActualUrl, 'getAllProdActual');
+        console.log('Data received:', prodActualData);
         
         // Pastikan data adalah array
         if (!Array.isArray(prodActualData)) {
