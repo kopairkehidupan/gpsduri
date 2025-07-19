@@ -492,24 +492,19 @@
     
     // Function to fetch data from Google Sheets
      async function fetchDataFromSheets(url, action) {
-      console.log(`Attempting to fetch from ${url} with action ${action}`);
       try {
-        const response = await fetch(`${url}?action=${action}`);
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-          console.log('Response not OK, headers:', [...response.headers.entries()]);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Successfully fetched data:', data);
-        return data;
+        const response = await fetch(`${url}?action=${action}`, {
+          mode: 'no-cors'
+        });
+        // Handle opaque response
+        console.log('Response (opaque):', response);
+        // Anda perlu menangani response opaque dengan cara khusus
+        return await response.text(); // atau .blob() tergantung data
       } catch (error) {
-        console.error('Fetch error details:', error);
+        console.error('Fetch error:', error);
         throw error;
       }
-    }
+    }}
     
     function fetchWithJsonp(url, action) {
       return new Promise((resolve, reject) => {
