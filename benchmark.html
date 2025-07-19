@@ -611,7 +611,16 @@
         alert('Data berhasil dimuat ke database lokal');
       } catch (error) {
         console.error('Error:', error);
-        alert('Gagal memuat data: ' + error.message);
+        let errorMessage = error.message;
+        
+        // Tambahkan penanganan khusus untuk error HTML
+        if (error.message.includes('Received HTML')) {
+          errorMessage = 'Terjadi masalah akses. Pastikan URL endpoint benar dan deployment Apps Script sudah di-set ke "Anyone".';
+        } else if (error.message.includes('Invalid JSON')) {
+          errorMessage = 'Format data tidak valid dari server.';
+        }
+        
+        alert('Gagal memuat data: ' + errorMessage);
       } finally {
         this.disabled = false;
         this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
