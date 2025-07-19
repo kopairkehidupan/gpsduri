@@ -542,24 +542,24 @@
         
         // Replace these URLs with your published web app URLs
         const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
-        const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
-        const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
-        const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
+        //const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
+        //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
+        //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
         
         // Fetch all data
         const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
           fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
-          fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
-          fetchDataFromSheets(budgetUrl, 'getAllBudget'),
-          fetchDataFromSheets(actualUrl, 'getAllActual')
+          //fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
+          //fetchDataFromSheets(budgetUrl, 'getAllBudget'),
+          //fetchDataFromSheets(actualUrl, 'getAllActual')
         ]);
         
         // Save to IndexedDB
         await Promise.all([
           saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
-          saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
-          saveToIndexedDB(STORES.BUDGET, budgetData),
-          saveToIndexedDB(STORES.ACTUAL, actualData)
+          //saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
+          //saveToIndexedDB(STORES.BUDGET, budgetData),
+          //saveToIndexedDB(STORES.ACTUAL, actualData)
         ]);
         
         console.log('All data loaded successfully');
