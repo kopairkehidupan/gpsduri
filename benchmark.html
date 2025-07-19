@@ -492,19 +492,22 @@
     
     // Function to fetch data from Google Sheets
      async function fetchDataFromSheets(url, action) {
+      console.log(`Attempting to fetch from ${url} with action ${action}`);
       try {
-        // Coba fetch biasa dulu
         const response = await fetch(`${url}?action=${action}`);
+        console.log('Response status:', response.status);
         
         if (!response.ok) {
+          console.log('Response not OK, headers:', [...response.headers.entries()]);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        return await response.json();
+        const data = await response.json();
+        console.log('Successfully fetched data:', data);
+        return data;
       } catch (error) {
-        console.log('Regular fetch failed, trying JSONP...', error);
-        // Fallback ke JSONP
-        return await fetchWithJsonp(url, action);
+        console.error('Fetch error details:', error);
+        throw error;
       }
     }
     
