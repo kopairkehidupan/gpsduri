@@ -556,19 +556,21 @@
           throw new Error('Data received is not an array');
         }
         
-        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-          fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
+        //const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
+        //  fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
           //fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
           //fetchDataFromSheets(budgetUrl, 'getAllBudget'),
           //fetchDataFromSheets(actualUrl, 'getAllActual')
-        ]);
+        //]);
         
-        await Promise.all([
-          saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
+        //await Promise.all([
+        //  saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
           //saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
           //saveToIndexedDB(STORES.BUDGET, budgetData),
           //saveToIndexedDB(STORES.ACTUAL, actualData)
-        ]);
+        //]);
+
+         await saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData);
         
         console.log('All data loaded successfully');
         return true;
