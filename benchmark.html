@@ -493,22 +493,17 @@
     // Function to fetch data from Google Sheets
      async function fetchDataFromSheets(url, action) {
       try {
-        // First try regular fetch
-        const response = await fetch(`${url}?action=${action}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-    
+        // Coba fetch biasa dulu
+        const response = await fetch(`${url}?action=${action}`);
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-    
+        
         return await response.json();
       } catch (error) {
-        console.log('Trying fallback JSONP method...');
-        // Fallback to JSONP if regular fetch fails
+        console.log('Regular fetch failed, trying JSONP...', error);
+        // Fallback ke JSONP
         return await fetchWithJsonp(url, action);
       }
     }
@@ -518,13 +513,16 @@
         const callbackName = `jsonp_${Date.now()}`;
         const script = document.createElement('script');
         
+        // Bersihkan URL dari /u/6/ jika ada
+        const cleanUrl = url.replace('/u/6/', '/');
+        
         window[callbackName] = (data) => {
           resolve(data);
           delete window[callbackName];
           document.body.removeChild(script);
         };
         
-        script.src = `${url}?action=${action}&callback=${callbackName}`;
+        script.src = `${cleanUrl}?action=${action}&callback=${callbackName}`;
         script.onerror = () => {
           reject(new Error('JSONP request failed'));
           delete window[callbackName];
@@ -534,19 +532,17 @@
         document.body.appendChild(script);
       });
     }
-
+    
     async function loadAllData() {
       try {
-        // Open database
         await openDatabase();
         
-        // Replace these URLs with your published web app URLs
+        // Gunakan URL yang benar (tanpa /u/6/)
         const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
         //const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
         
-        // Fetch all data
         const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
           fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
           //fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
@@ -554,7 +550,6 @@
           //fetchDataFromSheets(actualUrl, 'getAllActual')
         ]);
         
-        // Save to IndexedDB
         await Promise.all([
           saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
           //saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
