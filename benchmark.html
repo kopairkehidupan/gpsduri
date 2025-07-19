@@ -551,6 +551,9 @@
         //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
 
+        // 1. Ambil data terlebih dahulu
+        const prodActualData = await fetchDataFromSheets(prodActualUrl, 'getAllProdActual');
+        
         // Pastikan data adalah array
         if (!Array.isArray(prodActualData)) {
           throw new Error('Data received is not an array');
