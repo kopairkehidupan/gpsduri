@@ -567,9 +567,9 @@
         // Save to IndexedDB
         await Promise.all([
           saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
-          //saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
-          //saveToIndexedDB(STORES.BUDGET, budgetData),
-          //saveToIndexedDB(STORES.ACTUAL, actualData)
+          saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
+          saveToIndexedDB(STORES.BUDGET, budgetData),
+          saveToIndexedDB(STORES.ACTUAL, actualData)
         ]);
         
         console.log('All data loaded successfully');
