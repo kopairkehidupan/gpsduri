@@ -454,12 +454,6 @@
           return;
         }
         
-        // Pastikan data adalah array
-        if (!Array.isArray(data)) {
-          reject(new Error('Data must be an array'));
-          return;
-        }
-        
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
         
@@ -470,11 +464,9 @@
           console.log(`Cleared existing data in ${storeName}`);
           
           // Add all new data
-          const requests = data.map((item, index) => {
-            // Tambahkan id jika belum ada
-            const itemWithId = item.id ? item : {...item, id: index};
+          const requests = data.map(item => {
             return new Promise((innerResolve, innerReject) => {
-              const request = store.add(itemWithId);
+              const request = store.add(item);
               request.onsuccess = () => innerResolve();
               request.onerror = (event) => innerReject(event.target.error);
             });
@@ -499,44 +491,34 @@
     }
     
     // Function to fetch data from Google Sheets
-    async function fetchDataFromSheets(url, action) {
-      const CORS_PROXY = "https://api.allorigins.win/get?url=";
+     async function fetchDataFromSheets(url, action) {
       try {
-        const encodedUrl = encodeURIComponent(`${url}?action=${action}`);
-        const response = await fetch(`${CORS_PROXY}${encodedUrl}`);
-        
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const data = await response.json();
-        
-        // Debugging: Tampilkan data mentah yang diterima
-        console.log('Raw response:', data);
-        
-        // Periksa jika contents berisi HTML
-        if (data.contents && data.contents.startsWith('<!DOCTYPE')) {
-          throw new Error('Received HTML instead of JSON. Check the URL or authentication.');
+        // Pertama, coba dengan fetch biasa
+        const response = await fetch(`${url}?action=${action}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'no-cors'
+        });
+    
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        // Coba parse JSON
-        try {
-          return JSON.parse(data.contents);
-        } catch (parseError) {
-          console.error('Failed to parse JSON:', parseError);
-          throw new Error('Invalid JSON received: ' + data.contents.substring(0, 100));
-        }
+    
+        return await response.json();
       } catch (error) {
-        console.error('Fetch error:', error);
-        throw error;
+        console.log('Trying fallback JSONP method...');
+        // Fallback ke JSONP jika fetch biasa gagal
+        return await fetchWithJsonp(url, action);
       }
     }
     
+    // Fungsi JSONP fallback
     function fetchWithJsonp(url, action) {
       return new Promise((resolve, reject) => {
         const callbackName = `jsonp_${Date.now()}`;
         const script = document.createElement('script');
-        
-        // Bersihkan URL dari /u/6/ jika ada
-        const cleanUrl = url.replace('/u/6/', '/');
         
         window[callbackName] = (data) => {
           resolve(data);
@@ -544,7 +526,7 @@
           document.body.removeChild(script);
         };
         
-        script.src = `${cleanUrl}?action=${action}&callback=${callbackName}`;
+        script.src = `${url}?action=${action}&callback=${callbackName}`;
         script.onerror = () => {
           reject(new Error('JSONP request failed'));
           delete window[callbackName];
@@ -554,50 +536,38 @@
         document.body.appendChild(script);
       });
     }
-    
+
     async function loadAllData() {
       try {
+        // Open database
         await openDatabase();
         
-        // Gunakan URL yang benar (tanpa /u/6/)
+        // Replace these URLs with your published web app URLs
         const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
-        console.log('Fetching data from:', prodActualUrl);
         //const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
-
-        // 1. Ambil data terlebih dahulu
-        const prodActualData = await fetchDataFromSheets(prodActualUrl, 'getAllProdActual');
-        console.log('Data received:', prodActualData);
         
-        // Pastikan data adalah array
-        if (!Array.isArray(prodActualData)) {
-          throw new Error('Data received is not an array');
-        }
-        
-        //const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-        //  fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
+        // Fetch all data
+        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
+          fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
           //fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
           //fetchDataFromSheets(budgetUrl, 'getAllBudget'),
           //fetchDataFromSheets(actualUrl, 'getAllActual')
-        //]);
+        ]);
         
-        //await Promise.all([
-        //  saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
+        // Save to IndexedDB
+        await Promise.all([
+          saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
           //saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
           //saveToIndexedDB(STORES.BUDGET, budgetData),
           //saveToIndexedDB(STORES.ACTUAL, actualData)
-        //]);
-
-         await saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData);
+        ]);
         
         console.log('All data loaded successfully');
         return true;
       } catch (error) {
-        console.error('Error loading data:', {
-          message: error.message,
-          stack: error.stack
-        });
+        console.error('Error loading data:', error);
         throw error;
       }
     }
@@ -611,16 +581,7 @@
         alert('Data berhasil dimuat ke database lokal');
       } catch (error) {
         console.error('Error:', error);
-        let errorMessage = error.message;
-        
-        // Tambahkan penanganan khusus untuk error HTML
-        if (error.message.includes('Received HTML')) {
-          errorMessage = 'Terjadi masalah akses. Pastikan URL endpoint benar dan deployment Apps Script sudah di-set ke "Anyone".';
-        } else if (error.message.includes('Invalid JSON')) {
-          errorMessage = 'Format data tidak valid dari server.';
-        }
-        
-        alert('Gagal memuat data: ' + errorMessage);
+        alert('Gagal memuat data: ' + error.message);
       } finally {
         this.disabled = false;
         this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
