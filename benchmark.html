@@ -454,6 +454,12 @@
           return;
         }
         
+        // Pastikan data adalah array
+        if (!Array.isArray(data)) {
+          reject(new Error('Data must be an array'));
+          return;
+        }
+        
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
         
@@ -464,9 +470,11 @@
           console.log(`Cleared existing data in ${storeName}`);
           
           // Add all new data
-          const requests = data.map(item => {
+          const requests = data.map((item, index) => {
+            // Tambahkan id jika belum ada
+            const itemWithId = item.id ? item : {...item, id: index};
             return new Promise((innerResolve, innerReject) => {
-              const request = store.add(item);
+              const request = store.add(itemWithId);
               request.onsuccess = () => innerResolve();
               request.onerror = (event) => innerReject(event.target.error);
             });
@@ -492,14 +500,16 @@
     
     // Function to fetch data from Google Sheets
      async function fetchDataFromSheets(url, action) {
+      const CORS_PROXY = "https://api.allorigins.win/get?url=";
       try {
-        const response = await fetch(`${url}?action=${action}`, {
-          mode: 'no-cors'
-        });
-        // Handle opaque response
-        console.log('Response (opaque):', response);
-        // Anda perlu menangani response opaque dengan cara khusus
-        return await response.text(); // atau .blob() tergantung data
+        const encodedUrl = encodeURIComponent(`${url}?action=${action}`);
+        const response = await fetch(`${CORS_PROXY}${encodedUrl}`);
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data = await response.json();
+        // Data dari AllOrigins berada di properti contents
+        return JSON.parse(data.contents);
       } catch (error) {
         console.error('Fetch error:', error);
         throw error;
@@ -540,6 +550,11 @@
         //const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
         //const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
         //const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
+
+        // Pastikan data adalah array
+        if (!Array.isArray(prodActualData)) {
+          throw new Error('Data received is not an array');
+        }
         
         const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
           fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
