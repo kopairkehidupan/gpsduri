@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link rel="stylesheet" href="benchmarkstyle.css" />
   <style>
     :root {
       --primary: #4285f4;
@@ -260,6 +261,25 @@
     </div>
   </div>
 
+  <!-- Progress Modal -->
+  <div id="progressModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h3>Memuat Data...</h3>
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">0%</div>
+      </div>
+      <div class="progress-steps" id="progressSteps">
+        <div class="step" data-step="prodActual">1. Memuat Data Produksi Aktual</div>
+        <div class="step" data-step="prodBudget">2. Memuat Data Produksi Budget</div>
+        <div class="step" data-step="budget">3. Memuat Data Budget</div>
+        <div class="step" data-step="actual">4. Memuat Data Aktual</div>
+      </div>
+    </div>
+  </div>
+  
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
     let map;
@@ -545,41 +565,104 @@
       });
     }
 
+    // Function to update progress
+    function updateProgress(progress, currentStep, status = 'active') {
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const stepElements = document.querySelectorAll('.step');
+      
+      // Update progress bar
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = `${Math.round(progress)}%`;
+      
+      // Update step status
+      stepElements.forEach(step => {
+        if (step.dataset.step === currentStep) {
+          step.className = 'step ' + status;
+        } else if (step.dataset.step < currentStep) {
+          step.className = 'step completed';
+        }
+      });
+    }
+    
+    // Show/hide modal
+    function showProgressModal(show) {
+      document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
+    }
+    
     async function loadAllData() {
       try {
+        // Show progress modal
+        showProgressModal(true);
+        updateProgress(0, 'prodActual');
+        
         // Open database
         await openDatabase();
         
-        // Replace these URLs with your published web app URLs
-        const prodActualUrl = 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec';
-        const prodBudgetUrl = 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec';
-        const budgetUrl = 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec';
-        const actualUrl = 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec';
+        // Define endpoints and their order
+        const endpoints = [
+          { 
+            name: 'prodActual',
+            url: 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec',
+            action: 'getAllProdActual',
+            store: STORES.PROD_ACTUAL
+          },
+          { 
+            name: 'prodBudget',
+            url: 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec',
+            action: 'getAllProdBudget',
+            store: STORES.PROD_BUDGET
+          },
+          { 
+            name: 'budget',
+            url: 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec',
+            action: 'getAllBudget',
+            store: STORES.BUDGET
+          },
+          { 
+            name: 'actual',
+            url: 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec',
+            action: 'getAllActual',
+            store: STORES.ACTUAL
+          }
+        ];
         
-        // Fetch all data
-        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-          fetchDataFromSheets(prodActualUrl, 'getAllProdActual'),
-          fetchDataFromSheets(prodBudgetUrl, 'getAllProdBudget'),
-          fetchDataFromSheets(budgetUrl, 'getAllBudget'),
-          fetchDataFromSheets(actualUrl, 'getAllActual')
-        ]);
-        
-        // Save to IndexedDB
-        await Promise.all([
-          saveToIndexedDB(STORES.PROD_ACTUAL, prodActualData),
-          saveToIndexedDB(STORES.PROD_BUDGET, prodBudgetData),
-          saveToIndexedDB(STORES.BUDGET, budgetData),
-          saveToIndexedDB(STORES.ACTUAL, actualData)
-        ]);
+        // Process each endpoint sequentially
+        for (let i = 0; i < endpoints.length; i++) {
+          const endpoint = endpoints[i];
+          const progress = (i / endpoints.length) * 100;
+          updateProgress(progress, endpoint.name, 'active');
+          
+          try {
+            // Fetch data
+            const data = await fetchDataFromSheets(endpoint.url, endpoint.action);
+            
+            // Update progress during processing
+            updateProgress(progress + 10, endpoint.name, 'active');
+            
+            // Save to IndexedDB
+            await saveToIndexedDB(endpoint.store, data);
+            
+            // Mark as completed
+            updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed');
+          } catch (error) {
+            console.error(`Error loading ${endpoint.name}:`, error);
+            updateProgress(progress, endpoint.name, 'failed');
+            throw error; // Stop further processing if one fails
+          }
+        }
         
         console.log('All data loaded successfully');
         return true;
       } catch (error) {
         console.error('Error loading data:', error);
         throw error;
+      } finally {
+        // Hide modal after a short delay to show final state
+        setTimeout(() => showProgressModal(false), 1000);
       }
     }
-
+    
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
       this.disabled = true;
       this.innerHTML = '<span class="spinner"></span> Memuat...';
