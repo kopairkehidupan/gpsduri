@@ -690,9 +690,6 @@
           updateProgress(progress, endpoint.name, 'active');
           
           try {
-            // First get total count
-            const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
-            const totalRecords = countData.count || 0;
 
             let totalRecords = 0;
             try {
