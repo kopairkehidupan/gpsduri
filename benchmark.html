@@ -289,6 +289,8 @@
           <div class="step-details" id="actualDetails"></div>
         </div>
       </div>
+      <!-- Tambahkan ini untuk notifikasi -->
+      <div id="progressNotification" class="notification" style="display: none;"></div>
     </div>
   </div>
   
@@ -593,18 +595,37 @@
           step.className = 'step ' + status;
           const detailsEl = step.querySelector('.step-details');
           if (total > 0) {
-            detailsEl.textContent = `${loaded}/${total} records loaded`;
+            detailsEl.textContent = `${loaded}/${total} data masuk`;
           } else if (status === 'completed') {
-            detailsEl.textContent = `${loaded} records loaded`;
+            detailsEl.textContent = `${loaded} data masuk`;
           } else if (status === 'failed') {
-            detailsEl.textContent = 'Failed to load data';
+            detailsEl.textContent = 'Gagal mengambil data';
           } else {
-            detailsEl.textContent = 'Connecting...';
+            detailsEl.textContent = 'Menyambungkan...';
           }
         } else if (step.dataset.step < currentStep) {
-          step.className = 'step completed';
+          step.className = 'Selesai';
         }
       });
+    }
+
+    // Fungsi untuk menampilkan notifikasi di progress bar
+    function showProgressNotification(message, isSuccess) {
+      const notification = document.getElementById('progressNotification');
+      notification.innerHTML = `
+        <i class="material-icons">${isSuccess ? 'check_circle' : 'error'}</i>
+        ${message}
+      `;
+      notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
+      notification.style.display = 'block';
+      
+      // Sembunyikan otomatis setelah 3 detik
+      if (isSuccess) {
+        setTimeout(() => {
+          notification.style.display = 'none';
+          showProgressModal(false);
+        }, 3000);
+      }
     }
     
     // Show/hide modal
@@ -683,9 +704,11 @@
         }
         
         console.log('All data loaded successfully');
+        showProgressNotification('Data berhasil dimuat ke database lokal', true);
         return true;
       } catch (error) {
         console.error('Error loading data:', error);
+        showProgressNotification(`Gagal memuat data: ${error.message}`, false);
         throw error;
       } finally {
         setTimeout(() => showProgressModal(false), 1000);
@@ -698,10 +721,8 @@
       
       try {
         await loadAllData();
-        alert('Data berhasil dimuat ke database lokal');
       } catch (error) {
         console.error('Error:', error);
-        alert('Gagal memuat data: ' + error.message);
       } finally {
         this.disabled = false;
         this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
