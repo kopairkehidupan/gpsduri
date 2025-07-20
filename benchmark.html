@@ -433,12 +433,13 @@
     // ---------------- END POINT untuk mengambil data dari server-------------//
     // Database setup for IndexedDB
     const DB_NAME = 'KebunDatabase';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2; // Versi dinaikkan untuk schema baru
     const STORES = {
       PROD_ACTUAL: 'prodActual',
       PROD_BUDGET: 'prodBudget',
       BUDGET: 'budget',
-      ACTUAL: 'actual'
+      ACTUAL: 'actual',
+      SYNC_METADATA: 'sync_metadata' // Tambahan store untuk metadata
     };
     
     let db;
@@ -481,46 +482,78 @@
     }
     
     // Function to save data to IndexedDB
-    function saveToIndexedDB(storeName, data) {
+    function openDatabase() {
       return new Promise((resolve, reject) => {
-        if (!db) {
-          reject(new Error('Database not initialized'));
-          return;
-        }
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
         
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
-        
-        // Clear existing data first
-        const clearRequest = store.clear();
-        
-        clearRequest.onsuccess = () => {
-          console.log(`Cleared existing data in ${storeName}`);
-          
-          // Add all new data
-          const requests = data.map(item => {
-            return new Promise((innerResolve, innerReject) => {
-              const request = store.add(item);
-              request.onsuccess = () => innerResolve();
-              request.onerror = (event) => innerReject(event.target.error);
-            });
-          });
-          
-          Promise.all(requests)
-            .then(() => {
-              console.log(`Saved ${data.length} items to ${storeName}`);
-              resolve();
-            })
-            .catch(error => {
-              console.error(`Error saving to ${storeName}:`, error);
-              reject(error);
-            });
-        };
-        
-        clearRequest.onerror = (event) => {
-          console.error(`Error clearing ${storeName}:`, event.target.error);
+        request.onerror = (event) => {
+          console.error('Database error:', event.target.error);
           reject(event.target.error);
         };
+        
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log('Database opened successfully');
+          resolve(db);
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          
+          // Create object stores if they don't exist
+          if (!db.objectStoreNames.contains(STORES.PROD_ACTUAL)) {
+            const store = db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORES.PROD_BUDGET)) {
+            const store = db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORES.BUDGET)) {
+            const store = db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORES.ACTUAL)) {
+            const store = db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+          }
+          
+          // Tambahkan store untuk metadata sync
+          if (!db.objectStoreNames.contains(STORES.SYNC_METADATA)) {
+            db.createObjectStore(STORES.SYNC_METADATA, { keyPath: 'storeName' });
+          }
+          
+          console.log('Database upgrade complete');
+        };
+      });
+    }
+
+    // Fungsi untuk menyimpan metadata sync
+    async function saveSyncMetadata(storeName, metadata) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.SYNC_METADATA, 'readwrite');
+        const store = transaction.objectStore(STORES.SYNC_METADATA);
+        
+        const request = store.put({
+          storeName: storeName,
+          ...metadata
+        });
+        
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    }
+    
+    // Fungsi untuk mengambil metadata sync
+    async function getSyncMetadata(storeName) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.SYNC_METADATA, 'readonly');
+        const store = transaction.objectStore(STORES.SYNC_METADATA);
+        
+        const request = store.get(storeName);
+        
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = (event) => reject(event.target.error);
       });
     }
     
@@ -555,32 +588,9 @@
         });
       }
     }
-    
-    // Fungsi JSONP fallback
-    function fetchWithJsonp(url, action) {
-      return new Promise((resolve, reject) => {
-        const callbackName = `jsonp_${Date.now()}`;
-        const script = document.createElement('script');
-        
-        window[callbackName] = (data) => {
-          resolve(data);
-          delete window[callbackName];
-          document.body.removeChild(script);
-        };
-        
-        script.src = `${url}?action=${action}&callback=${callbackName}`;
-        script.onerror = () => {
-          reject(new Error('JSONP request failed'));
-          delete window[callbackName];
-          document.body.removeChild(script);
-        };
-        
-        document.body.appendChild(script);
-      });
-    }
 
     // Function to update progress
-    function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0) {
+    function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0, message = '') {
       const progressFill = document.getElementById('progressFill');
       const progressText = document.getElementById('progressText');
       const stepElements = document.querySelectorAll('.step');
@@ -595,14 +605,17 @@
         if (stepName === currentStep) {
           step.className = 'step ' + status;
           const detailsEl = step.querySelector('.step-details');
-          if (total > 0) {
-            detailsEl.textContent = `${loaded}/${total} data masuk`;
+          
+          if (message) {
+            detailsEl.textContent = message;
+          } else if (total > 0) {
+            detailsEl.textContent = `${loaded}/${total} data diproses`;
           } else if (status === 'completed') {
-            detailsEl.textContent = `${loaded} data masuk`;
+            detailsEl.textContent = 'Sinkronisasi selesai';
           } else if (status === 'failed') {
-            detailsEl.textContent = 'Gagal mengambil data';
+            detailsEl.textContent = 'Gagal memproses';
           } else {
-            detailsEl.textContent = 'Menyambungkan...';
+            detailsEl.textContent = 'Memproses...';
           }
         } else if (getStepOrder(stepName) < getStepOrder(currentStep)) {
           step.className = 'step completed';
@@ -645,102 +658,166 @@
       document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
     }
     
-    // Modified loadAllData function with data count tracking
-    async function loadAllData() {
+    // Fungsi utama untuk smart sync
+    async function smartSync() {
       try {
-        // Show progress modal
         showProgressModal(true);
-        updateProgress(0, 'prodActual');
+        updateProgress(0, 'metadata', 'active');
         
-        // Open database
+        // Buka database
         await openDatabase();
         
-        // Define endpoints and their order
+        // Endpoints configuration
         const endpoints = [
           { 
             name: 'prodActual',
             url: 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec',
-            action: 'getAllProdActual',
+            actionPrefix: 'ProdActual',
             store: STORES.PROD_ACTUAL
           },
           { 
             name: 'prodBudget',
             url: 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec',
-            action: 'getAllProdBudget',
+            actionPrefix: 'ProdBudget',
             store: STORES.PROD_BUDGET
           },
           { 
             name: 'budget',
             url: 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec',
-            action: 'getAllBudget',
+            actionPrefix: 'Budget',
             store: STORES.BUDGET
           },
           { 
             name: 'actual',
             url: 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec',
-            action: 'getAllActual',
+            actionPrefix: 'Actual',
             store: STORES.ACTUAL
           }
         ];
         
-        // Process each endpoint sequentially
+        // 1. Ambil metadata dari server
+        updateProgress(10, 'metadata', 'active', 0, 0, 'Mengambil metadata server');
+        const serverMetadata = await fetchDataFromSheets(
+          endpoints[0].url, 
+          'getSyncMetadata'
+        );
+        
+        // 2. Proses sync untuk setiap endpoint
         for (let i = 0; i < endpoints.length; i++) {
           const endpoint = endpoints[i];
-          const progress = (i / endpoints.length) * 100;
-          updateProgress(progress, endpoint.name, 'active');
+          const progress = 10 + (i * (90 / endpoints.length));
           
           try {
-
-            let totalRecords = 0;
-            try {
-              const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
-              totalRecords = countData.count || 0;
-            } catch (e) {
-              console.log(`Count endpoint not available for ${endpoint.name}, proceeding without count`);
+            updateProgress(progress, endpoint.name, 'active', 0, 0, 'Memeriksa perubahan');
+            
+            // Ambil metadata lokal
+            const localMeta = await getSyncMetadata(endpoint.store);
+            const serverMeta = serverMetadata[endpoint.actionPrefix];
+            
+            // Tentukan strategi sync
+            const needsFullSync = !localMeta || 
+                                new Date(serverMeta.lastModified) > new Date(localMeta.lastModified) || 
+                                serverMeta.rowCount !== localMeta.count;
+            
+            if (needsFullSync) {
+              // Full sync
+              updateProgress(progress + 5, endpoint.name, 'active', 0, 0, 'Memulai full sync');
+              await fullSync(endpoint);
+            } else {
+              // Incremental sync
+              updateProgress(progress + 5, endpoint.name, 'active', 0, 0, 'Memulai incremental sync');
+              await incrementalSync(endpoint, localMeta);
             }
             
-            // Update with total count
-            updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
-            
-            // Fetch data
-            const data = await fetchDataFromSheets(endpoint.url, endpoint.action);
-            
-            // Update progress during processing
-            updateProgress(progress + 10, endpoint.name, 'active', data.length, totalRecords);
-            
-            // Save to IndexedDB
-            await saveToIndexedDB(endpoint.store, data);
-            
-            // Mark as completed
-            updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', data.length, totalRecords);
+            updateProgress(progress + (90 / endpoints.length), endpoint.name, 'completed');
           } catch (error) {
-            console.error(`Error loading ${endpoint.name}:`, error);
-            updateProgress(progress, endpoint.name, 'failed');
+            console.error(`Error syncing ${endpoint.name}:`, error);
+            updateProgress(progress, endpoint.name, 'failed', 0, 0, `Error: ${error.message}`);
             throw error;
           }
         }
         
-        showProgressNotification('Data berhasil dimuat ke database lokal', true);
+        showProgressNotification('Sinkronisasi data berhasil', true);
         return true;
       } catch (error) {
-        showProgressNotification(`Gagal memuat data: ${error.message}`, false);
+        console.error('Sync failed:', error);
+        showProgressNotification(`Gagal sinkronisasi: ${error.message}`, false);
         throw error;
       } finally {
-        setTimeout(() => showProgressModal(false), 1000);
+        setTimeout(() => showProgressModal(false), 3000);
       }
     }
     
+    async function fullSync(endpoint) {
+      // 1. Ambil semua data dari server
+      const data = await fetchDataFromSheets(
+        endpoint.url, 
+        `getAll${endpoint.actionPrefix}`
+      );
+      
+      // 2. Simpan ke IndexedDB
+      await saveToIndexedDB(endpoint.store, data);
+      
+      // 3. Update metadata
+      await saveSyncMetadata(endpoint.store, {
+        lastModified: new Date().toISOString(),
+        count: data.length,
+        lastSync: new Date().toISOString()
+      });
+    }
+    
+    async function incrementalSync(endpoint, localMeta) {
+      // 1. Ambil data baru/changed dari server
+      const newData = await fetchDataFromSheets(
+        endpoint.url,
+        `get${endpoint.actionPrefix}Since?since=${localMeta.lastSync}`
+      );
+      
+      if (newData.length > 0) {
+        // 2. Update data di IndexedDB
+        await updateIndexedDB(endpoint.store, newData);
+        
+        // 3. Update metadata
+        await saveSyncMetadata(endpoint.store, {
+          lastModified: new Date().toISOString(),
+          count: localMeta.count + newData.length,
+          lastSync: new Date().toISOString()
+        });
+      }
+    }
+    
+    async function updateIndexedDB(storeName, newData) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        const requests = newData.map(item => {
+          return new Promise((resolve, reject) => {
+            // Coba update dulu, jika tidak ada insert baru
+            const request = store.put(item);
+            request.onsuccess = resolve;
+            request.onerror = reject;
+          });
+        });
+        
+        Promise.all(requests)
+          .then(() => resolve())
+          .catch(error => reject(error));
+      });
+    }
+    
+    
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
       this.disabled = true;
-      this.innerHTML = '<span class="spinner"></span> Memuat...';
+      this.innerHTML = '<span class="spinner"></span> Menyinkronisasi...';
       
       try {
-        await loadAllData();
+        await smartSync();
       } catch (error) {
         console.error('Error:', error);
       } finally {
         this.disabled = false;
-        this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
+        this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Sinkronisasi Data</span>';
       }
     });
   </script>
