@@ -487,29 +487,26 @@
 
     // Urutan prioritas divisi untuk Duri
     const DIVISI_DURI_ORDER = {
-      'I Tegar': 1,
-      'II Tegar': 2,
-      'III Tegar': 3, 
-      'IV Tegar': 4,
-      'V Tegar': 5,
-      'VI Tegar': 6,
-      'I Rangau': 7,
-      'II Rangau': 8,
-      'III Rangau': 9,
-      'IV Rangau': 10
+      "Divisi I Tegar": 1,
+      "Divisi II Tegar": 2,
+      "Divisi III Cucut": 3,
+      "Divisi III Mekarsari": 4, 
+      "Divisi IV Rangau": 5,
+      "Divisi V Rangau": 6,
+      "Divisi VI Rangau": 7
     };
     
     // Fungsi untuk memisahkan huruf dan angka dari blok
-    function parseBlok(blok, divisi) {
+    function parseBlok(blok) {
+      // Mencari posisi pertama angka
       const match = blok.match(/([A-Za-z]+)(\d+)/);
       if (match) {
         return {
           letters: match[1].toUpperCase(),
-          numbers: parseInt(match[2], 10),
-          divisi: divisi // Tambahkan divisi sebagai bagian dari kunci pengurutan
+          numbers: parseInt(match[2], 10)
         };
       }
-      return { letters: '', numbers: 0, divisi: divisi };
+      return { letters: '', numbers: 0 };
     }
 
     function loadAndDisplayData() {
@@ -596,14 +593,16 @@
           }
       });
 
-      // Fungsi pengurutan yang diperbarui
+      // Konversi object ke array dan urutkan
       const sortedData = Object.values(dataByBlok).sort((a, b) => {
-        // 1. Urutkan berdasarkan kebun
+        // 1. Urutkan berdasarkan kebun (Samsam pertama)
         const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
         const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
-        if (kebunOrderA !== kebunOrderB) return kebunOrderA - kebunOrderB;
-      
-        // 2. Urutkan berdasarkan divisi (prioritas sesuai urutan divisi)
+        if (kebunOrderA !== kebunOrderB) {
+          return kebunOrderA - kebunOrderB;
+        }
+        
+        // 2. Jika kebun sama, urutkan berdasarkan divisi
         let divisiOrderA, divisiOrderB;
         
         if (a.kebun === 'Samsam') {
@@ -613,21 +612,26 @@
           divisiOrderA = DIVISI_DURI_ORDER[a.divisi] || 99;
           divisiOrderB = DIVISI_DURI_ORDER[b.divisi] || 99;
         } else {
+          // Untuk kebun lain, urutkan berdasarkan nama divisi
           divisiOrderA = a.divisi.localeCompare(b.divisi);
           divisiOrderB = b.divisi.localeCompare(a.divisi);
         }
         
-        if (divisiOrderA !== divisiOrderB) return divisiOrderA - divisiOrderB;
-      
-        // 3. Jika kebun dan divisi sama, urutkan berdasarkan blok
-        const blokA = parseBlok(a.blok, a.divisi);
-        const blokB = parseBlok(b.blok, b.divisi);
-      
-        // Bandingkan huruf blok
+        if (divisiOrderA !== divisiOrderB) {
+          return divisiOrderA - divisiOrderB;
+        }
+        
+        // 3. Jika divisi sama, urutkan berdasarkan blok
+        const blokA = parseBlok(a.blok);
+        const blokB = parseBlok(b.blok);
+        
+        // Bandingkan bagian huruf
         const letterCompare = blokA.letters.localeCompare(blokB.letters);
-        if (letterCompare !== 0) return letterCompare;
-      
-        // Jika huruf sama, bandingkan angka blok
+        if (letterCompare !== 0) {
+          return letterCompare;
+        }
+        
+        // Jika huruf sama, bandingkan bagian angka
         return blokA.numbers - blokB.numbers;
       });
 
