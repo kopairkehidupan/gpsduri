@@ -501,13 +501,12 @@
     
     // Fungsi untuk memisahkan huruf dan angka dari blok
     function parseBlok(blok, divisi) {
-      // Mencari posisi pertama angka
       const match = blok.match(/([A-Za-z]+)(\d+)/);
       if (match) {
         return {
           letters: match[1].toUpperCase(),
           numbers: parseInt(match[2], 10),
-          divisi: divisi // Tambahkan divisi untuk memastikan unik
+          divisi: divisi // Tambahkan divisi sebagai bagian dari kunci pengurutan
         };
       }
       return { letters: '', numbers: 0, divisi: divisi };
@@ -597,16 +596,14 @@
           }
       });
 
-      // Konversi object ke array dan urutkan
+      // Fungsi pengurutan yang diperbarui
       const sortedData = Object.values(dataByBlok).sort((a, b) => {
-        // 1. Urutkan berdasarkan kebun (Samsam pertama)
+        // 1. Urutkan berdasarkan kebun
         const kebunOrderA = KEBUN_ORDER[a.kebun] || 99;
         const kebunOrderB = KEBUN_ORDER[b.kebun] || 99;
-        if (kebunOrderA !== kebunOrderB) {
-          return kebunOrderA - kebunOrderB;
-        }
-        
-        // 2. Jika kebun sama, urutkan berdasarkan divisi
+        if (kebunOrderA !== kebunOrderB) return kebunOrderA - kebunOrderB;
+      
+        // 2. Urutkan berdasarkan divisi (prioritas sesuai urutan divisi)
         let divisiOrderA, divisiOrderB;
         
         if (a.kebun === 'Samsam') {
@@ -616,26 +613,21 @@
           divisiOrderA = DIVISI_DURI_ORDER[a.divisi] || 99;
           divisiOrderB = DIVISI_DURI_ORDER[b.divisi] || 99;
         } else {
-          // Untuk kebun lain, urutkan berdasarkan nama divisi
           divisiOrderA = a.divisi.localeCompare(b.divisi);
           divisiOrderB = b.divisi.localeCompare(a.divisi);
         }
         
-        if (divisiOrderA !== divisiOrderB) {
-          return divisiOrderA - divisiOrderB;
-        }
-        
-        // 3. Jika divisi sama, urutkan berdasarkan blok
+        if (divisiOrderA !== divisiOrderB) return divisiOrderA - divisiOrderB;
+      
+        // 3. Jika kebun dan divisi sama, urutkan berdasarkan blok
         const blokA = parseBlok(a.blok, a.divisi);
         const blokB = parseBlok(b.blok, b.divisi);
-        
-        // Bandingkan bagian huruf
+      
+        // Bandingkan huruf blok
         const letterCompare = blokA.letters.localeCompare(blokB.letters);
-        if (letterCompare !== 0) {
-          return letterCompare;
-        }
-        
-        // Jika huruf sama, bandingkan bagian angka
+        if (letterCompare !== 0) return letterCompare;
+      
+        // Jika huruf sama, bandingkan angka blok
         return blokA.numbers - blokB.numbers;
       });
 
