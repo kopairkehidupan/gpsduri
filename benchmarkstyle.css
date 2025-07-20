@@ -80,3 +80,22 @@
   color: #ff0000;
   font-weight: 500;
 }
+
+.step-header {
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+
+.step-details {
+  font-size: 0.85rem;
+  color: var(--dark-gray);
+  margin-left: 1rem;
+}
+
+.step.completed .step-details {
+  color: var(--secondary);
+}
+
+.step.failed .step-details {
+  color: #ff0000;
+}
