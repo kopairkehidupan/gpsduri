@@ -558,15 +558,19 @@
         
         // Perbaiki format URL parameter
         const urlParams = lastSyncTime 
-          ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}&action=${endpoint.action}`
-          : `?action=${endpoint.action}`;
+          ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}`
+          : '';
         
+        // Gunakan URL langsung tanpa menambahkan action lagi
         const fullUrl = `${endpoint.url}${urlParams}`;
-        console.log('Fetching URL:', fullUrl); // Debug URL
+        console.log('Fetching modified data from:', fullUrl);
         
         const [countData, modifiedData] = await Promise.all([
           fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-          fetchDataFromSheets(fullUrl, endpoint.action) // Gunakan URL yang sudah diperbaiki
+          // Kirim action sebagai parameter terpisah
+          fetch(`${fullUrl}&action=${endpoint.action}`)
+            .then(handleResponse)
+            .then(data => data.data || data || [])
         ]);
         
         const totalRecords = countData.count || 0;
@@ -614,17 +618,16 @@
         return { added, updated, deleted };
         
       } catch (error) {
-        console.error(`Sync failed for ${endpoint.name}:`, error);
-        
-        // Coba tutup database dan buka kembali
-        if (db) {
-          db.close();
-          db = null;
-        }
-        db = await openDatabase();
-        
-        throw error;
+        console.error(`Sync failed:`, error);
       }
+    }
+
+    async function handleResponse(response) {
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status}: ${text}`);
+      }
+      return response.json();
     }
     
     // Fungsi baru dengan retry mechanism
