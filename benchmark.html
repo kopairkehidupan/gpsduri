@@ -550,26 +550,30 @@
     async function syncStoreData(endpoint) {
       const CHUNK_SIZE = 2000;
       let lastSyncTime = await getLastSyncTime(endpoint.store);
-      console.log(`Last sync for ${endpoint.store}:`, lastSyncTime);
       
       try {
-        // Pastikan database masih terbuka dan valid
         if (!db || db.version !== DB_VERSION) {
           db = await openDatabase();
         }
         
-        const urlParams = lastSyncTime ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}` : '';
+        // Perbaiki format URL parameter
+        const urlParams = lastSyncTime 
+          ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}&action=${endpoint.action}`
+          : `?action=${endpoint.action}`;
+        
         const fullUrl = `${endpoint.url}${urlParams}`;
+        console.log('Fetching URL:', fullUrl); // Debug URL
         
         const [countData, modifiedData] = await Promise.all([
           fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-          fetchDataFromSheets(fullUrl, endpoint.action)
+          fetchDataFromSheets(fullUrl, endpoint.action) // Gunakan URL yang sudah diperbaiki
         ]);
         
         const totalRecords = countData.count || 0;
         const dataToProcess = Array.isArray(modifiedData) ? modifiedData : 
-                      (modifiedData.data || []);
-        console.log(`Data to process:`, dataToProcess.length);
+                            (modifiedData?.data || []);
+        
+        console.log(`Data to process:`, dataToProcess.length, dataToProcess); // Debug data
         
         updateProgress(0, endpoint.name, 'active', 0, totalRecords);
         
