@@ -99,3 +99,27 @@
 .step.failed .step-details {
   color: #ff0000;
 }
+
+.notification {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.notification.success {
+  background-color: rgba(52, 168, 83, 0.1);
+  color: var(--secondary);
+}
+
+.notification.error {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff0000;
+}
+
+.notification i.material-icons {
+  vertical-align: middle;
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
