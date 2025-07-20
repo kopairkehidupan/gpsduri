@@ -591,7 +591,8 @@
       
       // Update step status
       stepElements.forEach(step => {
-        if (step.dataset.step === currentStep) {
+        const stepName = step.dataset.step;
+        if (stepName === currentStep) {
           step.className = 'step ' + status;
           const detailsEl = step.querySelector('.step-details');
           if (total > 0) {
@@ -603,10 +604,21 @@
           } else {
             detailsEl.textContent = 'Menyambungkan...';
           }
-        } else if (step.dataset.step < currentStep) {
-          step.className = 'Selesai';
+        } else if (getStepOrder(stepName) < getStepOrder(currentStep)) {
+          step.className = 'step completed';
         }
       });
+    }
+
+    // Helper function untuk menentukan urutan step
+    function getStepOrder(stepName) {
+      const order = {
+        'prodActual': 1,
+        'prodBudget': 2,
+        'budget': 3,
+        'actual': 4
+      };
+      return order[stepName] || 0;
     }
 
     // Fungsi untuk menampilkan notifikasi di progress bar
@@ -681,6 +693,14 @@
             // First get total count
             const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
             const totalRecords = countData.count || 0;
+
+            let totalRecords = 0;
+            try {
+              const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
+              totalRecords = countData.count || 0;
+            } catch (e) {
+              console.log(`Count endpoint not available for ${endpoint.name}, proceeding without count`);
+            }
             
             // Update with total count
             updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
@@ -703,11 +723,9 @@
           }
         }
         
-        console.log('All data loaded successfully');
         showProgressNotification('Data berhasil dimuat ke database lokal', true);
         return true;
       } catch (error) {
-        console.error('Error loading data:', error);
         showProgressNotification(`Gagal memuat data: ${error.message}`, false);
         throw error;
       } finally {
