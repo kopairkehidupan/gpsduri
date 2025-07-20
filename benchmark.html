@@ -272,10 +272,22 @@
         <div class="progress-text" id="progressText">0%</div>
       </div>
       <div class="progress-steps" id="progressSteps">
-        <div class="step" data-step="prodActual">1. Memuat Data Produksi Aktual</div>
-        <div class="step" data-step="prodBudget">2. Memuat Data Produksi Budget</div>
-        <div class="step" data-step="budget">3. Memuat Data Budget</div>
-        <div class="step" data-step="actual">4. Memuat Data Aktual</div>
+        <div class="step" data-step="prodActual">
+          <div class="step-header">1. Memuat Data Produksi Aktual</div>
+          <div class="step-details" id="prodActualDetails"></div>
+        </div>
+        <div class="step" data-step="prodBudget">
+          <div class="step-header">2. Memuat Data Produksi Budget</div>
+          <div class="step-details" id="prodBudgetDetails"></div>
+        </div>
+        <div class="step" data-step="budget">
+          <div class="step-header">3. Memuat Data Budget</div>
+          <div class="step-details" id="budgetDetails"></div>
+        </div>
+        <div class="step" data-step="actual">
+          <div class="step-header">4. Memuat Data Aktual</div>
+          <div class="step-details" id="actualDetails"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -566,7 +578,7 @@
     }
 
     // Function to update progress
-    function updateProgress(progress, currentStep, status = 'active') {
+    function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0) {
       const progressFill = document.getElementById('progressFill');
       const progressText = document.getElementById('progressText');
       const stepElements = document.querySelectorAll('.step');
@@ -579,6 +591,16 @@
       stepElements.forEach(step => {
         if (step.dataset.step === currentStep) {
           step.className = 'step ' + status;
+          const detailsEl = step.querySelector('.step-details');
+          if (total > 0) {
+            detailsEl.textContent = `${loaded}/${total} records loaded`;
+          } else if (status === 'completed') {
+            detailsEl.textContent = `${loaded} records loaded`;
+          } else if (status === 'failed') {
+            detailsEl.textContent = 'Failed to load data';
+          } else {
+            detailsEl.textContent = 'Connecting...';
+          }
         } else if (step.dataset.step < currentStep) {
           step.className = 'step completed';
         }
@@ -590,6 +612,7 @@
       document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
     }
     
+    // Modified loadAllData function with data count tracking
     async function loadAllData() {
       try {
         // Show progress modal
@@ -634,21 +657,28 @@
           updateProgress(progress, endpoint.name, 'active');
           
           try {
+            // First get total count
+            const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
+            const totalRecords = countData.count || 0;
+            
+            // Update with total count
+            updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
+            
             // Fetch data
             const data = await fetchDataFromSheets(endpoint.url, endpoint.action);
             
             // Update progress during processing
-            updateProgress(progress + 10, endpoint.name, 'active');
+            updateProgress(progress + 10, endpoint.name, 'active', data.length, totalRecords);
             
             // Save to IndexedDB
             await saveToIndexedDB(endpoint.store, data);
             
             // Mark as completed
-            updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed');
+            updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', data.length, totalRecords);
           } catch (error) {
             console.error(`Error loading ${endpoint.name}:`, error);
             updateProgress(progress, endpoint.name, 'failed');
-            throw error; // Stop further processing if one fails
+            throw error;
           }
         }
         
@@ -658,7 +688,6 @@
         console.error('Error loading data:', error);
         throw error;
       } finally {
-        // Hide modal after a short delay to show final state
         setTimeout(() => showProgressModal(false), 1000);
       }
     }
