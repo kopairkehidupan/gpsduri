@@ -505,9 +505,10 @@
 
         // Tambahkan handler untuk blocked event
         request.onblocked = (event) => {
-          console.warn('Database open blocked, likely due to pending transaction');
-          // Dalam kasus nyata, Anda mungkin ingin memberi tahu pengguna
-          reject(new Error('Database blocked by another instance'));
+          console.error('Database blocked, closing all connections');
+          if (db) db.close();
+          event.target.source.close();
+          window.location.reload(); // Force refresh jika diperlukan
         };
       });
     }
@@ -549,6 +550,7 @@
     async function syncStoreData(endpoint) {
       const CHUNK_SIZE = 2000;
       let lastSyncTime = await getLastSyncTime(endpoint.store);
+      console.log(`Last sync for ${endpoint.store}:`, lastSyncTime);
       
       try {
         // Pastikan database masih terbuka dan valid
@@ -560,8 +562,14 @@
         const fullUrl = `${endpoint.url}${urlParams}`;
         
         const [countData, modifiedData] = await Promise.all([
-          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-          fetchDataFromSheets(fullUrl, endpoint.action)
+          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`).catch(e => {
+            console.error('Count fetch failed:', e);
+            return { count: 0 };
+          }),
+          fetchDataFromSheets(fullUrl, endpoint.action).catch(e => {
+            console.error('Data fetch failed:', e);
+            return [];
+          })
         ]);
         
         const totalRecords = countData.count || 0;
@@ -746,6 +754,7 @@
       try {
         // Coba fetch biasa dulu
         const response = await fetch(`${url}?action=${action}`);
+        console.log('Response status:', response.status);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
       } catch (error) {
@@ -864,18 +873,23 @@
     
     // Modified loadAllData function with data count tracking
     async function loadAllData() {
+      showProgressModal(true);
+      updateProgress(0, 'prodActual');
       try {
-        showProgressModal(true);
-        updateProgress(0, 'prodActual');
-
         // Pastikan database ditutup sebelum membuka kembali
         if (db) {
-          db.close();
-          db = null;
+          try {
+            db.close();
+          } catch (e) {
+            console.log('Error closing db:', e);
+          }
         }
+        db = null;
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Tunggu sampai database benar-benar terbuka
         db = await openDatabase();
+        console.log('Database opened:', db);
         if (!db) throw new Error('Failed to open database');
         
         const endpoints = [
@@ -1033,6 +1047,11 @@
     }
     
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
+      // Tambahkan ini di awal event handler
+      if (db) {
+        db.close();
+        db = null;
+      }
       this.disabled = true;
       this.innerHTML = '<span class="spinner"></span> Memuat...';
       
