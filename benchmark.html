@@ -562,22 +562,15 @@
         const fullUrl = `${endpoint.url}${urlParams}`;
         
         const [countData, modifiedData] = await Promise.all([
-          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`)
-            .catch(e => {
-              console.error('Count fetch error:', e);
-              return { count: 0 };
-            }),
+          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
           fetchDataFromSheets(fullUrl, endpoint.action)
-            .catch(e => {
-              console.error('Data fetch error:', e);
-              return [];
-            })
         ]);
-
-        console.log(`Count data:`, countData);
-        console.log(`Modified data length:`, modifiedData.length);
         
         const totalRecords = countData.count || 0;
+        const dataToProcess = Array.isArray(modifiedData) ? modifiedData : 
+                      (modifiedData.data || []);
+        console.log(`Data to process:`, dataToProcess.length);
+        
         updateProgress(0, endpoint.name, 'active', 0, totalRecords);
         
         if (modifiedData.length === 0) {
@@ -766,23 +759,25 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Coba parse sebagai JSON
+        const text = await response.text();
+        console.log('Raw response:', text); // Log raw response
+        
         try {
-          const data = await response.json();
-          console.log('Data received:', data);
-          return data;
+          const data = JSON.parse(text);
+          console.log('Parsed data:', data);
+          
+          // Handle inconsistent response formats
+          if (action.includes('Count')) {
+            return data.count ? data : { count: 0 };
+          } else {
+            return data.data || data || [];
+          }
         } catch (jsonError) {
           console.error('JSON parse error:', jsonError);
-          throw new Error('Invalid JSON response');
+          throw new Error('Invalid JSON response: ' + text);
         }
-        
       } catch (error) {
         console.error('Fetch error:', error);
-        // Hanya gunakan JSONP jika error CORS
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-          console.log('Trying JSONP fallback due to CORS...');
-          return fetchWithJsonp(url, action);
-        }
         throw error;
       }
     }
