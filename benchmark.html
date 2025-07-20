@@ -562,15 +562,20 @@
         const fullUrl = `${endpoint.url}${urlParams}`;
         
         const [countData, modifiedData] = await Promise.all([
-          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`).catch(e => {
-            console.error('Count fetch failed:', e);
-            return { count: 0 };
-          }),
-          fetchDataFromSheets(fullUrl, endpoint.action).catch(e => {
-            console.error('Data fetch failed:', e);
-            return [];
-          })
+          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`)
+            .catch(e => {
+              console.error('Count fetch error:', e);
+              return { count: 0 };
+            }),
+          fetchDataFromSheets(fullUrl, endpoint.action)
+            .catch(e => {
+              console.error('Data fetch error:', e);
+              return [];
+            })
         ]);
+
+        console.log(`Count data:`, countData);
+        console.log(`Modified data length:`, modifiedData.length);
         
         const totalRecords = countData.count || 0;
         updateProgress(0, endpoint.name, 'active', 0, totalRecords);
@@ -603,7 +608,7 @@
             
             await new Promise(resolve => setTimeout(resolve, 0));
           } catch (error) {
-            console.error(`Error processing chunk starting at ${i}:`, error);
+            console.error('Sync error:', error);
             throw error;
           }
         }
@@ -752,33 +757,50 @@
     // Function to fetch data from Google Sheets
     async function fetchDataFromSheets(url, action) {
       try {
-        // Coba fetch biasa dulu
+        console.log(`Fetching ${url}?action=${action}`);
         const response = await fetch(`${url}?action=${action}`);
-        console.log('Response status:', response.status);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        return await response.json();
+        
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('Response not OK:', text);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Coba parse sebagai JSON
+        try {
+          const data = await response.json();
+          console.log('Data received:', data);
+          return data;
+        } catch (jsonError) {
+          console.error('JSON parse error:', jsonError);
+          throw new Error('Invalid JSON response');
+        }
+        
       } catch (error) {
-        console.log('Trying JSONP fallback...');
-        // Fallback ke JSONP
-        return new Promise((resolve, reject) => {
-          const callbackName = `jsonp_${Date.now()}`;
-          const script = document.createElement('script');
-          
-          window[callbackName] = (data) => {
-            resolve(data);
-            delete window[callbackName];
-            document.body.removeChild(script);
-          };
-          
-          script.src = `${url}?action=${action}&callback=${callbackName}`;
-          script.onerror = () => {
-            reject(new Error('JSONP request failed'));
-            delete window[callbackName];
-            document.body.removeChild(script);
-          };
-          
-          document.body.appendChild(script);
+        console.error('Fetch error:', error);
+        // Hanya gunakan JSONP jika error CORS
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          console.log('Trying JSONP fallback due to CORS...');
+          return fetchWithJsonp(url, action);
+        }
+        throw error;
+      }
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal 
         });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
       }
     }
     
@@ -875,8 +897,8 @@
     async function loadAllData() {
       showProgressModal(true);
       updateProgress(0, 'prodActual');
-      try {
-        // Pastikan database ditutup sebelum membuka kembali
+      
+        // Force close and reopen
         if (db) {
           try {
             db.close();
@@ -884,9 +906,11 @@
             console.log('Error closing db:', e);
           }
         }
-        db = null;
-        await new Promise(resolve => setTimeout(resolve, 200));
         
+        // Add delay to ensure clean state
+        await new Promise(resolve => setTimeout(resolve, 500));
+      
+        try {
         // Tunggu sampai database benar-benar terbuka
         db = await openDatabase();
         console.log('Database opened:', db);
@@ -985,6 +1009,7 @@
         return true;
       } catch (error) {
         showProgressNotification(`Gagal sinkronisasi data: ${error.message}`, false);
+        console.error('Database open error:', error);
         throw error;
       } finally {
         setTimeout(() => showProgressModal(false), 1000);
