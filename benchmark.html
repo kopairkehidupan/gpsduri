@@ -433,13 +433,14 @@
     // ---------------- END POINT untuk mengambil data dari server-------------//
     // Database setup for IndexedDB
     const DB_NAME = 'KebunDatabase';
-    const DB_VERSION = 1;
-    const STORES = {
-      PROD_ACTUAL: 'prodActual',
-      PROD_BUDGET: 'prodBudget',
-      BUDGET: 'budget',
-      ACTUAL: 'actual'
-    };
+      const DB_VERSION = 2; // Versi dinaikkan untuk tambahan store
+      const STORES = {
+        PROD_ACTUAL: 'prodActual',
+        PROD_BUDGET: 'prodBudget',
+        BUDGET: 'budget',
+        ACTUAL: 'actual',
+        SYNC_META: 'syncMeta' // Tambahan store untuk metadata
+      };
     
     let db;
     
@@ -461,22 +462,182 @@
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
           
-          // Create object stores if they don't exist
+          // Create object stores
           if (!db.objectStoreNames.contains(STORES.PROD_ACTUAL)) {
-            db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
+            const store = db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
           }
+          
           if (!db.objectStoreNames.contains(STORES.PROD_BUDGET)) {
-            db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
+            const store = db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
           }
+          
           if (!db.objectStoreNames.contains(STORES.BUDGET)) {
-            db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
+            const store = db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
           }
+          
           if (!db.objectStoreNames.contains(STORES.ACTUAL)) {
-            db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
+            const store = db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
+            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+          }
+          
+          if (!db.objectStoreNames.contains(STORES.SYNC_META)) {
+            db.createObjectStore(STORES.SYNC_META, { keyPath: 'storeName' });
           }
           
           console.log('Database upgrade complete');
         };
+      });
+    }
+
+    // Fungsi untuk mendapatkan timestamp sync terakhir
+    async function getLastSyncTime(storeName) {
+      return new Promise((resolve) => {
+        const transaction = db.transaction(STORES.SYNC_META, 'readonly');
+        const store = transaction.objectStore(STORES.SYNC_META);
+        const request = store.get(storeName);
+        
+        request.onsuccess = () => resolve(request.result?.lastSync || null);
+        request.onerror = () => resolve(null);
+      });
+    }
+    
+    // Fungsi untuk menyimpan timestamp sync
+    async function setLastSyncTime(storeName) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORES.SYNC_META, 'readwrite');
+        const store = transaction.objectStore(STORES.SYNC_META);
+        const request = store.put({ 
+          storeName, 
+          lastSync: new Date().toISOString() 
+        });
+        
+        request.onsuccess = resolve;
+        request.onerror = reject;
+      });
+    }
+    
+    // Fungsi untuk sync data dengan chunk processing
+    async function syncStoreData(endpoint) {
+      const CHUNK_SIZE = 2000; // Ukuran chunk optimal
+      let lastSyncTime = await getLastSyncTime(endpoint.store);
+      
+      try {
+        // 1. Ambil data modified sejak last sync
+        const urlParams = lastSyncTime ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}` : '';
+        const fullUrl = `${endpoint.url}${urlParams}`;
+        
+        // 2. Ambil total count dulu
+        const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
+        const totalRecords = countData.count || 0;
+        updateProgress(0, endpoint.name, 'active', 0, totalRecords);
+        
+        // 3. Ambil data modified
+        const modifiedData = await fetchDataFromSheets(fullUrl, endpoint.action);
+        
+        if (modifiedData.length === 0) {
+          console.log(`No changes for ${endpoint.name}`);
+          return { added: 0, updated: 0, deleted: 0 };
+        }
+        
+        // 4. Proses dalam chunk
+        let added = 0;
+        let updated = 0;
+        let deleted = 0;
+        
+        for (let i = 0; i < modifiedData.length; i += CHUNK_SIZE) {
+          const chunk = modifiedData.slice(i, i + CHUNK_SIZE);
+          const result = await processDataChunk(endpoint.store, chunk);
+          
+          added += result.added;
+          updated += result.updated;
+          deleted += result.deleted;
+          
+          // Update progress
+          const processed = Math.min(i + CHUNK_SIZE, modifiedData.length);
+          updateProgress(
+            (processed / modifiedData.length) * 100,
+            endpoint.name,
+            'active',
+            processed,
+            totalRecords
+          );
+          
+          // Yield ke main thread untuk menjaga responsivitas UI
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        // 5. Update sync time jika berhasil
+        await setLastSyncTime(endpoint.store);
+        
+        return { added, updated, deleted };
+        
+      } catch (error) {
+        console.error(`Sync failed for ${endpoint.name}:`, error);
+        throw error;
+      }
+    }
+    
+    // Fungsi untuk memproses chunk data
+    async function processDataChunk(storeName, chunk) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        let added = 0;
+        let updated = 0;
+        let deleted = 0;
+        
+        // Proses setiap item dalam chunk
+        const processNext = (index) => {
+          if (index >= chunk.length) {
+            resolve({ added, updated, deleted });
+            return;
+          }
+          
+          const item = chunk[index];
+          
+          if (item._deleted) {
+            // Handle deleted item
+            const request = store.delete(item.id);
+            request.onsuccess = () => {
+              deleted++;
+              processNext(index + 1);
+            };
+            request.onerror = () => processNext(index + 1);
+          } else {
+            // Cek apakah item sudah ada
+            const getRequest = store.get(item.id);
+            
+            getRequest.onsuccess = () => {
+              const existing = getRequest.result;
+              
+              if (existing) {
+                // Update existing
+                const putRequest = store.put(item);
+                putRequest.onsuccess = () => {
+                  updated++;
+                  processNext(index + 1);
+                };
+                putRequest.onerror = () => processNext(index + 1);
+              } else {
+                // Add new
+                const addRequest = store.add(item);
+                addRequest.onsuccess = () => {
+                  added++;
+                  processNext(index + 1);
+                };
+                addRequest.onerror = () => processNext(index + 1);
+              }
+            };
+            
+            getRequest.onerror = () => processNext(index + 1);
+          }
+        };
+        
+        processNext(0);
       });
     }
     
@@ -648,14 +809,11 @@
     // Modified loadAllData function with data count tracking
     async function loadAllData() {
       try {
-        // Show progress modal
         showProgressModal(true);
         updateProgress(0, 'prodActual');
         
-        // Open database
         await openDatabase();
         
-        // Define endpoints and their order
         const endpoints = [
           { 
             name: 'prodActual',
@@ -683,36 +841,52 @@
           }
         ];
         
-        // Process each endpoint sequentially
+        // Lakukan full sync pertama kali atau periodic
+        const lastFullSync = await getLastSyncTime('lastFullSync');
+        const daysSinceFullSync = lastFullSync ? 
+          (new Date() - new Date(lastFullSync)) / (1000 * 60 * 60 * 24) : Infinity;
+        
+        const needFullSync = !lastFullSync || daysSinceFullSync > 7; // Full sync mingguan
+        
         for (let i = 0; i < endpoints.length; i++) {
           const endpoint = endpoints[i];
           const progress = (i / endpoints.length) * 100;
           updateProgress(progress, endpoint.name, 'active');
           
           try {
-
-            let totalRecords = 0;
-            try {
+            if (needFullSync) {
+              // Full sync dengan chunk processing
               const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
-              totalRecords = countData.count || 0;
-            } catch (e) {
-              console.log(`Count endpoint not available for ${endpoint.name}, proceeding without count`);
+              const totalRecords = countData.count || 0;
+              
+              updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
+              
+              const fullData = await fetchDataFromSheets(endpoint.url, endpoint.action);
+              
+              // Simpan dengan chunk processing
+              await saveLargeData(endpoint.store, fullData, 2000, (processed) => {
+                updateProgress(
+                  progress + (10 * (processed / fullData.length)),
+                  endpoint.name,
+                  'active',
+                  processed,
+                  totalRecords
+                );
+              });
+              
+              await setLastSyncTime(endpoint.store);
+              updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', fullData.length, totalRecords);
+            } else {
+              // Incremental sync
+              const result = await syncStoreData(endpoint);
+              updateProgress(
+                ((i + 1) / endpoints.length) * 100,
+                endpoint.name,
+                'completed',
+                result.added + result.updated,
+                result.added + result.updated + result.deleted
+              );
             }
-            
-            // Update with total count
-            updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
-            
-            // Fetch data
-            const data = await fetchDataFromSheets(endpoint.url, endpoint.action);
-            
-            // Update progress during processing
-            updateProgress(progress + 10, endpoint.name, 'active', data.length, totalRecords);
-            
-            // Save to IndexedDB
-            await saveToIndexedDB(endpoint.store, data);
-            
-            // Mark as completed
-            updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', data.length, totalRecords);
           } catch (error) {
             console.error(`Error loading ${endpoint.name}:`, error);
             updateProgress(progress, endpoint.name, 'failed');
@@ -720,14 +894,61 @@
           }
         }
         
-        showProgressNotification('Data berhasil dimuat ke database lokal', true);
+        if (needFullSync) {
+          await setLastSyncTime('lastFullSync');
+        }
+        
+        showProgressNotification('Data berhasil disinkronisasi', true);
         return true;
       } catch (error) {
-        showProgressNotification(`Gagal memuat data: ${error.message}`, false);
+        showProgressNotification(`Gagal sinkronisasi data: ${error.message}`, false);
         throw error;
       } finally {
         setTimeout(() => showProgressModal(false), 1000);
       }
+    }
+    
+    // Fungsi bantu untuk save data besar per chunk
+    async function saveLargeData(storeName, data, chunkSize, progressCallback) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        // Clear existing data first
+        store.clear().onsuccess = () => {
+          let processed = 0;
+          
+          const processNextChunk = (startIdx) => {
+            if (startIdx >= data.length) {
+              resolve();
+              return;
+            }
+            
+            const endIdx = Math.min(startIdx + chunkSize, data.length);
+            const chunk = data.slice(startIdx, endIdx);
+            
+            const requests = chunk.map(item => {
+              return new Promise((res, rej) => {
+                const req = store.add(item);
+                req.onsuccess = res;
+                req.onerror = rej;
+              });
+            });
+            
+            Promise.all(requests)
+              .then(() => {
+                processed += chunk.length;
+                progressCallback(processed);
+                
+                // Beri waktu untuk UI update
+                setTimeout(() => processNextChunk(endIdx), 0);
+              })
+              .catch(reject);
+          };
+          
+          processNextChunk(0);
+        };
+      });
     }
     
     document.getElementById('loadDataBtn').addEventListener('click', async function() {
