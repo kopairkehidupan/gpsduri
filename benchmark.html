@@ -367,8 +367,28 @@
         return null;
       }
     }
+
+    // Modifikasi fungsi onEachFeature untuk menambahkan event click
+    function onEachFeature(feature, layer) {
+      const props = feature.properties;
+      const popupContent = `
+        <b>Kebun:</b> ${props.kebun}<br>
+        <b>Divisi:</b> ${props.divisi}<br>
+        <b>Blok:</b> ${props.blok}<br>
+        <b>Kode:</b> ${props.kode}<br>
+        <b>Luas:</b> ${props.luas} Ha<br>
+        <b>Tahun Tanam:</b> ${props.tahun}<br>
+        <b>Umur:</b> ${props.umur} tahun
+      `;
+      layer.bindPopup(popupContent);
+      
+      // Tambahkan event click untuk menampilkan detail data
+      layer.on('click', function() {
+        showBlockDetails(props.blok, props.kebun, props.divisi);
+      });
+    }
     
-    // Show GeoJSON on map
+    // Modifikasi fungsi showGeoJsonOnMap untuk menggunakan onEachFeature yang baru
     function showGeoJsonOnMap(data) {
       if (geoJsonLayer) {
         map.removeLayer(geoJsonLayer);
@@ -385,19 +405,7 @@
             fillOpacity: 0.7
           };
         },
-        onEachFeature: function(feature, layer) {
-          const props = feature.properties;
-          const popupContent = `
-            <b>Kebun:</b> ${props.kebun}<br>
-            <b>Divisi:</b> ${props.divisi}<br>
-            <b>Blok:</b> ${props.blok}<br>
-            <b>Kode:</b> ${props.kode}<br>
-            <b>Luas:</b> ${props.luas} Ha<br>
-            <b>Tahun Tanam:</b> ${props.tahun}<br>
-            <b>Umur:</b> ${props.umur} tahun
-          `;
-          layer.bindPopup(popupContent);
-        }
+        onEachFeature: onEachFeature
       }).addTo(map);
       
       map.fitBounds(geoJsonLayer.getBounds());
@@ -475,6 +483,20 @@
           showGeoJsonOnMap(filteredData);
         });
       }
+
+      // Event listener untuk tab
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          // Hapus class active dari semua tab dan content
+          document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          // Tambahkan class active ke tab yang diklik
+          this.classList.add('active');
+          const tabId = this.getAttribute('data-tab');
+          document.getElementById(`${tabId}Tab`).classList.add('active');
+        });
+      });
     });
   </script>
   
