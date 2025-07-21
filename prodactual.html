@@ -11,6 +11,8 @@
   <script src="https://unpkg.com/x-data-spreadsheet@1.1.7/dist/xspreadsheet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/pikaday.min.js"></script>
   <link href="budgetstyle.css" rel="stylesheet">
   <script src="budget.js"></script>
  <style>
@@ -1018,76 +1020,25 @@
       let currentDropdown = null;
 
       xs.on('cell-selected', (cell, ri, ci) => {
-          // Hapus dropdown sebelumnya jika ada
-          if (currentDropdown) {
-              currentDropdown.remove();
-              currentDropdown = null;
-          }
-          
-          // Cek jika kolom bulan (indeks 5) dipilih dan cell valid
-          if (ci === 5 && cell && cell.offsetLeft && cell.offsetTop) {
-              const currentYear = new Date().getFullYear();
-              const months = [
-                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-              ];
-              
-              // Buat dropdown element
-              currentDropdown = document.createElement('select');
-              currentDropdown.className = 'month-year-dropdown';
-              currentDropdown.style.position = 'absolute';
-              currentDropdown.style.zIndex = '10000';
-              currentDropdown.style.border = '1px solid #4285f4';
-              currentDropdown.style.borderRadius = '4px';
-              currentDropdown.style.padding = '5px';
-              currentDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-              
-              // Tambahkan opsi bulan
-              months.forEach(month => {
-                  const option = document.createElement('option');
-                  option.value = `${month}-${currentYear}`;
-                  option.textContent = `${month}-${currentYear}`;
-                  currentDropdown.appendChild(option);
-              });
-              
-              // Hitung posisi dropdown
-              const spreadsheetRect = document.getElementById('xspreadsheet').getBoundingClientRect();
-              const cellLeft = cell.offsetLeft + spreadsheetRect.left;
-              const cellTop = cell.offsetTop + spreadsheetRect.top + cell.offsetHeight;
-              
-              // Position dropdown
-              currentDropdown.style.left = `${cellLeft}px`;
-              currentDropdown.style.top = `${cellTop}px`;
-              
-              // Tambahkan ke body
-              document.body.appendChild(currentDropdown);
-              
-              // Fokus dan handle perubahan
-              currentDropdown.focus();
-              
-              currentDropdown.addEventListener('change', (e) => {
-                  xs.setCellText(ri, ci, e.target.value);
-                  currentDropdown.remove();
-                  currentDropdown = null;
-              });
-              
-              currentDropdown.addEventListener('blur', () => {
-                  setTimeout(() => {
-                      if (currentDropdown) {
-                          currentDropdown.remove();
-                          currentDropdown = null;
-                      }
-                  }, 200);
-              });
-              
-              // Tutup dropdown ketika klik di luar
-              document.addEventListener('click', function closeDropdown(e) {
-                  if (!currentDropdown.contains(e.target)) {
-                      currentDropdown.remove();
-                      currentDropdown = null;
-                      document.removeEventListener('click', closeDropdown);
+          if (ci === 5 && cell) {
+              const picker = new Pikaday({
+                  field: document.createElement('input'),
+                  format: 'MMM-YYYY',
+                  onSelect: function() {
+                      const date = this.getDate();
+                      const month = ['Jan','Feb','Mar','Apr','May','Jun',
+                                   'Jul','Aug','Sep','Oct','Nov','Dec'][date.getMonth()];
+                      const year = date.getFullYear();
+                      xs.setCellText(ri, ci, `${month}-${year}`);
+                      this.destroy();
+                  },
+                  onClose: function() {
+                      this.destroy();
                   }
               });
+              
+              // Trigger picker
+              picker.show();
           }
       });
 
