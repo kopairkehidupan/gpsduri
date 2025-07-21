@@ -495,6 +495,7 @@
         });
       });
     });
+    
     // ---------------- END POINT untuk mengambil menampilkan data dari indexDB-------------//
     // Fungsi untuk membuka koneksi IndexedDB
     function openDatabase() {
@@ -513,7 +514,7 @@
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
           // Buat object store jika belum ada
-          if (!db.objectStoreNames.contains('aktual')) {
+          if (!db.objectStoreNames.contains('actual')) {
             db.createObjectStore('Aktual', { keyPath: 'id' });
           }
           if (!db.objectStoreNames.contains('budget')) {
@@ -557,12 +558,12 @@
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
       
-      // Ambil semua data yang diperlukan
+      // Use the correct store names from STORES constant
       const [prodActualData, prodBudgetData, costActualData, costBudgetData] = await Promise.all([
-        getDataFromDB('prodActual'),
-        getDataFromDB('prodBudget'),
-        getDataFromDB('Aktual'),
-        getDataFromDB('Budget')
+        getDataFromDB(STORES.PROD_ACTUAL),
+        getDataFromDB(STORES.PROD_BUDGET),
+        getDataFromDB(STORES.ACTUAL),  // Changed from 'aktual' to STORES.ACTUAL
+        getDataFromDB(STORES.BUDGET)
       ]);
       
       // Filter data berdasarkan blok, kebun, dan divisi
