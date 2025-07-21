@@ -556,78 +556,88 @@
           db = await openDatabase();
         }
         
-        // Perbaiki format URL parameter
-        const urlParams = lastSyncTime 
-          ? `?modifiedSince=${encodeURIComponent(lastSyncTime)}`
-          : '';
-        
-        // Gunakan URL langsung tanpa menambahkan action lagi
-        const fullUrl = `${endpoint.url}${urlParams}`;
-        console.log('Fetching modified data from:', fullUrl);
-        
-        const [countData, modifiedData] = await Promise.all([
+        // Ambil semua data terbaru dari sheet
+        const [countData, allSheetData] = await Promise.all([
           fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-          // Kirim action sebagai parameter terpisah
-          fetch(`${fullUrl}&action=${endpoint.action}`)
-            .then(handleResponse)
-            .then(data => data.data || data || [])
+          fetchDataFromSheets(endpoint.url, endpoint.action)
         ]);
         
         const totalRecords = countData.count || 0;
-        const dataToProcess = Array.isArray(modifiedData) ? modifiedData : 
-                            (modifiedData?.data || []);
+        const sheetData = Array.isArray(allSheetData) ? allSheetData : (allSheetData?.data || []);
         
-        console.log(`Data to process:`, dataToProcess.length, dataToProcess); // Debug data
+        // Ambil semua ID yang ada di IndexedDB
+        const dbIds = await getAllIdsFromIndexedDB(endpoint.store);
         
-        updateProgress(0, endpoint.name, 'active', 0, totalRecords);
+        // Ambil semua ID yang ada di Sheet
+        const sheetIds = sheetData.map(item => item.id.toString());
         
-        if (modifiedData.length === 0) {
-          console.log(`No changes for ${endpoint.name}`);
-          return { added: 0, updated: 0, deleted: 0 };
+        // Cari ID yang ada di DB tapi tidak ada di Sheet
+        const idsToDelete = dbIds.filter(id => !sheetIds.includes(id.toString()));
+        
+        // Proses penghapusan
+        let deletedCount = 0;
+        if (idsToDelete.length > 0) {
+          deletedCount = await deleteRecordsFromIndexedDB(endpoint.store, idsToDelete);
+          console.log(`Deleted ${deletedCount} records from ${endpoint.store}`);
         }
         
-        // Buka transaksi baru untuk setiap chunk
-        let added = 0, updated = 0, deleted = 0;
-        
-        for (let i = 0; i < modifiedData.length; i += CHUNK_SIZE) {
-          try {
-            const chunk = modifiedData.slice(i, i + CHUNK_SIZE);
-            const result = await processDataChunkWithRetry(endpoint.store, chunk);
-            
-            added += result.added;
-            updated += result.updated;
-            deleted += result.deleted;
-            
-            const processed = Math.min(i + CHUNK_SIZE, modifiedData.length);
-            updateProgress(
-              (processed / modifiedData.length) * 100,
-              endpoint.name,
-              'active',
-              processed,
-              totalRecords
-            );
-            
-            await new Promise(resolve => setTimeout(resolve, 0));
-          } catch (error) {
-            console.error('Sync error:', error);
-            throw error;
-          }
+        // Proses sync normal (tambah/update)
+        let added = 0, updated = 0;
+        for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
+          const chunk = sheetData.slice(i, i + CHUNK_SIZE);
+          const result = await processDataChunkWithRetry(endpoint.store, chunk);
+          
+          added += result.added;
+          updated += result.updated;
+          
+          const processed = Math.min(i + CHUNK_SIZE, sheetData.length);
+          updateProgress(
+            (processed / sheetData.length) * 100,
+            endpoint.name,
+            'active',
+            processed,
+            totalRecords
+          );
+          
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
         
         await setLastSyncTime(endpoint.store);
-        return { added, updated, deleted };
+        return { added, updated, deleted: deletedCount };
         
       } catch (error) {
-        console.error(`Sync failed:`, error);
+        console.error(`Sync failed for ${endpoint.name}:`, error);
+        throw error;
       }
     }
 
-    async function handleResponse(response) {
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`HTTP ${response.status}: ${text}`);
-      }
-      return response.json();
+    // Fungsi untuk mendapatkan semua ID dari IndexedDB
+    async function getAllIdsFromIndexedDB(storeName) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.getAllKeys();
+        
+        request.onsuccess = () => resolve(request.result.map(id => id.toString()));
+        request.onerror = () => reject(new Error('Failed to get IDs from IndexedDB'));
+      });
+    }
+    
+    // Fungsi untuk menghapus multiple records dari IndexedDB
+    async function deleteRecordsFromIndexedDB(storeName, ids) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        let deletedCount = 0;
+        
+        ids.forEach(id => {
+          const request = store.delete(Number(id) || id);
+          request.onsuccess = () => deletedCount++;
+        });
+        
+        transaction.oncomplete = () => resolve(deletedCount);
+        transaction.onerror = () => reject(transaction.error);
+      });
     }
     
     // Fungsi baru dengan retry mechanism
@@ -657,53 +667,39 @@
         
         let added = 0;
         let updated = 0;
-        let deleted = 0;
         
-        // Proses setiap item dalam chunk
         const processNext = (index) => {
           if (index >= chunk.length) {
-            resolve({ added, updated, deleted });
+            resolve({ added, updated });
             return;
           }
           
           const item = chunk[index];
+          const getRequest = store.get(item.id);
           
-          if (item._deleted) {
-            // Handle deleted item
-            const request = store.delete(item.id);
-            request.onsuccess = () => {
-              deleted++;
-              processNext(index + 1);
-            };
-            request.onerror = () => processNext(index + 1);
-          } else {
-            // Cek apakah item sudah ada
-            const getRequest = store.get(item.id);
+          getRequest.onsuccess = () => {
+            const existing = getRequest.result;
             
-            getRequest.onsuccess = () => {
-              const existing = getRequest.result;
-              
-              if (existing) {
-                // Update existing
-                const putRequest = store.put(item);
-                putRequest.onsuccess = () => {
-                  updated++;
-                  processNext(index + 1);
-                };
-                putRequest.onerror = () => processNext(index + 1);
-              } else {
-                // Add new
-                const addRequest = store.add(item);
-                addRequest.onsuccess = () => {
-                  added++;
-                  processNext(index + 1);
-                };
-                addRequest.onerror = () => processNext(index + 1);
-              }
-            };
-            
-            getRequest.onerror = () => processNext(index + 1);
-          }
+            if (existing) {
+              // Update existing
+              const putRequest = store.put(item);
+              putRequest.onsuccess = () => {
+                updated++;
+                processNext(index + 1);
+              };
+              putRequest.onerror = () => processNext(index + 1);
+            } else {
+              // Add new
+              const addRequest = store.add(item);
+              addRequest.onsuccess = () => {
+                added++;
+                processNext(index + 1);
+              };
+              addRequest.onerror = () => processNext(index + 1);
+            }
+          };
+          
+          getRequest.onerror = () => processNext(index + 1);
         };
         
         processNext(0);
