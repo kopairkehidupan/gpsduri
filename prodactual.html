@@ -988,6 +988,23 @@
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       
+      // Buat daftar opsi bulan untuk tahun ini dan tahun depan
+      function createMonthOptions() {
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+        const options = [];
+        
+        for (let year = currentYear; year <= nextYear; year++) {
+          monthNames.forEach(month => {
+            options.push(`${month}-${year}`);
+          });
+        }
+        
+        return options;
+      }
+      
+      const monthOptions = createMonthOptions();
+      
       // Fungsi untuk memvalidasi format bulan
       function isValidMonthYear(input) {
         const parts = input.split('-');
@@ -1020,45 +1037,52 @@
         },
         message: "Format bulan harus MMM-YYYY (contoh: Jan-2025, Feb-2025)"
       }]);
-
-      // Variabel untuk menyimpan opsi bulan
-      let monthOptions = [];
       
-      // Buat daftar opsi bulan untuk tahun ini dan tahun depan
-      function createMonthOptions() {
-        const currentYear = new Date().getFullYear();
-        const nextYear = currentYear + 1;
-        const options = [];
-        
-        for (let year = currentYear; year <= nextYear; year++) {
-          monthNames.forEach(month => {
-            options.push(`${month}-${year}`);
-          });
-        }
-        
-        return options;
-      }
-      
-      // Inisialisasi opsi bulan
-      monthOptions = createMonthOptions();
-      
-      // Tambahkan event listener untuk cell-selected (bukan cell-edited)
-      xs.on('cell-selected', (cell, ri, ci) => {
+      // Tambahkan dropdown untuk kolom bulan
+      xs.on('cell-edited', (cell, ri, ci) => {
         if (ci === 5) { // Kolom bulan
-          // Set editor dropdown ketika sel dipilih
-          xs.setCellEditor('select', {
-            data: monthOptions,
-            value: cell?.text || '',
-            onchange: (value) => {
-              xs.setCellText(ri, ci, value);
-            }
+          // Buat elemen dropdown
+          const dropdown = document.createElement('select');
+          dropdown.style.width = '100%';
+          dropdown.style.height = '100%';
+          
+          // Tambahkan opsi kosong
+          const emptyOption = document.createElement('option');
+          emptyOption.value = '';
+          emptyOption.textContent = 'Pilih bulan';
+          dropdown.appendChild(emptyOption);
+          
+          // Tambahkan opsi bulan
+          monthOptions.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            opt.textContent = option;
+            dropdown.appendChild(opt);
           });
+          
+          // Set nilai dropdown sesuai dengan nilai sel
+          dropdown.value = cell?.text || '';
+          
+          // Ganti editor dengan dropdown
+          const editor = xs.editor;
+          if (editor) {
+            editor.el.innerHTML = '';
+            editor.el.appendChild(dropdown);
+            
+            // Fokus ke dropdown
+            dropdown.focus();
+            
+            // Handle perubahan nilai
+            dropdown.addEventListener('change', () => {
+              xs.setCellText(ri, ci, dropdown.value);
+            });
+            
+            // Tutup editor saat kehilangan fokus
+            dropdown.addEventListener('blur', () => {
+              editor.hide();
+            });
+          }
         }
-      });
-      
-      // Reset editor ketika keluar dari sel
-      xs.on('cell-unselected', () => {
-        xs.setCellEditor('text');
       });
 
       // Helper function to generate unique ID
