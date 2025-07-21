@@ -549,14 +549,12 @@
     // Fungsi untuk sync data dengan chunk processing
     async function syncStoreData(endpoint) {
       const CHUNK_SIZE = 2000;
-      let lastSyncTime = await getLastSyncTime(endpoint.store);
-      
       try {
         if (!db || db.version !== DB_VERSION) {
           db = await openDatabase();
         }
-        
-        // Ambil semua data terbaru dari sheet
+    
+        // [1] Ambil semua data terbaru dari sheet
         const [countData, allSheetData] = await Promise.all([
           fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
           fetchDataFromSheets(endpoint.url, endpoint.action)
@@ -565,43 +563,52 @@
         const totalRecords = countData.count || 0;
         const sheetData = Array.isArray(allSheetData) ? allSheetData : (allSheetData?.data || []);
         
-        // Ambil semua ID yang ada di IndexedDB
-        const dbIds = await getAllIdsFromIndexedDB(endpoint.store);
+        // [2] Ambil semua ID dari IndexedDB dan Sheet dengan format yang konsisten
+        const [dbIds, sheetIds] = await Promise.all([
+          getAllIdsFromIndexedDB(endpoint.store),
+          Promise.resolve(sheetData.map(item => String(item.id))) // Pastikan string untuk konsistensi
+        ]);
         
-        // Ambil semua ID yang ada di Sheet
-        const sheetIds = sheetData.map(item => item.id.toString());
-        
-        // Cari ID yang ada di DB tapi tidak ada di Sheet
-        const idsToDelete = dbIds.filter(id => !sheetIds.includes(id.toString()));
-        
-        // Proses penghapusan
+        console.log(`Sync ${endpoint.store}: DB IDs: ${dbIds.length}, Sheet IDs: ${sheetIds.length}`);
+    
+        // [3] Cari ID yang perlu dihapus (ada di DB tapi tidak ada di Sheet)
+        const idsToDelete = dbIds.filter(dbId => !sheetIds.includes(String(dbId)));
+        console.log(`IDs to delete: ${idsToDelete.length}`, idsToDelete);
+    
+        // [4] Proses penghapusan dalam batch
         let deletedCount = 0;
         if (idsToDelete.length > 0) {
-          deletedCount = await deleteRecordsFromIndexedDB(endpoint.store, idsToDelete);
-          console.log(`Deleted ${deletedCount} records from ${endpoint.store}`);
+          // Hapus dalam batch untuk menghindari timeout
+          const BATCH_SIZE = 500;
+          for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
+            const batch = idsToDelete.slice(i, i + BATCH_SIZE);
+            deletedCount += await deleteRecordsFromIndexedDB(endpoint.store, batch);
+            console.log(`Deleted batch ${i} to ${i + batch.length}`);
+          }
         }
-        
-        // Proses sync normal (tambah/update)
+    
+        // [5] Proses tambah/update data
         let added = 0, updated = 0;
-        for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
-          const chunk = sheetData.slice(i, i + CHUNK_SIZE);
-          const result = await processDataChunkWithRetry(endpoint.store, chunk);
-          
-          added += result.added;
-          updated += result.updated;
-          
-          const processed = Math.min(i + CHUNK_SIZE, sheetData.length);
-          updateProgress(
-            (processed / sheetData.length) * 100,
-            endpoint.name,
-            'active',
-            processed,
-            totalRecords
-          );
-          
-          await new Promise(resolve => setTimeout(resolve, 0));
+        if (sheetData.length > 0) {
+          for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
+            const chunk = sheetData.slice(i, i + CHUNK_SIZE);
+            const result = await processDataChunkWithRetry(endpoint.store, chunk);
+            added += result.added;
+            updated += result.updated;
+            
+            updateProgress(
+              (i / sheetData.length) * 100,
+              endpoint.name,
+              'active',
+              i,
+              totalRecords
+            );
+            
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
         }
-        
+    
+        console.log(`Sync result: ${added} added, ${updated} updated, ${deletedCount} deleted`);
         await setLastSyncTime(endpoint.store);
         return { added, updated, deleted: deletedCount };
         
@@ -611,32 +618,58 @@
       }
     }
 
-    // Fungsi untuk mendapatkan semua ID dari IndexedDB
+    // Fungsi untuk mendapatkan semua ID dengan konsisten
     async function getAllIdsFromIndexedDB(storeName) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readonly');
         const store = transaction.objectStore(storeName);
         const request = store.getAllKeys();
         
-        request.onsuccess = () => resolve(request.result.map(id => id.toString()));
+        request.onsuccess = () => {
+          // Konversi semua ID ke string untuk konsistensi
+          const ids = request.result.map(id => 
+            typeof id === 'number' ? String(id) : id
+          );
+          resolve(ids);
+        };
         request.onerror = () => reject(new Error('Failed to get IDs from IndexedDB'));
       });
     }
     
-    // Fungsi untuk menghapus multiple records dari IndexedDB
+    // Fungsi penghapusan yang lebih robust
     async function deleteRecordsFromIndexedDB(storeName, ids) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
         let deletedCount = 0;
+        let errorCount = 0;
+    
+        // Handle transaction completion
+        transaction.oncomplete = () => {
+          console.log(`Deleted ${deletedCount} records successfully`);
+          resolve(deletedCount);
+        };
         
+        transaction.onerror = (event) => {
+          console.error('Transaction error:', event.target.error);
+          reject(event.target.error);
+        };
+    
+        // Proses penghapusan per ID
         ids.forEach(id => {
-          const request = store.delete(Number(id) || id);
-          request.onsuccess = () => deletedCount++;
+          // Handle baik ID string maupun number
+          const idToDelete = isNaN(id) ? id : Number(id);
+          const request = store.delete(idToDelete);
+          
+          request.onsuccess = () => {
+            deletedCount++;
+          };
+          
+          request.onerror = (event) => {
+            errorCount++;
+            console.error(`Failed to delete ID ${id}:`, event.target.error);
+          };
         });
-        
-        transaction.oncomplete = () => resolve(deletedCount);
-        transaction.onerror = () => reject(transaction.error);
       });
     }
     
@@ -946,7 +979,7 @@
         const daysSinceFullSync = lastFullSync ? 
           (new Date() - new Date(lastFullSync)) / (1000 * 60 * 60 * 24) : Infinity;
         
-        const needFullSync = !lastFullSync || daysSinceFullSync > 7;
+        const needFullSync = !lastFullSync || daysSinceFullSync > 7 || forceClear; 
         
         for (let i = 0; i < endpoints.length; i++) {
           const endpoint = endpoints[i];
