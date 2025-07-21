@@ -123,3 +123,85 @@
   margin-right: 0.5rem;
   font-size: 1.2rem;
 }
+
+.data-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--medium-gray);
+      margin-bottom: 1rem;
+    }
+    
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--dark-gray);
+      position: relative;
+    }
+    
+    .tab-btn.active {
+      color: var(--primary);
+    }
+    
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 1rem;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    
+    .data-card {
+      background-color: var(--light-gray);
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .data-card h4 {
+      margin-top: 0;
+      color: var(--primary);
+      border-bottom: 1px solid var(--medium-gray);
+      padding-bottom: 0.5rem;
+    }
+    
+    .data-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    
+    .data-item .label {
+      font-weight: 500;
+      color: var(--dark-gray);
+    }
+    
+    .data-item .value {
+      font-weight: 600;
+    }
+    
+    .comparison-positive {
+      color: var(--secondary);
+    }
+    
+    .comparison-negative {
+      color: #EA4335;
+    }
