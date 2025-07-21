@@ -1016,10 +1016,10 @@
         return true;
       }
 
-      // Setelah inisialisasi xs, tambahkan:
+      // Modify the cell-selected event handler to check for null cell
       xs.on('cell-selected', (cell, ri, ci) => {
-        // Jika kolom bulan (indeks 5) dipilih
-        if (ci === 5) {
+        // Jika kolom bulan (indeks 5) dipilih dan cell tidak null
+        if (ci === 5 && cell) {
           const currentYear = new Date().getFullYear();
           const months = [
             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
