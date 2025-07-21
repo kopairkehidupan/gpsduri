@@ -535,6 +535,11 @@
   #xspreadsheet .x-spreadsheet-cell {
     padding: 4px;
   }
+
+  .x-spreadsheet-cell.invalid {
+    background-color: #ffebee;
+    border: 1px solid #ef9a9a;
+  }
 </style>
 </head>
 <body>
@@ -979,6 +984,62 @@
           }
       }, 500)); // Throttle untuk performa
 
+      // Daftar nama bulan singkatan
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      
+      // Fungsi untuk memvalidasi format bulan
+      function isValidMonthYear(input) {
+        const parts = input.split('-');
+        if (parts.length !== 2) return false;
+        
+        const month = parts[0];
+        const year = parts[1];
+        
+        // Validasi bulan
+        if (!monthNames.includes(month)) return false;
+        
+        // Validasi tahun (4 digit angka)
+        if (!/^\d{4}$/.test(year)) return false;
+        
+        return true;
+      }
+      
+      // Set validator untuk kolom bulan (kolom ke-5, index 5)
+      xs.validate([{
+        col: 5, // Kolom bulan (index 5)
+        validator: (cell) => {
+          if (!cell || !cell.text) return true;
+          const isValid = isValidMonthYear(cell.text);
+          if (!isValid) {
+            cell.className = (cell.className || '') + ' invalid';
+          } else {
+            cell.className = (cell.className || '').replace(' invalid', '');
+          }
+          return isValid;
+        },
+        message: "Format bulan harus MMM-YYYY (contoh: Jan-2025, Feb-2025)"
+      }]);
+      
+      // Tambahkan juga editor dropdown untuk memudahkan input
+      xs.on('cell-edited', (cell, ri, ci) => {
+        if (ci === 5) { // Kolom bulan
+          const currentYear = new Date().getFullYear();
+          const nextYear = currentYear + 1;
+          
+          // Buat daftar opsi bulan untuk tahun ini dan tahun depan
+          const monthOptions = [];
+          for (let year = currentYear; year <= nextYear; year++) {
+            monthNames.forEach(month => {
+              monthOptions.push(`${month}-${year}`);
+            });
+          }
+          
+          // Set editor dropdown
+          xs.editor.options = monthOptions;
+        }
+      });
+
       // Helper function to generate unique ID
       function generateId() {
           return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
@@ -996,44 +1057,51 @@
 
       // Format data untuk penyimpanan - TAMBAHKAN syncStatus
       function formatDataForStorage(sheetData) {
-          const rows = sheetData[0].rows;
-          const result = [];
+        const rows = sheetData[0].rows;
+        const result = [];
+        
+        for (let i = 1; i < Object.keys(rows).length; i++) {
+          const row = rows[i];
+          if (!row || !row.cells) continue;
           
-          for (let i = 1; i < Object.keys(rows).length; i++) {
-              const row = rows[i];
-              if (!row || !row.cells) continue;
-              
-              const cells = row.cells;
-              
-              // Cek apakah baris memiliki data minimal (kebun atau divisi)
-              const hasData = cells[0]?.text || cells[1]?.text;
-              if (!hasData) continue; // Lewati baris kosong
-              
-              // Fungsi untuk mengkonversi string angka
-              const parseNumberWithCommas = (str) => {
-                  if (str === undefined || str === null || str === '') return 0;
-                  if (typeof str === 'number') return str;
-                  const cleaned = str.toString().replace(/,/g, '');
-                  return parseFloat(cleaned) || 0;
-              };
-              
-              result.push({
-                  id: generateId(),
-                  kebun: cells[0]?.text || '',
-                  divisi: cells[1]?.text || '',
-                  kodeTahunTanam: cells[2]?.text || '',
-                  blok: cells[3]?.text || '',
-                  luas: parseNumberWithCommas(cells[4]?.text),
-                  bulan: cells[5]?.text || '',
-                  produksi: parseNumberWithCommas(cells[6]?.text),
-                  tonase: parseNumberWithCommas(cells[7]?.text),
-                  tonperha: parseNumberWithCommas(cells[8]?.text),
-                  timestamp: new Date().toISOString(),
-                  syncStatus: "pending",
-                  syncError: null
-              });
+          const cells = row.cells;
+          
+          // Cek apakah baris memiliki data minimal (kebun atau divisi)
+          const hasData = cells[0]?.text || cells[1]?.text;
+          if (!hasData) continue; // Lewati baris kosong
+          
+          // Validasi format bulan
+          const bulan = cells[5]?.text || '';
+          if (bulan && !isValidMonthYear(bulan)) {
+            showSimpleToast(`Baris ${i}: Format bulan tidak valid. Gunakan format MMM-YYYY (contoh: Jan-2025)`);
+            continue; // Lewati baris dengan format bulan tidak valid
           }
-          return result;
+          
+          // Fungsi untuk mengkonversi string angka
+          const parseNumberWithCommas = (str) => {
+            if (str === undefined || str === null || str === '') return 0;
+            if (typeof str === 'number') return str;
+            const cleaned = str.toString().replace(/,/g, '');
+            return parseFloat(cleaned) || 0;
+          };
+          
+          result.push({
+            id: generateId(),
+            kebun: cells[0]?.text || '',
+            divisi: cells[1]?.text || '',
+            kodeTahunTanam: cells[2]?.text || '',
+            blok: cells[3]?.text || '',
+            luas: parseNumberWithCommas(cells[4]?.text),
+            bulan: bulan,
+            produksi: parseNumberWithCommas(cells[6]?.text),
+            tonase: parseNumberWithCommas(cells[7]?.text),
+            tonperha: parseNumberWithCommas(cells[8]?.text),
+            timestamp: new Date().toISOString(),
+            syncStatus: "pending",
+            syncError: null
+          });
+        }
+        return result;
       }
 
       // Variabel pagination
@@ -1630,60 +1698,66 @@
       });
     
       document.getElementById('importFile').addEventListener('change', async function(e) {
-          const file = e.target.files[0];
-          if (!file) return;
+        const file = e.target.files[0];
+        if (!file) return;
       
-          const reader = new FileReader();
-          reader.onload = async function(e) {
-              try {
-                  const data = new Uint8Array(e.target.result);
-                  const workbook = XLSX.read(data, { type: 'array' });
-                  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                  
-                  const importedData = [];
-                  for (let i = 1; i < jsonData.length; i++) {
-                      const row = jsonData[i];
-                      if (!row || (!row[0] && !row[1])) continue;
-                      
-                      // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
-                      const parseNumberWithCommas = (num) => {
-                          if (typeof num === 'number') return num;
-                          if (!num) return 0;
-                          // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
-                          const cleaned = num.toString().replace(/,/g, '');
-                          return parseFloat(cleaned);
-                      };
-                      
-                      importedData.push({
-                          id: generateId(),
-                          kebun: row[0] || '',
-                          divisi: row[1] || '',
-                          kodeTahunTanam: row[2] || '',
-                          blok: row[3] || '',
-                          luas: parseFloat(row[4]) || 0,
-                          bulan: row[5] || '',
-                          produksi: parseFloat(row[6]) || 0,
-                          tonase: parseFloat(row[7]) || 0,
-                          tonperha: parseFloat(row[8]) || 0,
-                          timestamp: new Date().toISOString(),
-                          syncStatus: "pending",
-                          syncError: null
-                      });
-                  }
-                  
-                  // Simpan ke IndexedDB
-                  await saveToIndexedDB(importedData);
-                  
-                  showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
-                  loadDataToTable(currentPage);
-                  e.target.value = '';
-              } catch (error) {
-                  console.error('Error:', error);
-                  showSimpleToast('Gagal mengimport file Excel');
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            const importedData = [];
+            for (let i = 1; i < jsonData.length; i++) {
+              const row = jsonData[i];
+              if (!row || (!row[0] && !row[1])) continue;
+              
+              // Validasi format bulan
+              const bulan = row[5] || '';
+              if (bulan && !isValidMonthYear(bulan)) {
+                console.warn(`Baris ${i}: Format bulan tidak valid - ${bulan}`);
+                continue;
               }
-          };
-          reader.readAsArrayBuffer(file);
+              
+              // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
+              const parseNumberWithCommas = (num) => {
+                if (typeof num === 'number') return num;
+                if (!num) return 0;
+                const cleaned = num.toString().replace(/,/g, '');
+                return parseFloat(cleaned);
+              };
+              
+              importedData.push({
+                id: generateId(),
+                kebun: row[0] || '',
+                divisi: row[1] || '',
+                kodeTahunTanam: row[2] || '',
+                blok: row[3] || '',
+                luas: parseFloat(row[4]) || 0,
+                bulan: bulan,
+                produksi: parseFloat(row[6]) || 0,
+                tonase: parseFloat(row[7]) || 0,
+                tonperha: parseFloat(row[8]) || 0,
+                timestamp: new Date().toISOString(),
+                syncStatus: "pending",
+                syncError: null
+              });
+            }
+            
+            // Simpan ke IndexedDB
+            await saveToIndexedDB(importedData);
+            
+            showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
+            loadDataToTable(currentPage);
+            e.target.value = '';
+          } catch (error) {
+            console.error('Error:', error);
+            showSimpleToast('Gagal mengimport file Excel');
+          }
+        };
+        reader.readAsArrayBuffer(file);
       });
     
       // Export to Excel functionality
