@@ -1016,8 +1016,15 @@
         return true;
       }
 
-      // Modify the cell-selected event handler to check for null cell
+      let currentDropdown = null;
+
       xs.on('cell-selected', (cell, ri, ci) => {
+        // Remove any existing dropdown
+        if (currentDropdown) {
+          currentDropdown.remove();
+          currentDropdown = null;
+        }
+        
         // Jika kolom bulan (indeks 5) dipilih dan cell tidak null
         if (ci === 5 && cell) {
           const currentYear = new Date().getFullYear();
@@ -1029,28 +1036,34 @@
           const options = months.map(m => `${m}-${currentYear}`);
           
           // Buat dropdown
-          const dropdown = document.createElement('select');
-          dropdown.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+          currentDropdown = document.createElement('select');
+          currentDropdown.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
           
           // Tambahkan event handler
-          dropdown.addEventListener('change', (e) => {
+          currentDropdown.addEventListener('change', (e) => {
             xs.setCellText(ri, ci, e.target.value);
-            dropdown.remove();
+            currentDropdown.remove();
+            currentDropdown = null;
           });
           
           // Tambahkan ke DOM
-          dropdown.style.position = 'absolute';
-          dropdown.style.left = `${cell.offsetLeft}px`;
-          dropdown.style.top = `${cell.offsetTop + cell.offsetHeight}px`;
-          dropdown.style.zIndex = '1000';
-          document.body.appendChild(dropdown);
+          currentDropdown.style.position = 'absolute';
+          currentDropdown.style.left = `${cell.offsetLeft}px`;
+          currentDropdown.style.top = `${cell.offsetTop + cell.offsetHeight}px`;
+          currentDropdown.style.zIndex = '1000';
+          document.body.appendChild(currentDropdown);
           
           // Fokus ke dropdown
-          dropdown.focus();
+          currentDropdown.focus();
           
           // Hapus dropdown jika kehilangan fokus
-          dropdown.addEventListener('blur', () => {
-            setTimeout(() => dropdown.remove(), 200);
+          currentDropdown.addEventListener('blur', () => {
+            setTimeout(() => {
+              if (currentDropdown) {
+                currentDropdown.remove();
+                currentDropdown = null;
+              }
+            }, 200);
           });
         }
       });
