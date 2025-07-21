@@ -532,8 +532,20 @@
     font-weight: bold;
   }
   
-  #xspreadsheet .x-spreadsheet-cell {
-    padding: 4px;
+  .month-year-dropdown {
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      background-color: white;
+      min-width: 120px;
+  }
+  
+  .month-year-dropdown option {
+      padding: 5px 10px;
+  }
+  
+  .month-year-dropdown option:hover {
+      background-color: #4285f4;
+      color: white;
   }
 </style>
 </head>
@@ -908,36 +920,23 @@
       }
   
      // Ganti inisialisasi spreadsheet dengan:
-      const xs = x_spreadsheet('#xspreadsheet', {
+     const xs = x_spreadsheet('#xspreadsheet', {
         mode: 'edit',
         showToolbar: true,
         showGrid: true,
         showContextmenu: true,
         row: {
-          len: 1000,
-          height: 25
+            len: 1000,
+            height: 25
         },
         col: {
-          len: 10,
-          width: 120,
-          indexWidth: 60,
-          minWidth: 60
+            len: 10,
+            width: 120,
+            indexWidth: 60,
+            minWidth: 60
         },
-        autoAddRow: true,
-        // Tambahkan validasi custom
-        validator: (cell, value) => {
-          // Kolom ke-5 adalah bulan (indeks dimulai dari 0)
-          if (cell.col === 5) {
-            if (!isValidMonthYear(value)) {
-              return {
-                valid: false,
-                message: 'Format bulan harus MMM-YYYY (contoh: Jan-2025)'
-              };
-            }
-          }
-          return { valid: true };
-        }
-      });
+        autoAddRow: true
+    });
       
       // Load data awal setelah inisialisasi
       xs.loadData([{
@@ -1019,53 +1018,77 @@
       let currentDropdown = null;
 
       xs.on('cell-selected', (cell, ri, ci) => {
-        // Remove any existing dropdown
-        if (currentDropdown) {
-          currentDropdown.remove();
-          currentDropdown = null;
-        }
-        
-        // Jika kolom bulan (indeks 5) dipilih dan cell tidak null
-        if (ci === 5 && cell) {
-          const currentYear = new Date().getFullYear();
-          const months = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-          ];
+          // Hapus dropdown sebelumnya jika ada
+          if (currentDropdown) {
+              currentDropdown.remove();
+              currentDropdown = null;
+          }
           
-          const options = months.map(m => `${m}-${currentYear}`);
-          
-          // Buat dropdown
-          currentDropdown = document.createElement('select');
-          currentDropdown.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-          
-          // Tambahkan event handler
-          currentDropdown.addEventListener('change', (e) => {
-            xs.setCellText(ri, ci, e.target.value);
-            currentDropdown.remove();
-            currentDropdown = null;
-          });
-          
-          // Tambahkan ke DOM
-          currentDropdown.style.position = 'absolute';
-          currentDropdown.style.left = `${cell.offsetLeft}px`;
-          currentDropdown.style.top = `${cell.offsetTop + cell.offsetHeight}px`;
-          currentDropdown.style.zIndex = '1000';
-          document.body.appendChild(currentDropdown);
-          
-          // Fokus ke dropdown
-          currentDropdown.focus();
-          
-          // Hapus dropdown jika kehilangan fokus
-          currentDropdown.addEventListener('blur', () => {
-            setTimeout(() => {
-              if (currentDropdown) {
-                currentDropdown.remove();
-                currentDropdown = null;
-              }
-            }, 200);
-          });
-        }
+          // Cek jika kolom bulan (indeks 5) dipilih dan cell valid
+          if (ci === 5 && cell && cell.offsetLeft && cell.offsetTop) {
+              const currentYear = new Date().getFullYear();
+              const months = [
+                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+              ];
+              
+              // Buat dropdown element
+              currentDropdown = document.createElement('select');
+              currentDropdown.className = 'month-year-dropdown';
+              currentDropdown.style.position = 'absolute';
+              currentDropdown.style.zIndex = '10000';
+              currentDropdown.style.border = '1px solid #4285f4';
+              currentDropdown.style.borderRadius = '4px';
+              currentDropdown.style.padding = '5px';
+              currentDropdown.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+              
+              // Tambahkan opsi bulan
+              months.forEach(month => {
+                  const option = document.createElement('option');
+                  option.value = `${month}-${currentYear}`;
+                  option.textContent = `${month}-${currentYear}`;
+                  currentDropdown.appendChild(option);
+              });
+              
+              // Hitung posisi dropdown
+              const spreadsheetRect = document.getElementById('xspreadsheet').getBoundingClientRect();
+              const cellLeft = cell.offsetLeft + spreadsheetRect.left;
+              const cellTop = cell.offsetTop + spreadsheetRect.top + cell.offsetHeight;
+              
+              // Position dropdown
+              currentDropdown.style.left = `${cellLeft}px`;
+              currentDropdown.style.top = `${cellTop}px`;
+              
+              // Tambahkan ke body
+              document.body.appendChild(currentDropdown);
+              
+              // Fokus dan handle perubahan
+              currentDropdown.focus();
+              
+              currentDropdown.addEventListener('change', (e) => {
+                  xs.setCellText(ri, ci, e.target.value);
+                  currentDropdown.remove();
+                  currentDropdown = null;
+              });
+              
+              currentDropdown.addEventListener('blur', () => {
+                  setTimeout(() => {
+                      if (currentDropdown) {
+                          currentDropdown.remove();
+                          currentDropdown = null;
+                      }
+                  }, 200);
+              });
+              
+              // Tutup dropdown ketika klik di luar
+              document.addEventListener('click', function closeDropdown(e) {
+                  if (!currentDropdown.contains(e.target)) {
+                      currentDropdown.remove();
+                      currentDropdown = null;
+                      document.removeEventListener('click', closeDropdown);
+                  }
+              });
+          }
       });
 
       // Helper function to generate unique ID
