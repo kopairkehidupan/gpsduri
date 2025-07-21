@@ -1020,24 +1020,45 @@
         },
         message: "Format bulan harus MMM-YYYY (contoh: Jan-2025, Feb-2025)"
       }]);
+
+      // Variabel untuk menyimpan opsi bulan
+      let monthOptions = [];
       
-      // Tambahkan juga editor dropdown untuk memudahkan input
-      xs.on('cell-edited', (cell, ri, ci) => {
-        if (ci === 5) { // Kolom bulan
-          const currentYear = new Date().getFullYear();
-          const nextYear = currentYear + 1;
-          
-          // Buat daftar opsi bulan untuk tahun ini dan tahun depan
-          const monthOptions = [];
-          for (let year = currentYear; year <= nextYear; year++) {
-            monthNames.forEach(month => {
-              monthOptions.push(`${month}-${year}`);
-            });
-          }
-          
-          // Set editor dropdown
-          xs.editor.options = monthOptions;
+      // Buat daftar opsi bulan untuk tahun ini dan tahun depan
+      function createMonthOptions() {
+        const currentYear = new Date().getFullYear();
+        const nextYear = currentYear + 1;
+        const options = [];
+        
+        for (let year = currentYear; year <= nextYear; year++) {
+          monthNames.forEach(month => {
+            options.push(`${month}-${year}`);
+          });
         }
+        
+        return options;
+      }
+      
+      // Inisialisasi opsi bulan
+      monthOptions = createMonthOptions();
+      
+      // Tambahkan event listener untuk cell-selected (bukan cell-edited)
+      xs.on('cell-selected', (cell, ri, ci) => {
+        if (ci === 5) { // Kolom bulan
+          // Set editor dropdown ketika sel dipilih
+          xs.setCellEditor('select', {
+            data: monthOptions,
+            value: cell?.text || '',
+            onchange: (value) => {
+              xs.setCellText(ri, ci, value);
+            }
+          });
+        }
+      });
+      
+      // Reset editor ketika keluar dari sel
+      xs.on('cell-unselected', () => {
+        xs.setCellEditor('text');
       });
 
       // Helper function to generate unique ID
