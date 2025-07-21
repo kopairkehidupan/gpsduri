@@ -909,21 +909,34 @@
   
      // Ganti inisialisasi spreadsheet dengan:
       const xs = x_spreadsheet('#xspreadsheet', {
-          mode: 'edit',
-          showToolbar: true,
-          showGrid: true,
-          showContextmenu: true,
-          row: {
-              len: 1000, // Set jumlah baris awal yang besar
-              height: 25
-          },
-          col: {
-              len: 10,
-              width: 120,
-              indexWidth: 60,
-              minWidth: 60
-          },
-          autoAddRow: true // Aktifkan penambahan baris otomatis
+        mode: 'edit',
+        showToolbar: true,
+        showGrid: true,
+        showContextmenu: true,
+        row: {
+          len: 1000,
+          height: 25
+        },
+        col: {
+          len: 10,
+          width: 120,
+          indexWidth: 60,
+          minWidth: 60
+        },
+        autoAddRow: true,
+        // Tambahkan validasi custom
+        validator: (cell, value) => {
+          // Kolom ke-5 adalah bulan (indeks dimulai dari 0)
+          if (cell.col === 5) {
+            if (!isValidMonthYear(value)) {
+              return {
+                valid: false,
+                message: 'Format bulan harus MMM-YYYY (contoh: Jan-2025)'
+              };
+            }
+          }
+          return { valid: true };
+        }
       });
       
       // Load data awal setelah inisialisasi
@@ -978,6 +991,69 @@
               isAddingRows = false;
           }
       }, 500)); // Throttle untuk performa
+
+      // Fungsi untuk validasi format bulan (MMM-YYYY)
+      function isValidMonthYear(input) {
+        // Daftar nama bulan singkatan
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        // Cek format dengan regex
+        const regex = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{4}$/i;
+        if (!regex.test(input)) {
+          return false;
+        }
+        
+        // Pisahkan bulan dan tahun
+        const [monthStr, yearStr] = input.split('-');
+        const month = months.indexOf(monthStr);
+        const year = parseInt(yearStr);
+        
+        // Validasi tahun (contoh: antara 2000-2100)
+        if (year < 2000 || year > 2100) {
+          return false;
+        }
+        
+        return true;
+      }
+
+      // Setelah inisialisasi xs, tambahkan:
+      xs.on('cell-selected', (cell, ri, ci) => {
+        // Jika kolom bulan (indeks 5) dipilih
+        if (ci === 5) {
+          const currentYear = new Date().getFullYear();
+          const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ];
+          
+          const options = months.map(m => `${m}-${currentYear}`);
+          
+          // Buat dropdown
+          const dropdown = document.createElement('select');
+          dropdown.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+          
+          // Tambahkan event handler
+          dropdown.addEventListener('change', (e) => {
+            xs.setCellText(ri, ci, e.target.value);
+            dropdown.remove();
+          });
+          
+          // Tambahkan ke DOM
+          dropdown.style.position = 'absolute';
+          dropdown.style.left = `${cell.offsetLeft}px`;
+          dropdown.style.top = `${cell.offsetTop + cell.offsetHeight}px`;
+          dropdown.style.zIndex = '1000';
+          document.body.appendChild(dropdown);
+          
+          // Fokus ke dropdown
+          dropdown.focus();
+          
+          // Hapus dropdown jika kehilangan fokus
+          dropdown.addEventListener('blur', () => {
+            setTimeout(() => dropdown.remove(), 200);
+          });
+        }
+      });
 
       // Helper function to generate unique ID
       function generateId() {
@@ -1630,60 +1706,56 @@
       });
     
       document.getElementById('importFile').addEventListener('change', async function(e) {
-          const file = e.target.files[0];
-          if (!file) return;
+        const file = e.target.files[0];
+        if (!file) return;
       
-          const reader = new FileReader();
-          reader.onload = async function(e) {
-              try {
-                  const data = new Uint8Array(e.target.result);
-                  const workbook = XLSX.read(data, { type: 'array' });
-                  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                  
-                  const importedData = [];
-                  for (let i = 1; i < jsonData.length; i++) {
-                      const row = jsonData[i];
-                      if (!row || (!row[0] && !row[1])) continue;
-                      
-                      // Fungsi untuk mengkonversi string angka dengan koma sebagai ribuan
-                      const parseNumberWithCommas = (num) => {
-                          if (typeof num === 'number') return num;
-                          if (!num) return 0;
-                          // Hapus semua koma (pemisah ribuan) dan biarkan titik sebagai desimal
-                          const cleaned = num.toString().replace(/,/g, '');
-                          return parseFloat(cleaned);
-                      };
-                      
-                      importedData.push({
-                          id: generateId(),
-                          kebun: row[0] || '',
-                          divisi: row[1] || '',
-                          kodeTahunTanam: row[2] || '',
-                          blok: row[3] || '',
-                          luas: parseFloat(row[4]) || 0,
-                          bulan: row[5] || '',
-                          produksi: parseFloat(row[6]) || 0,
-                          tonase: parseFloat(row[7]) || 0,
-                          tonperha: parseFloat(row[8]) || 0,
-                          timestamp: new Date().toISOString(),
-                          syncStatus: "pending",
-                          syncError: null
-                      });
-                  }
-                  
-                  // Simpan ke IndexedDB
-                  await saveToIndexedDB(importedData);
-                  
-                  showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
-                  loadDataToTable(currentPage);
-                  e.target.value = '';
-              } catch (error) {
-                  console.error('Error:', error);
-                  showSimpleToast('Gagal mengimport file Excel');
-              }
-          };
-          reader.readAsArrayBuffer(file);
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                const importedData = [];
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row || (!row[0] && !row[1])) continue;
+                    
+                    // Validasi bulan
+                    const bulan = row[5] || '';
+                    if (bulan && !isValidMonthYear(bulan)) {
+                        showSimpleToast(`Baris ${i+1}: Format bulan tidak valid (${bulan}). Harus MMM-YYYY.`);
+                        continue;
+                    }
+                    
+                    importedData.push({
+                        id: generateId(),
+                        kebun: row[0] || '',
+                        divisi: row[1] || '',
+                        kodeTahunTanam: row[2] || '',
+                        blok: row[3] || '',
+                        luas: parseFloat(row[4]) || 0,
+                        bulan: bulan,
+                        produksi: parseFloat(row[6]) || 0,
+                        tonase: parseFloat(row[7]) || 0,
+                        tonperha: parseFloat(row[8]) || 0,
+                        timestamp: new Date().toISOString(),
+                        syncStatus: "pending",
+                        syncError: null
+                    });
+                }
+                
+                await saveToIndexedDB(importedData);
+                showSimpleToast(`Data berhasil diimport! ${importedData.length} records ditambahkan.`);
+                loadDataToTable(currentPage);
+                e.target.value = '';
+            } catch (error) {
+                console.error('Error:', error);
+                showSimpleToast('Gagal mengimport file Excel');
+            }
+        };
+        reader.readAsArrayBuffer(file);
       });
     
       // Export to Excel functionality
