@@ -15,10 +15,10 @@ function openDatabase() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       // Buat object store jika belum ada
-      if (!db.objectStoreNames.contains('Aktual')) {
+      if (!db.objectStoreNames.contains('aktual')) {
         db.createObjectStore('Aktual', { keyPath: 'id' });
       }
-      if (!db.objectStoreNames.contains('Budget')) {
+      if (!db.objectStoreNames.contains('budget')) {
         db.createObjectStore('Budget', { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains('prodActual')) {
