@@ -975,13 +975,14 @@
               await setLastSyncTime(endpoint.store);
               updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', fullData.length, totalRecords);
             } else {
+              // Gunakan syncStoreData yang sudah dimodifikasi
               const result = await syncStoreData(endpoint);
               updateProgress(
                 ((i + 1) / endpoints.length) * 100,
                 endpoint.name,
                 'completed',
                 result.added + result.updated,
-                result.added + result.updated + result.deleted
+                totalRecords
               );
             }
             
