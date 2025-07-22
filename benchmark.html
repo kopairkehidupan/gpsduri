@@ -1366,6 +1366,8 @@
 
       // Convert divisi format from "DIVISI_I" to "DIVISI I" for display
       const displayDivisi = divisi.replace('_', ' ');
+
+      document.getElementById('productionTab').classList.add('active');
       
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
@@ -1548,13 +1550,26 @@
     
     // Enhanced displayProductionData function
     function displayProductionData(budgetData = [], actualData = []) {
+      console.log('Attempting to display production data');
+      
+      // Get references to the DOM elements
       const prodBudgetDiv = document.getElementById('prodBudgetData');
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
+      // Debug: Log the elements to verify they exist
+      console.log('Elements found:', {
+        prodBudgetDiv,
+        prodActualDiv, 
+        comparisonDiv
+      });
+    
       // Check if elements exist before manipulating them
       if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-        console.error('One or more required elements not found');
+        console.error('Required elements not found in DOM');
+        console.error('prodBudgetDiv exists:', !!prodBudgetDiv);
+        console.error('prodActualDiv exists:', !!prodActualDiv);
+        console.error('prodComparison exists:', !!comparisonDiv);
         return;
       }
     
@@ -1587,27 +1602,27 @@
       };
     
       // Display budget data
-      if (budgetData.length > 0 && prodBudgetDiv) {
+      if (budgetData.length > 0) {
         prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
         prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
         prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
         prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
-      } else if (prodBudgetDiv) {
+      } else {
         prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
       }
       
       // Display actual data
-      if (actualData.length > 0 && prodActualDiv) {
+      if (actualData.length > 0) {
         prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
         prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
         prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
         prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
-      } else if (prodActualDiv) {
+      } else {
         prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
       }
       
       // Display comparison if both exist
-      if (budgetData.length > 0 && actualData.length > 0 && comparisonDiv) {
+      if (budgetData.length > 0 && actualData.length > 0) {
         const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
         const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
           (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
@@ -1641,9 +1656,11 @@
         comparisonDiv.appendChild(diffTonPerHaEl);
         comparisonDiv.appendChild(diffTonaseEl);
         comparisonDiv.appendChild(statusEl);
-      } else if (comparisonDiv) {
+      } else {
         comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
       }
+      
+      console.log('Production data displayed successfully');
     }
     
     // Enhanced calculateProductionTotals function
