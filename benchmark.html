@@ -1359,7 +1359,7 @@
       }
     }
     
-    // Fungsi untuk menampilkan detail data saat blok dipilih
+    // Enhanced showBlockDetails function
     async function showBlockDetails(blockCode, kebun, divisi) {
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
@@ -1370,59 +1370,66 @@
       });
     
       try {
-        // Get all data from IndexedDB
+        // Get all data from IndexedDB with error handling
         const [prodActualData, prodBudgetData, costActualData, costBudgetData] = await Promise.all([
-          getDataFromDB(STORES.PROD_ACTUAL),
-          getDataFromDB(STORES.PROD_BUDGET),
-          getDataFromDB(STORES.ACTUAL),
-          getDataFromDB(STORES.BUDGET)
+          getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
+          getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
+          getDataFromDB(STORES.ACTUAL).catch(() => []),
+          getDataFromDB(STORES.BUDGET).catch(() => [])
         ]);
     
         // Filter production data
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
     
-        // Filter and aggregate cost data - ensure we always return objects with the expected structure
-        const costActualResult = aggregateCostData(costActualData || [], blockCode, kebun, divisi);
-        const costBudgetResult = aggregateCostData(costBudgetData || [], blockCode, kebun, divisi);
-    
-        // Ensure we have proper data structures
-        const aggregatedCostActual = costActualResult.aggregatedCostData || [];
-        const totalCostActual = costActualResult.totalCostData || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
-        
-        const aggregatedCostBudget = costBudgetResult.aggregatedCostData || [];
-        const totalCostBudget = costBudgetResult.totalCostData || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
+        // Process cost data
+        const costActualResult = aggregateCostData(costActualData, blockCode, kebun, divisi);
+        const costBudgetResult = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
-        displayCostData(aggregatedCostBudget, aggregatedCostActual, totalCostBudget, totalCostActual);
+        displayCostData(
+          costBudgetResult.aggregatedCostData, 
+          costActualResult.aggregatedCostData,
+          costBudgetResult.totalCostData,
+          costActualResult.totalCostData
+        );
     
         // Scroll to details section
         dataDetails.scrollIntoView({ behavior: 'smooth' });
       } catch (error) {
         console.error('Error showing block details:', error);
-        // Show error message
         document.querySelectorAll('.tab-content').forEach(tab => {
           tab.innerHTML = '<p class="error">Gagal memuat data. Silakan coba lagi.</p>';
         });
       }
     }
     
-    // Helper function to filter production data
+    // Helper function to safely access nested properties
+    function getSafe(fn, defaultVal) {
+      try {
+        return fn();
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+    
+    // Enhanced filterProductionData function
     function filterProductionData(data, blockCode, kebun, divisi) {
+      if (!Array.isArray(data)) return [];
+      
       return data.filter(item => {
-        const itemDivisi = item.Divisi ? item.Divisi.replace(/_/g, ' ') : '';
+        const itemDivisi = getSafe(() => item.Divisi.replace(/_/g, ' '), '');
         const targetDivisi = divisi ? divisi.replace('DIVISI ', '') : '';
         
-        return item.Blok === blockCode && 
-               item.Kebun === kebun && 
+        return getSafe(() => item.Blok === blockCode, false) && 
+               getSafe(() => item.Kebun === kebun, false) && 
                itemDivisi === targetDivisi;
       });
     }
     
-    // Function to aggregate cost data by work code and work object
+    // Enhanced aggregateCostData function
     function aggregateCostData(data, blockCode, kebun, divisi) {
-      // Ensure data is an array
       if (!Array.isArray(data)) {
         return {
           aggregatedCostData: [],
@@ -1435,41 +1442,45 @@
       }
     
       const filteredData = data.filter(item => {
-        const itemDivisi = item.Divisi ? item.Divisi.replace(/_/g, ' ') : '';
+        const itemDivisi = getSafe(() => item.Divisi.replace(/_/g, ' '), '');
         const targetDivisi = divisi ? divisi.replace('DIVISI ', '') : '';
         
-        return item.Blok === blockCode && 
-               item.Kebun === kebun && 
+        return getSafe(() => item.Blok === blockCode, false) && 
+               getSafe(() => item.Kebun === kebun, false) && 
                itemDivisi === targetDivisi;
       });
     
-      // Aggregate by Kode Kerja and Objek Kerja
       const aggregated = {};
       let totalHK = 0;
       let totalArea = 0;
       let totalCost = 0;
     
       filteredData.forEach(item => {
-        const key = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
+        const kodeKerja = getSafe(() => item['Kode Kerja'], '');
+        const objekKerja = getSafe(() => item['Objek Kerja'], '');
+        const key = `${kodeKerja}_${objekKerja}`;
         
         if (!aggregated[key]) {
           aggregated[key] = {
-            'Kode Kerja': item['Kode Kerja'],
-            'Objek Kerja': item['Objek Kerja'],
+            'Kode Kerja': kodeKerja,
+            'Objek Kerja': objekKerja,
             HK: 0,
             'Luas/Hasil': 0,
             'Biaya (Rp)': 0
           };
         }
         
-        aggregated[key].HK += parseFloat(item.HK) || 0;
-        aggregated[key]['Luas/Hasil'] += parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
-        aggregated[key]['Biaya (Rp)'] += parseFloat(item['Biaya (Rp)'] || 0);
+        const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
+        const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
+        const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
+        
+        aggregated[key].HK += hk;
+        aggregated[key]['Luas/Hasil'] += luas;
+        aggregated[key]['Biaya (Rp)'] += biaya;
     
-        // Calculate totals
-        totalHK += parseFloat(item.HK) || 0;
-        totalArea += parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
-        totalCost += parseFloat(item['Biaya (Rp)'] || 0);
+        totalHK += hk;
+        totalArea += luas;
+        totalCost += biaya;
       });
     
       return {
@@ -1483,73 +1494,59 @@
     }
     
     // Enhanced displayProductionData function
-    function displayProductionData(budgetData, actualData) {
+    function displayProductionData(budgetData = [], actualData = []) {
       const prodBudgetDiv = document.getElementById('prodBudgetData');
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
-      // Check if elements exist before trying to update them
-      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-        console.error('One or more required elements not found in DOM');
-        return;
-      }
+      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) return;
     
-      // Calculate totals if multiple months exist
-      const budgetTotals = calculateProductionTotals(budgetData || []);
-      const actualTotals = calculateProductionTotals(actualData || []);
+      // Calculate totals with safe property access
+      const budgetTotals = calculateProductionTotals(budgetData);
+      const actualTotals = calculateProductionTotals(actualData);
     
       // Display budget data
-      if (budgetData && budgetData.length > 0) {
-        prodBudgetDiv.innerHTML = `
-          <h4>Budget Produksi</h4>
-          <div class="data-item">
-            <span class="label">Luas (Ha):</span>
-            <span class="value">${formatNumber(budgetTotals.luas)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Produksi (Kg):</span>
-            <span class="value">${formatNumber(budgetTotals.produksi)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Ton/Ha:</span>
-            <span class="value">${formatNumber(budgetTotals.tonPerHa)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Tonase (Ton):</span>
-            <span class="value">${formatNumber(budgetTotals.tonase)}</span>
-          </div>
-        `;
-      } else {
-        prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
-      }
+      prodBudgetDiv.innerHTML = budgetData.length > 0 ? `
+        <div class="data-item">
+          <span class="label">Luas (Ha):</span>
+          <span class="value">${formatNumber(budgetTotals.luas)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Produksi (Kg):</span>
+          <span class="value">${formatNumber(budgetTotals.produksi)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Ton/Ha:</span>
+          <span class="value">${formatNumber(budgetTotals.tonPerHa)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Tonase (Ton):</span>
+          <span class="value">${formatNumber(budgetTotals.tonase)}</span>
+        </div>
+      ` : '<p>Tidak ada data budget produksi</p>';
       
       // Display actual data
-      if (actualData && actualData.length > 0) {
-        prodActualDiv.innerHTML = `
-          <h4>Actual Produksi</h4>
-          <div class="data-item">
-            <span class="label">Luas (Ha):</span>
-            <span class="value">${formatNumber(actualTotals.luas)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Produksi (Kg):</span>
-            <span class="value">${formatNumber(actualTotals.produksi)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Ton/Ha:</span>
-            <span class="value">${formatNumber(actualTotals.tonPerHa)}</span>
-          </div>
-          <div class="data-item">
-            <span class="label">Tonase (Ton):</span>
-            <span class="value">${formatNumber(actualTotals.tonase)}</span>
-          </div>
-        `;
-      } else {
-        prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
-      }
+      prodActualDiv.innerHTML = actualData.length > 0 ? `
+        <div class="data-item">
+          <span class="label">Luas (Ha):</span>
+          <span class="value">${formatNumber(actualTotals.luas)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Produksi (Kg):</span>
+          <span class="value">${formatNumber(actualTotals.produksi)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Ton/Ha:</span>
+          <span class="value">${formatNumber(actualTotals.tonPerHa)}</span>
+        </div>
+        <div class="data-item">
+          <span class="label">Tonase (Ton):</span>
+          <span class="value">${formatNumber(actualTotals.tonase)}</span>
+        </div>
+      ` : '<p>Tidak ada data aktual produksi</p>';
       
       // Display comparison if both exist
-      if (budgetData && budgetData.length > 0 && actualData && actualData.length > 0) {
+      if (budgetData.length > 0 && actualData.length > 0) {
         const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
         const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
           (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
@@ -1559,7 +1556,6 @@
           (diffTonase / budgetTotals.tonase * 100) : 0;
         
         comparisonDiv.innerHTML = `
-          <h4>Perbandingan</h4>
           <div class="data-item">
             <span class="label">Selisih Ton/Ha:</span>
             <span class="value ${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
@@ -1584,17 +1580,18 @@
       }
     }
     
-    // Function to calculate production totals
-    function calculateProductionTotals(data) {
-      if (!data || !Array.isArray(data)) {
-        return { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 };
-      }
-      
+    // Enhanced calculateProductionTotals function
+    function calculateProductionTotals(data = []) {
       return data.reduce((totals, item) => {
-        totals.luas += parseFloat(item.Luas || item['Luas (Ha)'] || 0);
-        totals.produksi += parseFloat(item['Actual Produksi (Kg)'] || item['Budget Produksi (Kg)'] || 0);
-        totals.tonase += parseFloat(item['Actual Tonase (Ton)'] || item['Budget Tonase (Ton)'] || 0);
+        const luas = parseFloat(getSafe(() => item.Luas || item['Luas (Ha)'], 0)) || 0;
+        const produksi = parseFloat(getSafe(() => item['Actual Produksi (Kg)'] || item['Budget Produksi (Kg)'], 0)) || 0;
+        const tonase = parseFloat(getSafe(() => item['Actual Tonase (Ton)'] || item['Budget Tonase (Ton)'], 0)) || 0;
+        
+        totals.luas += luas;
+        totals.produksi += produksi;
+        totals.tonase += tonase;
         totals.tonPerHa = totals.luas > 0 ? totals.tonase / totals.luas : 0;
+        
         return totals;
       }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
     }
@@ -1602,14 +1599,21 @@
     // Enhanced displayCostData function
     function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
       const costTab = document.getElementById('costTab');
-      
-      // Ensure we have proper default values
-      budgetData = Array.isArray(budgetData) ? budgetData : [];
-      actualData = Array.isArray(actualData) ? actualData : [];
-      totalBudget = totalBudget || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
-      totalActual = totalActual || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
+      if (!costTab) return;
     
-      // Create table for budget vs actual comparison
+      // Initialize totals with default values
+      totalBudget = {
+        HK: getSafe(() => totalBudget.HK, 0),
+        'Luas/Hasil': getSafe(() => totalBudget['Luas/Hasil'], 0),
+        'Biaya (Rp)': getSafe(() => totalBudget['Biaya (Rp)'], 0)
+      };
+    
+      totalActual = {
+        HK: getSafe(() => totalActual.HK, 0),
+        'Luas/Hasil': getSafe(() => totalActual['Luas/Hasil'], 0),
+        'Biaya (Rp)': getSafe(() => totalActual['Biaya (Rp)'], 0)
+      };
+    
       let tableHTML = `
         <table class="cost-table">
           <thead>
@@ -1628,7 +1632,6 @@
           <tbody>
       `;
     
-      // Handle case when there's no data
       if (budgetData.length === 0 && actualData.length === 0) {
         tableHTML += `
           <tr>
@@ -1636,40 +1639,54 @@
           </tr>
         `;
       } else {
-        // Create a combined list of all work codes from both budget and actual
+        // Get unique work codes from both datasets
         const allWorkCodes = new Set([
-          ...budgetData.map(item => item['Kode Kerja']),
-          ...actualData.map(item => item['Kode Kerja'])
+          ...budgetData.map(item => getSafe(() => item['Kode Kerja'], '')),
+          ...actualData.map(item => getSafe(() => item['Kode Kerja'], ''))
         ]);
     
-        // Add rows for each work code
+        // Process each work code
         Array.from(allWorkCodes).forEach(kodeKerja => {
-          const budgetItems = budgetData.filter(item => item['Kode Kerja'] === kodeKerja);
-          const actualItems = actualData.filter(item => item['Kode Kerja'] === kodeKerja);
-          
-          // Group by Objek Kerja
+          if (!kodeKerja) return;
+    
+          const budgetItems = budgetData.filter(item => 
+            getSafe(() => item['Kode Kerja'], '') === kodeKerja
+          );
+          const actualItems = actualData.filter(item => 
+            getSafe(() => item['Kode Kerja'], '') === kodeKerja
+          );
+    
+          // Get unique work objects
           const allObjekKerja = new Set([
-            ...budgetItems.map(item => item['Objek Kerja']),
-            ...actualItems.map(item => item['Objek Kerja'])
+            ...budgetItems.map(item => getSafe(() => item['Objek Kerja'], '')),
+            ...actualItems.map(item => getSafe(() => item['Objek Kerja'], ''))
           ]);
-          
+    
+          // Process each work object
           Array.from(allObjekKerja).forEach(objekKerja => {
-            const budgetItem = budgetItems.find(item => item['Objek Kerja'] === objekKerja) || {};
-            const actualItem = actualItems.find(item => item['Objek Kerja'] === objekKerja) || {};
-            
-            const costDiff = (actualItem['Biaya (Rp)'] || 0) - (budgetItem['Biaya (Rp)'] || 0);
+            if (!objekKerja) return;
+    
+            const budgetItem = budgetItems.find(item => 
+              getSafe(() => item['Objek Kerja'], '') === objekKerja
+            ) || {};
+            const actualItem = actualItems.find(item => 
+              getSafe(() => item['Objek Kerja'], '') === objekKerja
+            ) || {};
+    
+            const costDiff = (getSafe(() => actualItem['Biaya (Rp)'], 0) || 0) - 
+                            (getSafe(() => budgetItem['Biaya (Rp)'], 0) || 0);
             const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
             
             tableHTML += `
               <tr>
                 <td>${kodeKerja || '-'}</td>
                 <td>${objekKerja || '-'}</td>
-                <td>${formatNumber(budgetItem.HK)}</td>
-                <td>${formatNumber(actualItem.HK)}</td>
-                <td>${formatNumber(budgetItem['Luas/Hasil'])}</td>
-                <td>${formatNumber(actualItem['Luas/Hasil'])}</td>
-                <td>${formatCurrency(budgetItem['Biaya (Rp)'])}</td>
-                <td>${formatCurrency(actualItem['Biaya (Rp)'])}</td>
+                <td>${formatNumber(getSafe(() => budgetItem.HK, 0))}</td>
+                <td>${formatNumber(getSafe(() => actualItem.HK, 0))}</td>
+                <td>${formatNumber(getSafe(() => budgetItem['Luas/Hasil'], 0))}</td>
+                <td>${formatNumber(getSafe(() => actualItem['Luas/Hasil'], 0))}</td>
+                <td>${formatCurrency(getSafe(() => budgetItem['Biaya (Rp)'], 0))}</td>
+                <td>${formatCurrency(getSafe(() => actualItem['Biaya (Rp)'], 0))}</td>
                 <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
               </tr>
             `;
@@ -1679,13 +1696,14 @@
     
       tableHTML += `</tbody></table>`;
     
-      // Add summary cards
+      // Calculate summary data
       const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
       const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
       const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
       const totalCostDiffPercent = totalBudgetCost > 0 ? 
         (totalCostDiff / totalBudgetCost * 100) : 0;
     
+      // Add summary cards
       tableHTML += `
         <div class="data-grid">
           <div class="summary-card">
