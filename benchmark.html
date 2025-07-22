@@ -1623,14 +1623,34 @@
     // Enhanced calculateProductionTotals function
     function calculateProductionTotals(data = []) {
       return data.reduce((totals, item) => {
-        const luas = parseFloat(getSafe(() => item.Luas || item['Luas (Ha)'], 0)) || 0;
-        const produksi = parseFloat(getSafe(() => item['Actual Produksi (Kg)'] || item['Budget Produksi (Kg)'], 0)) || 0;
-        const tonase = parseFloat(getSafe(() => item['Actual Tonase (Ton)'] || item['Budget Tonase (Ton)'], 0)) || 0;
+        // Handle both actual and budget data formats
+        const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
+        
+        // Check for both actual and budget property names
+        const produksi = parseFloat(
+          getSafe(() => item['Actual Produksi (Kg)'], 0) || 
+          getSafe(() => item['Budget Produksi (Kg)'], 0)
+        ) || 0;
+        
+        const tonase = parseFloat(
+          getSafe(() => item['Actual Tonase (Ton)'], 0) || 
+          getSafe(() => item['Budget Tonase (Ton)'], 0)
+        ) || 0;
+        
+        // Calculate ton/ha based on available data
+        let tonPerHa = 0;
+        if (item['Actual Ton/Ha'] !== undefined) {
+          tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+        } else if (item['Budget Ton/Ha'] !== undefined) {
+          tonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+        } else if (luas > 0) {
+          tonPerHa = tonase / luas;
+        }
         
         totals.luas += luas;
         totals.produksi += produksi;
         totals.tonase += tonase;
-        totals.tonPerHa = totals.luas > 0 ? totals.tonase / totals.luas : 0;
+        totals.tonPerHa = tonPerHa;
         
         return totals;
       }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
