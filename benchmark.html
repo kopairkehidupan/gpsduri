@@ -1364,29 +1364,32 @@
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
     
-      // Convert divisi format from "DIVISI_I" to "DIVISI I" for display
-      const displayDivisi = divisi.replace('_', ' ');
-    
-      // First, make sure the dataDetails container is visible
+      // First, make sure the dataDetails container is visible and elements exist
       const dataDetails = document.getElementById('dataDetails');
       if (!dataDetails) {
         console.error('dataDetails element not found');
         return;
       }
+      
+      // Show the container before trying to access its children
       dataDetails.style.display = 'block';
-    
+      
       // Activate the production tab
       document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
       document.getElementById('productionTab').classList.add('active');
       
-      // Get references to the elements - we'll do this after making sure the container is visible
+      // Get references to the elements after making the container visible
       const prodBudgetDiv = document.getElementById('prodBudgetData');
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
       // Verify elements exist
       if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-        console.error('Production data display elements not found');
+        console.error('Production data display elements not found', {
+          prodBudgetDiv, 
+          prodActualDiv, 
+          comparisonDiv
+        });
         return;
       }
     
