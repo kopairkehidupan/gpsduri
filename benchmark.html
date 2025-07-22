@@ -1586,11 +1586,7 @@
       [prodBudgetDiv, prodActualDiv, comparisonDiv].forEach(el => {
         el.innerHTML = '';
       });
-      
-      clearElement(prodBudgetDiv);
-      clearElement(prodActualDiv);
-      clearElement(comparisonDiv);
-    
+
       // Calculate totals with safe property access
       const budgetTotals = calculateProductionTotals(budgetData);
       const actualTotals = calculateProductionTotals(actualData);
