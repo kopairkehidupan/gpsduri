@@ -401,33 +401,34 @@
       </div>
       
       <div id="dataDetails" class="card" style="display: none;">
-        <div class="data-tabs">
-          <button class="tab-btn active" data-tab="production">Produksi</button>
-          <button class="tab-btn" data-tab="cost">Biaya</button>
-        </div>
-        
-        <div id="productionTab" class="tab-content active">
-          <h3>Data Produksi</h3>
-          <div class="data-grid">
-            <div class="data-card">
-              <h4>Budget</h4>
-              <div id="prodBudgetData"></div>
-            </div>
-            <div class="data-card">
-              <h4>Aktual</h4>
-              <div id="prodActualData"></div>
-            </div>
-            <div class="data-card">
-              <h4>Perbandingan</h4>
-              <div id="prodComparison"></div>
-            </div>
+      <div class="data-tabs">
+        <button class="tab-btn active" data-tab="production">Produksi</button>
+        <button class="tab-btn" data-tab="cost">Biaya</button>
+      </div>
+      
+      <div id="productionTab" class="tab-content active">
+        <h3>Data Produksi</h3>
+        <div class="data-grid">
+          <div class="data-card">
+            <h4>Budget</h4>
+            <div id="prodBudgetData"></div>
+          </div>
+          <div class="data-card">
+            <h4>Aktual</h4>
+            <div id="prodActualData"></div>
+          </div>
+          <div class="data-card">
+            <h4>Perbandingan</h4>
+            <div id="prodComparison"></div>
           </div>
         </div>
-        
-        <div id="costTab" class="tab-content">
-          <!-- Content will be dynamically generated -->
-        </div>
       </div>
+      
+      <div id="costTab" class="tab-content">
+        <!-- Content will be dynamically generated -->
+      </div>
+    </div>
+      
     </div>
   </div>
 
@@ -1468,12 +1469,18 @@
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
+      // Check if elements exist before trying to update them
+      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
+        console.error('One or more required elements not found in DOM');
+        return;
+      }
+    
       // Calculate totals if multiple months exist
-      const budgetTotals = calculateProductionTotals(budgetData);
-      const actualTotals = calculateProductionTotals(actualData);
+      const budgetTotals = calculateProductionTotals(budgetData || []);
+      const actualTotals = calculateProductionTotals(actualData || []);
     
       // Display budget data
-      if (budgetData.length > 0) {
+      if (budgetData && budgetData.length > 0) {
         prodBudgetDiv.innerHTML = `
           <h4>Budget Produksi</h4>
           <div class="data-item">
@@ -1498,7 +1505,7 @@
       }
       
       // Display actual data
-      if (actualData.length > 0) {
+      if (actualData && actualData.length > 0) {
         prodActualDiv.innerHTML = `
           <h4>Actual Produksi</h4>
           <div class="data-item">
@@ -1523,7 +1530,7 @@
       }
       
       // Display comparison if both exist
-      if (budgetData.length > 0 && actualData.length > 0) {
+      if (budgetData && budgetData.length > 0 && actualData && actualData.length > 0) {
         const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
         const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
           (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
@@ -1560,6 +1567,10 @@
     
     // Function to calculate production totals
     function calculateProductionTotals(data) {
+      if (!data || !Array.isArray(data)) {
+        return { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 };
+      }
+      
       return data.reduce((totals, item) => {
         totals.luas += parseFloat(item.Luas || item['Luas (Ha)'] || 0);
         totals.produksi += parseFloat(item['Actual Produksi (Kg)'] || item['Budget Produksi (Kg)'] || 0);
