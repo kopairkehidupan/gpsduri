@@ -1363,30 +1363,68 @@
     // Enhanced showBlockDetails function
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
+
+      // Convert divisi format from "DIVISI_I" to "DIVISI I" for display
+      const displayDivisi = divisi.replace('_', ' ');
       
+      const dataDetails = document.getElementById('dataDetails');
+      dataDetails.style.display = 'block';
+      
+      // Show loading state
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.innerHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
+      });
+    
       try {
-        const [prodActualData, prodBudgetData] = await Promise.all([
-          getDataFromDB(STORES.PROD_ACTUAL),
-          getDataFromDB(STORES.PROD_BUDGET)
+        // Get all data from IndexedDB with error handling
+        const [prodActualData, prodBudgetData, costActualData, costBudgetData] = await Promise.all([
+          getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
+          getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
+          getDataFromDB(STORES.ACTUAL).catch(() => []),
+          getDataFromDB(STORES.BUDGET).catch(() => [])
         ]);
     
-        console.log('All production data:', {
-          actual: prodActualData,
-          budget: prodBudgetData
+        console.log('Data loaded:', {
+          prodActualData,
+          prodBudgetData,
+          costActualData,
+          costBudgetData
         });
     
+        // Filter production data
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
     
         console.log('Filtered production data:', {
-          actual: filteredProdActual,
-          budget: filteredProdBudget
+          filteredProdActual,
+          filteredProdBudget
         });
     
+        // Process cost data
+        const costActualResult = aggregateCostData(costActualData, blockCode, kebun, divisi);
+        const costBudgetResult = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
+    
+        console.log('Aggregated cost data:', {
+          costActualResult,
+          costBudgetResult
+        });
+    
+        // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
-        
+        displayCostData(
+          costBudgetResult.aggregatedCostData, 
+          costActualResult.aggregatedCostData,
+          costBudgetResult.totalCostData,
+          costActualResult.totalCostData
+        );
+    
+        // Scroll to details section
+        dataDetails.scrollIntoView({ behavior: 'smooth' });
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error showing block details:', error);
+        document.querySelectorAll('.tab-content').forEach(tab => {
+          tab.innerHTML = '<p class="error">Gagal memuat data. Silakan coba lagi.</p>';
+        });
       }
     }
     
@@ -1405,21 +1443,15 @@
       
       return data.filter(item => {
         // Normalize kebun name (case insensitive)
-        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase().trim();
-        const targetKebun = kebun ? kebun.toUpperCase().trim() : '';
+        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
+        const targetKebun = kebun ? kebun.toUpperCase() : '';
         
         // Normalize divisi format (from "Divisi_I" to "DIVISI I")
-        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ').trim();
-        const targetDivisi = divisi ? divisi.replace('_', ' ').trim() : '';
+        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
+        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
         
-        // Exact match for block code (case sensitive)
-        const itemBlok = getSafe(() => item.Blok, '').trim();
-        
-        console.log('Comparing:', {
-          itemBlok, blockCode,
-          itemKebun, targetKebun,
-          itemDivisi, targetDivisi
-        });
+        // Exact match for block code
+        const itemBlok = getSafe(() => item.Blok, '');
         
         return itemBlok === blockCode && 
                itemKebun === targetKebun && 
@@ -1591,27 +1623,14 @@
     // Enhanced calculateProductionTotals function
     function calculateProductionTotals(data = []) {
       return data.reduce((totals, item) => {
-        // Handle both budget and actual data structures
         const luas = parseFloat(getSafe(() => item.Luas || item['Luas (Ha)'], 0)) || 0;
-        const produksi = parseFloat(getSafe(() => 
-          item['Actual Produksi (Kg)'] || 
-          item['Budget Produksi (Kg)'] || 
-          item.Produksi, 0)) || 0;
-        
-        const tonase = parseFloat(getSafe(() => 
-          item['Actual Tonase (Ton)'] || 
-          item['Budget Tonase (Ton)'] || 
-          item.Tonase, 0)) || 0;
-        
-        const tonPerHa = parseFloat(getSafe(() => 
-          item['Actual Ton/Ha'] || 
-          item['Budget Ton/Ha'] || 
-          item['Ton/Ha'], 0)) || 0;
+        const produksi = parseFloat(getSafe(() => item['Actual Produksi (Kg)'] || item['Budget Produksi (Kg)'], 0)) || 0;
+        const tonase = parseFloat(getSafe(() => item['Actual Tonase (Ton)'] || item['Budget Tonase (Ton)'], 0)) || 0;
         
         totals.luas += luas;
         totals.produksi += produksi;
         totals.tonase += tonase;
-        totals.tonPerHa = totals.tonPerHa + tonPerHa; // Average or sum depending on your needs
+        totals.tonPerHa = totals.luas > 0 ? totals.tonase / totals.luas : 0;
         
         return totals;
       }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
