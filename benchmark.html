@@ -1552,51 +1552,45 @@
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
-      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) return;
+      // Clear previous content
+      prodBudgetDiv.innerHTML = '';
+      prodActualDiv.innerHTML = '';
+      comparisonDiv.innerHTML = '';
     
       // Calculate totals with safe property access
       const budgetTotals = calculateProductionTotals(budgetData);
       const actualTotals = calculateProductionTotals(actualData);
     
+      // Helper function to create data item
+      const createDataItem = (label, value) => {
+        const div = document.createElement('div');
+        div.className = 'data-item';
+        div.innerHTML = `
+          <span class="label">${label}:</span>
+          <span class="value">${value}</span>
+        `;
+        return div;
+      };
+    
       // Display budget data
-      prodBudgetDiv.innerHTML = budgetData.length > 0 ? `
-        <div class="data-item">
-          <span class="label">Luas (Ha):</span>
-          <span class="value">${formatNumber(budgetTotals.luas)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Produksi (Kg):</span>
-          <span class="value">${formatNumber(budgetTotals.produksi)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Ton/Ha:</span>
-          <span class="value">${formatNumber(budgetTotals.tonPerHa)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Tonase (Ton):</span>
-          <span class="value">${formatNumber(budgetTotals.tonase)}</span>
-        </div>
-      ` : '<p>Tidak ada data budget produksi</p>';
+      if (budgetData.length > 0) {
+        prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
+        prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
+        prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
+        prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
+      } else {
+        prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
+      }
       
       // Display actual data
-      prodActualDiv.innerHTML = actualData.length > 0 ? `
-        <div class="data-item">
-          <span class="label">Luas (Ha):</span>
-          <span class="value">${formatNumber(actualTotals.luas)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Produksi (Kg):</span>
-          <span class="value">${formatNumber(actualTotals.produksi)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Ton/Ha:</span>
-          <span class="value">${formatNumber(actualTotals.tonPerHa)}</span>
-        </div>
-        <div class="data-item">
-          <span class="label">Tonase (Ton):</span>
-          <span class="value">${formatNumber(actualTotals.tonase)}</span>
-        </div>
-      ` : '<p>Tidak ada data aktual produksi</p>';
+      if (actualData.length > 0) {
+        prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
+        prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
+        prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
+        prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
+      } else {
+        prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
+      }
       
       // Display comparison if both exist
       if (budgetData.length > 0 && actualData.length > 0) {
@@ -1608,26 +1602,31 @@
         const percentageTonase = budgetTotals.tonase !== 0 ? 
           (diffTonase / budgetTotals.tonase * 100) : 0;
         
-        comparisonDiv.innerHTML = `
-          <div class="data-item">
-            <span class="label">Selisih Ton/Ha:</span>
-            <span class="value ${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-              ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
-            </span>
-          </div>
-          <div class="data-item">
-            <span class="label">Selisih Tonase:</span>
-            <span class="value ${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-              ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
-            </span>
-          </div>
-          <div class="data-item">
-            <span class="label">Status:</span>
-            <span class="value ${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-              ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
-            </span>
-          </div>
-        `;
+        // Create comparison elements
+        const diffTonPerHaEl = createDataItem(
+          'Selisih Ton/Ha',
+          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
+          </span>`
+        );
+        
+        const diffTonaseEl = createDataItem(
+          'Selisih Tonase',
+          `<span class="${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
+          </span>`
+        );
+        
+        const statusEl = createDataItem(
+          'Status',
+          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
+          </span>`
+        );
+        
+        comparisonDiv.appendChild(diffTonPerHaEl);
+        comparisonDiv.appendChild(diffTonaseEl);
+        comparisonDiv.appendChild(statusEl);
       } else {
         comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
       }
@@ -1843,7 +1842,7 @@
     
     // Helper function to format numbers
     function formatNumber(value) {
-      if (isNaN(value) || value === undefined) return '-';
+      if (isNaN(value) || value === undefined || value === null) return '-';
       return new Intl.NumberFormat('id-ID').format(value);
     }
     
