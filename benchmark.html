@@ -1363,15 +1363,33 @@
     // Enhanced showBlockDetails function
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
-
+    
       // Convert divisi format from "DIVISI_I" to "DIVISI I" for display
       const displayDivisi = divisi.replace('_', ' ');
-
+    
+      // First, make sure the dataDetails container is visible
+      const dataDetails = document.getElementById('dataDetails');
+      if (!dataDetails) {
+        console.error('dataDetails element not found');
+        return;
+      }
+      dataDetails.style.display = 'block';
+    
+      // Activate the production tab
+      document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
       document.getElementById('productionTab').classList.add('active');
       
-      const dataDetails = document.getElementById('dataDetails');
-      dataDetails.style.display = 'block';
+      // Get references to the elements - we'll do this after making sure the container is visible
+      const prodBudgetDiv = document.getElementById('prodBudgetData');
+      const prodActualDiv = document.getElementById('prodActualData');
+      const comparisonDiv = document.getElementById('prodComparison');
       
+      // Verify elements exist
+      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
+        console.error('Production data display elements not found');
+        return;
+      }
+    
       // Show loading state
       document.querySelectorAll('.tab-content').forEach(tab => {
         tab.innerHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
@@ -1386,30 +1404,13 @@
           getDataFromDB(STORES.BUDGET).catch(() => [])
         ]);
     
-        console.log('Data loaded:', {
-          prodActualData,
-          prodBudgetData,
-          costActualData,
-          costBudgetData
-        });
-    
         // Filter production data
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
     
-        console.log('Filtered production data:', {
-          filteredProdActual,
-          filteredProdBudget
-        });
-    
         // Process cost data
         const costActualResult = aggregateCostData(costActualData, blockCode, kebun, divisi);
         const costBudgetResult = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
-    
-        console.log('Aggregated cost data:', {
-          costActualResult,
-          costBudgetResult
-        });
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
@@ -1422,16 +1423,7 @@
     
         // Scroll to details section
         dataDetails.scrollIntoView({ behavior: 'smooth' });
-
-        console.log('Filtered production data (raw):', {
-          actual: filteredProdActual,
-          budget: filteredProdBudget
-        });
-        
-        console.log('Calculated totals:', {
-          actual: calculateProductionTotals(filteredProdActual),
-          budget: calculateProductionTotals(filteredProdBudget)
-        });
+    
       } catch (error) {
         console.error('Error showing block details:', error);
         document.querySelectorAll('.tab-content').forEach(tab => {
