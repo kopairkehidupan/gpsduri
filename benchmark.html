@@ -622,6 +622,11 @@
           document.getElementById(`${tabId}Tab`).classList.add('active');
         });
       });
+
+      console.log('DOM fully loaded');
+      console.log('prodBudgetData exists:', !!document.getElementById('prodBudgetData'));
+      console.log('prodActualData exists:', !!document.getElementById('prodActualData'));
+      console.log('prodComparison exists:', !!document.getElementById('prodComparison'));
     });
     
     // ---------------- END POINT untuk mengambil data dari server-------------//
@@ -1364,7 +1369,7 @@
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
     
-      // First, make sure the dataDetails container is visible and elements exist
+      // First, make sure the dataDetails container is visible
       const dataDetails = document.getElementById('dataDetails');
       if (!dataDetails) {
         console.error('dataDetails element not found');
@@ -1374,11 +1379,7 @@
       // Show the container before trying to access its children
       dataDetails.style.display = 'block';
       
-      // Activate the production tab
-      document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
-      document.getElementById('productionTab').classList.add('active');
-      
-      // Get references to the elements after making the container visible
+      // Now get references to the elements
       const prodBudgetDiv = document.getElementById('prodBudgetData');
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
