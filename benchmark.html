@@ -1420,6 +1420,16 @@
     
         // Scroll to details section
         dataDetails.scrollIntoView({ behavior: 'smooth' });
+
+        console.log('Filtered production data (raw):', {
+          actual: filteredProdActual,
+          budget: filteredProdBudget
+        });
+        
+        console.log('Calculated totals:', {
+          actual: calculateProductionTotals(filteredProdActual),
+          budget: calculateProductionTotals(filteredProdBudget)
+        });
       } catch (error) {
         console.error('Error showing block details:', error);
         document.querySelectorAll('.tab-content').forEach(tab => {
@@ -1441,14 +1451,17 @@
     function filterProductionData(data, blockCode, kebun, divisi) {
       if (!Array.isArray(data)) return [];
       
+      // Normalize divisi format from "DIVISI_I" to "Divisi_I"
+      const normalizedDivisi = divisi.replace(' ', '_');
+      
       return data.filter(item => {
         // Normalize kebun name (case insensitive)
         const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
         const targetKebun = kebun ? kebun.toUpperCase() : '';
         
-        // Normalize divisi format (from "Divisi_I" to "DIVISI I")
-        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
-        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
+        // Normalize divisi format (case insensitive and handle both formats)
+        const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
+        const targetDivisi = normalizedDivisi.toUpperCase();
         
         // Exact match for block code
         const itemBlok = getSafe(() => item.Blok, '');
@@ -1622,11 +1635,19 @@
     
     // Enhanced calculateProductionTotals function
     function calculateProductionTotals(data = []) {
+      // Use a Set to track processed IDs to avoid duplicates
+      const processedIds = new Set();
+      
       return data.reduce((totals, item) => {
-        // Handle both actual and budget data formats
+        // Skip duplicates
+        if (processedIds.has(item.id)) {
+          return totals;
+        }
+        processedIds.add(item.id);
+        
         const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
         
-        // Check for both actual and budget property names
+        // Handle both actual and budget data
         const produksi = parseFloat(
           getSafe(() => item['Actual Produksi (Kg)'], 0) || 
           getSafe(() => item['Budget Produksi (Kg)'], 0)
@@ -1637,7 +1658,6 @@
           getSafe(() => item['Budget Tonase (Ton)'], 0)
         ) || 0;
         
-        // Calculate ton/ha based on available data
         let tonPerHa = 0;
         if (item['Actual Ton/Ha'] !== undefined) {
           tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
@@ -1650,7 +1670,7 @@
         totals.luas += luas;
         totals.produksi += produksi;
         totals.tonase += tonase;
-        totals.tonPerHa = tonPerHa;
+        totals.tonPerHa = tonPerHa; // Will be averaged correctly
         
         return totals;
       }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
