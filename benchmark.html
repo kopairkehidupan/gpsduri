@@ -1382,9 +1382,16 @@
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
     
-        // Filter and aggregate cost data
-        const { aggregatedCostActual, totalCostActual } = aggregateCostData(costActualData, blockCode, kebun, divisi);
-        const { aggregatedCostBudget, totalCostBudget } = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
+        // Filter and aggregate cost data - ensure we always return objects with the expected structure
+        const costActualResult = aggregateCostData(costActualData || [], blockCode, kebun, divisi);
+        const costBudgetResult = aggregateCostData(costBudgetData || [], blockCode, kebun, divisi);
+    
+        // Ensure we have proper data structures
+        const aggregatedCostActual = costActualResult.aggregatedCostData || [];
+        const totalCostActual = costActualResult.totalCostData || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
+        
+        const aggregatedCostBudget = costBudgetResult.aggregatedCostData || [];
+        const totalCostBudget = costBudgetResult.totalCostData || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
@@ -1415,6 +1422,18 @@
     
     // Function to aggregate cost data by work code and work object
     function aggregateCostData(data, blockCode, kebun, divisi) {
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        return {
+          aggregatedCostData: [],
+          totalCostData: {
+            HK: 0,
+            'Luas/Hasil': 0,
+            'Biaya (Rp)': 0
+          }
+        };
+      }
+    
       const filteredData = data.filter(item => {
         const itemDivisi = item.Divisi ? item.Divisi.replace(/_/g, ' ') : '';
         const targetDivisi = divisi ? divisi.replace('DIVISI ', '') : '';
@@ -1581,9 +1600,15 @@
     }
     
     // Enhanced displayCostData function
-    function displayCostData(budgetData, actualData, totalBudget, totalActual) {
+    function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
       const costTab = document.getElementById('costTab');
       
+      // Ensure we have proper default values
+      budgetData = Array.isArray(budgetData) ? budgetData : [];
+      actualData = Array.isArray(actualData) ? actualData : [];
+      totalBudget = totalBudget || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
+      totalActual = totalActual || { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 };
+    
       // Create table for budget vs actual comparison
       let tableHTML = `
         <table class="cost-table">
@@ -1603,53 +1628,63 @@
           <tbody>
       `;
     
-      // Create a combined list of all work codes from both budget and actual
-      const allWorkCodes = new Set([
-        ...budgetData.map(item => item['Kode Kerja']),
-        ...actualData.map(item => item['Kode Kerja'])
-      ]);
-    
-      // Add rows for each work code
-      Array.from(allWorkCodes).forEach(kodeKerja => {
-        const budgetItems = budgetData.filter(item => item['Kode Kerja'] === kodeKerja);
-        const actualItems = actualData.filter(item => item['Kode Kerja'] === kodeKerja);
-        
-        // Group by Objek Kerja
-        const allObjekKerja = new Set([
-          ...budgetItems.map(item => item['Objek Kerja']),
-          ...actualItems.map(item => item['Objek Kerja'])
+      // Handle case when there's no data
+      if (budgetData.length === 0 && actualData.length === 0) {
+        tableHTML += `
+          <tr>
+            <td colspan="9" style="text-align: center;">Tidak ada data biaya untuk blok ini</td>
+          </tr>
+        `;
+      } else {
+        // Create a combined list of all work codes from both budget and actual
+        const allWorkCodes = new Set([
+          ...budgetData.map(item => item['Kode Kerja']),
+          ...actualData.map(item => item['Kode Kerja'])
         ]);
-        
-        Array.from(allObjekKerja).forEach(objekKerja => {
-          const budgetItem = budgetItems.find(item => item['Objek Kerja'] === objekKerja) || {};
-          const actualItem = actualItems.find(item => item['Objek Kerja'] === objekKerja) || {};
+    
+        // Add rows for each work code
+        Array.from(allWorkCodes).forEach(kodeKerja => {
+          const budgetItems = budgetData.filter(item => item['Kode Kerja'] === kodeKerja);
+          const actualItems = actualData.filter(item => item['Kode Kerja'] === kodeKerja);
           
-          const costDiff = (actualItem['Biaya (Rp)'] || 0) - (budgetItem['Biaya (Rp)'] || 0);
-          const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
+          // Group by Objek Kerja
+          const allObjekKerja = new Set([
+            ...budgetItems.map(item => item['Objek Kerja']),
+            ...actualItems.map(item => item['Objek Kerja'])
+          ]);
           
-          tableHTML += `
-            <tr>
-              <td>${kodeKerja || '-'}</td>
-              <td>${objekKerja || '-'}</td>
-              <td>${formatNumber(budgetItem.HK)}</td>
-              <td>${formatNumber(actualItem.HK)}</td>
-              <td>${formatNumber(budgetItem['Luas/Hasil'])}</td>
-              <td>${formatNumber(actualItem['Luas/Hasil'])}</td>
-              <td>${formatCurrency(budgetItem['Biaya (Rp)'])}</td>
-              <td>${formatCurrency(actualItem['Biaya (Rp)'])}</td>
-              <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
-            </tr>
-          `;
+          Array.from(allObjekKerja).forEach(objekKerja => {
+            const budgetItem = budgetItems.find(item => item['Objek Kerja'] === objekKerja) || {};
+            const actualItem = actualItems.find(item => item['Objek Kerja'] === objekKerja) || {};
+            
+            const costDiff = (actualItem['Biaya (Rp)'] || 0) - (budgetItem['Biaya (Rp)'] || 0);
+            const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
+            
+            tableHTML += `
+              <tr>
+                <td>${kodeKerja || '-'}</td>
+                <td>${objekKerja || '-'}</td>
+                <td>${formatNumber(budgetItem.HK)}</td>
+                <td>${formatNumber(actualItem.HK)}</td>
+                <td>${formatNumber(budgetItem['Luas/Hasil'])}</td>
+                <td>${formatNumber(actualItem['Luas/Hasil'])}</td>
+                <td>${formatCurrency(budgetItem['Biaya (Rp)'])}</td>
+                <td>${formatCurrency(actualItem['Biaya (Rp)'])}</td>
+                <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
+              </tr>
+            `;
+          });
         });
-      });
+      }
     
       tableHTML += `</tbody></table>`;
     
       // Add summary cards
-      const totalCostDiff = totalActual['Biaya (Rp)'] - totalBudget['Biaya (Rp)'];
+      const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
       const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
-      const totalCostDiffPercent = totalBudget['Biaya (Rp)'] > 0 ? 
-        (totalCostDiff / totalBudget['Biaya (Rp)'] * 100) : 0;
+      const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
+      const totalCostDiffPercent = totalBudgetCost > 0 ? 
+        (totalCostDiff / totalBudgetCost * 100) : 0;
     
       tableHTML += `
         <div class="data-grid">
@@ -1657,15 +1692,15 @@
             <h4>Total Budget</h4>
             <div class="summary-item">
               <span>Total HK:</span>
-              <span>${formatNumber(totalBudget.HK)}</span>
+              <span>${formatNumber(totalBudget.HK || 0)}</span>
             </div>
             <div class="summary-item">
               <span>Total Luas:</span>
-              <span>${formatNumber(totalBudget['Luas/Hasil'])} Ha</span>
+              <span>${formatNumber(totalBudget['Luas/Hasil'] || 0)} Ha</span>
             </div>
             <div class="summary-item">
               <span>Total Biaya:</span>
-              <span>${formatCurrency(totalBudget['Biaya (Rp)'])}</span>
+              <span>${formatCurrency(totalBudget['Biaya (Rp)'] || 0)}</span>
             </div>
           </div>
           
@@ -1673,15 +1708,15 @@
             <h4>Total Actual</h4>
             <div class="summary-item">
               <span>Total HK:</span>
-              <span>${formatNumber(totalActual.HK)}</span>
+              <span>${formatNumber(totalActual.HK || 0)}</span>
             </div>
             <div class="summary-item">
               <span>Total Hasil:</span>
-              <span>${formatNumber(totalActual['Luas/Hasil'])} Ha</span>
+              <span>${formatNumber(totalActual['Luas/Hasil'] || 0)} Ha</span>
             </div>
             <div class="summary-item">
               <span>Total Biaya:</span>
-              <span>${formatCurrency(totalActual['Biaya (Rp)'])}</span>
+              <span>${formatCurrency(totalActual['Biaya (Rp)'] || 0)}</span>
             </div>
           </div>
           
@@ -1689,16 +1724,16 @@
             <h4>Perbandingan</h4>
             <div class="summary-item">
               <span>Selisih HK:</span>
-              <span>${formatNumber(totalActual.HK - totalBudget.HK)}</span>
+              <span>${formatNumber((totalActual.HK || 0) - (totalBudget.HK || 0))}</span>
             </div>
             <div class="summary-item">
               <span>Selisih Luas:</span>
-              <span>${formatNumber(totalActual['Luas/Hasil'] - totalBudget['Luas/Hasil'])} Ha</span>
+              <span>${formatNumber((totalActual['Luas/Hasil'] || 0) - (totalBudget['Luas/Hasil'] || 0))} Ha</span>
             </div>
             <div class="summary-item">
               <span>Selisih Biaya:</span>
               <span class="${totalCostDiffClass}">
-                ${formatCurrency(totalCostDiff)} (${totalCostDiffPercent.toFixed(2)}%)
+                ${formatCurrency(totalCostDiff)} (${Math.abs(totalCostDiffPercent).toFixed(2)}%)
               </span>
             </div>
           </div>
