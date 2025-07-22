@@ -1396,14 +1396,9 @@
     
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
-      if (!dataDetails) {
-        console.error('dataDetails element not found');
-        return;
-      }
-      
       dataDetails.style.display = 'block';
       
-      // Activate production tab explicitly
+      // Activate production tab
       document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
       document.getElementById('productionTab').classList.add('active');
       document.getElementById('productionTab').style.display = 'block';
@@ -1415,64 +1410,53 @@
           tab.style.display = 'none';
         }
       });
-      
-      // Force a reflow
-      void dataDetails.offsetHeight;
     
-      // Get fresh references to elements after tab activation
-      const getFreshElement = (id) => {
-        const el = document.getElementById(id);
-        if (!el) console.error(`Element ${id} not found`);
-        return el;
-      };
-    
-      const prodBudgetDiv = getFreshElement('prodBudgetData');
-      const prodActualDiv = getFreshElement('prodActualData');
-      const comparisonDiv = getFreshElement('prodComparison');
-    
-      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-        console.error('Essential elements not found');
-        return;
-      }
+      // Get elements fresh each time
+      const prodBudgetDiv = document.getElementById('prodBudgetData');
+      const prodActualDiv = document.getElementById('prodActualData');
+      const comparisonDiv = document.getElementById('prodComparison');
+      const costTab = document.getElementById('costTab');
     
       // Show loading state
       const loadingHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
       prodBudgetDiv.innerHTML = loadingHTML;
       prodActualDiv.innerHTML = loadingHTML;
       comparisonDiv.innerHTML = loadingHTML;
+      costTab.innerHTML = loadingHTML;
     
       try {
-        // Rest of your data loading and display code...
-        const [prodActualData, prodBudgetData] = await Promise.all([
+        // Load all data in parallel
+        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
           getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
-          getDataFromDB(STORES.PROD_BUDGET).catch(() => [])
+          getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
+          getDataFromDB(STORES.BUDGET).catch(() => []),
+          getDataFromDB(STORES.ACTUAL).catch(() => [])
         ]);
     
-        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
-        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
-
-         // Process cost data
-        const costActualResult = aggregateCostData(costActualData, blockCode, kebun, divisi);
-        const costBudgetResult = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
+        // Normalize divisi format for filtering
+        const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
+    
+        // Filter data
+        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+        
+        // Process cost data
+        const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
+          aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
+        const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
+          aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
-        displayCostData(
-          costBudgetResult.aggregatedCostData, 
-          costActualResult.aggregatedCostData,
-          costBudgetResult.totalCostData,
-          costActualResult.totalCostData
-        );
+        displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
     
-        // Scroll to details section
-        dataDetails.scrollIntoView({ behavior: 'smooth' });
-        
       } catch (error) {
         console.error('Error:', error);
         const errorHTML = '<p class="error">Gagal memuat data</p>';
         prodBudgetDiv.innerHTML = errorHTML;
         prodActualDiv.innerHTML = errorHTML;
         comparisonDiv.innerHTML = errorHTML;
+        costTab.innerHTML = errorHTML;
       }
     }
     
