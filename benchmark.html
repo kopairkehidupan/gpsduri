@@ -1450,8 +1450,22 @@
     
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, divisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, divisi);
+
+         // Process cost data
+        const costActualResult = aggregateCostData(costActualData, blockCode, kebun, divisi);
+        const costBudgetResult = aggregateCostData(costBudgetData, blockCode, kebun, divisi);
     
+        // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
+        displayCostData(
+          costBudgetResult.aggregatedCostData, 
+          costActualResult.aggregatedCostData,
+          costBudgetResult.totalCostData,
+          costActualResult.totalCostData
+        );
+    
+        // Scroll to details section
+        dataDetails.scrollIntoView({ behavior: 'smooth' });
         
       } catch (error) {
         console.error('Error:', error);
