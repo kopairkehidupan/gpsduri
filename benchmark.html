@@ -1552,10 +1552,24 @@
       const prodActualDiv = document.getElementById('prodActualData');
       const comparisonDiv = document.getElementById('prodComparison');
       
-      // Clear previous content
-      prodBudgetDiv.innerHTML = '';
-      prodActualDiv.innerHTML = '';
-      comparisonDiv.innerHTML = '';
+      // Check if elements exist before manipulating them
+      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
+        console.error('One or more required elements not found');
+        return;
+      }
+    
+      // Clear previous content safely
+      const clearElement = (element) => {
+        if (element) {
+          while (element.firstChild) {
+            element.removeChild(element.firstChild);
+          }
+        }
+      };
+      
+      clearElement(prodBudgetDiv);
+      clearElement(prodActualDiv);
+      clearElement(comparisonDiv);
     
       // Calculate totals with safe property access
       const budgetTotals = calculateProductionTotals(budgetData);
@@ -1573,27 +1587,27 @@
       };
     
       // Display budget data
-      if (budgetData.length > 0) {
+      if (budgetData.length > 0 && prodBudgetDiv) {
         prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
         prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
         prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
         prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
-      } else {
+      } else if (prodBudgetDiv) {
         prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
       }
       
       // Display actual data
-      if (actualData.length > 0) {
+      if (actualData.length > 0 && prodActualDiv) {
         prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
         prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
         prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
         prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
-      } else {
+      } else if (prodActualDiv) {
         prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
       }
       
       // Display comparison if both exist
-      if (budgetData.length > 0 && actualData.length > 0) {
+      if (budgetData.length > 0 && actualData.length > 0 && comparisonDiv) {
         const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
         const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
           (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
@@ -1627,7 +1641,7 @@
         comparisonDiv.appendChild(diffTonPerHaEl);
         comparisonDiv.appendChild(diffTonaseEl);
         comparisonDiv.appendChild(statusEl);
-      } else {
+      } else if (comparisonDiv) {
         comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
       }
     }
