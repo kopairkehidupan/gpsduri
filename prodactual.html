@@ -1418,7 +1418,7 @@
         } else if (item.syncStatus === "synced") {
           indicator = `<span class="sync-indicator synced" data-tooltip="Data tersinkronisasi">✓</span>`;
         } else {
-          indicator = `<span class="sync-indicator pending" data-tooltip="Belum disinkronisasi">↻</span>`;
+          indicator = `<span class="sync-indicator pending" data-tooltip="Menunggu sinkronisasi">↻</span>`;
         }
         return indicator;
       }
@@ -1490,33 +1490,36 @@
         }
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
-        // Fungsi save data - hanya simpan ke IndexedDB
         document.getElementById('saveBtn').addEventListener('click', async function() {
           try {
-            const currentData = xs.getData();
-            console.log('Data dari spreadsheet:', currentData);
-            
-            const newData = formatDataForStorage(currentData);
-            console.log('Data yang akan disimpan:', newData);
-            
-            if (newData.length === 0) {
-              showSimpleToast('Tidak ada data baru untuk disimpan!');
-              return;
-            }
-            
-            showSimpleToast(`Menyimpan ${newData.length} data ke penyimpanan lokal...`);
-            
-            // Simpan ke IndexedDB saja
-            await saveToIndexedDB(newData);
-            
-            showSimpleToast(`Data berhasil disimpan di penyimpanan lokal. ${newData.length} records ditambahkan.`);
-            loadDataToTable(currentPage);
-            clearSpreadsheet();
+              const currentData = xs.getData();
+              console.log('Data dari spreadsheet:', currentData); // Debug
+              
+              const newData = formatDataForStorage(currentData);
+              console.log('Data yang akan disimpan:', newData); // Debug
+              
+              if (newData.length === 0) {
+                  showSimpleToast('Tidak ada data baru untuk disimpan!');
+                  return;
+              }
+              
+              // Tampilkan jumlah data yang akan disimpan
+              showSimpleToast(`Menyimpan ${newData.length} data...`);
+              
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
+              
+              // Coba sync ke server
+              await syncToServer();
+              
+              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              loadDataToTable(currentPage);
+              clearSpreadsheet();
           } catch (error) {
-            console.error('Error saving data:', error);
-            showSimpleToast('Gagal menyimpan data: ' + error.message);
+              console.error('Error saving data:', error);
+              showSimpleToast('Gagal menyimpan data: ' + error.message);
           }
-        });
+      });
 
       // Fungsi utama sync ke server
       async function syncToServer() {
@@ -1591,86 +1594,34 @@
           }
       }
 
-      // Fungsi manual sync - kirim ke Google Sheet
+      // Manual sync button (tambahkan di HTML)
       let isSyncing = false;
-      
+
       document.getElementById('manualSyncBtn').addEventListener('click', async function() {
-        if (isSyncing) {
-          console.log("Sync sudah berjalan, tunggu...");
-          return;
-        }
-        
-        try {
-          isSyncing = true;
-          const btn = this;
-          btn.disabled = true;
-          btn.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
-          
-          // Dapatkan semua data dari IndexedDB
-          const allData = await getFromIndexedDB();
-          
-          // Filter hanya data yang belum sync atau sync error
-          const dataToSync = allData.filter(item => 
-            item.syncStatus !== "synced" || item.syncError
-          );
-          
-          if (dataToSync.length === 0) {
-            showSimpleToast('Tidak ada data yang perlu disinkronisasi!');
-            btn.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-            btn.disabled = false;
-            isSyncing = false;
-            return;
+          if (isSyncing) {
+              console.log("Sync sudah berjalan, tunggu...");
+              return;
           }
-          
-          showProgress('Menyinkronkan ke Server', dataToSync.length);
-          
-          // Kirim data ke Google Sheet
-          const url = `https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec?t=${Date.now()}`;
           
           try {
-            const response = await fetch(url, {
-              method: "POST",
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: "saveProdActual",
-                data: dataToSync
-              }),
-              mode: 'no-cors'
-            });
-            
-            // Jika berhasil, update status di IndexedDB
-            await Promise.all(dataToSync.map(async (item) => {
-              item.syncStatus = "synced";
-              item.syncError = null;
-              await saveToIndexedDB(item);
-            }));
-            
-            showSimpleToast(`Berhasil menyinkronisasi ${dataToSync.length} data ke server!`);
+              isSyncing = true;
+              this.disabled = true;
+              this.innerHTML = '<i class="material-icons">sync</i> Menyinkronkan...';
+              
+              await syncToServer();
+              
+              this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+              this.disabled = false;
+              isSyncing = false;
           } catch (error) {
-            console.error("Error sync:", error);
-            
-            // Jika gagal, update status error
-            await Promise.all(dataToSync.map(async (item) => {
-              item.syncError = "Gagal terhubung ke server";
-              await saveToIndexedDB(item);
-            }));
-            
-            showSimpleToast('Gagal menyinkronisasi data ke server!');
+              console.error("Manual sync error:", error);
+              this.innerHTML = '<i class="material-icons">sync</i> Error, Coba Lagi';
+              setTimeout(() => {
+                  this.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
+                  this.disabled = false;
+                  isSyncing = false;
+              }, 2000);
           }
-          
-          hideProgress();
-          loadDataToTable(currentPage);
-          
-        } catch (error) {
-          console.error("Manual sync error:", error);
-          showSimpleToast('Terjadi kesalahan saat sinkronisasi');
-          hideProgress();
-        } finally {
-          const btn = document.getElementById('manualSyncBtn');
-          btn.innerHTML = '<i class="material-icons">sync</i> Sinkronkan Sekarang';
-          btn.disabled = false;
-          isSyncing = false;
-        }
       });
 
       // Import Excel functionality with ID generation
@@ -1771,11 +1722,11 @@
     // Inisialisasi aplikasi
     initDB.then(() => {
         loadDataToTable(1);
-        //syncToServer(); // Sync segera saat pertama load
+        syncToServer(); // Sync segera saat pertama load
         // Periodic sync
-        //setInterval(async () => {
-        //    await syncToServer();
-        //}, SYNC_INTERVAL);
+        setInterval(async () => {
+            await syncToServer();
+        }, SYNC_INTERVAL);
     }).catch(error => {
         console.error("Gagal menginisialisasi database:", error);
         showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
