@@ -1522,45 +1522,35 @@
       });
 
       // Fungsi utama sync ke server
+      // Di fungsi syncToServer()
+      const BATCH_SIZE = 50; // Ukuran batch yang optimal
+      
       async function syncToServer() {
         try {
           const allData = await getFromIndexedDB();
           const pendingData = allData.filter(item => item.syncStatus === "pending");
           
-          if (pendingData.length === 0) {
-            console.log("Tidak ada data pending untuk sync");
-            return;
-          }
+          if (pendingData.length === 0) return;
           
           showProgress('Menyinkronkan ke Server', pendingData.length);
           
-          console.log("Memulai sync dengan", pendingData.length, "data");
-          
+          // Proses dalam batch
           for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
             const batch = pendingData.slice(i, i + BATCH_SIZE);
-            const batchIds = batch.map(item => item.id);
             
             try {
-              const url = `https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec?t=${Date.now()}`;
-              
-              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1} dari ${Math.ceil(pendingData.length/BATCH_SIZE)}`);
-              
-              const response = await fetch(url, {
+              const response = await fetch(API_URL, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   action: "saveProdActual",
                   data: batch
-                }),
-                mode: 'no-cors'
+                })
               });
               
-              await updateSyncStatus(batchIds, "synced");
-              console.log("Sync berhasil untuk batch", i);
-              
+              await updateSyncStatus(batch.map(item => item.id), "synced");
             } catch (error) {
-              console.error("Error sync batch", i, error);
-              await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+              await updateSyncStatus(batch.map(item => item.id), "pending", error.message);
             }
             
             updateProgress(Math.min(i + BATCH_SIZE, pendingData.length), pendingData.length);
