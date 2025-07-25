@@ -1418,7 +1418,7 @@
         } else if (item.syncStatus === "synced") {
           indicator = `<span class="sync-indicator synced" data-tooltip="Data tersinkronisasi">✓</span>`;
         } else {
-          indicator = `<span class="sync-indicator pending" data-tooltip="Menunggu sinkronisasi">↻</span>`;
+          indicator = `<span class="sync-indicator pending" data-tooltip="Belum disinkronisasi">↻</span>`;
         }
         return indicator;
       }
@@ -1771,11 +1771,11 @@
     // Inisialisasi aplikasi
     initDB.then(() => {
         loadDataToTable(1);
-        syncToServer(); // Sync segera saat pertama load
+        //syncToServer(); // Sync segera saat pertama load
         // Periodic sync
-        setInterval(async () => {
-            await syncToServer();
-        }, SYNC_INTERVAL);
+        //setInterval(async () => {
+        //    await syncToServer();
+        //}, SYNC_INTERVAL);
     }).catch(error => {
         console.error("Gagal menginisialisasi database:", error);
         showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
