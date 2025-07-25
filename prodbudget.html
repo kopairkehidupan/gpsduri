@@ -1722,11 +1722,11 @@
     // Inisialisasi aplikasi
     initDB.then(() => {
         loadDataToTable(1);
-        syncToServer(); // Sync segera saat pertama load
+        //syncToServer(); // Sync segera saat pertama load
         // Periodic sync
-        setInterval(async () => {
-            await syncToServer();
-        }, SYNC_INTERVAL);
+        //setInterval(async () => {
+        //    await syncToServer();
+        //}, SYNC_INTERVAL);
     }).catch(error => {
         console.error("Gagal menginisialisasi database:", error);
         showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
