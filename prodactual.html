@@ -764,7 +764,8 @@
           if (Array.isArray(data)) {
             showProgress('Menyimpan ke Database Lokal', data.length);
             
-            const transaction = db.transaction('prodactuals', 'readwrite');
+            // Gunakan transaction dengan mode 'readwrite' dan 'durability: 'strict'
+            const transaction = db.transaction(['prodactuals'], 'readwrite', { durability: 'strict' });
             const store = transaction.objectStore('prodactuals');
             
             let processed = 0;
@@ -772,13 +773,31 @@
             // Gunakan Promise.all untuk bulk operation dengan progress
             const promises = data.map((item, index) => {
               return new Promise((resolve, reject) => {
-                const request = store.put(item);
-                request.onsuccess = () => {
-                  processed++;
-                  updateProgress(processed, data.length, `Menyimpan data ${index + 1} dari ${data.length}`);
-                  resolve();
+                // Cek dulu apakah data sudah ada
+                const checkRequest = store.get(item.id);
+                
+                checkRequest.onsuccess = () => {
+                  const existing = checkRequest.result;
+                  
+                  // Jika data sudah ada, skip
+                  if (existing) {
+                    processed++;
+                    updateProgress(processed, data.length, `Data ${index + 1} sudah ada`);
+                    resolve();
+                    return;
+                  }
+                  
+                  // Jika belum ada, simpan
+                  const putRequest = store.put(item);
+                  putRequest.onsuccess = () => {
+                    processed++;
+                    updateProgress(processed, data.length, `Menyimpan data ${index + 1}`);
+                    resolve();
+                  };
+                  putRequest.onerror = (event) => reject(event.target.error);
                 };
-                request.onerror = (event) => reject(event.target.error);
+                
+                checkRequest.onerror = (event) => reject(event.target.error);
               });
             });
             
@@ -787,7 +806,17 @@
             return;
           } else {
             showProgress('Menyimpan ke Database Lokal', 1);
-            await dbOperation('prodactuals', (store) => store.put(data));
+            
+            // Untuk single item, gunakan transaction yang sama
+            const transaction = db.transaction(['prodactuals'], 'readwrite', { durability: 'strict' });
+            const store = transaction.objectStore('prodactuals');
+            
+            // Cek dulu apakah data sudah ada
+            const existing = await dbOperation('prodactuals', (store) => store.get(data.id));
+            if (!existing) {
+              await dbOperation('prodactuals', (store) => store.put(data));
+            }
+            
             updateProgress(1, 1, 'Data tersimpan');
             setTimeout(hideProgress, 500);
           }
@@ -1525,7 +1554,12 @@
       async function syncToServer() {
         try {
           const allData = await getFromIndexedDB();
-          const pendingData = allData.filter(item => item.syncStatus === "pending");
+          
+          // Filter hanya data pending dan pastikan tidak ada duplikat ID
+          const pendingData = allData.filter((item, index, self) => 
+            item.syncStatus === "pending" && 
+            self.findIndex(i => i.id === item.id) === index
+          );
           
           if (pendingData.length === 0) {
             console.log("Tidak ada data pending untuk sync");
@@ -1533,34 +1567,48 @@
           }
           
           showProgress('Menyinkronkan ke Server', pendingData.length);
+          console.log("Memulai sync dengan", pendingData.length, "data unik");
           
-          console.log("Memulai sync dengan", pendingData.length, "data");
+          // Buat map untuk melacak ID yang sedang diproses
+          const processingIds = new Set();
           
           for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
             const batch = pendingData.slice(i, i + BATCH_SIZE);
-            const batchIds = batch.map(item => item.id);
+            
+            // Filter batch untuk menghilangkan ID yang sedang diproses
+            const uniqueBatch = batch.filter(item => !processingIds.has(item.id));
+            if (uniqueBatch.length === 0) continue;
+            
+            const batchIds = uniqueBatch.map(item => item.id);
+            
+            // Tandai ID yang sedang diproses
+            batchIds.forEach(id => processingIds.add(id));
             
             try {
-              const url = `https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec?t=${Date.now()}`;
+              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1}`);
               
-              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1} dari ${Math.ceil(pendingData.length/BATCH_SIZE)}`);
+              const url = `https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec?t=${Date.now()}`;
               
               const response = await fetch(url, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   action: "saveProdActual",
-                  data: batch
+                  data: uniqueBatch
                 }),
                 mode: 'no-cors'
               });
               
+              // Update status hanya jika berhasil
               await updateSyncStatus(batchIds, "synced");
               console.log("Sync berhasil untuk batch", i);
               
             } catch (error) {
               console.error("Error sync batch", i, error);
               await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
+              
+              // Hapus ID dari processing set jika gagal
+              batchIds.forEach(id => processingIds.delete(id));
             }
             
             updateProgress(Math.min(i + BATCH_SIZE, pendingData.length), pendingData.length);
