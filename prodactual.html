@@ -1491,28 +1491,35 @@
       
         // Fungsi save data - MODIFIKASI untuk hybrid system
         document.getElementById('saveBtn').addEventListener('click', async function() {
-          const currentData = xs.getData();
-          const newData = formatDataForStorage(currentData);
-          
-          // Validasi data sebelum mengirim
-          const uniqueData = [];
-          const duplicateIds = new Set();
-          
-          newData.forEach(item => {
-            if (!duplicateIds.has(item.id)) {
-              uniqueData.push(item);
-              duplicateIds.add(item.id);
-            }
-          });
-          
-          if (uniqueData.length !== newData.length) {
-            showSimpleToast(`Ditemukan ${newData.length - uniqueData.length} data duplikat - hanya data unik yang akan disimpan`);
+          try {
+              const currentData = xs.getData();
+              console.log('Data dari spreadsheet:', currentData); // Debug
+              
+              const newData = formatDataForStorage(currentData);
+              console.log('Data yang akan disimpan:', newData); // Debug
+              
+              if (newData.length === 0) {
+                  showSimpleToast('Tidak ada data baru untuk disimpan!');
+                  return;
+              }
+              
+              // Tampilkan jumlah data yang akan disimpan
+              showSimpleToast(`Menyimpan ${newData.length} data...`);
+              
+              // Simpan ke IndexedDB
+              await saveToIndexedDB(newData);
+              
+              // Coba sync ke server
+              await syncToServer();
+              
+              showSimpleToast(`Data budget berhasil disimpan. ${newData.length} records ditambahkan.`);
+              loadDataToTable(currentPage);
+              clearSpreadsheet();
+          } catch (error) {
+              console.error('Error saving data:', error);
+              showSimpleToast('Gagal menyimpan data: ' + error.message);
           }
-          
-          // Simpan hanya data unik
-          await saveToIndexedDB(uniqueData);
-          await syncToServer();
-        });
+      });
 
       // Fungsi utama sync ke server
       async function syncToServer() {
@@ -1520,46 +1527,50 @@
           const allData = await getFromIndexedDB();
           const pendingData = allData.filter(item => item.syncStatus === "pending");
           
-          if (pendingData.length === 0) return;
-      
+          if (pendingData.length === 0) {
+            console.log("Tidak ada data pending untuk sync");
+            return;
+          }
+          
           showProgress('Menyinkronkan ke Server', pendingData.length);
           
-          // Kelompokkan data berdasarkan ID untuk memastikan unik
-          const uniqueDataMap = new Map();
-          pendingData.forEach(item => uniqueDataMap.set(item.id, item));
-          const uniqueData = Array.from(uniqueDataMap.values());
+          console.log("Memulai sync dengan", pendingData.length, "data");
           
-          for (let i = 0; i < uniqueData.length; i += BATCH_SIZE) {
-            const batch = uniqueData.slice(i, i + BATCH_SIZE);
+          for (let i = 0; i < pendingData.length; i += BATCH_SIZE) {
+            const batch = pendingData.slice(i, i + BATCH_SIZE);
+            const batchIds = batch.map(item => item.id);
             
             try {
-              const response = await fetch(API_URL, {
+              const url = `https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec?t=${Date.now()}`;
+              
+              updateProgress(i, pendingData.length, `Mengirim batch ${Math.floor(i/BATCH_SIZE) + 1} dari ${Math.ceil(pendingData.length/BATCH_SIZE)}`);
+              
+              const response = await fetch(url, {
                 method: "POST",
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   action: "saveProdActual",
                   data: batch
-                })
-                // Hapus mode: 'no-cors' untuk bisa membaca response
+                }),
+                mode: 'no-cors'
               });
               
-              const result = await response.json();
+              await updateSyncStatus(batchIds, "synced");
+              console.log("Sync berhasil untuk batch", i);
               
-              if (result.status === "success") {
-                await updateSyncStatus(batch.map(item => item.id), "synced");
-              } else {
-                // Handle duplicate or other warnings
-                await updateSyncStatus(batch.map(item => item.id), "synced");
-              }
             } catch (error) {
-              await updateSyncStatus(batch.map(item => item.id), "pending", error.message);
+              console.error("Error sync batch", i, error);
+              await updateSyncStatus(batchIds, "pending", "Gagal terhubung ke server");
             }
             
-            updateProgress(Math.min(i + BATCH_SIZE, uniqueData.length), uniqueData.length);
+            updateProgress(Math.min(i + BATCH_SIZE, pendingData.length), pendingData.length);
           }
-        } finally {
+          
           hideProgress();
           loadDataToTable(currentPage);
+        } catch (error) {
+          hideProgress();
+          console.error("Sync error:", error);
         }
       }
 
