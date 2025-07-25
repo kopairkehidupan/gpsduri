@@ -1522,9 +1522,6 @@
       });
 
       // Fungsi utama sync ke server
-      // Di fungsi syncToServer()
-      const BATCH_SIZE = 50; // Ukuran batch yang optimal
-      
       async function syncToServer() {
         try {
           const allData = await getFromIndexedDB();
