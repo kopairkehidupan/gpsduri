@@ -1565,6 +1565,7 @@
               
           } catch (error) {
               console.error("Sync error:", error);
+              hideProgress();
               showSimpleToast("Gagal sinkronisasi: " + error.message);
           }
       }
