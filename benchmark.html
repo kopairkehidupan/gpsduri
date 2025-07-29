@@ -430,38 +430,46 @@
         <!-- Content will be dynamically generated -->
       </div>
 
-      <!-- Di bagian tab-content -->
       <div id="chartTab" class="tab-content">
-        <h3>Analisis Grafik</h3>
+        <h3>Grafik Data</h3>
+        
+        <!-- Chart 1: Production Line Chart -->
         <div class="chart-container">
-          <div class="chart-row">
-            <div class="chart-card">
-              <h4>Perbandingan Produksi</h4>
-              <div class="chart-wrapper">
-                <canvas id="productionChart"></canvas>
-              </div>
-            </div>
-            <div class="chart-card">
-              <h4>Perbandingan Biaya</h4>
-              <div class="chart-wrapper">
-                <canvas id="costChart"></canvas>
-              </div>
+          <h4>Grafik Produksi (Tonase)</h4>
+          <div class="chart-description">
+            <p>Perbandingan antara budget dan actual tonase per bulan</p>
+          </div>
+          <canvas id="productionChart"></canvas>
+        </div>
+        
+        <!-- Chart 2: Cost Bar Chart -->
+        <div class="chart-container">
+          <h4>Grafik Biaya</h4>
+          <div class="chart-description">
+            <p>Perbandingan antara budget dan actual biaya per bulan</p>
+            <div class="chart-filter">
+              <label for="costWorkObject">Pilih Objek Kerja:</label>
+              <select id="costWorkObject">
+                <option value="">Semua Objek Kerja</option>
+              </select>
             </div>
           </div>
-          <div class="chart-row">
-            <div class="chart-card">
-              <h4>Efisiensi Biaya per HK</h4>
-              <div class="chart-wrapper">
-                <canvas id="efficiencyChart"></canvas>
-              </div>
-            </div>
-            <div class="chart-card">
-              <h4>Trend Bulanan</h4>
-              <div class="chart-wrapper">
-                <canvas id="monthlyTrendChart"></canvas>
-              </div>
+          <canvas id="costChart"></canvas>
+        </div>
+        
+        <!-- Chart 3: Area Line Chart -->
+        <div class="chart-container">
+          <h4>Grafik Luas/Hasil</h4>
+          <div class="chart-description">
+            <p>Perbandingan antara budget luas dan actual hasil per bulan</p>
+            <div class="chart-filter">
+              <label for="areaWorkObject">Pilih Objek Kerja:</label>
+              <select id="areaWorkObject">
+                <option value="">Semua Objek Kerja</option>
+              </select>
             </div>
           </div>
+          <canvas id="areaChart"></canvas>
         </div>
       </div>
     </div>
@@ -1434,6 +1442,11 @@
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
+
+      // Initialize charts if not already done
+      if (!productionChart) {
+        initializeCharts();
+      }
       
       // Activate production tab
       document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -1487,12 +1500,16 @@
         displayProductionData(filteredProdBudget, filteredProdActual);
         displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
 
-        // Calculate production totals for charts
-        const budgetProdTotals = calculateProductionTotals(filteredProdBudget);
-        const actualProdTotals = calculateProductionTotals(filteredProdActual);
-        
-        // Display charts
-        displayCharts(budgetProdTotals, actualProdTotals, totalBudget, totalActual);
+        // Update charts with all data
+        updateCharts({
+          kebun,
+          divisi: normalizedDivisi,
+          blok: blockCode,
+          prodBudget: filteredProdBudget,
+          prodActual: filteredProdActual,
+          budget: filteredBudget,
+          actual: filteredActual
+        });
     
       } catch (error) {
         console.error('Error:', error);
@@ -1931,304 +1948,373 @@
       }).format(amount);
     }
 
-    // ---------------- END POINT untuk menampilkan grafik-------------//
-    // Variabel untuk menyimpan instance chart
-    let productionChart, costChart, efficiencyChart, monthlyTrendChart;
+    // ---------------- END POINT untuk menampilkan tab grafik-------------//
+    // Add these variables at the top of your script section
+    let productionChart, costChart, areaChart;
+    let currentBlockData = {
+      kebun: '',
+      divisi: '',
+      blok: '',
+      prodBudget: [],
+      prodActual: [],
+      budget: [],
+      actual: []
+    };
     
-    // Fungsi untuk menghancurkan chart sebelumnya
-    function destroyCharts() {
-      if (productionChart) productionChart.destroy();
-      if (costChart) costChart.destroy();
-      if (efficiencyChart) efficiencyChart.destroy();
-      if (monthlyTrendChart) monthlyTrendChart.destroy();
-    }
-    
-    // Fungsi untuk membuat grafik produksi
-    function createProductionChart(budgetData, actualData) {
-      const ctx = document.getElementById('productionChart').getContext('2d');
-      
-      productionChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Luas (Ha)', 'Produksi (Kg)', 'Ton/Ha', 'Tonase (Ton)'],
-          datasets: [
-            {
-              label: 'Budget',
-              data: [
-                budgetData.luas,
-                budgetData.produksi,
-                budgetData.tonPerHa,
-                budgetData.tonase
-              ],
-              backgroundColor: 'rgba(66, 133, 244, 0.7)',
-              borderColor: 'rgba(66, 133, 244, 1)',
-              borderWidth: 1
-            },
-            {
-              label: 'Actual',
-              data: [
-                actualData.luas,
-                actualData.produksi,
-                actualData.tonPerHa,
-                actualData.tonase
-              ],
-              backgroundColor: 'rgba(52, 168, 83, 0.7)',
-              borderColor: 'rgba(52, 168, 83, 1)',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Nilai'
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) {
-                    if (context.dataIndex === 0 || context.dataIndex === 1) {
-                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
-                    } else if (context.dataIndex === 2) {
-                      label += context.parsed.y.toFixed(2);
-                    } else {
-                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
-                    }
-                  }
-                  return label;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-    
-    // Fungsi untuk membuat grafik biaya
-    function createCostChart(totalBudget, totalActual) {
-      const ctx = document.getElementById('costChart').getContext('2d');
-      
-      costChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['HK', 'Luas/Hasil (Ha)', 'Biaya (Rp)'],
-          datasets: [
-            {
-              label: 'Budget',
-              data: [
-                totalBudget.HK,
-                totalBudget['Luas/Hasil'],
-                totalBudget['Biaya (Rp)']
-              ],
-              backgroundColor: 'rgba(66, 133, 244, 0.7)',
-              borderColor: 'rgba(66, 133, 244, 1)',
-              borderWidth: 1
-            },
-            {
-              label: 'Actual',
-              data: [
-                totalActual.HK,
-                totalActual['Luas/Hasil'],
-                totalActual['Biaya (Rp)']
-              ],
-              backgroundColor: 'rgba(52, 168, 83, 0.7)',
-              borderColor: 'rgba(52, 168, 83, 1)',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Nilai'
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) {
-                    if (context.dataIndex === 0) {
-                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
-                    } else if (context.dataIndex === 1) {
-                      label += context.parsed.y.toFixed(2) + ' Ha';
-                    } else {
-                      label += new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(context.parsed.y);
-                    }
-                  }
-                  return label;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-    
-    // Fungsi untuk membuat grafik efisiensi
-    function createEfficiencyChart(totalBudget, totalActual) {
-      const budgetEfficiency = totalBudget.HK > 0 ? totalBudget['Biaya (Rp)'] / totalBudget.HK : 0;
-      const actualEfficiency = totalActual.HK > 0 ? totalActual['Biaya (Rp)'] / totalActual.HK : 0;
-      
-      const ctx = document.getElementById('efficiencyChart').getContext('2d');
-      
-      efficiencyChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Biaya per HK'],
-          datasets: [
-            {
-              label: 'Budget',
-              data: [budgetEfficiency],
-              backgroundColor: 'rgba(66, 133, 244, 0.7)',
-              borderColor: 'rgba(66, 133, 244, 1)',
-              borderWidth: 1
-            },
-            {
-              label: 'Actual',
-              data: [actualEfficiency],
-              backgroundColor: 'rgba(52, 168, 83, 0.7)',
-              borderColor: 'rgba(52, 168, 83, 1)',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Biaya per HK (Rp)'
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) {
-                    label += new Intl.NumberFormat('id-ID', {
-                      style: 'currency',
-                      currency: 'IDR'
-                    }).format(context.parsed.y);
-                  }
-                  return label;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-    
-    // Fungsi untuk membuat grafik trend bulanan (contoh)
-    function createMonthlyTrendChart(budgetData, actualData) {
-      // Contoh data bulanan - perlu disesuaikan dengan data aktual Anda
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-      
-      // Contoh data - perlu diganti dengan data aktual dari database
-      const budgetTrend = months.map((_, i) => {
-        const progress = (i + 1) / 12;
-        return budgetData.tonase * progress * (0.9 + Math.random() * 0.2);
-      });
-      
-      const actualTrend = months.map((_, i) => {
-        const progress = (i + 1) / 12;
-        return actualData.tonase * progress * (0.8 + Math.random() * 0.4);
-      });
-      
-      const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
-      
-      monthlyTrendChart = new Chart(ctx, {
+    // Add this function to initialize charts
+    function initializeCharts() {
+      // Production Chart (Tonase)
+      const productionCtx = document.getElementById('productionChart').getContext('2d');
+      productionChart = new Chart(productionCtx, {
         type: 'line',
         data: {
-          labels: months,
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
           datasets: [
             {
               label: 'Budget Tonase',
-              data: budgetTrend,
-              borderColor: 'rgba(66, 133, 244, 1)',
+              data: [],
+              borderColor: '#4285f4',
               backgroundColor: 'rgba(66, 133, 244, 0.1)',
               borderWidth: 2,
-              fill: true,
-              tension: 0.4
+              tension: 0.1,
+              fill: true
             },
             {
               label: 'Actual Tonase',
-              data: actualTrend,
-              borderColor: 'rgba(52, 168, 83, 1)',
+              data: [],
+              borderColor: '#34a853',
               backgroundColor: 'rgba(52, 168, 83, 0.1)',
               borderWidth: 2,
-              fill: true,
-              tension: 0.4
+              tension: 0.1,
+              fill: true
             }
           ]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
+                }
+              }
+            }
+          },
           scales: {
             y: {
               beginAtZero: true,
               title: {
                 display: true,
                 text: 'Tonase (Ton)'
-              }
-            }
-          },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) {
-                    label += context.parsed.y.toFixed(2) + ' Ton';
-                  }
-                  return label;
+              },
+              ticks: {
+                callback: function(value) {
+                  return formatNumber(value);
                 }
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Bulan'
               }
             }
           }
         }
       });
+    
+      // Cost Chart (Biaya)
+      const costCtx = document.getElementById('costChart').getContext('2d');
+      costChart = new Chart(costCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+          datasets: [
+            {
+              label: 'Budget Biaya',
+              data: [],
+              backgroundColor: 'rgba(66, 133, 244, 0.7)',
+              borderColor: '#4285f4',
+              borderWidth: 1
+            },
+            {
+              label: 'Actual Biaya',
+              data: [],
+              backgroundColor: 'rgba(52, 168, 83, 0.7)',
+              borderColor: '#34a853',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatCurrency(context.raw);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Biaya (Rp)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return formatCurrency(value);
+                }
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Bulan'
+              }
+            }
+          }
+        }
+      });
+    
+      // Area Chart (Luas/Hasil)
+      const areaCtx = document.getElementById('areaChart').getContext('2d');
+      areaChart = new Chart(areaCtx, {
+        type: 'line',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+          datasets: [
+            {
+              label: 'Budget Luas',
+              data: [],
+              borderColor: '#4285f4',
+              backgroundColor: 'rgba(66, 133, 244, 0.1)',
+              borderWidth: 2,
+              tension: 0.1,
+              fill: true
+            },
+            {
+              label: 'Actual Hasil',
+              data: [],
+              borderColor: '#34a853',
+              backgroundColor: 'rgba(52, 168, 83, 0.1)',
+              borderWidth: 2,
+              tension: 0.1,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Luas/Hasil (Ha)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return formatNumber(value);
+                }
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Bulan'
+              }
+            }
+          }
+        }
+      });
+    
+      // Add event listeners for work object filters
+      document.getElementById('costWorkObject').addEventListener('change', function() {
+        updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
+      });
+    
+      document.getElementById('areaWorkObject').addEventListener('change', function() {
+        updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
+      });
     }
     
-    // Fungsi untuk menampilkan semua grafik
-    function displayCharts(budgetProdData, actualProdData, totalBudgetCost, totalActualCost) {
-      destroyCharts(); // Hapus chart sebelumnya jika ada
+    // Add this function to update charts when data is loaded
+    function updateCharts(blockData) {
+      currentBlockData = blockData;
       
-      // Buat semua grafik
-      createProductionChart(budgetProdData, actualProdData);
-      createCostChart(totalBudgetCost, totalActualCost);
-      createEfficiencyChart(totalBudgetCost, totalActualCost);
-      createMonthlyTrendChart(budgetProdData, actualProdData);
+      // Update production chart (tonase)
+      updateProductionChart(blockData.prodBudget, blockData.prodActual);
+      
+      // Update work object filters
+      updateWorkObjectFilters(blockData.budget, blockData.actual);
+      
+      // Update cost chart with default selection (all)
+      updateCostChart(blockData.budget, blockData.actual, '');
+      
+      // Update area chart with default selection (all)
+      updateAreaChart(blockData.budget, blockData.actual, '');
+    }
+    
+    // Helper function to update production chart
+    function updateProductionChart(budgetData, actualData) {
+      const monthlyBudget = aggregateMonthlyData(budgetData, 'Budget Tonase (Ton)');
+      const monthlyActual = aggregateMonthlyData(actualData, 'Actual Tonase (Ton)');
+      
+      productionChart.data.datasets[0].data = monthlyBudget;
+      productionChart.data.datasets[1].data = monthlyActual;
+      productionChart.update();
+    }
+    
+    // Helper function to update cost chart
+    function updateCostChart(budgetData, actualData, workObjectFilter) {
+      const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
+      const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
+      
+      costChart.data.datasets[0].data = monthlyBudget;
+      costChart.data.datasets[1].data = monthlyActual;
+      costChart.update();
+    }
+    
+    // Helper function to update area chart
+    function updateAreaChart(budgetData, actualData, workObjectFilter) {
+      const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
+      const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
+      
+      areaChart.data.datasets[0].data = monthlyBudget;
+      areaChart.data.datasets[1].data = monthlyActual;
+      areaChart.update();
+    }
+    
+    // Helper function to aggregate monthly production data
+    function aggregateMonthlyData(data, fieldName) {
+      const monthlyData = Array(12).fill(0);
+      
+      data.forEach(item => {
+        const month = getMonthFromDate(item.Bulan);
+        if (month >= 0 && month < 12) {
+          monthlyData[month] += parseFloat(item[fieldName]) || 0;
+        }
+      });
+      
+      return monthlyData;
+    }
+    
+    // Helper function to aggregate monthly cost data
+    function aggregateMonthlyCostData(data, workObjectFilter) {
+      const monthlyData = Array(12).fill(0);
+      
+      data.forEach(item => {
+        // Skip if work object filter doesn't match
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
+        }
+        
+        const month = getMonthFromDate(item.Bulan);
+        if (month >= 0 && month < 12) {
+          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
+        }
+      });
+      
+      return monthlyData;
+    }
+    
+    // Helper function to aggregate monthly area data
+    function aggregateMonthlyAreaData(data, workObjectFilter) {
+      const monthlyData = Array(12).fill(0);
+      
+      data.forEach(item => {
+        // Skip if work object filter doesn't match
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
+        }
+        
+        const month = getMonthFromDate(item.Bulan);
+        if (month >= 0 && month < 12) {
+          // Use 'Luas (Ha)' for budget, 'Hasil (Ha)' for actual
+          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+          monthlyData[month] += value;
+        }
+      });
+      
+      return monthlyData;
+    }
+    
+    // Helper function to get month index (0-11) from date string
+    function getMonthFromDate(dateStr) {
+      if (!dateStr) return -1;
+      
+      try {
+        const date = new Date(dateStr);
+        return date.getMonth();
+      } catch (e) {
+        // Try to parse month name if date parsing fails
+        const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
+                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+        const lowerStr = dateStr.toLowerCase().trim();
+        return monthNames.findIndex(m => lowerStr.includes(m));
+      }
+    }
+    
+    // Helper function to update work object filters
+    function updateWorkObjectFilters(budgetData, actualData) {
+      const workObjects = new Set();
+      
+      // Add work objects from budget data
+      budgetData.forEach(item => {
+        if (item['Kode Kerja'] && item['Objek Kerja']) {
+          workObjects.add(`${item['Kode Kerja']}-${item['Objek Kerja']}`);
+        }
+      });
+      
+      // Add work objects from actual data
+      actualData.forEach(item => {
+        if (item['Kode Kerja'] && item['Objek Kerja']) {
+          workObjects.add(`${item['Kode Kerja']}-${item['Objek Kerja']}`);
+        }
+      });
+      
+      // Update both dropdowns
+      const costDropdown = document.getElementById('costWorkObject');
+      const areaDropdown = document.getElementById('areaWorkObject');
+      
+      // Clear existing options except the first one
+      while (costDropdown.options.length > 1) costDropdown.remove(1);
+      while (areaDropdown.options.length > 1) areaDropdown.remove(1);
+      
+      // Add new options
+      workObjects.forEach(workObject => {
+        const option = document.createElement('option');
+        option.value = workObject;
+        option.textContent = workObject;
+        
+        costDropdown.appendChild(option.cloneNode(true));
+        areaDropdown.appendChild(option.cloneNode(true));
+      });
     }
   </script>
   
