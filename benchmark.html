@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="benchmarkstyle.css" />
   <style>
     :root {
@@ -404,6 +405,7 @@
       <div class="data-tabs">
         <button class="tab-btn active" data-tab="production">Produksi</button>
         <button class="tab-btn" data-tab="cost">Biaya</button>
+        <button class="tab-btn" data-tab="chart">Grafik</button>
       </div>
       
       <div id="productionTab" class="tab-content active">
@@ -426,6 +428,41 @@
       
       <div id="costTab" class="tab-content">
         <!-- Content will be dynamically generated -->
+      </div>
+
+      <!-- Di bagian tab-content -->
+      <div id="chartTab" class="tab-content">
+        <h3>Analisis Grafik</h3>
+        <div class="chart-container">
+          <div class="chart-row">
+            <div class="chart-card">
+              <h4>Perbandingan Produksi</h4>
+              <div class="chart-wrapper">
+                <canvas id="productionChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h4>Perbandingan Biaya</h4>
+              <div class="chart-wrapper">
+                <canvas id="costChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="chart-row">
+            <div class="chart-card">
+              <h4>Efisiensi Biaya per HK</h4>
+              <div class="chart-wrapper">
+                <canvas id="efficiencyChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h4>Trend Bulanan</h4>
+              <div class="chart-wrapper">
+                <canvas id="monthlyTrendChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
       
@@ -1449,6 +1486,13 @@
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
         displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
+
+        // Calculate production totals for charts
+        const budgetProdTotals = calculateProductionTotals(filteredProdBudget);
+        const actualProdTotals = calculateProductionTotals(filteredProdActual);
+        
+        // Display charts
+        displayCharts(budgetProdTotals, actualProdTotals, totalBudget, totalActual);
     
       } catch (error) {
         console.error('Error:', error);
@@ -1885,6 +1929,306 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(amount);
+    }
+
+    // ---------------- END POINT untuk menampilkan grafik-------------//
+    // Variabel untuk menyimpan instance chart
+    let productionChart, costChart, efficiencyChart, monthlyTrendChart;
+    
+    // Fungsi untuk menghancurkan chart sebelumnya
+    function destroyCharts() {
+      if (productionChart) productionChart.destroy();
+      if (costChart) costChart.destroy();
+      if (efficiencyChart) efficiencyChart.destroy();
+      if (monthlyTrendChart) monthlyTrendChart.destroy();
+    }
+    
+    // Fungsi untuk membuat grafik produksi
+    function createProductionChart(budgetData, actualData) {
+      const ctx = document.getElementById('productionChart').getContext('2d');
+      
+      productionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Luas (Ha)', 'Produksi (Kg)', 'Ton/Ha', 'Tonase (Ton)'],
+          datasets: [
+            {
+              label: 'Budget',
+              data: [
+                budgetData.luas,
+                budgetData.produksi,
+                budgetData.tonPerHa,
+                budgetData.tonase
+              ],
+              backgroundColor: 'rgba(66, 133, 244, 0.7)',
+              borderColor: 'rgba(66, 133, 244, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Actual',
+              data: [
+                actualData.luas,
+                actualData.produksi,
+                actualData.tonPerHa,
+                actualData.tonase
+              ],
+              backgroundColor: 'rgba(52, 168, 83, 0.7)',
+              borderColor: 'rgba(52, 168, 83, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Nilai'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    if (context.dataIndex === 0 || context.dataIndex === 1) {
+                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
+                    } else if (context.dataIndex === 2) {
+                      label += context.parsed.y.toFixed(2);
+                    } else {
+                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
+                    }
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Fungsi untuk membuat grafik biaya
+    function createCostChart(totalBudget, totalActual) {
+      const ctx = document.getElementById('costChart').getContext('2d');
+      
+      costChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['HK', 'Luas/Hasil (Ha)', 'Biaya (Rp)'],
+          datasets: [
+            {
+              label: 'Budget',
+              data: [
+                totalBudget.HK,
+                totalBudget['Luas/Hasil'],
+                totalBudget['Biaya (Rp)']
+              ],
+              backgroundColor: 'rgba(66, 133, 244, 0.7)',
+              borderColor: 'rgba(66, 133, 244, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Actual',
+              data: [
+                totalActual.HK,
+                totalActual['Luas/Hasil'],
+                totalActual['Biaya (Rp)']
+              ],
+              backgroundColor: 'rgba(52, 168, 83, 0.7)',
+              borderColor: 'rgba(52, 168, 83, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Nilai'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    if (context.dataIndex === 0) {
+                      label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
+                    } else if (context.dataIndex === 1) {
+                      label += context.parsed.y.toFixed(2) + ' Ha';
+                    } else {
+                      label += new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR'
+                      }).format(context.parsed.y);
+                    }
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Fungsi untuk membuat grafik efisiensi
+    function createEfficiencyChart(totalBudget, totalActual) {
+      const budgetEfficiency = totalBudget.HK > 0 ? totalBudget['Biaya (Rp)'] / totalBudget.HK : 0;
+      const actualEfficiency = totalActual.HK > 0 ? totalActual['Biaya (Rp)'] / totalActual.HK : 0;
+      
+      const ctx = document.getElementById('efficiencyChart').getContext('2d');
+      
+      efficiencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Biaya per HK'],
+          datasets: [
+            {
+              label: 'Budget',
+              data: [budgetEfficiency],
+              backgroundColor: 'rgba(66, 133, 244, 0.7)',
+              borderColor: 'rgba(66, 133, 244, 1)',
+              borderWidth: 1
+            },
+            {
+              label: 'Actual',
+              data: [actualEfficiency],
+              backgroundColor: 'rgba(52, 168, 83, 0.7)',
+              borderColor: 'rgba(52, 168, 83, 1)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Biaya per HK (Rp)'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    label += new Intl.NumberFormat('id-ID', {
+                      style: 'currency',
+                      currency: 'IDR'
+                    }).format(context.parsed.y);
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Fungsi untuk membuat grafik trend bulanan (contoh)
+    function createMonthlyTrendChart(budgetData, actualData) {
+      // Contoh data bulanan - perlu disesuaikan dengan data aktual Anda
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      
+      // Contoh data - perlu diganti dengan data aktual dari database
+      const budgetTrend = months.map((_, i) => {
+        const progress = (i + 1) / 12;
+        return budgetData.tonase * progress * (0.9 + Math.random() * 0.2);
+      });
+      
+      const actualTrend = months.map((_, i) => {
+        const progress = (i + 1) / 12;
+        return actualData.tonase * progress * (0.8 + Math.random() * 0.4);
+      });
+      
+      const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+      
+      monthlyTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label: 'Budget Tonase',
+              data: budgetTrend,
+              borderColor: 'rgba(66, 133, 244, 1)',
+              backgroundColor: 'rgba(66, 133, 244, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Actual Tonase',
+              data: actualTrend,
+              borderColor: 'rgba(52, 168, 83, 1)',
+              backgroundColor: 'rgba(52, 168, 83, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Tonase (Ton)'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) {
+                    label += context.parsed.y.toFixed(2) + ' Ton';
+                  }
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Fungsi untuk menampilkan semua grafik
+    function displayCharts(budgetProdData, actualProdData, totalBudgetCost, totalActualCost) {
+      destroyCharts(); // Hapus chart sebelumnya jika ada
+      
+      // Buat semua grafik
+      createProductionChart(budgetProdData, actualProdData);
+      createCostChart(totalBudgetCost, totalActualCost);
+      createEfficiencyChart(totalBudgetCost, totalActualCost);
+      createMonthlyTrendChart(budgetProdData, actualProdData);
     }
   </script>
   
