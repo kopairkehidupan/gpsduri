@@ -214,6 +214,147 @@
       vertical-align: middle;
       margin-right: 5px;
     }
+
+    /* Data Display Styles */
+    .data-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--medium-gray);
+      margin-bottom: 1rem;
+    }
+    
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-family: inherit;
+      font-weight: 500;
+      color: var(--dark-gray);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 1rem;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .data-card {
+      background: var(--light-gray);
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .data-card h4 {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1rem;
+      border-bottom: 1px solid var(--medium-gray);
+      padding-bottom: 0.5rem;
+    }
+    
+    .data-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .data-item .label {
+      font-weight: 500;
+      color: var(--dark-gray);
+    }
+    
+    .data-item .value {
+      font-weight: 600;
+    }
+    
+    .comparison-positive {
+      color: var(--secondary);
+    }
+    
+    .comparison-negative {
+      color: #ea4335;
+    }
+    
+    .summary-card {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    
+    .summary-card h4 {
+      margin-top: 0;
+      color: white;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Cost Table Styles */
+    .cost-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    
+    .cost-table th, .cost-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .cost-table th {
+      background-color: var(--light-gray);
+      font-weight: 600;
+    }
+    
+    .cost-table tr:hover {
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .cost-table .positive {
+      color: var(--secondary);
+    }
+    
+    .cost-table .negative {
+      color: #ea4335;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .data-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .cost-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -258,6 +399,36 @@
       <div id="mapContainer">
         <div id="map"></div>
       </div>
+      
+      <div id="dataDetails" class="card" style="display: none;">
+      <div class="data-tabs">
+        <button class="tab-btn active" data-tab="production">Produksi</button>
+        <button class="tab-btn" data-tab="cost">Biaya</button>
+      </div>
+      
+      <div id="productionTab" class="tab-content active">
+        <h3>Data Produksi</h3>
+        <div class="data-grid">
+          <div class="data-card">
+            <h4>Budget</h4>
+            <div id="prodBudgetData"></div>
+          </div>
+          <div class="data-card">
+            <h4>Aktual</h4>
+            <div id="prodActualData"></div>
+          </div>
+          <div class="data-card">
+            <h4>Perbandingan</h4>
+            <div id="prodComparison"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="costTab" class="tab-content">
+        <!-- Content will be dynamically generated -->
+      </div>
+    </div>
+      
     </div>
   </div>
 
@@ -320,8 +491,29 @@
         return null;
       }
     }
+
+    // Modifikasi fungsi onEachFeature untuk menambahkan event click
+    function onEachFeature(feature, layer) {
+      const props = feature.properties;
+      const popupContent = `
+        <b>Kebun:</b> ${props.kebun}<br>
+        <b>Divisi:</b> ${props.divisi}<br>
+        <b>Blok:</b> ${props.blok}<br>
+        <b>Kode:</b> ${props.kode}<br>
+        <b>Luas:</b> ${props.luas} Ha<br>
+        <b>Tahun Tanam:</b> ${props.tahun}<br>
+        <b>Umur:</b> ${props.umur} tahun
+      `;
+      layer.bindPopup(popupContent);
+      
+      layer.on('click', function() {
+        // Convert divisi format from "DIVISI I" to "Divisi_I" to match IndexedDB data
+        const divisiForQuery = props.divisi.replace(' ', '_');
+        showBlockDetails(props.blok, props.kebun, divisiForQuery);
+      });
+    }
     
-    // Show GeoJSON on map
+    // Modifikasi fungsi showGeoJsonOnMap untuk menggunakan onEachFeature yang baru
     function showGeoJsonOnMap(data) {
       if (geoJsonLayer) {
         map.removeLayer(geoJsonLayer);
@@ -338,19 +530,7 @@
             fillOpacity: 0.7
           };
         },
-        onEachFeature: function(feature, layer) {
-          const props = feature.properties;
-          const popupContent = `
-            <b>Kebun:</b> ${props.kebun}<br>
-            <b>Divisi:</b> ${props.divisi}<br>
-            <b>Blok:</b> ${props.blok}<br>
-            <b>Kode:</b> ${props.kode}<br>
-            <b>Luas:</b> ${props.luas} Ha<br>
-            <b>Tahun Tanam:</b> ${props.tahun}<br>
-            <b>Umur:</b> ${props.umur} tahun
-          `;
-          layer.bindPopup(popupContent);
-        }
+        onEachFeature: onEachFeature
       }).addTo(map);
       
       map.fitBounds(geoJsonLayer.getBounds());
@@ -428,8 +608,52 @@
           showGeoJsonOnMap(filteredData);
         });
       }
-    });
 
+      // Event listener untuk tab
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          
+          // Hide all tabs first
+          document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+            tab.style.display = 'none';
+          });
+          
+          // Show only the selected tab
+          const activeTab = document.getElementById(`${tabId}Tab`);
+          if (activeTab) {
+            activeTab.classList.add('active');
+            activeTab.style.display = 'block';
+          }
+          
+          // Update active tab button
+          document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+        });
+      });
+
+      function getElementSafe(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+          console.error(`Element with ID ${id} not found`);
+          // Create a fallback element if needed
+          const fallback = document.createElement('div');
+          fallback.id = id;
+          document.body.appendChild(fallback);
+          return fallback;
+        }
+        return el;
+      }
+
+      console.log('DOM fully loaded');
+      console.log('prodBudgetData exists:', !!document.getElementById('prodBudgetData'));
+      console.log('prodActualData exists:', !!document.getElementById('prodActualData'));
+      console.log('prodComparison exists:', !!document.getElementById('prodComparison'));
+      console.log('Active tab content:', document.querySelector('.tab-content.active'));
+      console.log('All tab contents:', document.querySelectorAll('.tab-content'));
+    });
+    
     // ---------------- END POINT untuk mengambil data dari server-------------//
     // Database setup for IndexedDB
     const DB_NAME = 'KebunDatabase';
@@ -1141,6 +1365,527 @@
         this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
       }
     });
+
+    // ---------------- END POINT untuk mengambil menampilkan data dari indexDB-------------//
+    // Fungsi untuk mendapatkan data dari IndexedDB
+    async function getDataFromDB(storeName, key) {
+      try {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction([storeName], 'readonly');
+          const store = transaction.objectStore(storeName);
+          const request = store.getAll();
+          
+          request.onsuccess = () => {
+            resolve(request.result);
+          };
+          
+          request.onerror = (event) => {
+            reject(event.target.error);
+          };
+        });
+      } catch (error) {
+        console.error(`Error getting data from ${storeName}:`, error);
+        return [];
+      }
+    }
+    
+    // Enhanced showBlockDetails function
+    async function showBlockDetails(blockCode, kebun, divisi) {
+      console.log('Showing details for:', { blockCode, kebun, divisi });
+    
+      // Show the container and activate production tab first
+      const dataDetails = document.getElementById('dataDetails');
+      dataDetails.style.display = 'block';
+      
+      // Activate production tab
+      document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
+      document.getElementById('productionTab').classList.add('active');
+      document.getElementById('productionTab').style.display = 'block';
+      
+      // Hide other tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        if (tab.id !== 'productionTab') {
+          tab.classList.remove('active');
+          tab.style.display = 'none';
+        }
+      });
+    
+      // Get elements fresh each time
+      const prodBudgetDiv = document.getElementById('prodBudgetData');
+      const prodActualDiv = document.getElementById('prodActualData');
+      const comparisonDiv = document.getElementById('prodComparison');
+      const costTab = document.getElementById('costTab');
+    
+      // Show loading state
+      const loadingHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
+      prodBudgetDiv.innerHTML = loadingHTML;
+      prodActualDiv.innerHTML = loadingHTML;
+      comparisonDiv.innerHTML = loadingHTML;
+      costTab.innerHTML = loadingHTML;
+    
+      try {
+        // Load all data in parallel
+        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
+          getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
+          getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
+          getDataFromDB(STORES.BUDGET).catch(() => []),
+          getDataFromDB(STORES.ACTUAL).catch(() => [])
+        ]);
+    
+        // Normalize divisi format for filtering
+        const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
+    
+        // Filter data
+        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+        
+        // Process cost data
+        const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
+          aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
+        const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
+          aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
+    
+        // Display data
+        displayProductionData(filteredProdBudget, filteredProdActual);
+        displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
+    
+      } catch (error) {
+        console.error('Error:', error);
+        const errorHTML = '<p class="error">Gagal memuat data</p>';
+        prodBudgetDiv.innerHTML = errorHTML;
+        prodActualDiv.innerHTML = errorHTML;
+        comparisonDiv.innerHTML = errorHTML;
+        costTab.innerHTML = errorHTML;
+      }
+    }
+    
+    // Helper function to safely access nested properties
+    function getSafe(fn, defaultVal) {
+      try {
+        return fn();
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+    
+    // Enhanced filterProductionData function
+    function filterProductionData(data, blockCode, kebun, divisi) {
+      if (!Array.isArray(data)) return [];
+      
+      // Normalize divisi format from "DIVISI_I" to "Divisi_I"
+      const normalizedDivisi = divisi.replace(' ', '_');
+      
+      return data.filter(item => {
+        // Normalize kebun name (case insensitive)
+        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
+        const targetKebun = kebun ? kebun.toUpperCase() : '';
+        
+        // Normalize divisi format (case insensitive and handle both formats)
+        const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
+        const targetDivisi = normalizedDivisi.toUpperCase();
+        
+        // Exact match for block code
+        const itemBlok = getSafe(() => item.Blok, '');
+        
+        return itemBlok === blockCode && 
+               itemKebun === targetKebun && 
+               itemDivisi === targetDivisi;
+      });
+    }
+    
+    // Enhanced aggregateCostData function
+    function aggregateCostData(data, blockCode, kebun, divisi) {
+      if (!Array.isArray(data)) {
+        return {
+          aggregatedCostData: [],
+          totalCostData: {
+            HK: 0,
+            'Luas/Hasil': 0,
+            'Biaya (Rp)': 0
+          }
+        };
+      }
+    
+      const filteredData = data.filter(item => {
+        // Normalize kebun name
+        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
+        const targetKebun = kebun ? kebun.toUpperCase() : '';
+        
+        // Normalize divisi format
+        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
+        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
+        
+        // Exact match for block code
+        const itemBlok = getSafe(() => item.Blok, '');
+        
+        return itemBlok === blockCode && 
+               itemKebun === targetKebun && 
+               itemDivisi === targetDivisi;
+      });
+
+      const aggregated = {};
+      let totalHK = 0;
+      let totalArea = 0;
+      let totalCost = 0;
+    
+      filteredData.forEach(item => {
+        const kodeKerja = getSafe(() => item['Kode Kerja'], '');
+        const objekKerja = getSafe(() => item['Objek Kerja'], '');
+        const key = `${kodeKerja}_${objekKerja}`;
+        
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            'Kode Kerja': kodeKerja,
+            'Objek Kerja': objekKerja,
+            HK: 0,
+            'Luas/Hasil': 0,
+            'Biaya (Rp)': 0
+          };
+        }
+        
+        // Handle property names with parentheses
+        const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
+        const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
+        const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
+        
+        aggregated[key].HK += hk;
+        aggregated[key]['Luas/Hasil'] += luas;
+        aggregated[key]['Biaya (Rp)'] += biaya;
+    
+        totalHK += hk;
+        totalArea += luas;
+        totalCost += biaya;
+      });
+    
+      return {
+        aggregatedCostData: Object.values(aggregated),
+        totalCostData: {
+          HK: totalHK,
+          'Luas/Hasil': totalArea,
+          'Biaya (Rp)': totalCost
+        }
+      };
+    }
+    
+    // Enhanced displayProductionData function
+    function displayProductionData(budgetData = [], actualData = []) {
+      // Get fresh references each time
+      const prodBudgetDiv = document.getElementById('prodBudgetData');
+      const prodActualDiv = document.getElementById('prodActualData');
+      const comparisonDiv = document.getElementById('prodComparison');
+    
+      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
+        console.error('Display elements not found');
+        return;
+      }
+    
+      // Clear previous content safely
+      [prodBudgetDiv, prodActualDiv, comparisonDiv].forEach(el => {
+        el.innerHTML = '';
+      });
+
+      // Calculate totals with safe property access
+      const budgetTotals = calculateProductionTotals(budgetData);
+      const actualTotals = calculateProductionTotals(actualData);
+    
+      // Helper function to create data item
+      const createDataItem = (label, value) => {
+        const div = document.createElement('div');
+        div.className = 'data-item';
+        div.innerHTML = `
+          <span class="label">${label}:</span>
+          <span class="value">${value}</span>
+        `;
+        return div;
+      };
+    
+      // Display budget data
+      if (budgetData.length > 0) {
+        prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
+        prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
+        prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
+        prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
+      } else {
+        prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
+      }
+      
+      // Display actual data
+      if (actualData.length > 0) {
+        prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
+        prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
+        prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
+        prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
+      } else {
+        prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
+      }
+      
+      // Display comparison if both exist
+      if (budgetData.length > 0 && actualData.length > 0) {
+        const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
+        const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
+          (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
+        
+        const diffTonase = actualTotals.tonase - budgetTotals.tonase;
+        const percentageTonase = budgetTotals.tonase !== 0 ? 
+          (diffTonase / budgetTotals.tonase * 100) : 0;
+        
+        // Create comparison elements
+        const diffTonPerHaEl = createDataItem(
+          'Selisih Ton/Ha',
+          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
+          </span>`
+        );
+        
+        const diffTonaseEl = createDataItem(
+          'Selisih Tonase',
+          `<span class="${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
+          </span>`
+        );
+        
+        const statusEl = createDataItem(
+          'Status',
+          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+            ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
+          </span>`
+        );
+        
+        comparisonDiv.appendChild(diffTonPerHaEl);
+        comparisonDiv.appendChild(diffTonaseEl);
+        comparisonDiv.appendChild(statusEl);
+      } else {
+        comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
+      }
+      
+      console.log('Production data displayed successfully');
+    }
+    
+    // Enhanced calculateProductionTotals function
+    function calculateProductionTotals(data = []) {
+      // Use a Set to track processed IDs to avoid duplicates
+      const processedIds = new Set();
+      
+      return data.reduce((totals, item) => {
+        // Skip duplicates
+        if (processedIds.has(item.id)) {
+          return totals;
+        }
+        processedIds.add(item.id);
+        
+        const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
+        
+        // Handle both actual and budget data
+        const produksi = parseFloat(
+          getSafe(() => item['Actual Produksi (Kg)'], 0) || 
+          getSafe(() => item['Budget Produksi (Kg)'], 0)
+        ) || 0;
+        
+        const tonase = parseFloat(
+          getSafe(() => item['Actual Tonase (Ton)'], 0) || 
+          getSafe(() => item['Budget Tonase (Ton)'], 0)
+        ) || 0;
+        
+        let tonPerHa = 0;
+        if (item['Actual Ton/Ha'] !== undefined) {
+          tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+        } else if (item['Budget Ton/Ha'] !== undefined) {
+          tonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+        } else if (luas > 0) {
+          tonPerHa = tonase / luas;
+        }
+        
+        totals.luas += luas;
+        totals.produksi += produksi;
+        totals.tonase += tonase;
+        totals.tonPerHa = tonPerHa; // Will be averaged correctly
+        
+        return totals;
+      }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
+    }
+    
+    // Enhanced displayCostData function
+    function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
+      const costTab = document.getElementById('costTab');
+      if (!costTab) return;
+    
+      // Initialize totals with default values
+      totalBudget = {
+        HK: getSafe(() => totalBudget.HK, 0),
+        'Luas/Hasil': getSafe(() => totalBudget['Luas/Hasil'], 0),
+        'Biaya (Rp)': getSafe(() => totalBudget['Biaya (Rp)'], 0)
+      };
+    
+      totalActual = {
+        HK: getSafe(() => totalActual.HK, 0),
+        'Luas/Hasil': getSafe(() => totalActual['Luas/Hasil'], 0),
+        'Biaya (Rp)': getSafe(() => totalActual['Biaya (Rp)'], 0)
+      };
+    
+      let tableHTML = `
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>Kode Kerja</th>
+              <th>Objek Kerja</th>
+              <th>HK (Budget)</th>
+              <th>HK (Actual)</th>
+              <th>Luas/Hasil (Budget)</th>
+              <th>Luas/Hasil (Actual)</th>
+              <th>Biaya (Budget)</th>
+              <th>Biaya (Actual)</th>
+              <th>Selisih Biaya</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+    
+      if (budgetData.length === 0 && actualData.length === 0) {
+        tableHTML += `
+          <tr>
+            <td colspan="9" style="text-align: center;">Tidak ada data biaya untuk blok ini</td>
+          </tr>
+        `;
+      } else {
+        // Get unique work codes from both datasets
+        const allWorkCodes = new Set([
+          ...budgetData.map(item => getSafe(() => item['Kode Kerja'], '')),
+          ...actualData.map(item => getSafe(() => item['Kode Kerja'], ''))
+        ]);
+    
+        // Process each work code
+        Array.from(allWorkCodes).forEach(kodeKerja => {
+          if (!kodeKerja) return;
+    
+          const budgetItems = budgetData.filter(item => 
+            getSafe(() => item['Kode Kerja'], '') === kodeKerja
+          );
+          const actualItems = actualData.filter(item => 
+            getSafe(() => item['Kode Kerja'], '') === kodeKerja
+          );
+    
+          // Get unique work objects
+          const allObjekKerja = new Set([
+            ...budgetItems.map(item => getSafe(() => item['Objek Kerja'], '')),
+            ...actualItems.map(item => getSafe(() => item['Objek Kerja'], ''))
+          ]);
+    
+          // Process each work object
+          Array.from(allObjekKerja).forEach(objekKerja => {
+            if (!objekKerja) return;
+    
+            const budgetItem = budgetItems.find(item => 
+              getSafe(() => item['Objek Kerja'], '') === objekKerja
+            ) || {};
+            const actualItem = actualItems.find(item => 
+              getSafe(() => item['Objek Kerja'], '') === objekKerja
+            ) || {};
+    
+            const costDiff = (getSafe(() => actualItem['Biaya (Rp)'], 0) || 0) - 
+                            (getSafe(() => budgetItem['Biaya (Rp)'], 0) || 0);
+            const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
+            
+            tableHTML += `
+              <tr>
+                <td>${kodeKerja || '-'}</td>
+                <td>${objekKerja || '-'}</td>
+                <td>${formatNumber(getSafe(() => budgetItem.HK, 0))}</td>
+                <td>${formatNumber(getSafe(() => actualItem.HK, 0))}</td>
+                <td>${formatNumber(getSafe(() => budgetItem['Luas/Hasil'], 0))}</td>
+                <td>${formatNumber(getSafe(() => actualItem['Luas/Hasil'], 0))}</td>
+                <td>${formatCurrency(getSafe(() => budgetItem['Biaya (Rp)'], 0))}</td>
+                <td>${formatCurrency(getSafe(() => actualItem['Biaya (Rp)'], 0))}</td>
+                <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
+              </tr>
+            `;
+          });
+        });
+      }
+    
+      tableHTML += `</tbody></table>`;
+    
+      // Calculate summary data
+      const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
+      const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
+      const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
+      const totalCostDiffPercent = totalBudgetCost > 0 ? 
+        (totalCostDiff / totalBudgetCost * 100) : 0;
+    
+      // Add summary cards
+      tableHTML += `
+        <div class="data-grid">
+          <div class="summary-card">
+            <h4>Total Budget</h4>
+            <div class="summary-item">
+              <span>Total HK:</span>
+              <span>${formatNumber(totalBudget.HK || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Luas:</span>
+              <span>${formatNumber(totalBudget['Luas/Hasil'] || 0)} Ha</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Biaya:</span>
+              <span>${formatCurrency(totalBudget['Biaya (Rp)'] || 0)}</span>
+            </div>
+          </div>
+          
+          <div class="summary-card">
+            <h4>Total Actual</h4>
+            <div class="summary-item">
+              <span>Total HK:</span>
+              <span>${formatNumber(totalActual.HK || 0)}</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Hasil:</span>
+              <span>${formatNumber(totalActual['Luas/Hasil'] || 0)} Ha</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Biaya:</span>
+              <span>${formatCurrency(totalActual['Biaya (Rp)'] || 0)}</span>
+            </div>
+          </div>
+          
+          <div class="summary-card">
+            <h4>Perbandingan</h4>
+            <div class="summary-item">
+              <span>Selisih HK:</span>
+              <span>${formatNumber((totalActual.HK || 0) - (totalBudget.HK || 0))}</span>
+            </div>
+            <div class="summary-item">
+              <span>Selisih Luas:</span>
+              <span>${formatNumber((totalActual['Luas/Hasil'] || 0) - (totalBudget['Luas/Hasil'] || 0))} Ha</span>
+            </div>
+            <div class="summary-item">
+              <span>Selisih Biaya:</span>
+              <span class="${totalCostDiffClass}">
+                ${formatCurrency(totalCostDiff)} (${Math.abs(totalCostDiffPercent).toFixed(2)}%)
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    
+      costTab.innerHTML = tableHTML;
+    }
+    
+    // Helper function to format numbers
+    function formatNumber(value) {
+      if (isNaN(value) || value === undefined || value === null) return '-';
+      return new Intl.NumberFormat('id-ID').format(value);
+    }
+    
+    // Enhanced currency formatting
+    function formatCurrency(amount) {
+      if (amount === undefined || amount === null || isNaN(amount)) return '-';
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
   </script>
   
 </body>
