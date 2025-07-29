@@ -123,3 +123,49 @@
   margin-right: 0.5rem;
   font-size: 1.2rem;
 }
+
+/* Chart Styles */
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.chart-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.chart-card {
+  flex: 1;
+  min-width: 300px;
+  background: var(--white);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 250px;
+  width: 100%;
+}
+
+.chart-card h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-row {
+    flex-direction: column;
+  }
+  
+  .chart-card {
+    min-width: 100%;
+  }
+}
