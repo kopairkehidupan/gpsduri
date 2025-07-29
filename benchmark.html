@@ -2282,21 +2282,30 @@
     
     // Helper function to update work object filters
     function updateWorkObjectFilters(budgetData, actualData) {
-      const workObjects = new Set();
+      const workObjects = new Map(); // Menggunakan Map untuk menyimpan kombinasi unik
       
-      // Add work objects from budget data
-      budgetData.forEach(item => {
-        if (item['Kode Kerja'] && item['Objek Kerja']) {
-          workObjects.add(`${item['Kode Kerja']}-${item['Objek Kerja']}`);
-        }
-      });
+      // Fungsi untuk menambahkan objek kerja ke Map
+      const addWorkObjects = (data) => {
+        data.forEach(item => {
+          const kodeKerja = getSafe(() => item['Kode Kerja'], '');
+          const objekKerja = getSafe(() => item['Objek Kerja'], '');
+          
+          if (kodeKerja && objekKerja) {
+            const key = `${kodeKerja}-${objekKerja}`;
+            if (!workObjects.has(key)) {
+              workObjects.set(key, {
+                kodeKerja,
+                objekKerja,
+                displayText: `${kodeKerja} - ${objekKerja}`
+              });
+            }
+          }
+        });
+      };
       
-      // Add work objects from actual data
-      actualData.forEach(item => {
-        if (item['Kode Kerja'] && item['Objek Kerja']) {
-          workObjects.add(`${item['Kode Kerja']}-${item['Objek Kerja']}`);
-        }
-      });
+      // Tambahkan dari budget dan actual data
+      addWorkObjects(budgetData);
+      addWorkObjects(actualData);
       
       // Update both dropdowns
       const costDropdown = document.getElementById('costWorkObject');
@@ -2306,15 +2315,22 @@
       while (costDropdown.options.length > 1) costDropdown.remove(1);
       while (areaDropdown.options.length > 1) areaDropdown.remove(1);
       
+      // Sort work objects by kode kerja and objek kerja
+      const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => {
+        return a.displayText.localeCompare(b.displayText);
+      });
+      
       // Add new options
-      workObjects.forEach(workObject => {
+      sortedWorkObjects.forEach(workObject => {
         const option = document.createElement('option');
-        option.value = workObject;
-        option.textContent = workObject;
+        option.value = `${workObject.kodeKerja}-${workObject.objekKerja}`;
+        option.textContent = workObject.displayText;
         
         costDropdown.appendChild(option.cloneNode(true));
         areaDropdown.appendChild(option.cloneNode(true));
       });
+      
+      console.log('Work objects loaded:', sortedWorkObjects);
     }
   </script>
   
