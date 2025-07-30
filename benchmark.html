@@ -2163,6 +2163,13 @@
     
     // Add this function to update charts when data is loaded
     function updateCharts(blockData) {
+      console.log('Data untuk grafik:', {
+        budget: blockData.budget,
+        actual: blockData.actual,
+        prodBudget: blockData.prodBudget,
+        prodActual: blockData.prodActual
+      });
+          
       currentBlockData = blockData;
       
       // Update production chart (tonase)
@@ -2180,11 +2187,14 @@
     
     // Helper function to update production chart
     function updateProductionChart(budgetData, actualData) {
+      if (!budgetData || !actualData) return;
+  
       const monthlyBudget = aggregateMonthlyData(budgetData, 'Budget Tonase (Ton)');
       const monthlyActual = aggregateMonthlyData(actualData, 'Actual Tonase (Ton)');
       
-      productionChart.data.datasets[0].data = monthlyBudget;
-      productionChart.data.datasets[1].data = monthlyActual;
+      // Jika tidak ada data, gunakan array kosong
+      productionChart.data.datasets[0].data = monthlyBudget || Array(12).fill(0);
+      productionChart.data.datasets[1].data = monthlyActual || Array(12).fill(0);
       productionChart.update();
     }
     
@@ -2226,16 +2236,19 @@
     function aggregateMonthlyCostData(data, workObjectFilter) {
       const monthlyData = Array(12).fill(0);
       
+      if (!Array.isArray(data)) return monthlyData;
+      
       data.forEach(item => {
-        // Skip if work object filter doesn't match
-        if (workObjectFilter && 
-            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+        // Handle filter
+        const currentKey = `${item?.['Kode Kerja']}_${item?.['Objek Kerja']}`.replace(/\s+/g, '_');
+        if (workObjectFilter && workObjectFilter !== 'all' && currentKey !== workObjectFilter) {
           return;
         }
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
-          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
+          const biaya = parseFloat(item['Biaya (Rp)']) || 0;
+          monthlyData[month] += biaya;
         }
       });
       
@@ -2269,14 +2282,13 @@
       if (!dateStr) return -1;
       
       try {
+        // Handle both Date objects and ISO strings
         const date = new Date(dateStr);
-        return date.getMonth();
+        if (isNaN(date.getTime())) throw new Error('Invalid date');
+        return date.getMonth(); // Returns 0-11
       } catch (e) {
-        // Try to parse month name if date parsing fails
-        const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
-                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-        const lowerStr = dateStr.toLowerCase().trim();
-        return monthNames.findIndex(m => lowerStr.includes(m));
+        console.warn('Failed to parse date:', dateStr, e);
+        return -1;
       }
     }
     
@@ -2287,13 +2299,14 @@
       // Fungsi untuk menambahkan objek kerja ke Map
       const addWorkObjects = (data) => {
         data.forEach(item => {
-          const kodeKerja = getSafe(() => item['Kode Kerja'], '');
-          const objekKerja = getSafe(() => item['Objek Kerja'], '');
+          const kodeKerja = item?.['Kode Kerja'] || '';
+          const objekKerja = item?.['Objek Kerja'] || '';
           
           if (kodeKerja && objekKerja) {
-            const key = `${kodeKerja}-${objekKerja}`;
+            const key = `${kodeKerja}_${objekKerja}`.replace(/\s+/g, '_');
             if (!workObjects.has(key)) {
               workObjects.set(key, {
+                key,
                 kodeKerja,
                 objekKerja,
                 displayText: `${kodeKerja} - ${objekKerja}`
