@@ -1482,6 +1482,8 @@
           getDataFromDB(STORES.BUDGET).catch(() => []),
           getDataFromDB(STORES.ACTUAL).catch(() => [])
         ]);
+
+        console.log('Actual data from DB:', actualData); // Tambahkan ini
     
         // Normalize divisi format for filtering
         const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
@@ -1568,64 +1570,43 @@
         };
       }
     
+      // Filter data berdasarkan kriteria
       const filteredData = data.filter(item => {
-        // Normalize kebun name
-        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
-        const targetKebun = kebun ? kebun.toUpperCase() : '';
-        
-        // Normalize divisi format
-        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
-        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
-        
-        // Exact match for block code
-        const itemBlok = getSafe(() => item.Blok, '');
-        
-        return itemBlok === blockCode && 
-               itemKebun === targetKebun && 
-               itemDivisi === targetDivisi;
+        return item.Blok === blockCode && 
+               item.Kebun === kebun && 
+               item.Divisi === divisi.replace('_', ' ');
       });
-
-      const aggregated = {};
-      let totalHK = 0;
-      let totalArea = 0;
-      let totalCost = 0;
     
+      // Agregasi per Kode Kerja dan Objek Kerja
+      const aggregated = {};
+      
       filteredData.forEach(item => {
-        const kodeKerja = getSafe(() => item['Kode Kerja'], '');
-        const objekKerja = getSafe(() => item['Objek Kerja'], '');
-        const key = `${kodeKerja}_${objekKerja}`;
+        const key = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
         
         if (!aggregated[key]) {
           aggregated[key] = {
-            'Kode Kerja': kodeKerja,
-            'Objek Kerja': objekKerja,
+            'Kode Kerja': item['Kode Kerja'],
+            'Objek Kerja': item['Objek Kerja'],
             HK: 0,
             'Luas/Hasil': 0,
-            'Biaya (Rp)': 0
+            'Biaya (Rp)': 0,
+            Bulan: item.Bulan // Simpan bulan untuk chart
           };
         }
         
-        // Handle property names with parentheses
-        const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
-        const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
-        const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
-        
-        aggregated[key].HK += hk;
-        aggregated[key]['Luas/Hasil'] += luas;
-        aggregated[key]['Biaya (Rp)'] += biaya;
-    
-        totalHK += hk;
-        totalArea += luas;
-        totalCost += biaya;
+        aggregated[key].HK += parseFloat(item.HK) || 0;
+        aggregated[key]['Luas/Hasil'] += parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+        aggregated[key]['Biaya (Rp)'] += parseFloat(item['Biaya (Rp)']) || 0;
       });
     
       return {
         aggregatedCostData: Object.values(aggregated),
-        totalCostData: {
-          HK: totalHK,
-          'Luas/Hasil': totalArea,
-          'Biaya (Rp)': totalCost
-        }
+        totalCostData: Object.values(aggregated).reduce((totals, item) => {
+          totals.HK += item.HK;
+          totals['Luas/Hasil'] += item['Luas/Hasil'];
+          totals['Biaya (Rp)'] += item['Biaya (Rp)'];
+          return totals;
+        }, { HK: 0, 'Luas/Hasil': 0, 'Biaya (Rp)': 0 })
       };
     }
     
@@ -2197,12 +2178,20 @@
     
     // Helper function to update cost chart
     function updateCostChart(budgetData, actualData, workObjectFilter) {
+      // Pastikan data ada
+      if (!budgetData || !actualData) {
+        console.error('Data tidak valid');
+        return;
+      }
+    
       const monthlyBudget = Array(12).fill(0);
       const monthlyActual = Array(12).fill(0);
     
       // Proses budget data
       budgetData.forEach(item => {
         const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
+        
+        // Jika filter kosong atau cocok dengan item saat ini
         if (!workObjectFilter || workObjectFilter === currentKey) {
           const month = getMonthFromDate(item.Bulan);
           if (month >= 0 && month < 12) {
@@ -2221,11 +2210,11 @@
           }
         }
       });
-
-      console.log('Updating cost chart with filter:', workObjectFilter);
-      console.log('Budget data:', budgetData);
-      console.log('Actual data:', actualData);
     
+      console.log('Monthly Budget:', monthlyBudget);
+      console.log('Monthly Actual:', monthlyActual);
+    
+      // Update chart
       costChart.data.datasets[0].data = monthlyBudget;
       costChart.data.datasets[1].data = monthlyActual;
       costChart.update();
@@ -2325,29 +2314,27 @@
     // Helper function to get month index (0-11) from date string
     function getMonthFromDate(dateStr) {
       if (!dateStr) return -1;
-      
-      // Jika format ISO (dari database)
-      if (dateStr.includes('T') && dateStr.includes('Z')) {
-        try {
-          const date = new Date(dateStr);
-          return date.getMonth();
-        } catch (e) {
-          console.error('Error parsing ISO date:', e);
-        }
+    
+      // Coba parse sebagai Date object
+      try {
+        const date = new Date(dateStr);
+        if (!isNaN(date)) return date.getMonth();
+      } catch (e) {
+        console.log('Date parse error, trying alternative methods');
       }
-      
-      // Jika format string biasa (bulan nama)
+    
+      // Coba cari nama bulan dalam string
       const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
                          'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-      const lowerStr = dateStr.toLowerCase().trim();
+      const lowerStr = String(dateStr).toLowerCase().trim();
       
       for (let i = 0; i < monthNames.length; i++) {
         if (lowerStr.includes(monthNames[i])) {
           return i;
         }
       }
-      
-      return -1; // Jika tidak ditemukan
+    
+      return 0; // Default ke bulan pertama jika tidak ditemukan
     }
     
     // Helper function to update work object filters
