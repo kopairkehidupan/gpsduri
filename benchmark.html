@@ -1442,7 +1442,7 @@
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
-    
+
       // Initialize charts if not already done
       if (!productionChart) {
         initializeCharts();
@@ -1483,26 +1483,6 @@
           getDataFromDB(STORES.ACTUAL).catch(() => [])
         ]);
     
-        // Validasi data sebelum diproses
-        const validateData = (data) => {
-          return data.filter(item => {
-            return item.Blok === blockCode && 
-                   item.Kebun === kebun && 
-                   item.Divisi === divisi.replace('_', ' ');
-          }).map(item => ({
-            ...item,
-            Bulan: item.Bulan || new Date().toISOString(), // Default to current month
-            'Biaya (Rp)': item['Biaya (Rp)'] || 0,
-            'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
-          }));
-        };
-        
-        const validatedBudgetData = validateData(budgetData); // Changed variable name
-        const validatedActualData = validateData(actualData); // Changed variable name
-        
-        console.log('Validated budget data:', validatedBudgetData);
-        console.log('Validated actual data:', validatedActualData);
-    
         // Normalize divisi format for filtering
         const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
     
@@ -1510,16 +1490,16 @@
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
         
-        // Process cost data - using the validated data now
-        const { aggregatedCostData: aggregatedBudget, totalCostData: totalBudget } = 
-          aggregateCostData(validatedBudgetData, blockCode, kebun, normalizedDivisi); // Changed variable name
-        const { aggregatedCostData: aggregatedActual, totalCostData: totalActual } = 
-          aggregateCostData(validatedActualData, blockCode, kebun, normalizedDivisi); // Changed variable name
+        // Process cost data
+        const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
+          aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
+        const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
+          aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
-        displayCostData(aggregatedBudget, aggregatedActual, totalBudget, totalActual); // Updated variable names
-    
+        displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
+
         // Update charts with all data
         updateCharts({
           kebun,
@@ -1527,8 +1507,8 @@
           blok: blockCode,
           prodBudget: filteredProdBudget,
           prodActual: filteredProdActual,
-          budget: aggregatedBudget, // Updated variable name
-          actual: aggregatedActual  // Updated variable name
+          budget: filteredBudget,
+          actual: filteredActual
         });
     
       } catch (error) {
@@ -1554,22 +1534,24 @@
     function filterProductionData(data, blockCode, kebun, divisi) {
       if (!Array.isArray(data)) return [];
       
-      // Normalize divisi format (accept both DIVISI I and DIVISI_I)
-      const normalizedDivisi = divisi.replace('_', ' ').toUpperCase();
+      // Normalize divisi format from "DIVISI_I" to "Divisi_I"
+      const normalizedDivisi = divisi.replace(' ', '_');
       
       return data.filter(item => {
+        // Normalize kebun name (case insensitive)
         const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
         const targetKebun = kebun ? kebun.toUpperCase() : '';
         
-        const itemDivisi = getSafe(() => item.Divisi, '')
-          .replace('_', ' ')
-          .toUpperCase();
+        // Normalize divisi format (case insensitive and handle both formats)
+        const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
+        const targetDivisi = normalizedDivisi.toUpperCase();
         
+        // Exact match for block code
         const itemBlok = getSafe(() => item.Blok, '');
         
         return itemBlok === blockCode && 
                itemKebun === targetKebun && 
-               itemDivisi === normalizedDivisi;
+               itemDivisi === targetDivisi;
       });
     }
     
@@ -1585,24 +1567,24 @@
           }
         };
       }
-
-      // Normalize divisi format
-      const normalizedDivisi = divisi.replace('_', ' ').toUpperCase();
     
       const filteredData = data.filter(item => {
+        // Normalize kebun name
         const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
         const targetKebun = kebun ? kebun.toUpperCase() : '';
         
-        const itemDivisi = getSafe(() => item.Divisi, '')
-          .replace('_', ' ')
-          .toUpperCase();
+        // Normalize divisi format
+        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
+        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
         
+        // Exact match for block code
         const itemBlok = getSafe(() => item.Blok, '');
         
         return itemBlok === blockCode && 
                itemKebun === targetKebun && 
-               itemDivisi === normalizedDivisi;
+               itemDivisi === targetDivisi;
       });
+
       const aggregated = {};
       let totalHK = 0;
       let totalArea = 0;
@@ -1786,17 +1768,6 @@
     
     // Enhanced displayCostData function
     function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
-      // Pastikan menggunakan field yang benar
-      const processedBudget = budgetData.map(item => ({
-        ...item,
-        'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
-      }));
-      
-      const processedActual = actualData.map(item => ({
-        ...item,
-        'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
-      }));
-      
       const costTab = document.getElementById('costTab');
       if (!costTab) return;
     
@@ -2182,12 +2153,10 @@
     
       // Add event listeners for work object filters
       document.getElementById('costWorkObject').addEventListener('change', function() {
-        console.log('Cost work object changed to:', this.value);
         updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
-      
+    
       document.getElementById('areaWorkObject').addEventListener('change', function() {
-        console.log('Area work object changed to:', this.value);
         updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
     }
@@ -2221,32 +2190,19 @@
     
     // Helper function to update cost chart
     function updateCostChart(budgetData, actualData, workObjectFilter) {
-      console.log('Updating cost chart with filter:', workObjectFilter);
-      
-      // Process data
       const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
       
-      console.log('Monthly budget:', monthlyBudget);
-      console.log('Monthly actual:', monthlyActual);
-      
-      // Update chart
       costChart.data.datasets[0].data = monthlyBudget;
       costChart.data.datasets[1].data = monthlyActual;
       costChart.update();
     }
     
+    // Helper function to update area chart
     function updateAreaChart(budgetData, actualData, workObjectFilter) {
-      console.log('Updating area chart with filter:', workObjectFilter);
-      
-      // Process data
       const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
       
-      console.log('Monthly budget area:', monthlyBudget);
-      console.log('Monthly actual area:', monthlyActual);
-      
-      // Update chart
       areaChart.data.datasets[0].data = monthlyBudget;
       areaChart.data.datasets[1].data = monthlyActual;
       areaChart.update();
@@ -2271,25 +2227,16 @@
       const monthlyData = Array(12).fill(0);
       
       data.forEach(item => {
-        // Filter by work object if specified
-        if (workObjectFilter && workObjectFilter !== '') {
-          const currentKey = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
-          if (currentKey !== workObjectFilter) return;
+        // Skip if work object filter doesn't match
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
         }
         
-        // Get month with proper handling
         const month = getMonthFromDate(item.Bulan);
-        const biaya = parseFloat(item['Biaya (Rp)']) || 0;
-        
-        monthlyData[month] += biaya;
-
-        // Di dalam fungsi aggregateMonthlyCostData, tambahkan:
-        console.log('Processing item:', {
-          month: getMonthFromDate(item.Bulan),
-          biaya: item['Biaya (Rp)'],
-          kode: item['Kode Kerja'],
-          objek: item['Objek Kerja']
-        });
+        if (month >= 0 && month < 12) {
+          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
+        }
       });
       
       return monthlyData;
@@ -2300,19 +2247,18 @@
       const monthlyData = Array(12).fill(0);
       
       data.forEach(item => {
-        // Filter by work object if specified
-        if (workObjectFilter && workObjectFilter !== '') {
-          const currentKey = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
-          if (currentKey !== workObjectFilter) return;
+        // Skip if work object filter doesn't match
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
         }
         
-        // Get month
         const month = getMonthFromDate(item.Bulan);
-        
-        // Handle both Luas (Ha) and Hasil (Ha)
-        const luas = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
-        
-        monthlyData[month] += luas;
+        if (month >= 0 && month < 12) {
+          // Use 'Luas (Ha)' for budget, 'Hasil (Ha)' for actual
+          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+          monthlyData[month] += value;
+        }
       });
       
       return monthlyData;
@@ -2320,45 +2266,32 @@
     
     // Helper function to get month index (0-11) from date string
     function getMonthFromDate(dateStr) {
-      if (!dateStr) return 0; // Default to January if empty
+      if (!dateStr) return -1;
       
-      // Handle ISO string format
-      if (typeof dateStr === 'string' && dateStr.includes('T')) {
-        try {
-          const date = new Date(dateStr);
-          if (!isNaN(date.getTime())) {
-            return date.getMonth();
-          }
-        } catch (e) {
-          console.warn('Invalid date format:', dateStr);
-        }
+      try {
+        const date = new Date(dateStr);
+        return date.getMonth();
+      } catch (e) {
+        // Try to parse month name if date parsing fails
+        const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
+                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+        const lowerStr = dateStr.toLowerCase().trim();
+        return monthNames.findIndex(m => lowerStr.includes(m));
       }
-      
-      // Handle month names (Indonesian)
-      const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
-                         'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-      const lowerStr = dateStr.toString().toLowerCase().trim();
-      
-      for (let i = 0; i < monthNames.length; i++) {
-        if (lowerStr.includes(monthNames[i])) {
-          return i;
-        }
-      }
-      
-      return 0; // Default to January if cannot parse
     }
     
     // Helper function to update work object filters
     function updateWorkObjectFilters(budgetData, actualData) {
-      const workObjects = new Map();
+      const workObjects = new Map(); // Menggunakan Map untuk menyimpan kombinasi unik
       
+      // Fungsi untuk menambahkan objek kerja ke Map
       const addWorkObjects = (data) => {
         data.forEach(item => {
           const kodeKerja = getSafe(() => item['Kode Kerja'], '');
           const objekKerja = getSafe(() => item['Objek Kerja'], '');
           
           if (kodeKerja && objekKerja) {
-            const key = `${kodeKerja}_${objekKerja}`; // Menggunakan underscore sebagai separator
+            const key = `${kodeKerja}-${objekKerja}`;
             if (!workObjects.has(key)) {
               workObjects.set(key, {
                 kodeKerja,
@@ -2370,17 +2303,19 @@
         });
       };
       
+      // Tambahkan dari budget dan actual data
       addWorkObjects(budgetData);
       addWorkObjects(actualData);
       
+      // Update both dropdowns
       const costDropdown = document.getElementById('costWorkObject');
       const areaDropdown = document.getElementById('areaWorkObject');
       
       // Clear existing options except the first one
-      costDropdown.innerHTML = '<option value="">Semua Objek Kerja</option>';
-      areaDropdown.innerHTML = '<option value="">Semua Objek Kerja</option>';
+      while (costDropdown.options.length > 1) costDropdown.remove(1);
+      while (areaDropdown.options.length > 1) areaDropdown.remove(1);
       
-      // Sort work objects
+      // Sort work objects by kode kerja and objek kerja
       const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => {
         return a.displayText.localeCompare(b.displayText);
       });
@@ -2388,12 +2323,14 @@
       // Add new options
       sortedWorkObjects.forEach(workObject => {
         const option = document.createElement('option');
-        option.value = `${workObject.kodeKerja}_${workObject.objekKerja}`; // Konsisten dengan key
+        option.value = `${workObject.kodeKerja}-${workObject.objekKerja}`;
         option.textContent = workObject.displayText;
         
         costDropdown.appendChild(option.cloneNode(true));
         areaDropdown.appendChild(option.cloneNode(true));
       });
+      
+      console.log('Work objects loaded:', sortedWorkObjects);
     }
   </script>
   
