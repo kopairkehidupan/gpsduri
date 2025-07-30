@@ -2163,26 +2163,25 @@
     
     // Add this function to update charts when data is loaded
     function updateCharts(blockData) {
-      console.log('Data untuk grafik:', {
-        budget: blockData.budget,
-        actual: blockData.actual,
-        prodBudget: blockData.prodBudget,
-        prodActual: blockData.prodActual
-      });
-          
-      currentBlockData = blockData;
+      console.log('Data untuk grafik:', blockData);
       
-      // Update production chart (tonase)
-      updateProductionChart(blockData.prodBudget, blockData.prodActual);
-      
-      // Update work object filters
-      updateWorkObjectFilters(blockData.budget, blockData.actual);
-      
-      // Update cost chart with default selection (all)
-      updateCostChart(blockData.budget, blockData.actual, '');
-      
-      // Update area chart with default selection (all)
-      updateAreaChart(blockData.budget, blockData.actual, '');
+      try {
+        currentBlockData = blockData;
+        
+        // Update production chart (tonase)
+        updateProductionChart(blockData.prodBudget, blockData.prodActual);
+        
+        // Update work object filters
+        updateWorkObjectFilters(blockData.budget, blockData.actual);
+        
+        // Update cost chart with default selection (all)
+        updateCostChart(blockData.budget, blockData.actual, '');
+        
+        // Update area chart with default selection (all)
+        updateAreaChart(blockData.budget, blockData.actual, '');
+      } catch (error) {
+        console.error('Error updating charts:', error);
+      }
     }
     
     // Helper function to update production chart
@@ -2239,13 +2238,15 @@
       if (!Array.isArray(data)) return monthlyData;
       
       data.forEach(item => {
-        // Handle filter
-        const currentKey = `${item?.['Kode Kerja']}_${item?.['Objek Kerja']}`.replace(/\s+/g, '_');
-        if (workObjectFilter && workObjectFilter !== 'all' && currentKey !== workObjectFilter) {
+        // Handle filter - sesuaikan dengan format dropdown
+        const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
+        if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
           return;
         }
         
-        const month = getMonthFromDate(item.Bulan);
+        // Default ke bulan 0 jika tidak ada data bulan
+        const month = 0; // Sementara di-set ke Januari (index 0)
+        
         if (month >= 0 && month < 12) {
           const biaya = parseFloat(item['Biaya (Rp)']) || 0;
           monthlyData[month] += biaya;
@@ -2259,17 +2260,21 @@
     function aggregateMonthlyAreaData(data, workObjectFilter) {
       const monthlyData = Array(12).fill(0);
       
+      if (!Array.isArray(data)) return monthlyData;
+      
       data.forEach(item => {
-        // Skip if work object filter doesn't match
-        if (workObjectFilter && 
-            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+        // Handle filter - sesuaikan dengan format dropdown
+        const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
+        if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
           return;
         }
         
-        const month = getMonthFromDate(item.Bulan);
+        // Default ke bulan 0 jika tidak ada data bulan
+        const month = 0; // Sementara di-set ke Januari (index 0)
+        
         if (month >= 0 && month < 12) {
-          // Use 'Luas (Ha)' for budget, 'Hasil (Ha)' for actual
-          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+          // Gunakan Luas/Hasil dari data yang sudah di-agregasi
+          const value = parseFloat(item['Luas/Hasil']) || 0;
           monthlyData[month] += value;
         }
       });
@@ -2294,16 +2299,16 @@
     
     // Helper function to update work object filters
     function updateWorkObjectFilters(budgetData, actualData) {
-      const workObjects = new Map(); // Menggunakan Map untuk menyimpan kombinasi unik
+      const workObjects = new Map();
       
-      // Fungsi untuk menambahkan objek kerja ke Map
       const addWorkObjects = (data) => {
         data.forEach(item => {
-          const kodeKerja = item?.['Kode Kerja'] || '';
-          const objekKerja = item?.['Objek Kerja'] || '';
+          const kodeKerja = item['Kode Kerja'] || '';
+          const objekKerja = item['Objek Kerja'] || '';
           
           if (kodeKerja && objekKerja) {
-            const key = `${kodeKerja}_${objekKerja}`.replace(/\s+/g, '_');
+            // Gunakan format yang konsisten dengan dropdown (dengan dash)
+            const key = `${kodeKerja}-${objekKerja}`;
             if (!workObjects.has(key)) {
               workObjects.set(key, {
                 key,
@@ -2316,11 +2321,9 @@
         });
       };
       
-      // Tambahkan dari budget dan actual data
       addWorkObjects(budgetData);
       addWorkObjects(actualData);
       
-      // Update both dropdowns
       const costDropdown = document.getElementById('costWorkObject');
       const areaDropdown = document.getElementById('areaWorkObject');
       
@@ -2328,22 +2331,19 @@
       while (costDropdown.options.length > 1) costDropdown.remove(1);
       while (areaDropdown.options.length > 1) areaDropdown.remove(1);
       
-      // Sort work objects by kode kerja and objek kerja
-      const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => {
-        return a.displayText.localeCompare(b.displayText);
-      });
+      // Sort work objects
+      const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => 
+        a.displayText.localeCompare(b.displayText));
       
       // Add new options
       sortedWorkObjects.forEach(workObject => {
         const option = document.createElement('option');
-        option.value = `${workObject.kodeKerja}-${workObject.objekKerja}`;
+        option.value = workObject.key; // Gunakan key yang sudah diformat
         option.textContent = workObject.displayText;
         
         costDropdown.appendChild(option.cloneNode(true));
         areaDropdown.appendChild(option.cloneNode(true));
       });
-      
-      console.log('Work objects loaded:', sortedWorkObjects);
     }
   </script>
   
