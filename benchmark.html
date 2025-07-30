@@ -1483,12 +1483,25 @@
           getDataFromDB(STORES.ACTUAL).catch(() => [])
         ]);
 
-        console.log('Jumlah data yang diambil:', {
-          prodActual: prodActualData.length,
-          prodBudget: prodBudgetData.length,
-          budget: budgetData.length,
-          actual: actualData.length
-        });
+        // Validasi data sebelum diproses
+        const validateData = (data) => {
+          return data.filter(item => {
+            return item.Blok === blockCode && 
+                   item.Kebun === kebun && 
+                   item.Divisi === divisi.replace('_', ' ');
+          }).map(item => ({
+            ...item,
+            Bulan: item.Bulan || new Date().toISOString(), // Default to current month
+            'Biaya (Rp)': item['Biaya (Rp)'] || 0,
+            'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
+          }));
+        };
+        
+        const filteredBudget = validateData(budgetData);
+        const filteredActual = validateData(actualData);
+        
+        console.log('Filtered budget data:', filteredBudget);
+        console.log('Filtered actual data:', filteredActual);
     
         // Normalize divisi format for filtering
         const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
@@ -1773,6 +1786,17 @@
     
     // Enhanced displayCostData function
     function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
+      // Pastikan menggunakan field yang benar
+      const processedBudget = budgetData.map(item => ({
+        ...item,
+        'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
+      }));
+      
+      const processedActual = actualData.map(item => ({
+        ...item,
+        'Luas/Hasil': item['Luas (Ha)'] || item['Hasil (Ha)'] || 0
+      }));
+      
       const costTab = document.getElementById('costTab');
       if (!costTab) return;
     
@@ -2197,26 +2221,32 @@
     
     // Helper function to update cost chart
     function updateCostChart(budgetData, actualData, workObjectFilter) {
-      console.log('Updating cost chart with:', {
-        budgetData,
-        actualData, 
-        workObjectFilter
-      });
+      console.log('Updating cost chart with filter:', workObjectFilter);
+      
+      // Process data
       const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
-
-      console.log('Monthly budget data:', monthlyBudget);
-      console.log('Monthly actual data:', monthlyActual);
       
+      console.log('Monthly budget:', monthlyBudget);
+      console.log('Monthly actual:', monthlyActual);
+      
+      // Update chart
       costChart.data.datasets[0].data = monthlyBudget;
       costChart.data.datasets[1].data = monthlyActual;
       costChart.update();
     }
     
     function updateAreaChart(budgetData, actualData, workObjectFilter) {
+      console.log('Updating area chart with filter:', workObjectFilter);
+      
+      // Process data
       const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
       
+      console.log('Monthly budget area:', monthlyBudget);
+      console.log('Monthly actual area:', monthlyActual);
+      
+      // Update chart
       areaChart.data.datasets[0].data = monthlyBudget;
       areaChart.data.datasets[1].data = monthlyActual;
       areaChart.update();
@@ -2238,32 +2268,28 @@
     
     // Helper function to aggregate monthly cost data
     function aggregateMonthlyCostData(data, workObjectFilter) {
-      console.log('Aggregating monthly cost data for:', workObjectFilter);
       const monthlyData = Array(12).fill(0);
       
       data.forEach(item => {
-        // Debugging log
-        console.log('Processing item:', {
-          kodeKerja: item['Kode Kerja'],
-          objekKerja: item['Objek Kerja'],
-          bulan: item.Bulan,
-          biaya: item['Biaya (Rp)']
-        });
-        
-        // Skip if work object filter doesn't match
-        if (workObjectFilter) {
+        // Filter by work object if specified
+        if (workObjectFilter && workObjectFilter !== '') {
           const currentKey = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
-          if (currentKey !== workObjectFilter) {
-            return;
-          }
+          if (currentKey !== workObjectFilter) return;
         }
         
+        // Get month with proper handling
         const month = getMonthFromDate(item.Bulan);
-        if (month >= 0 && month < 12) {
-          const biaya = parseFloat(item['Biaya (Rp)']) || 0;
-          console.log(`Adding ${biaya} to month ${month}`);
-          monthlyData[month] += biaya;
-        }
+        const biaya = parseFloat(item['Biaya (Rp)']) || 0;
+        
+        monthlyData[month] += biaya;
+
+        // Di dalam fungsi aggregateMonthlyCostData, tambahkan:
+        console.log('Processing item:', {
+          month: getMonthFromDate(item.Bulan),
+          biaya: item['Biaya (Rp)'],
+          kode: item['Kode Kerja'],
+          objek: item['Objek Kerja']
+        });
       });
       
       return monthlyData;
@@ -2274,20 +2300,19 @@
       const monthlyData = Array(12).fill(0);
       
       data.forEach(item => {
-        // Skip if work object filter doesn't match
-        if (workObjectFilter) {
+        // Filter by work object if specified
+        if (workObjectFilter && workObjectFilter !== '') {
           const currentKey = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
-          if (currentKey !== workObjectFilter) {
-            return;
-          }
+          if (currentKey !== workObjectFilter) return;
         }
         
+        // Get month
         const month = getMonthFromDate(item.Bulan);
-        if (month >= 0 && month < 12) {
-          // Gunakan 'Luas (Ha)' untuk budget, 'Hasil (Ha)' untuk actual
-          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
-          monthlyData[month] += value;
-        }
+        
+        // Handle both Luas (Ha) and Hasil (Ha)
+        const luas = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+        
+        monthlyData[month] += luas;
       });
       
       return monthlyData;
@@ -2295,18 +2320,32 @@
     
     // Helper function to get month index (0-11) from date string
     function getMonthFromDate(dateStr) {
-      if (!dateStr) return -1;
+      if (!dateStr) return 0; // Default to January if empty
       
-      try {
-        const date = new Date(dateStr);
-        return date.getMonth();
-      } catch (e) {
-        // Try to parse month name if date parsing fails
-        const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
-                           'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
-        const lowerStr = dateStr.toLowerCase().trim();
-        return monthNames.findIndex(m => lowerStr.includes(m));
+      // Handle ISO string format
+      if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        try {
+          const date = new Date(dateStr);
+          if (!isNaN(date.getTime())) {
+            return date.getMonth();
+          }
+        } catch (e) {
+          console.warn('Invalid date format:', dateStr);
+        }
       }
+      
+      // Handle month names (Indonesian)
+      const monthNames = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 
+                         'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+      const lowerStr = dateStr.toString().toLowerCase().trim();
+      
+      for (let i = 0; i < monthNames.length; i++) {
+        if (lowerStr.includes(monthNames[i])) {
+          return i;
+        }
+      }
+      
+      return 0; // Default to January if cannot parse
     }
     
     // Helper function to update work object filters
