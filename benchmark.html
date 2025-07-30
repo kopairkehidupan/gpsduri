@@ -1541,24 +1541,22 @@
     function filterProductionData(data, blockCode, kebun, divisi) {
       if (!Array.isArray(data)) return [];
       
-      // Normalize divisi format from "DIVISI_I" to "Divisi_I"
-      const normalizedDivisi = divisi.replace(' ', '_');
+      // Normalize divisi format (accept both DIVISI I and DIVISI_I)
+      const normalizedDivisi = divisi.replace('_', ' ').toUpperCase();
       
       return data.filter(item => {
-        // Normalize kebun name (case insensitive)
         const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
         const targetKebun = kebun ? kebun.toUpperCase() : '';
         
-        // Normalize divisi format (case insensitive and handle both formats)
-        const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
-        const targetDivisi = normalizedDivisi.toUpperCase();
+        const itemDivisi = getSafe(() => item.Divisi, '')
+          .replace('_', ' ')
+          .toUpperCase();
         
-        // Exact match for block code
         const itemBlok = getSafe(() => item.Blok, '');
         
         return itemBlok === blockCode && 
                itemKebun === targetKebun && 
-               itemDivisi === targetDivisi;
+               itemDivisi === normalizedDivisi;
       });
     }
     
@@ -1574,24 +1572,24 @@
           }
         };
       }
+
+      // Normalize divisi format
+      const normalizedDivisi = divisi.replace('_', ' ').toUpperCase();
     
       const filteredData = data.filter(item => {
-        // Normalize kebun name
         const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
         const targetKebun = kebun ? kebun.toUpperCase() : '';
         
-        // Normalize divisi format
-        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
-        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
+        const itemDivisi = getSafe(() => item.Divisi, '')
+          .replace('_', ' ')
+          .toUpperCase();
         
-        // Exact match for block code
         const itemBlok = getSafe(() => item.Blok, '');
         
         return itemBlok === blockCode && 
                itemKebun === targetKebun && 
-               itemDivisi === targetDivisi;
+               itemDivisi === normalizedDivisi;
       });
-
       const aggregated = {};
       let totalHK = 0;
       let totalArea = 0;
@@ -2160,10 +2158,12 @@
     
       // Add event listeners for work object filters
       document.getElementById('costWorkObject').addEventListener('change', function() {
+        console.log('Cost work object changed to:', this.value);
         updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
       
       document.getElementById('areaWorkObject').addEventListener('change', function() {
+        console.log('Area work object changed to:', this.value);
         updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
     }
@@ -2197,8 +2197,16 @@
     
     // Helper function to update cost chart
     function updateCostChart(budgetData, actualData, workObjectFilter) {
+      console.log('Updating cost chart with:', {
+        budgetData,
+        actualData, 
+        workObjectFilter
+      });
       const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
+
+      console.log('Monthly budget data:', monthlyBudget);
+      console.log('Monthly actual data:', monthlyActual);
       
       costChart.data.datasets[0].data = monthlyBudget;
       costChart.data.datasets[1].data = monthlyActual;
@@ -2230,9 +2238,18 @@
     
     // Helper function to aggregate monthly cost data
     function aggregateMonthlyCostData(data, workObjectFilter) {
+      console.log('Aggregating monthly cost data for:', workObjectFilter);
       const monthlyData = Array(12).fill(0);
       
       data.forEach(item => {
+        // Debugging log
+        console.log('Processing item:', {
+          kodeKerja: item['Kode Kerja'],
+          objekKerja: item['Objek Kerja'],
+          bulan: item.Bulan,
+          biaya: item['Biaya (Rp)']
+        });
+        
         // Skip if work object filter doesn't match
         if (workObjectFilter) {
           const currentKey = `${item['Kode Kerja']}_${item['Objek Kerja']}`;
@@ -2243,7 +2260,9 @@
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
-          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
+          const biaya = parseFloat(item['Biaya (Rp)']) || 0;
+          console.log(`Adding ${biaya} to month ${month}`);
+          monthlyData[month] += biaya;
         }
       });
       
