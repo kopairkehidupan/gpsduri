@@ -1442,7 +1442,7 @@
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
-
+    
       // Initialize charts if not already done
       if (!productionChart) {
         initializeCharts();
@@ -1482,7 +1482,7 @@
           getDataFromDB(STORES.BUDGET).catch(() => []),
           getDataFromDB(STORES.ACTUAL).catch(() => [])
         ]);
-
+    
         // Validasi data sebelum diproses
         const validateData = (data) => {
           return data.filter(item => {
@@ -1497,11 +1497,11 @@
           }));
         };
         
-        const filteredBudget = validateData(budgetData);
-        const filteredActual = validateData(actualData);
+        const validatedBudgetData = validateData(budgetData); // Changed variable name
+        const validatedActualData = validateData(actualData); // Changed variable name
         
-        console.log('Filtered budget data:', filteredBudget);
-        console.log('Filtered actual data:', filteredActual);
+        console.log('Validated budget data:', validatedBudgetData);
+        console.log('Validated actual data:', validatedActualData);
     
         // Normalize divisi format for filtering
         const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
@@ -1510,16 +1510,16 @@
         const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
         const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
         
-        // Process cost data
-        const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
-          aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
-        const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
-          aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
+        // Process cost data - using the validated data now
+        const { aggregatedCostData: aggregatedBudget, totalCostData: totalBudget } = 
+          aggregateCostData(validatedBudgetData, blockCode, kebun, normalizedDivisi); // Changed variable name
+        const { aggregatedCostData: aggregatedActual, totalCostData: totalActual } = 
+          aggregateCostData(validatedActualData, blockCode, kebun, normalizedDivisi); // Changed variable name
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
-        displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
-
+        displayCostData(aggregatedBudget, aggregatedActual, totalBudget, totalActual); // Updated variable names
+    
         // Update charts with all data
         updateCharts({
           kebun,
@@ -1527,8 +1527,8 @@
           blok: blockCode,
           prodBudget: filteredProdBudget,
           prodActual: filteredProdActual,
-          budget: filteredBudget,
-          actual: filteredActual
+          budget: aggregatedBudget, // Updated variable name
+          actual: aggregatedActual  // Updated variable name
         });
     
       } catch (error) {
