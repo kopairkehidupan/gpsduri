@@ -1500,9 +1500,6 @@
         displayProductionData(filteredProdBudget, filteredProdActual);
         displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
 
-        console.log('Filtered budget data:', filteredBudget);
-        console.log('Filtered actual data:', filteredActual);
-
         // Update charts with all data
         updateCharts({
           kebun,
@@ -1535,8 +1532,6 @@
     
     // Enhanced filterProductionData function
     function filterProductionData(data, blockCode, kebun, divisi) {
-      console.log('Filtering production data for:', {blockCode, kebun, divisi});
-      console.log('Input data:', data);
       if (!Array.isArray(data)) return [];
       
       // Normalize divisi format from "DIVISI_I" to "Divisi_I"
@@ -1562,7 +1557,6 @@
     
     // Enhanced aggregateCostData function
     function aggregateCostData(data, blockCode, kebun, divisi) {
-      console.log('Raw data for aggregateCostData:', data);
       if (!Array.isArray(data)) {
         return {
           aggregatedCostData: [],
@@ -2159,12 +2153,10 @@
     
       // Add event listeners for work object filters
       document.getElementById('costWorkObject').addEventListener('change', function() {
-        console.log('Cost work object changed:', this.value);
         updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
     
       document.getElementById('areaWorkObject').addEventListener('change', function() {
-        console.log('Area work object changed:', this.value);
         updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
     }
@@ -2198,14 +2190,8 @@
     
     // Helper function to update cost chart
     function updateCostChart(budgetData, actualData, workObjectFilter) {
-      console.log('Updating cost chart with filter:', workObjectFilter);
-      console.log('Budget data:', budgetData);
-      console.log('Actual data:', actualData);
       const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
-
-      console.log('Monthly budget data:', monthlyBudget);
-      console.log('Monthly actual data:', monthlyActual);
       
       costChart.data.datasets[0].data = monthlyBudget;
       costChart.data.datasets[1].data = monthlyActual;
@@ -2214,15 +2200,8 @@
     
     // Helper function to update area chart
     function updateAreaChart(budgetData, actualData, workObjectFilter) {
-      console.log('Updating area chart with filter:', workObjectFilter);
-      console.log('Budget data:', budgetData);
-      console.log('Actual data:', actualData);
-      
       const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
       const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
-
-      console.log('Monthly budget data:', monthlyBudget);
-      console.log('Monthly actual data:', monthlyActual);
       
       areaChart.data.datasets[0].data = monthlyBudget;
       areaChart.data.datasets[1].data = monthlyActual;
@@ -2249,16 +2228,14 @@
       
       data.forEach(item => {
         // Skip if work object filter doesn't match
-        if (workObjectFilter) {
-          const currentKey = `${getSafe(() => item['Kode Kerja'], '')}-${getSafe(() => item['Objek Kerja'], '')}`;
-          if (currentKey !== workObjectFilter) {
-            return;
-          }
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
         }
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
-          monthlyData[month] += parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
+          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
         }
       });
       
@@ -2271,17 +2248,15 @@
       
       data.forEach(item => {
         // Skip if work object filter doesn't match
-        if (workObjectFilter) {
-          const currentKey = `${getSafe(() => item['Kode Kerja'], '')}-${getSafe(() => item['Objek Kerja'], '')}`;
-          if (currentKey !== workObjectFilter) {
-            return;
-          }
+        if (workObjectFilter && 
+            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
+          return;
         }
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
           // Use 'Luas (Ha)' for budget, 'Hasil (Ha)' for actual
-          const value = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
+          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
           monthlyData[month] += value;
         }
       });
