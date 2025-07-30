@@ -2228,14 +2228,16 @@
       
       data.forEach(item => {
         // Skip if work object filter doesn't match
-        if (workObjectFilter && 
-            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
-          return;
+        if (workObjectFilter) {
+          const currentKey = `${getSafe(() => item['Kode Kerja'], '')}-${getSafe(() => item['Objek Kerja'], '')}`;
+          if (currentKey !== workObjectFilter) {
+            return;
+          }
         }
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
-          monthlyData[month] += parseFloat(item['Biaya (Rp)']) || 0;
+          monthlyData[month] += parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
         }
       });
       
@@ -2248,15 +2250,17 @@
       
       data.forEach(item => {
         // Skip if work object filter doesn't match
-        if (workObjectFilter && 
-            `${item['Kode Kerja']}-${item['Objek Kerja']}` !== workObjectFilter) {
-          return;
+        if (workObjectFilter) {
+          const currentKey = `${getSafe(() => item['Kode Kerja'], '')}-${getSafe(() => item['Objek Kerja'], '')}`;
+          if (currentKey !== workObjectFilter) {
+            return;
+          }
         }
         
         const month = getMonthFromDate(item.Bulan);
         if (month >= 0 && month < 12) {
           // Use 'Luas (Ha)' for budget, 'Hasil (Ha)' for actual
-          const value = parseFloat(item['Luas (Ha)'] || item['Hasil (Ha)'] || 0);
+          const value = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
           monthlyData[month] += value;
         }
       });
