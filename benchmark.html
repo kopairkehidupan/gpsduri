@@ -534,19 +534,8 @@
     }
 
     function onEachFeature(feature, layer) {
-      const props = feature.properties;
-      const popupContent = `
-        <b>Kebun:</b> ${props.kebun}<br>
-        <b>Divisi:</b> ${props.divisi}<br>
-        <b>Blok:</b> ${props.blok}<br>
-        <b>Kode:</b> ${props.kode}<br>
-        <b>Luas:</b> ${props.luas} Ha<br>
-        <b>Tahun Tanam:</b> ${props.tahun}<br>
-        <b>Umur:</b> ${props.umur} tahun
-      `;
-      layer.bindPopup(popupContent);
-      
       layer.on('click', function() {
+        const props = feature.properties;
         const divisiForQuery = props.divisi.replace(' ', '_');
         showBlockDetails(props.blok, props.kebun, divisiForQuery);
       });
@@ -1425,10 +1414,41 @@
     // Enhanced showBlockDetails function
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
+
+      // Dapatkan properti blok dari geoJsonData
+      const blockFeature = geoJsonData.features.find(f => 
+        f.properties.blok === blockCode && 
+        f.properties.kebun === kebun && 
+        f.properties.divisi === divisi.replace('_', ' ')
+      );
+      
+      const blockProps = blockFeature ? blockFeature.properties : {
+        kebun, 
+        divisi: divisi.replace('_', ' '), 
+        blok: blockCode,
+        kode: '',
+        luas: '',
+        tahun: '',
+        umur: ''
+      };
     
+      // Buat header info blok
+      const blockInfoHeader = createBlockInfoHeader(blockProps);
+      
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
+
+      // Tambahkan/muat ulang header info blok di setiap tab
+      ['productionTab', 'costTab', 'chartTab'].forEach(tabId => {
+        const tab = document.getElementById(tabId);
+        const existingHeader = tab.querySelector('.block-info-header');
+        if (existingHeader) {
+          existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
+        } else {
+          tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
+        }
+      });
 
       // Initialize charts if not already done
       if (!productionChart) {
@@ -1506,6 +1526,45 @@
         comparisonDiv.innerHTML = errorHTML;
         costTab.innerHTML = errorHTML;
       }
+    }
+
+    //membuat header informasi blok
+    function createBlockInfoHeader(props) {
+      const header = document.createElement('div');
+      header.className = 'block-info-header';
+      header.innerHTML = `
+        <div class="block-info-grid">
+          <div class="block-info-item">
+            <span class="block-info-label">Kebun:</span>
+            <span class="block-info-value">${props.kebun || '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Divisi:</span>
+            <span class="block-info-value">${props.divisi || '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Blok:</span>
+            <span class="block-info-value">${props.blok || '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Kode:</span>
+            <span class="block-info-value">${props.kode || '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Luas:</span>
+            <span class="block-info-value">${props.luas ? props.luas + ' Ha' : '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Tahun Tanam:</span>
+            <span class="block-info-value">${props.tahun || '-'}</span>
+          </div>
+          <div class="block-info-item">
+            <span class="block-info-label">Umur:</span>
+            <span class="block-info-value">${props.umur ? props.umur + ' tahun' : '-'}</span>
+          </div>
+        </div>
+      `;
+      return header;
     }
     
     // Helper function to safely access nested properties
