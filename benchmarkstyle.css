@@ -124,13 +124,15 @@
   font-size: 1.2rem;
 }
 
-/* Chart Styles */
+/* Chart Container Styles */
 .chart-container {
   background: var(--white);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
+  position: relative;
+  width: 100%;
 }
 
 .chart-container h4 {
@@ -138,16 +140,19 @@
   margin-top: 0;
   border-bottom: 1px solid var(--medium-gray);
   padding-bottom: 0.5rem;
+  font-size: 1rem;
 }
 
 .chart-description {
   margin-bottom: 1rem;
   color: var(--dark-gray);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .chart-filter {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin: 0.5rem 0;
@@ -155,14 +160,102 @@
 
 .chart-filter label {
   margin-bottom: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  flex: 0 0 100%;
 }
 
 .chart-filter select {
   flex: 1;
-  max-width: 300px;
-  padding: 0.4rem;
-  font-size: 0.9rem;
+  min-width: 0;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Responsive Chart Canvas */
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 250px;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 400px;
+}
+
+/* Tooltip Styles */
+.chartjs-tooltip {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  color: white;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Legend Styles */
+.chartjs-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+.chartjs-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chartjs-legend li {
+  display: flex;
+  align-items: center;
+  margin: 0 0.5rem 0.5rem 0;
+  cursor: pointer;
+}
+
+.chartjs-legend .legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.chartjs-legend .legend-color-box {
+  width: 12px;
+  height: 12px;
+  margin-right: 5px;
+  border-radius: 2px;
+}
+
+/* Responsive adjustments */
+@media (min-width: 601px) {
+  .chart-container h4 {
+    font-size: 1.1rem;
+  }
+  
+  .chart-description {
+    font-size: 0.9rem;
+  }
+  
+  .chart-filter label {
+    flex: 0 0 auto;
+    margin-right: 0.5rem;
+  }
+  
+  .chart-wrapper {
+    min-height: 300px;
+  }
+}
+
+@media (min-width: 993px) {
+  .chart-wrapper {
+    min-height: 350px;
+  }
 }
 
 canvas {
