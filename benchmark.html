@@ -529,29 +529,54 @@
       
       data.features.forEach(feature => {
         const blokName = feature.properties.blok;
-        const layer = L.geoJSON(feature);
-        
-        // Dapatkan pusat poligon
-        const center = layer.getBounds().getCenter();
-        
-        // Buat label untuk blok
-        const label = L.marker(center, {
-          icon: L.divIcon({
-            className: 'blok-label',
-            html: `<div>${blokName}</div>`,
-            iconSize: [100, 20] // Sesuaikan ukuran sesuai kebutuhan
-          }),
-          zIndexOffset: 1000, // Pastikan label muncul di atas poligon
-          interactive: false // Non-aktifkan interaksi dengan label
+        const layer = L.geoJSON(feature, {
+          style: function(feature) {
+            return {
+              fillColor: getColorByDivisi(feature.properties.divisi),
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.7
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            // Tambahkan tooltip permanen di tengah poligon
+            const center = layer.getBounds().getCenter();
+            const tooltip = L.tooltip({
+              permanent: true,
+              direction: 'center',
+              className: 'blok-label',
+              offset: [0, 0]
+            }).setContent(blokName);
+            
+            layer.bindTooltip(tooltip);
+            layer.setTooltipContent(blokName);
+            
+            // Simpan referensi tooltip
+            blokLabels.push({layer: layer, tooltip: tooltip});
+            
+            // Tetap pertahankan event click
+            layer.on('click', function() {
+              const props = feature.properties;
+              const divisiForQuery = props.divisi.replace(' ', '_');
+              showBlockDetails(props.blok, props.kebun, divisiForQuery);
+            });
+          }
         }).addTo(map);
         
-        blokLabels.push(label);
+        geoJsonLayer.addLayer(layer);
       });
     }
-
+    
     // Fungsi untuk menghapus semua label blok
     function removeBlokLabels() {
-      blokLabels.forEach(label => map.removeLayer(label));
+      blokLabels.forEach(item => {
+        if (item.layer && map.hasLayer(item.layer)) {
+          item.layer.unbindTooltip();
+          map.removeLayer(item.layer);
+        }
+      });
       blokLabels = [];
     }
 
@@ -576,27 +601,18 @@
     }
     
     function showGeoJsonOnMap(data) {
+      // Hapus layer yang sudah ada
       if (geoJsonLayer) {
         map.removeLayer(geoJsonLayer);
       }
       
-      geoJsonLayer = L.geoJSON(data, {
-        style: function(feature) {
-          return {
-            fillColor: getColorByDivisi(feature.properties.divisi),
-            weight: 2,
-            opacity: 1,
-            color: 'white',
-            dashArray: '3',
-            fillOpacity: 0.7
-          };
-        },
-        onEachFeature: onEachFeature
-      }).addTo(map);
+      // Buat layer group baru
+      geoJsonLayer = L.layerGroup().addTo(map);
       
-      // Tambahkan label blok
+      // Tambahkan blok dengan label
       addBlokLabels(data);
       
+      // Sesuaikan view
       map.fitBounds(geoJsonLayer.getBounds());
     }
     
