@@ -215,3 +215,28 @@ canvas {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Tambahkan style untuk label blok */
+.blok-label {
+  text-align: center;
+  font-weight: bold;
+  color: #333;
+  text-shadow: 
+    -1px -1px 0 #fff,  
+     1px -1px 0 #fff,
+    -1px  1px 0 #fff,
+     1px  1px 0 #fff;
+  pointer-events: none;
+}
+
+.blok-label div {
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+/* Untuk mobile, ukuran font lebih kecil */
+@media (max-width: 600px) {
+  .blok-label {
+    font-size: 10px;
+  }
+}
