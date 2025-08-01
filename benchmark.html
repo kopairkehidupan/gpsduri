@@ -384,11 +384,6 @@
           </select>
         </div>
         
-        <button id="showBtn" class="btn" disabled>
-          <i class="material-icons" style="font-size: 16px;">map</i>
-          <span>Tampilkan</span>
-        </button>
-
         <div class="filter-group">
           <button id="loadDataBtn" class="btn">
             <i class="material-icons" style="font-size: 16px;">refresh</i>
@@ -514,6 +509,7 @@
   <script>
     let map;
     let geoJsonLayer;
+    let geoJsonData; // Simpan data GeoJSON secara global
     
     // Initialize map
     function initMap() {
@@ -537,7 +533,6 @@
       }
     }
 
-    // Modifikasi fungsi onEachFeature untuk menambahkan event click
     function onEachFeature(feature, layer) {
       const props = feature.properties;
       const popupContent = `
@@ -552,13 +547,11 @@
       layer.bindPopup(popupContent);
       
       layer.on('click', function() {
-        // Convert divisi format from "DIVISI I" to "Divisi_I" to match IndexedDB data
         const divisiForQuery = props.divisi.replace(' ', '_');
         showBlockDetails(props.blok, props.kebun, divisiForQuery);
       });
     }
     
-    // Modifikasi fungsi showGeoJsonOnMap untuk menggunakan onEachFeature yang baru
     function showGeoJsonOnMap(data) {
       if (geoJsonLayer) {
         map.removeLayer(geoJsonLayer);
@@ -594,7 +587,7 @@
       return divisiColors[divisi] || '#888888';
     }
     
-    function loadDivisiOptions(kebun, geoJsonData) {
+    function loadDivisiOptions(kebun) {
       const divisiSelect = document.getElementById('divisiSelect');
       divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
       divisiSelect.disabled = true;
@@ -615,10 +608,9 @@
       });
       
       divisiSelect.disabled = false;
-      document.getElementById('showBtn').disabled = true;
     }
     
-    function filterGeoJson(geoJsonData, kebun, divisi) {
+    function filterGeoJson(kebun, divisi) {
       return {
         ...geoJsonData,
         features: geoJsonData.features.filter(feature => {
@@ -633,46 +625,49 @@
       initMap();
       
       // Load GeoJSON data
-      const geoJsonData = await loadGeoJsonData();
+      geoJsonData = await loadGeoJsonData();
       if (geoJsonData) {
         showGeoJsonOnMap(geoJsonData);
         
-        // Event listeners
+        // Event listener untuk dropdown kebun
         document.getElementById('kebunSelect').addEventListener('change', function() {
-          loadDivisiOptions(this.value, geoJsonData);
+          loadDivisiOptions(this.value);
+          
+          // Jika kebun dipilih, tapi divisi belum dipilih, tampilkan semua divisi kebun tersebut
+          if (this.value) {
+            const filteredData = filterGeoJson(this.value, '');
+            showGeoJsonOnMap(filteredData);
+          } else {
+            // Jika kebun direset, tampilkan semua data
+            showGeoJsonOnMap(geoJsonData);
+          }
         });
         
+        // Event listener untuk dropdown divisi
         document.getElementById('divisiSelect').addEventListener('change', function() {
-          document.getElementById('showBtn').disabled = !this.value;
-        });
-        
-        document.getElementById('showBtn').addEventListener('click', function() {
           const kebun = document.getElementById('kebunSelect').value;
-          const divisi = document.getElementById('divisiSelect').value;
-          const filteredData = filterGeoJson(geoJsonData, kebun, divisi);
+          const divisi = this.value;
+          const filteredData = filterGeoJson(kebun, divisi);
           showGeoJsonOnMap(filteredData);
         });
       }
 
-      // Event listener untuk tab
+      // Event listener untuk tab (tetap sama seperti sebelumnya)
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           const tabId = this.getAttribute('data-tab');
           
-          // Hide all tabs first
           document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
             tab.style.display = 'none';
           });
           
-          // Show only the selected tab
           const activeTab = document.getElementById(`${tabId}Tab`);
           if (activeTab) {
             activeTab.classList.add('active');
             activeTab.style.display = 'block';
           }
           
-          // Update active tab button
           document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
           this.classList.add('active');
         });
@@ -682,7 +677,6 @@
         const el = document.getElementById(id);
         if (!el) {
           console.error(`Element with ID ${id} not found`);
-          // Create a fallback element if needed
           const fallback = document.createElement('div');
           fallback.id = id;
           document.body.appendChild(fallback);
@@ -690,13 +684,6 @@
         }
         return el;
       }
-
-      console.log('DOM fully loaded');
-      console.log('prodBudgetData exists:', !!document.getElementById('prodBudgetData'));
-      console.log('prodActualData exists:', !!document.getElementById('prodActualData'));
-      console.log('prodComparison exists:', !!document.getElementById('prodComparison'));
-      console.log('Active tab content:', document.querySelector('.tab-content.active'));
-      console.log('All tab contents:', document.querySelectorAll('.tab-content'));
     });
     
     // ---------------- END POINT untuk mengambil data dari server-------------//
