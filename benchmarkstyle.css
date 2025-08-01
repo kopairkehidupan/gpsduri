@@ -239,3 +239,173 @@ canvas {
     font-size: 10px;
   }
 }
+
+/* Analysis Tab Styles */
+.analysis-section {
+  background: var(--white);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.analysis-section h4 {
+  color: var(--primary);
+  margin-top: 0;
+  border-bottom: 1px solid var(--medium-gray);
+  padding-bottom: 0.5rem;
+}
+
+.performance-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--light-gray);
+}
+
+.performance-card.excellent {
+  border-left: 4px solid #0f9d58;
+}
+
+.performance-card.good {
+  border-left: 4px solid #8bc34a;
+}
+
+.performance-card.normal {
+  border-left: 4px solid #ff9800;
+}
+
+.performance-card.poor {
+  border-left: 4px solid #f44336;
+}
+
+.performance-metric {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  font-weight: 500;
+  color: var(--dark-gray);
+}
+
+.metric-value {
+  font-weight: 600;
+}
+
+.metric-comparison.positive {
+  color: var(--secondary);
+}
+
+.metric-comparison.negative {
+  color: #ea4335;
+}
+
+.performance-status {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.performance-card.excellent .status-badge {
+  background-color: #e6f4ea;
+  color: #0f9d58;
+}
+
+.performance-card.good .status-badge {
+  background-color: #f1f8e9;
+  color: #689f38;
+}
+
+.performance-card.normal .status-badge {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.performance-card.poor .status-badge {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.efficiency-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--light-gray);
+}
+
+.efficiency-metric {
+  margin-bottom: 1rem;
+}
+
+.efficiency-score {
+  position: relative;
+  height: 24px;
+  background-color: #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 0.3rem;
+}
+
+.score-bar {
+  height: 100%;
+  background-color: var(--secondary);
+  transition: width 0.5s ease;
+}
+
+.score-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.cost-overruns {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--medium-gray);
+}
+
+.cost-overruns h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+}
+
+.cost-overruns ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.cost-overruns li {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.category {
+  font-weight: 500;
+}
+
+.overrun-amount {
+  font-weight: 600;
+}
+
+.overrun-amount.positive {
+  color: var(--secondary);
+}
+
+.overrun-amount.negative {
+  color: #ea4335;
+}
