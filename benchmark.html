@@ -1414,7 +1414,7 @@
     // Enhanced showBlockDetails function
     async function showBlockDetails(blockCode, kebun, divisi) {
       console.log('Showing details for:', { blockCode, kebun, divisi });
-
+    
       // Dapatkan properti blok dari geoJsonData
       const blockFeature = geoJsonData.features.find(f => 
         f.properties.blok === blockCode && 
@@ -1434,22 +1434,11 @@
     
       // Buat header info blok
       const blockInfoHeader = createBlockInfoHeader(blockProps);
-      
+    
       // Show the container and activate production tab first
       const dataDetails = document.getElementById('dataDetails');
       dataDetails.style.display = 'block';
-
-      // Tambahkan/muat ulang header info blok di setiap tab
-      ['productionTab', 'costTab', 'chartTab'].forEach(tabId => {
-        const tab = document.getElementById(tabId);
-        const existingHeader = tab.querySelector('.block-info-header');
-        if (existingHeader) {
-          existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
-        } else {
-          tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
-        }
-      });
-
+    
       // Initialize charts if not already done
       if (!productionChart) {
         initializeCharts();
@@ -1505,8 +1494,30 @@
     
         // Display data
         displayProductionData(filteredProdBudget, filteredProdActual);
+        
+        // Tambahkan header info blok ke tab produksi dan grafik
+        ['productionTab', 'chartTab'].forEach(tabId => {
+          const tab = document.getElementById(tabId);
+          const existingHeader = tab.querySelector('.block-info-header');
+          if (existingHeader) {
+            existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
+          } else {
+            tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
+          }
+        });
+    
+        // Display cost data (ini akan meng-generate konten tab biaya)
         displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
-
+        
+        // Setelah konten biaya di-generate, baru tambahkan header info blok
+        const costTab = document.getElementById('costTab');
+        const existingCostHeader = costTab.querySelector('.block-info-header');
+        if (existingCostHeader) {
+          existingCostHeader.replaceWith(blockInfoHeader.cloneNode(true));
+        } else {
+          costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
+        }
+    
         // Update charts with all data
         updateCharts({
           kebun,
