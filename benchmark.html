@@ -219,20 +219,30 @@
     /* Data Display Styles */
     .data-tabs {
       display: flex;
-      border-bottom: 1px solid var(--medium-gray);
-      margin-bottom: 1rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+    }
+
+    .data-tabs::-webkit-scrollbar {
+      display: none; /* Chrome/Safari */
     }
     
     .tab-btn {
-      padding: 0.75rem 1.5rem;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      font-family: inherit;
-      font-weight: 500;
-      color: var(--dark-gray);
-      cursor: pointer;
-      transition: var(--transition);
+      padding: 0.75rem 1rem;
+      white-space: nowrap;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 600px) {
+      .tab-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+      }
+      
+      .tab-content {
+        padding: 0.75rem;
+      }
     }
     
     .tab-btn.active {
@@ -1540,6 +1550,13 @@
           if (!productionChart) {
             initializeCharts();
           }
+
+          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
+          setTimeout(() => {
+            if (productionChart) productionChart.resize();
+            if (costChart) costChart.resize();
+            if (areaChart) areaChart.resize();
+          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -2129,6 +2146,44 @@
         // Add this function to initialize charts
         function initializeCharts() {
           // Production Chart (Tonase)
+          const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false, // Penting untuk responsif
+            plugins: {
+              title: { display: false },
+              legend: {
+                position: 'top',
+                labels: {
+                  boxWidth: 12,
+                  padding: 20,
+                  font: {
+                    size: 12
+                  }
+                }
+              }
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeInOutQuad'
+            }
+          };
+
+          const commonTooltipOptions = {
+            enabled: true,
+            mode: 'index',
+            intersect: false,
+            position: 'nearest',
+            bodyFont: {
+              size: window.innerWidth < 600 ? 10 : 12
+            },
+            titleFont: {
+              size: window.innerWidth < 600 ? 10 : 12
+            },
+            padding: window.innerWidth < 600 ? 8 : 12,
+            caretSize: window.innerWidth < 600 ? 6 : 8,
+            displayColors: true
+          };
+        
           const productionCtx = document.getElementById('productionChart').getContext('2d');
           productionChart = new Chart(productionCtx, {
             type: 'line',
@@ -2156,6 +2211,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
               plugins: {
                 title: {
@@ -2216,6 +2275,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
               plugins: {
                 title: {
@@ -2280,6 +2343,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
               plugins: {
                 title: {
@@ -2327,7 +2394,37 @@
     
           // Initialize analysis charts
           initializeAnalysisCharts();
+
+          // Tambahkan event listener untuk resize
+          window.addEventListener('resize', function() {
+            productionChart.resize();
+            costChart.resize();
+            areaChart.resize();
+          });
         }
+
+        function handleChartResize() {
+          const charts = [productionChart, costChart, areaChart];
+          charts.forEach(chart => {
+            if (chart) {
+              chart.resize();
+            }
+          });
+        }
+        
+        // Panggil saat tab diubah
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            setTimeout(handleChartResize, 300); // Beri sedikit delay
+          });
+        });
+        
+        // Panggil saat window di-resize
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(handleChartResize, 200);
+        });    
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
