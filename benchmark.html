@@ -401,6 +401,8 @@
         <button class="tab-btn active" data-tab="production">Produksi</button>
         <button class="tab-btn" data-tab="cost">Biaya</button>
         <button class="tab-btn" data-tab="chart">Grafik</button>
+        <button class="tab-btn" data-tab="chart">Grafik</button>
+        <button class="tab-btn" data-tab="analysis">Analisa</button>
       </div>
       
       <div id="productionTab" class="tab-content active">
@@ -465,6 +467,31 @@
             </div>
           </div>
           <canvas id="areaChart"></canvas>
+        </div>
+      </div>
+
+      // Tambahkan tab baru di HTML
+      <div id="analysisTab" class="tab-content">
+        <h3>Analisis Mendalam</h3>
+        
+        <div class="analysis-section">
+          <h4>Ringkasan Kinerja</h4>
+          <div id="performanceSummary"></div>
+        </div>
+        
+        <div class="analysis-section">
+          <h4>Efisiensi Biaya</h4>
+          <div id="costEfficiency"></div>
+        </div>
+        
+        <div class="analysis-section">
+          <h4>Trend Produktivitas</h4>
+          <canvas id="productivityTrendChart"></canvas>
+        </div>
+        
+        <div class="analysis-section">
+          <h4>Distribusi Biaya</h4>
+          <canvas id="costDistributionChart"></canvas>
         </div>
       </div>
     </div>
@@ -1587,6 +1614,17 @@ function addBlokLabels(data) {
         } else {
           costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
         }
+
+        // Lakukan analisis
+        const prodAnalysis = analyzeBlockProductivity(filteredProdActual, filteredProdBudget);
+        const costAnalysis = analyzeCostEfficiency(filteredActual, filteredBudget);
+        
+        // Simpan dalam currentBlockData untuk analisis lebih lanjut
+        currentBlockData.prodAnalysis = prodAnalysis;
+        currentBlockData.costAnalysis = costAnalysis;
+        
+        // Tampilkan analisis
+        displayAnalysis(currentBlockData);
     
         // Update charts with all data
         updateCharts({
@@ -2471,6 +2509,367 @@ function addBlokLabels(data) {
         costDropdown.appendChild(option.cloneNode(true));
         areaDropdown.appendChild(option.cloneNode(true));
       });
+    }
+
+    // ---------------- END POINT untuk analisa mendalam-------------//
+    //1. Analisa prodktifitas blok
+    function analyzeBlockProductivity(prodActual, prodBudget) {
+      const analysis = {
+        totalActualTonase: 0,
+        totalBudgetTonase: 0,
+        totalActualLuas: 0,
+        totalBudgetLuas: 0,
+        productivityByMonth: {},
+        performanceStatus: 'normal'
+      };
+    
+      // Hitung total tonase dan luas
+      prodActual.forEach(item => {
+        analysis.totalActualTonase += parseFloat(item['Actual Tonase (Ton)']) || 0;
+        analysis.totalActualLuas += parseFloat(item['Luas (Ha)']) || 0;
+      });
+    
+      prodBudget.forEach(item => {
+        analysis.totalBudgetTonase += parseFloat(item['Budget Tonase (Ton)']) || 0;
+        analysis.totalBudgetLuas += parseFloat(item['Luas (Ha)']) || 0;
+      });
+    
+      // Hitung produktivitas per bulan
+      for (let month = 0; month < 12; month++) {
+        const monthName = new Date(0, month).toLocaleString('id-ID', { month: 'short' });
+        const actual = prodActual.filter(item => new Date(item.Bulan).getMonth() === month);
+        const budget = prodBudget.filter(item => new Date(item.Bulan).getMonth() === month);
+        
+        const actualTonase = actual.reduce((sum, item) => sum + (parseFloat(item['Actual Tonase (Ton)']) || 0), 0);
+        const budgetTonase = budget.reduce((sum, item) => sum + (parseFloat(item['Budget Tonase (Ton)']) || 0), 0);
+        
+        analysis.productivityByMonth[monthName] = {
+          actual: actualTonase,
+          budget: budgetTonase,
+          difference: actualTonase - budgetTonase,
+          percentage: budgetTonase > 0 ? ((actualTonase - budgetTonase) / budgetTonase * 100) : 0
+        };
+      }
+    
+      // Tentukan status performa
+      const overallPercentage = analysis.totalBudgetTonase > 0 ? 
+        ((analysis.totalActualTonase - analysis.totalBudgetTonase) / analysis.totalBudgetTonase * 100) : 0;
+      
+      if (overallPercentage > 20) {
+        analysis.performanceStatus = 'excellent';
+      } else if (overallPercentage > 0) {
+        analysis.performanceStatus = 'good';
+      } else if (overallPercentage > -10) {
+        analysis.performanceStatus = 'normal';
+      } else {
+        analysis.performanceStatus = 'poor';
+      }
+    
+      return analysis;
+    }
+
+    // 2. Analisis Biaya dan Efisiensi
+    function analyzeCostEfficiency(actualCosts, budgetCosts) {
+      const analysis = {
+        totalActualCost: 0,
+        totalBudgetCost: 0,
+        costByCategory: {},
+        efficiencyScore: 0,
+        costOverruns: []
+      };
+    
+      // Hitung total biaya
+      actualCosts.forEach(item => {
+        analysis.totalActualCost += parseFloat(item['Biaya (Rp)']) || 0;
+      });
+    
+      budgetCosts.forEach(item => {
+        analysis.totalBudgetCost += parseFloat(item['Biaya (Rp)']) || 0;
+      });
+    
+      // Analisis per kategori
+      const categories = [...new Set([
+        ...actualCosts.map(item => item['Objek Kerja']),
+        ...budgetCosts.map(item => item['Objek Kerja'])
+      ])];
+    
+      categories.forEach(category => {
+        const actual = actualCosts.filter(item => item['Objek Kerja'] === category)
+          .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+        
+        const budget = budgetCosts.filter(item => item['Objek Kerja'] === category)
+          .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+        
+        if (budget > 0) {
+          const variance = actual - budget;
+          const percentage = (variance / budget) * 100;
+          
+          analysis.costByCategory[category] = {
+            actual,
+            budget,
+            variance,
+            percentage
+          };
+    
+          if (percentage > 15) {
+            analysis.costOverruns.push({
+              category,
+              actual,
+              budget,
+              variance,
+              percentage
+            });
+          }
+        }
+      });
+    
+      // Hitung skor efisiensi (0-100)
+      if (analysis.totalBudgetCost > 0) {
+        const costRatio = Math.min(analysis.totalActualCost / analysis.totalBudgetCost, 2); // Maksimal 2x budget
+        analysis.efficiencyScore = Math.max(0, 100 - (costRatio * 50)); // Skor 100 jika actual <= budget
+      }
+    
+      return analysis;
+    }
+
+    // Fungsi untuk menampilkan analisis
+    function displayAnalysis(blockData) {
+      const performanceAnalysis = analyzeBlockProductivity(blockData.prodActual, blockData.prodBudget);
+      const costAnalysis = analyzeCostEfficiency(blockData.actual, blockData.budget);
+      
+      // Tampilkan ringkasan kinerja
+      const performanceHTML = `
+        <div class="performance-card ${performanceAnalysis.performanceStatus}">
+          <div class="performance-metric">
+            <span class="metric-label">Total Produksi:</span>
+            <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase)} Ton</span>
+            <span class="metric-comparison ${performanceAnalysis.totalActualTonase >= performanceAnalysis.totalBudgetTonase ? 'positive' : 'negative'}">
+              (${formatNumber(performanceAnalysis.totalActualTonase - performanceAnalysis.totalBudgetTonase)} Ton)
+            </span>
+          </div>
+          <div class="performance-metric">
+            <span class="metric-label">Produktivitas:</span>
+            <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase / performanceAnalysis.totalActualLuas)} Ton/Ha</span>
+          </div>
+          <div class="performance-status">
+            Status: <span class="status-badge">${getPerformanceStatusText(performanceAnalysis.performanceStatus)}</span>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('performanceSummary').innerHTML = performanceHTML;
+      
+      // Tampilkan efisiensi biaya
+      const efficiencyHTML = `
+        <div class="efficiency-card">
+          <div class="efficiency-metric">
+            <span class="metric-label">Total Biaya:</span>
+            <span class="metric-value">${formatCurrency(costAnalysis.totalActualCost)}</span>
+            <span class="metric-comparison ${costAnalysis.totalActualCost <= costAnalysis.totalBudgetCost ? 'positive' : 'negative'}">
+              (${formatCurrency(costAnalysis.totalActualCost - costAnalysis.totalBudgetCost)})
+            </span>
+          </div>
+          <div class="efficiency-metric">
+            <span class="metric-label">Skor Efisiensi:</span>
+            <div class="efficiency-score">
+              <div class="score-bar" style="width: ${costAnalysis.efficiencyScore}%"></div>
+              <span class="score-text">${Math.round(costAnalysis.efficiencyScore)}/100</span>
+            </div>
+          </div>
+          ${costAnalysis.costOverruns.length > 0 ? `
+            <div class="cost-overruns">
+              <h5>Biaya Melebihi Budget:</h5>
+              <ul>
+                ${costAnalysis.costOverruns.map(item => `
+                  <li>
+                    <span class="category">${item.category}</span>
+                    <span class="overrun-amount negative">+${formatCurrency(item.variance)} (${item.percentage.toFixed(1)}%)</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      
+      document.getElementById('costEfficiency').innerHTML = efficiencyHTML;
+      
+      // Update chart trend produktivitas
+      updateProductivityTrendChart(performanceAnalysis.productivityByMonth);
+      
+      // Update chart distribusi biaya
+      updateCostDistributionChart(costAnalysis.costByCategory);
+    }
+
+    // 4.  Chart Analisis Tambahan
+    let productivityTrendChart, costDistributionChart;
+
+    function initializeAnalysisCharts() {
+      // Chart Trend Produktivitas
+      const trendCtx = document.getElementById('productivityTrendChart').getContext('2d');
+      productivityTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: Object.keys(monthNames),
+          datasets: [
+            {
+              label: 'Actual Produksi',
+              data: [],
+              borderColor: '#34a853',
+              backgroundColor: 'rgba(52, 168, 83, 0.1)',
+              borderWidth: 2,
+              tension: 0.1,
+              fill: true
+            },
+            {
+              label: 'Target Produksi',
+              data: [],
+              borderColor: '#4285f4',
+              backgroundColor: 'rgba(66, 133, 244, 0.1)',
+              borderWidth: 2,
+              tension: 0.1,
+              fill: true,
+              borderDash: [5, 5]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Tonase (Ton)' },
+              ticks: { callback: formatNumber }
+            },
+            x: { title: { display: true, text: 'Bulan' } }
+          }
+        }
+      });
+    
+      // Chart Distribusi Biaya
+      const distCtx = document.getElementById('costDistributionChart').getContext('2d');
+      costDistributionChart = new Chart(distCtx, {
+        type: 'doughnut',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            backgroundColor: [],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
+                }
+              }
+            },
+            legend: { position: 'right' }
+          }
+        }
+      });
+    }
+    
+    function updateProductivityTrendChart(monthlyData) {
+      const months = Object.keys(monthlyData);
+      productivityTrendChart.data.labels = months;
+      productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
+      productivityTrendChart.data.datasets[1].data = months.map(m => monthlyData[m].budget);
+      productivityTrendChart.update();
+    }
+    
+    function updateCostDistributionChart(costByCategory) {
+      const categories = Object.keys(costByCategory);
+      const colors = generateColors(categories.length);
+      
+      costDistributionChart.data.labels = categories;
+      costDistributionChart.data.datasets[0].data = categories.map(c => costByCategory[c].actual);
+      costDistributionChart.data.datasets[0].backgroundColor = colors;
+      costDistributionChart.update();
+    }
+    
+    function generateColors(count) {
+      const colors = [];
+      const hueStep = 360 / count;
+      
+      for (let i = 0; i < count; i++) {
+        const hue = i * hueStep;
+        colors.push(`hsl(${hue}, 70%, 60%)`);
+      }
+      
+      return colors;
+    }
+
+    // 5. Fungsi Tambahan untuk Mendukung Analisis
+    function getPerformanceStatusText(status) {
+      const statusText = {
+        'excellent': 'Sangat Baik (Melebihi Target >20%)',
+        'good': 'Baik (Melebihi Target 0-20%)',
+        'normal': 'Normal (Di Bawah Target <10%)',
+        'poor': 'Perlu Perhatian (Di Bawah Target >10%)'
+      };
+      return statusText[status] || status;
+    }
+    
+    function compareBlocks(blocksData) {
+      const comparison = {
+        mostProductive: null,
+        mostEfficient: null,
+        highestCost: null,
+        bestROI: null,
+        blocks: []
+      };
+    
+      blocksData.forEach(block => {
+        const productivity = block.prodAnalysis.totalActualTonase / block.prodAnalysis.totalActualLuas;
+        const costEfficiency = block.costAnalysis.totalActualCost / block.prodAnalysis.totalActualTonase; // Cost per ton
+        const roi = (block.prodAnalysis.totalActualTonase * 1000) / block.costAnalysis.totalActualCost; // ROI sederhana
+        
+        const blockStats = {
+          blok: block.blok,
+          productivity,
+          costEfficiency,
+          roi,
+          actualTonase: block.prodAnalysis.totalActualTonase,
+          actualCost: block.costAnalysis.totalActualCost
+        };
+        
+        comparison.blocks.push(blockStats);
+        
+        // Update yang terbaik
+        if (!comparison.mostProductive || productivity > comparison.mostProductive.productivity) {
+          comparison.mostProductive = blockStats;
+        }
+        
+        if (!comparison.mostEfficient || costEfficiency < comparison.mostEfficient.costEfficiency) {
+          comparison.mostEfficient = blockStats;
+        }
+        
+        if (!comparison.highestCost || blockStats.actualCost > comparison.highestCost.actualCost) {
+          comparison.highestCost = blockStats;
+        }
+        
+        if (!comparison.bestROI || roi > comparison.bestROI.roi) {
+          comparison.bestROI = blockStats;
+        }
+      });
+    
+      return comparison;
     }
   </script>
   
