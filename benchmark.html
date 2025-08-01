@@ -1592,8 +1592,8 @@
             // Display data
             displayProductionData(filteredProdBudget, filteredProdActual);
             
-            // Tambahkan header info blok ke tab produksi dan grafik
-            ['productionTab', 'chartTab'].forEach(tabId => {
+            // Tambahkan header info blok ke tab produksi, grafik, dan analisa
+            ['productionTab', 'chartTab', 'analysisTab'].forEach(tabId => {
               const tab = document.getElementById(tabId);
               const existingHeader = tab.querySelector('.block-info-header');
               if (existingHeader) {
@@ -1614,7 +1614,7 @@
             } else {
               costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
             }
-    
+        
             // Lakukan analisis
             const prodAnalysis = analyzeBlockProductivity(filteredProdActual, filteredProdBudget);
             const costAnalysis = analyzeCostEfficiency(filteredActual, filteredBudget);
