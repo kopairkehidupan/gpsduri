@@ -1541,8 +1541,8 @@
           const dataDetails = document.getElementById('dataDetails');
           dataDetails.style.display = 'block';
         
-          // Initialize charts if not already done
-          if (!productionChart) {
+          // Initialize charts if not already done - only once
+          if (!productionChart && !costChart && !areaChart) {
             initializeCharts();
           }
           
@@ -2413,6 +2413,16 @@
           
           // Initialize analysis charts
           initializeAnalysisCharts();
+
+          // Add event listeners for work object filters
+            document.getElementById('costWorkObject')?.addEventListener('change', function() {
+              updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
+            });
+          
+            document.getElementById('areaWorkObject')?.addEventListener('change', function() {
+              updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
+            });
+          }
           
           // Tambahkan event listener untuk resize window
           window.addEventListener('resize', function() {
@@ -2422,6 +2432,79 @@
             if (productivityTrendChart) productivityTrendChart.resize();
             if (costDistributionChart) costDistributionChart.resize();
           });
+        }
+
+        // Helper function for common chart options
+        function getBaseChartOptions(yAxisTitle, tickCallback) {
+          return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: { display: false },
+              tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                  label: function(context) {
+                    return `${context.dataset.label}: ${tickCallback(context.raw)}`;
+                  }
+                }
+              },
+              legend: {
+                position: 'top',
+                labels: {
+                  usePointStyle: true,
+                  padding: 20,
+                  font: {
+                    size: window.innerWidth < 600 ? 10 : 12
+                  }
+                }
+              }
+            },
+            interaction: {
+              mode: 'nearest',
+              axis: 'x',
+              intersect: false
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: yAxisTitle,
+                  font: {
+                    size: window.innerWidth < 600 ? 11 : 13
+                  }
+                },
+                ticks: {
+                  callback: tickCallback,
+                  font: {
+                    size: window.innerWidth < 600 ? 10 : 12
+                  }
+                },
+                grid: {
+                  color: 'rgba(0, 0, 0, 0.05)'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Bulan',
+                  font: {
+                    size: window.innerWidth < 600 ? 11 : 13
+                  }
+                },
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  font: {
+                    size: window.innerWidth < 600 ? 10 : 12
+                  }
+                }
+              }
+            }
+          };
         }
 
         // Fungsi untuk mengatur responsivitas chart
