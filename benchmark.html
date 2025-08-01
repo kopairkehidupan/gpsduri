@@ -709,6 +709,7 @@ function addBlokLabels(data) {
     
     document.addEventListener('DOMContentLoaded', async function() {
       initMap();
+      initializeCharts(); // Initialize all charts
       
       // Load GeoJSON data
       geoJsonData = await loadGeoJsonData();
@@ -2115,7 +2116,7 @@ function addBlokLabels(data) {
 
     // ---------------- END POINT untuk menampilkan tab grafik-------------//
     // Add these variables at the top of your script section
-    let productionChart, costChart, areaChart;
+    let productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart;
     let currentBlockData = {
       kebun: '',
       divisi: '',
@@ -2124,7 +2125,7 @@ function addBlokLabels(data) {
       prodActual: [],
       budget: [],
       actual: []
-    };
+    }
     
     // Add this function to initialize charts
     function initializeCharts() {
@@ -2324,6 +2325,9 @@ function addBlokLabels(data) {
       document.getElementById('areaWorkObject').addEventListener('change', function() {
         updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
       });
+
+      // Initialize analysis charts
+      initializeAnalysisCharts();
     }
     
     // Add this function to update charts when data is loaded
@@ -2706,86 +2710,92 @@ function addBlokLabels(data) {
 
     function initializeAnalysisCharts() {
       // Chart Trend Produktivitas
-      const trendCtx = document.getElementById('productivityTrendChart').getContext('2d');
-      productivityTrendChart = new Chart(trendCtx, {
-        type: 'line',
-        data: {
-          labels: Object.keys(monthNames),
-          datasets: [
-            {
-              label: 'Actual Produksi',
-              data: [],
-              borderColor: '#34a853',
-              backgroundColor: 'rgba(52, 168, 83, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true
-            },
-            {
-              label: 'Target Produksi',
-              data: [],
-              borderColor: '#4285f4',
-              backgroundColor: 'rgba(66, 133, 244, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true,
-              borderDash: [5, 5]
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
-                }
+      const trendCtx = document.getElementById('productivityTrendChart')?.getContext('2d');
+      if (trendCtx) {
+        productivityTrendChart = new Chart(trendCtx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Actual Produksi',
+                data: [],
+                borderColor: '#34a853',
+                backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+              },
+              {
+                label: 'Target Produksi',
+                data: [],
+                borderColor: '#4285f4',
+                backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true,
+                borderDash: [5, 5]
               }
-            }
+            ]
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Tonase (Ton)' },
-              ticks: { callback: formatNumber }
-            },
-            x: { title: { display: true, text: 'Bulan' } }
-          }
-        }
-      });
-    
-      // Chart Distribusi Biaya
-      const distCtx = document.getElementById('costDistributionChart').getContext('2d');
-      costDistributionChart = new Chart(distCtx, {
-        type: 'doughnut',
-        data: {
-          labels: [],
-          datasets: [{
-            data: [],
-            backgroundColor: [],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
+          options: {
+            responsive: true,
+            plugins: {
+              title: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
+                  }
                 }
               }
             },
-            legend: { position: 'right' }
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Tonase (Ton)' },
+                ticks: { callback: formatNumber }
+              },
+              x: { title: { display: true, text: 'Bulan' } }
+            }
           }
-        }
-      });
+        });
+      }
+
+      // Chart Distribusi Biaya
+      const distCtx = document.getElementById('costDistributionChart')?.getContext('2d');
+      if (distCtx) {
+        costDistributionChart = new Chart(distCtx, {
+          type: 'doughnut',
+          data: {
+            labels: [],
+            datasets: [{
+              data: [],
+              backgroundColor: [],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              title: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
+                  }
+                }
+              },
+              legend: { position: 'right' }
+            }
+          }
+        });
+      }
     }
     
     function updateProductivityTrendChart(monthlyData) {
+      if (!productivityTrendChart || !monthlyData) return;
+      
       const months = Object.keys(monthlyData);
       productivityTrendChart.data.labels = months;
       productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
@@ -2794,6 +2804,8 @@ function addBlokLabels(data) {
     }
     
     function updateCostDistributionChart(costByCategory) {
+      if (!costDistributionChart || !costByCategory) return;
+      
       const categories = Object.keys(costByCategory);
       const colors = generateColors(categories.length);
       
