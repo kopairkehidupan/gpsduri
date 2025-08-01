@@ -212,6 +212,71 @@
   }
 }
 
+/* Responsive Tabs */
+.data-tabs {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.data-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.tab-btn {
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .tab-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .tab-content {
+    padding: 0.75rem;
+  }
+}
+
+/* General Mobile Layout */
+@media (max-width: 600px) {
+  .container {
+    padding: 0.75rem;
+  }
+  
+  .filter-container {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .filter-group {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  #map {
+    height: 300px;
+  }
+  
+  .data-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .summary-card {
+    padding: 0.75rem;
+  }
+  
+  .cost-table th, 
+  .cost-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
 /* Block Info Header Styles */
 .block-info-header {
   background-color: var(--light-gray);
