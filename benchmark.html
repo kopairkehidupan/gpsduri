@@ -534,2352 +534,2352 @@
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
     let map;
-let geoJsonLayer = null; // Initialize as null
-let geoJsonData;
-let blokLabels = []; // Untuk menyimpan label blok
-
-// Initialize map
-function initMap() {
-  // Default center (will be updated when data loads)
-  map = L.map('map').setView([1.0, 101.05], 15);
-  
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
-  
-  // Initialize geoJsonLayer as a LayerGroup
-  geoJsonLayer = L.layerGroup().addTo(map);
-}
-
-// Fungsi untuk menambahkan label blok di tengah poligon
-function addBlokLabels(data) {
-  // Hapus label yang sudah ada
-  removeBlokLabels();
-  
-  // Pastikan geoJsonLayer ada
-  if (!geoJsonLayer) {
-    geoJsonLayer = L.layerGroup().addTo(map);
-  }
-  
-  // Buat array untuk menyimpan bounds
-  const boundsArray = [];
-  
-  data.features.forEach(feature => {
-    const blokName = feature.properties.blok;
-    const layer = L.geoJSON(feature, {
-      style: function(feature) {
-        return {
-          fillColor: getColorByDivisi(feature.properties.divisi),
-              weight: 2,
-              opacity: 1,
-              color: 'white',
-              dashArray: '3',
-              fillOpacity: 0.7
-            };
-          },
-          onEachFeature: function(feature, layer) {
-            // Tambahkan tooltip permanen di tengah poligon
-            const bounds = layer.getBounds();
-            boundsArray.push(bounds); // Simpan bounds untuk fitBounds nanti
-            
-            const center = bounds.getCenter();
-            const tooltip = L.tooltip({
-              permanent: true,
-              direction: 'center',
-              className: 'blok-label',
-              offset: [0, 0]
-            }).setContent(blokName);
-            
-            layer.bindTooltip(tooltip);
-            layer.setTooltipContent(blokName);
-            
-            // Simpan referensi tooltip
-            blokLabels.push({layer: layer, tooltip: tooltip});
-            
-            // Tetap pertahankan event click
-            layer.on('click', function() {
-              const props = feature.properties;
-              const divisiForQuery = props.divisi.replace(' ', '_');
-              showBlockDetails(props.blok, props.kebun, divisiForQuery);
-            });
-          }
-        });
-        
-        geoJsonLayer.addLayer(layer);
-      });
+    let geoJsonLayer = null; // Initialize as null
+    let geoJsonData;
+    let blokLabels = []; // Untuk menyimpan label blok
+    
+    // Initialize map
+    function initMap() {
+      // Default center (will be updated when data loads)
+      map = L.map('map').setView([1.0, 101.05], 15);
       
-      // Fit bounds jika ada features
-      if (boundsArray.length > 0) {
-        const bounds = new L.LatLngBounds(boundsArray);
-        map.fitBounds(bounds);
-      }
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      
+      // Initialize geoJsonLayer as a LayerGroup
+      geoJsonLayer = L.layerGroup().addTo(map);
     }
     
-    // Fungsi untuk menghapus semua label blok
-    function removeBlokLabels() {
-      blokLabels.forEach(item => {
-        if (item.layer && geoJsonLayer && map.hasLayer(item.layer)) {
-          item.layer.unbindTooltip();
-          geoJsonLayer.removeLayer(item.layer);
-        }
-      });
-      blokLabels = [];
-    }
-
-    function onEachFeature(feature, layer) {
-      layer.on('click', function() {
-        const props = feature.properties;
-        const divisiForQuery = props.divisi.replace(' ', '_');
-        showBlockDetails(props.blok, props.kebun, divisiForQuery);
-      });
-    }
-    
-    function showGeoJsonOnMap(data) {
-      // Clear existing layers
-      if (geoJsonLayer) {
-        geoJsonLayer.clearLayers();
-      } else {
-        // Initialize if not already done
+    // Fungsi untuk menambahkan label blok di tengah poligon
+    function addBlokLabels(data) {
+      // Hapus label yang sudah ada
+      removeBlokLabels();
+      
+      // Pastikan geoJsonLayer ada
+      if (!geoJsonLayer) {
         geoJsonLayer = L.layerGroup().addTo(map);
       }
       
-      // Tambahkan blok dengan label
-      addBlokLabels(data);
-    }
-    
-    // Load GeoJSON data from GitHub
-    async function loadGeoJsonData() {
-      try {
-        const response = await fetch('koordinatkebundivisiblok.geojson');
-        if (!response.ok) throw new Error('Network response was not ok');
-        return await response.json();
-      } catch (error) {
-        console.error('Error loading GeoJSON:', error);
-        return null;
-      }
-    }
-    
-    function getColorByDivisi(divisi) {
-      const divisiColors = {
-        'DIVISI I': '#FF5733',
-        'DIVISI II': '#33FF57',
-        'DIVISI III': '#3357FF',
-        'DIVISI IV': '#F3FF33',
-        'DIVISI V': '#FF33F3',
-        'DIVISI VI': '#33FFF3',
-        'DIVISI VII': '#8A2BE2'
-      };
-      return divisiColors[divisi] || '#888888';
-    }
-    
-    function loadDivisiOptions(kebun) {
-      const divisiSelect = document.getElementById('divisiSelect');
-      divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-      divisiSelect.disabled = true;
+      // Buat array untuk menyimpan bounds
+      const boundsArray = [];
       
-      if (!kebun) return;
-      
-      const divisiList = [...new Set(
-        geoJsonData.features
-          .filter(f => f.properties.kebun === kebun)
-          .map(f => f.properties.divisi)
-      )].sort();
-      
-      divisiList.forEach(divisi => {
-        const option = document.createElement('option');
-        option.value = divisi;
-        option.textContent = divisi.replace('DIVISI ', '');
-        divisiSelect.appendChild(option);
-      });
-      
-      divisiSelect.disabled = false;
-    }
-    
-    function filterGeoJson(kebun, divisi) {
-      return {
-        ...geoJsonData,
-        features: geoJsonData.features.filter(feature => {
-          const props = feature.properties;
-          return (!kebun || props.kebun === kebun) && 
-                 (!divisi || props.divisi === divisi);
-        })
-      };
-    }
-    
-    document.addEventListener('DOMContentLoaded', async function() {
-      initMap();
-      initializeCharts(); // Initialize all charts
-      
-      // Load GeoJSON data
-      geoJsonData = await loadGeoJsonData();
-      if (geoJsonData) {
-        showGeoJsonOnMap(geoJsonData);
-        
-        // Event listener untuk dropdown kebun
-        document.getElementById('kebunSelect').addEventListener('change', function() {
-          loadDivisiOptions(this.value);
-          
-          // Jika kebun dipilih, tapi divisi belum dipilih, tampilkan semua divisi kebun tersebut
-          if (this.value) {
-            const filteredData = filterGeoJson(this.value, '');
-            showGeoJsonOnMap(filteredData);
-          } else {
-            // Jika kebun direset, tampilkan semua data
-            showGeoJsonOnMap(geoJsonData);
-          }
-        });
-        
-        // Event listener untuk dropdown divisi
-        document.getElementById('divisiSelect').addEventListener('change', function() {
-          const kebun = document.getElementById('kebunSelect').value;
-          const divisi = this.value;
-          const filteredData = filterGeoJson(kebun, divisi);
-          showGeoJsonOnMap(filteredData);
-        });
-      }
-
-      // Event listener untuk tab (tetap sama seperti sebelumnya)
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const tabId = this.getAttribute('data-tab');
-          
-          document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-            tab.style.display = 'none';
+      data.features.forEach(feature => {
+        const blokName = feature.properties.blok;
+        const layer = L.geoJSON(feature, {
+          style: function(feature) {
+            return {
+              fillColor: getColorByDivisi(feature.properties.divisi),
+                  weight: 2,
+                  opacity: 1,
+                  color: 'white',
+                  dashArray: '3',
+                  fillOpacity: 0.7
+                };
+              },
+              onEachFeature: function(feature, layer) {
+                // Tambahkan tooltip permanen di tengah poligon
+                const bounds = layer.getBounds();
+                boundsArray.push(bounds); // Simpan bounds untuk fitBounds nanti
+                
+                const center = bounds.getCenter();
+                const tooltip = L.tooltip({
+                  permanent: true,
+                  direction: 'center',
+                  className: 'blok-label',
+                  offset: [0, 0]
+                }).setContent(blokName);
+                
+                layer.bindTooltip(tooltip);
+                layer.setTooltipContent(blokName);
+                
+                // Simpan referensi tooltip
+                blokLabels.push({layer: layer, tooltip: tooltip});
+                
+                // Tetap pertahankan event click
+                layer.on('click', function() {
+                  const props = feature.properties;
+                  const divisiForQuery = props.divisi.replace(' ', '_');
+                  showBlockDetails(props.blok, props.kebun, divisiForQuery);
+                });
+              }
+            });
+            
+            geoJsonLayer.addLayer(layer);
           });
           
-          const activeTab = document.getElementById(`${tabId}Tab`);
-          if (activeTab) {
-            activeTab.classList.add('active');
-            activeTab.style.display = 'block';
-          }
-          
-          document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-          this.classList.add('active');
-        });
-      });
-
-      function getElementSafe(id) {
-        const el = document.getElementById(id);
-        if (!el) {
-          console.error(`Element with ID ${id} not found`);
-          const fallback = document.createElement('div');
-          fallback.id = id;
-          document.body.appendChild(fallback);
-          return fallback;
-        }
-        return el;
-      }
-    });
-    
-    // ---------------- END POINT untuk mengambil data dari server-------------//
-    // Database setup for IndexedDB
-    const DB_NAME = 'KebunDatabase';
-      const DB_VERSION = 2; // Versi dinaikkan untuk tambahan store
-      const STORES = {
-        PROD_ACTUAL: 'prodActual',
-        PROD_BUDGET: 'prodBudget',
-        BUDGET: 'budget',
-        ACTUAL: 'actual',
-        SYNC_META: 'syncMeta' // Tambahan store untuk metadata
-      };
-    
-    let db;
-    
-    function openDatabase() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        
-        request.onerror = (event) => {
-          console.error('Database error:', event.target.error);
-          reject(event.target.error);
-        };
-        
-        request.onsuccess = (event) => {
-          db = event.target.result;
-          
-          // Tambahkan handler untuk error yang mungkin terjadi setelah open
-          db.onerror = (event) => {
-            console.error('Database error after open:', event.target.error);
-            // Tidak reject di sini, hanya log karena mungkin recoverable
-          };
-          
-          // Tambahkan handler untuk version change
-          db.onversionchange = (event) => {
-            db.close();
-            console.log('Database closed due to version change');
-          };
-          
-          console.log('Database opened successfully');
-          resolve(db);
-        };
-        
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          
-          // Create object stores
-          if (!db.objectStoreNames.contains(STORES.PROD_ACTUAL)) {
-            const store = db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
-            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-          }
-          
-          if (!db.objectStoreNames.contains(STORES.PROD_BUDGET)) {
-            const store = db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
-            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-          }
-          
-          if (!db.objectStoreNames.contains(STORES.BUDGET)) {
-            const store = db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
-            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-          }
-          
-          if (!db.objectStoreNames.contains(STORES.ACTUAL)) {
-            const store = db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
-            store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-          }
-          
-          if (!db.objectStoreNames.contains(STORES.SYNC_META)) {
-            db.createObjectStore(STORES.SYNC_META, { keyPath: 'storeName' });
-          }
-          
-          console.log('Database upgrade complete');
-        };
-
-        // Tambahkan handler untuk blocked event
-        request.onblocked = (event) => {
-          console.error('Database blocked, closing all connections');
-          if (db) db.close();
-          event.target.source.close();
-          window.location.reload(); // Force refresh jika diperlukan
-        };
-      });
-    }
-
-    // Fungsi untuk mendapatkan timestamp sync terakhir
-    async function getLastSyncTime(storeName) {
-      return new Promise((resolve, reject) => {
-        // Tambahkan pengecekan db
-        if (!db) {
-          reject(new Error('Database not initialized'));
-          return;
-        }
-        
-        const transaction = db.transaction(STORES.SYNC_META, 'readonly');
-        const store = transaction.objectStore(STORES.SYNC_META);
-        const request = store.get(storeName);
-        
-        request.onsuccess = () => resolve(request.result?.lastSync || null);
-        request.onerror = () => reject(new Error('Failed to get sync time'));
-      });
-    }
-    
-    // Fungsi untuk menyimpan timestamp sync
-    async function setLastSyncTime(storeName) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(STORES.SYNC_META, 'readwrite');
-        const store = transaction.objectStore(STORES.SYNC_META);
-        const request = store.put({ 
-          storeName, 
-          lastSync: new Date().toISOString() 
-        });
-        
-        request.onsuccess = resolve;
-        request.onerror = reject;
-      });
-    }
-    
-    // Fungsi untuk sync data dengan chunk processing
-    async function syncStoreData(endpoint) {
-      const CHUNK_SIZE = 2000;
-      try {
-        if (!db || db.version !== DB_VERSION) {
-          db = await openDatabase();
-        }
-    
-        // [1] Ambil semua data terbaru dari sheet
-        const [countData, allSheetData] = await Promise.all([
-          fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-          fetchDataFromSheets(endpoint.url, endpoint.action)
-        ]);
-        
-        const totalRecords = countData.count || 0;
-        const sheetData = Array.isArray(allSheetData) ? allSheetData : (allSheetData?.data || []);
-        
-        // [2] Ambil semua ID dari IndexedDB dan Sheet dengan format yang konsisten
-        const [dbIds, sheetIds] = await Promise.all([
-          getAllIdsFromIndexedDB(endpoint.store),
-          Promise.resolve(sheetData.map(item => String(item.id))) // Pastikan string untuk konsistensi
-        ]);
-        
-        console.log(`Sync ${endpoint.store}: DB IDs: ${dbIds.length}, Sheet IDs: ${sheetIds.length}`);
-    
-        // [3] Cari ID yang perlu dihapus (ada di DB tapi tidak ada di Sheet)
-        const idsToDelete = dbIds.filter(dbId => !sheetIds.includes(String(dbId)));
-        console.log(`IDs to delete: ${idsToDelete.length}`, idsToDelete);
-    
-        // [4] Proses penghapusan dalam batch
-        let deletedCount = 0;
-        if (idsToDelete.length > 0) {
-          // Hapus dalam batch untuk menghindari timeout
-          const BATCH_SIZE = 500;
-          for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
-            const batch = idsToDelete.slice(i, i + BATCH_SIZE);
-            deletedCount += await deleteRecordsFromIndexedDB(endpoint.store, batch);
-            console.log(`Deleted batch ${i} to ${i + batch.length}`);
+          // Fit bounds jika ada features
+          if (boundsArray.length > 0) {
+            const bounds = new L.LatLngBounds(boundsArray);
+            map.fitBounds(bounds);
           }
         }
-    
-        // [5] Proses tambah/update data
-        let added = 0, updated = 0;
-        if (sheetData.length > 0) {
-          for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
-            const chunk = sheetData.slice(i, i + CHUNK_SIZE);
-            const result = await processDataChunkWithRetry(endpoint.store, chunk);
-            added += result.added;
-            updated += result.updated;
-            
-            updateProgress(
-              (i / sheetData.length) * 100,
-              endpoint.name,
-              'active',
-              i,
-              totalRecords
-            );
-            
-            await new Promise(resolve => setTimeout(resolve, 0));
-          }
-        }
-    
-        console.log(`Sync result: ${added} added, ${updated} updated, ${deletedCount} deleted`);
-        await setLastSyncTime(endpoint.store);
-        return { added, updated, deleted: deletedCount };
         
-      } catch (error) {
-        console.error(`Sync failed for ${endpoint.name}:`, error);
-        throw error;
-      }
-    }
-
-    // Fungsi untuk mendapatkan semua ID dengan konsisten
-    async function getAllIdsFromIndexedDB(storeName) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(storeName, 'readonly');
-        const store = transaction.objectStore(storeName);
-        const request = store.getAllKeys();
-        
-        request.onsuccess = () => {
-          // Konversi semua ID ke string untuk konsistensi
-          const ids = request.result.map(id => 
-            typeof id === 'number' ? String(id) : id
-          );
-          resolve(ids);
-        };
-        request.onerror = () => reject(new Error('Failed to get IDs from IndexedDB'));
-      });
-    }
-    
-    // Fungsi penghapusan yang lebih robust
-    async function deleteRecordsFromIndexedDB(storeName, ids) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
-        let deletedCount = 0;
-        let errorCount = 0;
-    
-        // Handle transaction completion
-        transaction.oncomplete = () => {
-          console.log(`Deleted ${deletedCount} records successfully`);
-          resolve(deletedCount);
-        };
-        
-        transaction.onerror = (event) => {
-          console.error('Transaction error:', event.target.error);
-          reject(event.target.error);
-        };
-    
-        // Proses penghapusan per ID
-        ids.forEach(id => {
-          // Handle baik ID string maupun number
-          const idToDelete = isNaN(id) ? id : Number(id);
-          const request = store.delete(idToDelete);
-          
-          request.onsuccess = () => {
-            deletedCount++;
-          };
-          
-          request.onerror = (event) => {
-            errorCount++;
-            console.error(`Failed to delete ID ${id}:`, event.target.error);
-          };
-        });
-      });
-    }
-    
-    // Fungsi baru dengan retry mechanism
-    async function processDataChunkWithRetry(storeName, chunk, retries = 3) {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          return await processDataChunk(storeName, chunk);
-        } catch (error) {
-          console.warn(`Attempt ${attempt} failed for chunk:`, error);
-          if (attempt === retries) throw error;
-          
-          // Tunggu sebelum retry
-          await new Promise(resolve => setTimeout(resolve, 200 * attempt));
-          
-          // Coba buka kembali database
-          if (db) db.close();
-          db = await openDatabase();
-        }
-      }
-    }
-
-    // Fungsi untuk memproses chunk data
-    async function processDataChunk(storeName, chunk) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
-        
-        let added = 0;
-        let updated = 0;
-        
-        const processNext = (index) => {
-          if (index >= chunk.length) {
-            resolve({ added, updated });
-            return;
-          }
-          
-          const item = chunk[index];
-          const getRequest = store.get(item.id);
-          
-          getRequest.onsuccess = () => {
-            const existing = getRequest.result;
-            
-            if (existing) {
-              // Update existing
-              const putRequest = store.put(item);
-              putRequest.onsuccess = () => {
-                updated++;
-                processNext(index + 1);
-              };
-              putRequest.onerror = () => processNext(index + 1);
-            } else {
-              // Add new
-              const addRequest = store.add(item);
-              addRequest.onsuccess = () => {
-                added++;
-                processNext(index + 1);
-              };
-              addRequest.onerror = () => processNext(index + 1);
+        // Fungsi untuk menghapus semua label blok
+        function removeBlokLabels() {
+          blokLabels.forEach(item => {
+            if (item.layer && geoJsonLayer && map.hasLayer(item.layer)) {
+              item.layer.unbindTooltip();
+              geoJsonLayer.removeLayer(item.layer);
             }
-          };
-          
-          getRequest.onerror = () => processNext(index + 1);
-        };
-        
-        processNext(0);
-      });
-    }
+          });
+          blokLabels = [];
+        }
     
-    // Function to save data to IndexedDB
-    function saveToIndexedDB(storeName, data) {
-      return new Promise((resolve, reject) => {
-        if (!db) {
-          reject(new Error('Database not initialized'));
-          return;
+        function onEachFeature(feature, layer) {
+          layer.on('click', function() {
+            const props = feature.properties;
+            const divisiForQuery = props.divisi.replace(' ', '_');
+            showBlockDetails(props.blok, props.kebun, divisiForQuery);
+          });
         }
         
-        const transaction = db.transaction(storeName, 'readwrite');
-        const store = transaction.objectStore(storeName);
-        
-        // Clear existing data first
-        const clearRequest = store.clear();
-        
-        clearRequest.onsuccess = () => {
-          console.log(`Cleared existing data in ${storeName}`);
+        function showGeoJsonOnMap(data) {
+          // Clear existing layers
+          if (geoJsonLayer) {
+            geoJsonLayer.clearLayers();
+          } else {
+            // Initialize if not already done
+            geoJsonLayer = L.layerGroup().addTo(map);
+          }
           
-          // Add all new data
-          const requests = data.map(item => {
-            return new Promise((innerResolve, innerReject) => {
-              const request = store.add(item);
-              request.onsuccess = () => innerResolve();
-              request.onerror = (event) => innerReject(event.target.error);
-            });
+          // Tambahkan blok dengan label
+          addBlokLabels(data);
+        }
+        
+        // Load GeoJSON data from GitHub
+        async function loadGeoJsonData() {
+          try {
+            const response = await fetch('koordinatkebundivisiblok.geojson');
+            if (!response.ok) throw new Error('Network response was not ok');
+            return await response.json();
+          } catch (error) {
+            console.error('Error loading GeoJSON:', error);
+            return null;
+          }
+        }
+        
+        function getColorByDivisi(divisi) {
+          const divisiColors = {
+            'DIVISI I': '#FF5733',
+            'DIVISI II': '#33FF57',
+            'DIVISI III': '#3357FF',
+            'DIVISI IV': '#F3FF33',
+            'DIVISI V': '#FF33F3',
+            'DIVISI VI': '#33FFF3',
+            'DIVISI VII': '#8A2BE2'
+          };
+          return divisiColors[divisi] || '#888888';
+        }
+        
+        function loadDivisiOptions(kebun) {
+          const divisiSelect = document.getElementById('divisiSelect');
+          divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+          divisiSelect.disabled = true;
+          
+          if (!kebun) return;
+          
+          const divisiList = [...new Set(
+            geoJsonData.features
+              .filter(f => f.properties.kebun === kebun)
+              .map(f => f.properties.divisi)
+          )].sort();
+          
+          divisiList.forEach(divisi => {
+            const option = document.createElement('option');
+            option.value = divisi;
+            option.textContent = divisi.replace('DIVISI ', '');
+            divisiSelect.appendChild(option);
           });
           
-          Promise.all(requests)
-            .then(() => {
-              console.log(`Saved ${data.length} items to ${storeName}`);
-              resolve();
+          divisiSelect.disabled = false;
+        }
+        
+        function filterGeoJson(kebun, divisi) {
+          return {
+            ...geoJsonData,
+            features: geoJsonData.features.filter(feature => {
+              const props = feature.properties;
+              return (!kebun || props.kebun === kebun) && 
+                     (!divisi || props.divisi === divisi);
             })
-            .catch(error => {
-              console.error(`Error saving to ${storeName}:`, error);
-              reject(error);
+          };
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+          initMap();
+          initializeCharts(); // Initialize all charts
+          
+          // Load GeoJSON data
+          geoJsonData = await loadGeoJsonData();
+          if (geoJsonData) {
+            showGeoJsonOnMap(geoJsonData);
+            
+            // Event listener untuk dropdown kebun
+            document.getElementById('kebunSelect').addEventListener('change', function() {
+              loadDivisiOptions(this.value);
+              
+              // Jika kebun dipilih, tapi divisi belum dipilih, tampilkan semua divisi kebun tersebut
+              if (this.value) {
+                const filteredData = filterGeoJson(this.value, '');
+                showGeoJsonOnMap(filteredData);
+              } else {
+                // Jika kebun direset, tampilkan semua data
+                showGeoJsonOnMap(geoJsonData);
+              }
             });
-        };
-        
-        clearRequest.onerror = (event) => {
-          console.error(`Error clearing ${storeName}:`, event.target.error);
-          reject(event.target.error);
-        };
-      });
-    }
-    
-    // Function to fetch data from Google Sheets
-    async function fetchDataFromSheets(url, action) {
-      try {
-        console.log(`Fetching ${url}?action=${action}`);
-        const response = await fetch(`${url}?action=${action}`);
-        
-        if (!response.ok) {
-          const text = await response.text();
-          console.error('Response not OK:', text);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const text = await response.text();
-        console.log('Raw response:', text); // Log raw response
-        
-        try {
-          const data = JSON.parse(text);
-          console.log('Parsed data:', data);
-          
-          // Handle inconsistent response formats
-          if (action.includes('Count')) {
-            return data.count ? data : { count: 0 };
-          } else {
-            return data.data || data || [];
+            
+            // Event listener untuk dropdown divisi
+            document.getElementById('divisiSelect').addEventListener('change', function() {
+              const kebun = document.getElementById('kebunSelect').value;
+              const divisi = this.value;
+              const filteredData = filterGeoJson(kebun, divisi);
+              showGeoJsonOnMap(filteredData);
+            });
           }
-        } catch (jsonError) {
-          console.error('JSON parse error:', jsonError);
-          throw new Error('Invalid JSON response: ' + text);
-        }
-      } catch (error) {
-        console.error('Fetch error:', error);
-        throw error;
-      }
-    }
-
-    async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      
-      try {
-        const response = await fetch(url, {
-          ...options,
-          signal: controller.signal 
-        });
-        clearTimeout(id);
-        return response;
-      } catch (error) {
-        clearTimeout(id);
-        throw error;
-      }
-    }
     
-    // Fungsi JSONP fallback
-    function fetchWithJsonp(url, action) {
-      return new Promise((resolve, reject) => {
-        const callbackName = `jsonp_${Date.now()}`;
-        const script = document.createElement('script');
-        
-        window[callbackName] = (data) => {
-          resolve(data);
-          delete window[callbackName];
-          document.body.removeChild(script);
-        };
-        
-        script.src = `${url}?action=${action}&callback=${callbackName}`;
-        script.onerror = () => {
-          reject(new Error('JSONP request failed'));
-          delete window[callbackName];
-          document.body.removeChild(script);
-        };
-        
-        document.body.appendChild(script);
-      });
-    }
-
-    // Function to update progress
-    function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0) {
-      const progressFill = document.getElementById('progressFill');
-      const progressText = document.getElementById('progressText');
-      const stepElements = document.querySelectorAll('.step');
-      
-      // Update progress bar
-      progressFill.style.width = `${progress}%`;
-      progressText.textContent = `${Math.round(progress)}%`;
-      
-      // Update step status
-      stepElements.forEach(step => {
-        const stepName = step.dataset.step;
-        if (stepName === currentStep) {
-          step.className = 'step ' + status;
-          const detailsEl = step.querySelector('.step-details');
-          if (total > 0) {
-            detailsEl.textContent = `${loaded}/${total} data masuk`;
-          } else if (status === 'completed') {
-            detailsEl.textContent = `${loaded} data masuk`;
-          } else if (status === 'failed') {
-            detailsEl.textContent = 'Gagal mengambil data';
-          } else {
-            detailsEl.textContent = 'Menyambungkan...';
-          }
-        } else if (getStepOrder(stepName) < getStepOrder(currentStep)) {
-          step.className = 'step completed';
-        }
-      });
-    }
-
-    // Helper function untuk menentukan urutan step
-    function getStepOrder(stepName) {
-      const order = {
-        'prodActual': 1,
-        'prodBudget': 2,
-        'budget': 3,
-        'actual': 4
-      };
-      return order[stepName] || 0;
-    }
-
-    // Fungsi untuk menampilkan notifikasi di progress bar
-    function showProgressNotification(message, isSuccess) {
-      const notification = document.getElementById('progressNotification');
-      notification.innerHTML = `
-        <i class="material-icons">${isSuccess ? 'check_circle' : 'error'}</i>
-        ${message}
-      `;
-      notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
-      notification.style.display = 'block';
-      
-      // Sembunyikan otomatis setelah 3 detik
-      if (isSuccess) {
-        setTimeout(() => {
-          notification.style.display = 'none';
-          showProgressModal(false);
-        }, 3000);
-      }
-    }
-    
-    // Show/hide modal
-    function showProgressModal(show) {
-      document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
-    }
-    
-    // Modified loadAllData function with data count tracking
-    async function loadAllData() {
-      showProgressModal(true);
-      updateProgress(0, 'prodActual');
-      
-        // Force close and reopen
-        if (db) {
-          try {
-            db.close();
-          } catch (e) {
-            console.log('Error closing db:', e);
-          }
-        }
-        
-        // Add delay to ensure clean state
-        await new Promise(resolve => setTimeout(resolve, 500));
-      
-        try {
-        // Tunggu sampai database benar-benar terbuka
-        db = await openDatabase();
-        console.log('Database opened:', db);
-        if (!db) throw new Error('Failed to open database');
-        
-        const endpoints = [
-          { 
-            name: 'prodActual',
-            url: 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec',
-            action: 'getAllProdActual',
-            store: STORES.PROD_ACTUAL
-          },
-          { 
-            name: 'prodBudget',
-            url: 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec',
-            action: 'getAllProdBudget',
-            store: STORES.PROD_BUDGET
-          },
-          { 
-            name: 'budget',
-            url: 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec',
-            action: 'getAllBudget',
-            store: STORES.BUDGET
-          },
-          { 
-            name: 'actual',
-            url: 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec',
-            action: 'getAllActual',
-            store: STORES.ACTUAL
-          }
-        ];
-        
-        // Lakukan full sync pertama kali atau periodic
-        const lastFullSync = await getLastSyncTime('lastFullSync');
-        const daysSinceFullSync = lastFullSync ? 
-          (new Date() - new Date(lastFullSync)) / (1000 * 60 * 60 * 24) : Infinity;
-        
-        const needFullSync = !lastFullSync || daysSinceFullSync > 7;
-        
-        for (let i = 0; i < endpoints.length; i++) {
-          const endpoint = endpoints[i];
-          const progress = (i / endpoints.length) * 100;
-          updateProgress(progress, endpoint.name, 'active');
-          
-          try {
-            if (needFullSync) {
-              const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
-              const totalRecords = countData.count || 0;
+          // Event listener untuk tab (tetap sama seperti sebelumnya)
+          document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+              const tabId = this.getAttribute('data-tab');
               
-              updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
-              
-              const fullData = await fetchDataFromSheets(endpoint.url, endpoint.action);
-              
-              await saveLargeData(endpoint.store, fullData, 2000, (processed) => {
-                updateProgress(
-                  progress + (10 * (processed / fullData.length)),
-                  endpoint.name,
-                  'active',
-                  processed,
-                  totalRecords
-                );
+              document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.display = 'none';
               });
               
-              await setLastSyncTime(endpoint.store);
-              updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', fullData.length, totalRecords);
-            } else {
-              const result = await syncStoreData(endpoint);
-              updateProgress(
-                ((i + 1) / endpoints.length) * 100,
-                endpoint.name,
-                'completed',
-                result.added + result.updated,
-                result.added + result.updated + result.deleted
-              );
+              const activeTab = document.getElementById(`${tabId}Tab`);
+              if (activeTab) {
+                activeTab.classList.add('active');
+                activeTab.style.display = 'block';
+              }
+              
+              document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+              this.classList.add('active');
+            });
+          });
+    
+          function getElementSafe(id) {
+            const el = document.getElementById(id);
+            if (!el) {
+              console.error(`Element with ID ${id} not found`);
+              const fallback = document.createElement('div');
+              fallback.id = id;
+              document.body.appendChild(fallback);
+              return fallback;
+            }
+            return el;
+          }
+        });
+        
+        // ---------------- END POINT untuk mengambil data dari server-------------//
+        // Database setup for IndexedDB
+        const DB_NAME = 'KebunDatabase';
+          const DB_VERSION = 2; // Versi dinaikkan untuk tambahan store
+          const STORES = {
+            PROD_ACTUAL: 'prodActual',
+            PROD_BUDGET: 'prodBudget',
+            BUDGET: 'budget',
+            ACTUAL: 'actual',
+            SYNC_META: 'syncMeta' // Tambahan store untuk metadata
+          };
+        
+        let db;
+        
+        function openDatabase() {
+          return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onerror = (event) => {
+              console.error('Database error:', event.target.error);
+              reject(event.target.error);
+            };
+            
+            request.onsuccess = (event) => {
+              db = event.target.result;
+              
+              // Tambahkan handler untuk error yang mungkin terjadi setelah open
+              db.onerror = (event) => {
+                console.error('Database error after open:', event.target.error);
+                // Tidak reject di sini, hanya log karena mungkin recoverable
+              };
+              
+              // Tambahkan handler untuk version change
+              db.onversionchange = (event) => {
+                db.close();
+                console.log('Database closed due to version change');
+              };
+              
+              console.log('Database opened successfully');
+              resolve(db);
+            };
+            
+            request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              
+              // Create object stores
+              if (!db.objectStoreNames.contains(STORES.PROD_ACTUAL)) {
+                const store = db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
+                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+              }
+              
+              if (!db.objectStoreNames.contains(STORES.PROD_BUDGET)) {
+                const store = db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
+                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+              }
+              
+              if (!db.objectStoreNames.contains(STORES.BUDGET)) {
+                const store = db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
+                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+              }
+              
+              if (!db.objectStoreNames.contains(STORES.ACTUAL)) {
+                const store = db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
+                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
+              }
+              
+              if (!db.objectStoreNames.contains(STORES.SYNC_META)) {
+                db.createObjectStore(STORES.SYNC_META, { keyPath: 'storeName' });
+              }
+              
+              console.log('Database upgrade complete');
+            };
+    
+            // Tambahkan handler untuk blocked event
+            request.onblocked = (event) => {
+              console.error('Database blocked, closing all connections');
+              if (db) db.close();
+              event.target.source.close();
+              window.location.reload(); // Force refresh jika diperlukan
+            };
+          });
+        }
+    
+        // Fungsi untuk mendapatkan timestamp sync terakhir
+        async function getLastSyncTime(storeName) {
+          return new Promise((resolve, reject) => {
+            // Tambahkan pengecekan db
+            if (!db) {
+              reject(new Error('Database not initialized'));
+              return;
             }
             
-            // Beri waktu untuk UI update
-            await new Promise(resolve => setTimeout(resolve, 50));
+            const transaction = db.transaction(STORES.SYNC_META, 'readonly');
+            const store = transaction.objectStore(STORES.SYNC_META);
+            const request = store.get(storeName);
+            
+            request.onsuccess = () => resolve(request.result?.lastSync || null);
+            request.onerror = () => reject(new Error('Failed to get sync time'));
+          });
+        }
+        
+        // Fungsi untuk menyimpan timestamp sync
+        async function setLastSyncTime(storeName) {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORES.SYNC_META, 'readwrite');
+            const store = transaction.objectStore(STORES.SYNC_META);
+            const request = store.put({ 
+              storeName, 
+              lastSync: new Date().toISOString() 
+            });
+            
+            request.onsuccess = resolve;
+            request.onerror = reject;
+          });
+        }
+        
+        // Fungsi untuk sync data dengan chunk processing
+        async function syncStoreData(endpoint) {
+          const CHUNK_SIZE = 2000;
+          try {
+            if (!db || db.version !== DB_VERSION) {
+              db = await openDatabase();
+            }
+        
+            // [1] Ambil semua data terbaru dari sheet
+            const [countData, allSheetData] = await Promise.all([
+              fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
+              fetchDataFromSheets(endpoint.url, endpoint.action)
+            ]);
+            
+            const totalRecords = countData.count || 0;
+            const sheetData = Array.isArray(allSheetData) ? allSheetData : (allSheetData?.data || []);
+            
+            // [2] Ambil semua ID dari IndexedDB dan Sheet dengan format yang konsisten
+            const [dbIds, sheetIds] = await Promise.all([
+              getAllIdsFromIndexedDB(endpoint.store),
+              Promise.resolve(sheetData.map(item => String(item.id))) // Pastikan string untuk konsistensi
+            ]);
+            
+            console.log(`Sync ${endpoint.store}: DB IDs: ${dbIds.length}, Sheet IDs: ${sheetIds.length}`);
+        
+            // [3] Cari ID yang perlu dihapus (ada di DB tapi tidak ada di Sheet)
+            const idsToDelete = dbIds.filter(dbId => !sheetIds.includes(String(dbId)));
+            console.log(`IDs to delete: ${idsToDelete.length}`, idsToDelete);
+        
+            // [4] Proses penghapusan dalam batch
+            let deletedCount = 0;
+            if (idsToDelete.length > 0) {
+              // Hapus dalam batch untuk menghindari timeout
+              const BATCH_SIZE = 500;
+              for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
+                const batch = idsToDelete.slice(i, i + BATCH_SIZE);
+                deletedCount += await deleteRecordsFromIndexedDB(endpoint.store, batch);
+                console.log(`Deleted batch ${i} to ${i + batch.length}`);
+              }
+            }
+        
+            // [5] Proses tambah/update data
+            let added = 0, updated = 0;
+            if (sheetData.length > 0) {
+              for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
+                const chunk = sheetData.slice(i, i + CHUNK_SIZE);
+                const result = await processDataChunkWithRetry(endpoint.store, chunk);
+                added += result.added;
+                updated += result.updated;
+                
+                updateProgress(
+                  (i / sheetData.length) * 100,
+                  endpoint.name,
+                  'active',
+                  i,
+                  totalRecords
+                );
+                
+                await new Promise(resolve => setTimeout(resolve, 0));
+              }
+            }
+        
+            console.log(`Sync result: ${added} added, ${updated} updated, ${deletedCount} deleted`);
+            await setLastSyncTime(endpoint.store);
+            return { added, updated, deleted: deletedCount };
+            
           } catch (error) {
-            console.error(`Error loading ${endpoint.name}:`, error);
-            updateProgress(progress, endpoint.name, 'failed');
+            console.error(`Sync failed for ${endpoint.name}:`, error);
+            throw error;
+          }
+        }
+    
+        // Fungsi untuk mendapatkan semua ID dengan konsisten
+        async function getAllIdsFromIndexedDB(storeName) {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.getAllKeys();
             
-            // Coba refresh database sebelum melanjutkan ke endpoint berikutnya
-            if (db) db.close();
-            db = await openDatabase();
+            request.onsuccess = () => {
+              // Konversi semua ID ke string untuk konsistensi
+              const ids = request.result.map(id => 
+                typeof id === 'number' ? String(id) : id
+              );
+              resolve(ids);
+            };
+            request.onerror = () => reject(new Error('Failed to get IDs from IndexedDB'));
+          });
+        }
+        
+        // Fungsi penghapusan yang lebih robust
+        async function deleteRecordsFromIndexedDB(storeName, ids) {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            let deletedCount = 0;
+            let errorCount = 0;
+        
+            // Handle transaction completion
+            transaction.oncomplete = () => {
+              console.log(`Deleted ${deletedCount} records successfully`);
+              resolve(deletedCount);
+            };
             
+            transaction.onerror = (event) => {
+              console.error('Transaction error:', event.target.error);
+              reject(event.target.error);
+            };
+        
+            // Proses penghapusan per ID
+            ids.forEach(id => {
+              // Handle baik ID string maupun number
+              const idToDelete = isNaN(id) ? id : Number(id);
+              const request = store.delete(idToDelete);
+              
+              request.onsuccess = () => {
+                deletedCount++;
+              };
+              
+              request.onerror = (event) => {
+                errorCount++;
+                console.error(`Failed to delete ID ${id}:`, event.target.error);
+              };
+            });
+          });
+        }
+        
+        // Fungsi baru dengan retry mechanism
+        async function processDataChunkWithRetry(storeName, chunk, retries = 3) {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              return await processDataChunk(storeName, chunk);
+            } catch (error) {
+              console.warn(`Attempt ${attempt} failed for chunk:`, error);
+              if (attempt === retries) throw error;
+              
+              // Tunggu sebelum retry
+              await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+              
+              // Coba buka kembali database
+              if (db) db.close();
+              db = await openDatabase();
+            }
+          }
+        }
+    
+        // Fungsi untuk memproses chunk data
+        async function processDataChunk(storeName, chunk) {
+          return new Promise((resolve, reject) => {
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            
+            let added = 0;
+            let updated = 0;
+            
+            const processNext = (index) => {
+              if (index >= chunk.length) {
+                resolve({ added, updated });
+                return;
+              }
+              
+              const item = chunk[index];
+              const getRequest = store.get(item.id);
+              
+              getRequest.onsuccess = () => {
+                const existing = getRequest.result;
+                
+                if (existing) {
+                  // Update existing
+                  const putRequest = store.put(item);
+                  putRequest.onsuccess = () => {
+                    updated++;
+                    processNext(index + 1);
+                  };
+                  putRequest.onerror = () => processNext(index + 1);
+                } else {
+                  // Add new
+                  const addRequest = store.add(item);
+                  addRequest.onsuccess = () => {
+                    added++;
+                    processNext(index + 1);
+                  };
+                  addRequest.onerror = () => processNext(index + 1);
+                }
+              };
+              
+              getRequest.onerror = () => processNext(index + 1);
+            };
+            
+            processNext(0);
+          });
+        }
+        
+        // Function to save data to IndexedDB
+        function saveToIndexedDB(storeName, data) {
+          return new Promise((resolve, reject) => {
+            if (!db) {
+              reject(new Error('Database not initialized'));
+              return;
+            }
+            
+            const transaction = db.transaction(storeName, 'readwrite');
+            const store = transaction.objectStore(storeName);
+            
+            // Clear existing data first
+            const clearRequest = store.clear();
+            
+            clearRequest.onsuccess = () => {
+              console.log(`Cleared existing data in ${storeName}`);
+              
+              // Add all new data
+              const requests = data.map(item => {
+                return new Promise((innerResolve, innerReject) => {
+                  const request = store.add(item);
+                  request.onsuccess = () => innerResolve();
+                  request.onerror = (event) => innerReject(event.target.error);
+                });
+              });
+              
+              Promise.all(requests)
+                .then(() => {
+                  console.log(`Saved ${data.length} items to ${storeName}`);
+                  resolve();
+                })
+                .catch(error => {
+                  console.error(`Error saving to ${storeName}:`, error);
+                  reject(error);
+                });
+            };
+            
+            clearRequest.onerror = (event) => {
+              console.error(`Error clearing ${storeName}:`, event.target.error);
+              reject(event.target.error);
+            };
+          });
+        }
+        
+        // Function to fetch data from Google Sheets
+        async function fetchDataFromSheets(url, action) {
+          try {
+            console.log(`Fetching ${url}?action=${action}`);
+            const response = await fetch(`${url}?action=${action}`);
+            
+            if (!response.ok) {
+              const text = await response.text();
+              console.error('Response not OK:', text);
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const text = await response.text();
+            console.log('Raw response:', text); // Log raw response
+            
+            try {
+              const data = JSON.parse(text);
+              console.log('Parsed data:', data);
+              
+              // Handle inconsistent response formats
+              if (action.includes('Count')) {
+                return data.count ? data : { count: 0 };
+              } else {
+                return data.data || data || [];
+              }
+            } catch (jsonError) {
+              console.error('JSON parse error:', jsonError);
+              throw new Error('Invalid JSON response: ' + text);
+            }
+          } catch (error) {
+            console.error('Fetch error:', error);
+            throw error;
+          }
+        }
+    
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), timeout);
+          
+          try {
+            const response = await fetch(url, {
+              ...options,
+              signal: controller.signal 
+            });
+            clearTimeout(id);
+            return response;
+          } catch (error) {
+            clearTimeout(id);
             throw error;
           }
         }
         
-        if (needFullSync) {
-          await setLastSyncTime('lastFullSync');
+        // Fungsi JSONP fallback
+        function fetchWithJsonp(url, action) {
+          return new Promise((resolve, reject) => {
+            const callbackName = `jsonp_${Date.now()}`;
+            const script = document.createElement('script');
+            
+            window[callbackName] = (data) => {
+              resolve(data);
+              delete window[callbackName];
+              document.body.removeChild(script);
+            };
+            
+            script.src = `${url}?action=${action}&callback=${callbackName}`;
+            script.onerror = () => {
+              reject(new Error('JSONP request failed'));
+              delete window[callbackName];
+              document.body.removeChild(script);
+            };
+            
+            document.body.appendChild(script);
+          });
+        }
+    
+        // Function to update progress
+        function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0) {
+          const progressFill = document.getElementById('progressFill');
+          const progressText = document.getElementById('progressText');
+          const stepElements = document.querySelectorAll('.step');
+          
+          // Update progress bar
+          progressFill.style.width = `${progress}%`;
+          progressText.textContent = `${Math.round(progress)}%`;
+          
+          // Update step status
+          stepElements.forEach(step => {
+            const stepName = step.dataset.step;
+            if (stepName === currentStep) {
+              step.className = 'step ' + status;
+              const detailsEl = step.querySelector('.step-details');
+              if (total > 0) {
+                detailsEl.textContent = `${loaded}/${total} data masuk`;
+              } else if (status === 'completed') {
+                detailsEl.textContent = `${loaded} data masuk`;
+              } else if (status === 'failed') {
+                detailsEl.textContent = 'Gagal mengambil data';
+              } else {
+                detailsEl.textContent = 'Menyambungkan...';
+              }
+            } else if (getStepOrder(stepName) < getStepOrder(currentStep)) {
+              step.className = 'step completed';
+            }
+          });
+        }
+    
+        // Helper function untuk menentukan urutan step
+        function getStepOrder(stepName) {
+          const order = {
+            'prodActual': 1,
+            'prodBudget': 2,
+            'budget': 3,
+            'actual': 4
+          };
+          return order[stepName] || 0;
+        }
+    
+        // Fungsi untuk menampilkan notifikasi di progress bar
+        function showProgressNotification(message, isSuccess) {
+          const notification = document.getElementById('progressNotification');
+          notification.innerHTML = `
+            <i class="material-icons">${isSuccess ? 'check_circle' : 'error'}</i>
+            ${message}
+          `;
+          notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
+          notification.style.display = 'block';
+          
+          // Sembunyikan otomatis setelah 3 detik
+          if (isSuccess) {
+            setTimeout(() => {
+              notification.style.display = 'none';
+              showProgressModal(false);
+            }, 3000);
+          }
         }
         
-        showProgressNotification('Data berhasil disinkronisasi', true);
-        return true;
-      } catch (error) {
-        showProgressNotification(`Gagal sinkronisasi data: ${error.message}`, false);
-        console.error('Database open error:', error);
-        throw error;
-      } finally {
-        setTimeout(() => showProgressModal(false), 1000);
-      }
-    }
-    
-    // Fungsi bantu untuk save data besar per chunk
-    async function saveLargeData(storeName, data, chunkSize, progressCallback) {
-      return new Promise((resolve, reject) => {
-        // Tambahkan timeout untuk mencegah hanging
-        const timeout = setTimeout(() => {
-          reject(new Error('Database operation timed out'));
-        }, 30000); // 30 detik timeout
+        // Show/hide modal
+        function showProgressModal(show) {
+          document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
+        }
         
-        const transaction = db.transaction(storeName, 'readwrite');
-        transaction.oncomplete = () => {
-          clearTimeout(timeout);
-          resolve();
-        };
-        transaction.onerror = (event) => {
-          clearTimeout(timeout);
-          reject(event.target.error);
-        };
-        
-        const store = transaction.objectStore(storeName);
-        
-        // Clear existing data first dengan timeout terpisah
-        const clearRequest = store.clear();
-        clearRequest.onsuccess = () => {
-          let processed = 0;
+        // Modified loadAllData function with data count tracking
+        async function loadAllData() {
+          showProgressModal(true);
+          updateProgress(0, 'prodActual');
           
-          const processNextChunk = (startIdx) => {
-            if (startIdx >= data.length) return;
+            // Force close and reopen
+            if (db) {
+              try {
+                db.close();
+              } catch (e) {
+                console.log('Error closing db:', e);
+              }
+            }
             
-            const endIdx = Math.min(startIdx + chunkSize, data.length);
-            const chunk = data.slice(startIdx, endIdx);
+            // Add delay to ensure clean state
+            await new Promise(resolve => setTimeout(resolve, 500));
+          
+            try {
+            // Tunggu sampai database benar-benar terbuka
+            db = await openDatabase();
+            console.log('Database opened:', db);
+            if (!db) throw new Error('Failed to open database');
             
-            chunk.forEach(item => {
-              const request = store.add(item);
-              request.onerror = () => {
-                console.error('Error adding item:', item.id, request.error);
+            const endpoints = [
+              { 
+                name: 'prodActual',
+                url: 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec',
+                action: 'getAllProdActual',
+                store: STORES.PROD_ACTUAL
+              },
+              { 
+                name: 'prodBudget',
+                url: 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec',
+                action: 'getAllProdBudget',
+                store: STORES.PROD_BUDGET
+              },
+              { 
+                name: 'budget',
+                url: 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec',
+                action: 'getAllBudget',
+                store: STORES.BUDGET
+              },
+              { 
+                name: 'actual',
+                url: 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec',
+                action: 'getAllActual',
+                store: STORES.ACTUAL
+              }
+            ];
+            
+            // Lakukan full sync pertama kali atau periodic
+            const lastFullSync = await getLastSyncTime('lastFullSync');
+            const daysSinceFullSync = lastFullSync ? 
+              (new Date() - new Date(lastFullSync)) / (1000 * 60 * 60 * 24) : Infinity;
+            
+            const needFullSync = !lastFullSync || daysSinceFullSync > 7;
+            
+            for (let i = 0; i < endpoints.length; i++) {
+              const endpoint = endpoints[i];
+              const progress = (i / endpoints.length) * 100;
+              updateProgress(progress, endpoint.name, 'active');
+              
+              try {
+                if (needFullSync) {
+                  const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
+                  const totalRecords = countData.count || 0;
+                  
+                  updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
+                  
+                  const fullData = await fetchDataFromSheets(endpoint.url, endpoint.action);
+                  
+                  await saveLargeData(endpoint.store, fullData, 2000, (processed) => {
+                    updateProgress(
+                      progress + (10 * (processed / fullData.length)),
+                      endpoint.name,
+                      'active',
+                      processed,
+                      totalRecords
+                    );
+                  });
+                  
+                  await setLastSyncTime(endpoint.store);
+                  updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', fullData.length, totalRecords);
+                } else {
+                  const result = await syncStoreData(endpoint);
+                  updateProgress(
+                    ((i + 1) / endpoints.length) * 100,
+                    endpoint.name,
+                    'completed',
+                    result.added + result.updated,
+                    result.added + result.updated + result.deleted
+                  );
+                }
+                
+                // Beri waktu untuk UI update
+                await new Promise(resolve => setTimeout(resolve, 50));
+              } catch (error) {
+                console.error(`Error loading ${endpoint.name}:`, error);
+                updateProgress(progress, endpoint.name, 'failed');
+                
+                // Coba refresh database sebelum melanjutkan ke endpoint berikutnya
+                if (db) db.close();
+                db = await openDatabase();
+                
+                throw error;
+              }
+            }
+            
+            if (needFullSync) {
+              await setLastSyncTime('lastFullSync');
+            }
+            
+            showProgressNotification('Data berhasil disinkronisasi', true);
+            return true;
+          } catch (error) {
+            showProgressNotification(`Gagal sinkronisasi data: ${error.message}`, false);
+            console.error('Database open error:', error);
+            throw error;
+          } finally {
+            setTimeout(() => showProgressModal(false), 1000);
+          }
+        }
+        
+        // Fungsi bantu untuk save data besar per chunk
+        async function saveLargeData(storeName, data, chunkSize, progressCallback) {
+          return new Promise((resolve, reject) => {
+            // Tambahkan timeout untuk mencegah hanging
+            const timeout = setTimeout(() => {
+              reject(new Error('Database operation timed out'));
+            }, 30000); // 30 detik timeout
+            
+            const transaction = db.transaction(storeName, 'readwrite');
+            transaction.oncomplete = () => {
+              clearTimeout(timeout);
+              resolve();
+            };
+            transaction.onerror = (event) => {
+              clearTimeout(timeout);
+              reject(event.target.error);
+            };
+            
+            const store = transaction.objectStore(storeName);
+            
+            // Clear existing data first dengan timeout terpisah
+            const clearRequest = store.clear();
+            clearRequest.onsuccess = () => {
+              let processed = 0;
+              
+              const processNextChunk = (startIdx) => {
+                if (startIdx >= data.length) return;
+                
+                const endIdx = Math.min(startIdx + chunkSize, data.length);
+                const chunk = data.slice(startIdx, endIdx);
+                
+                chunk.forEach(item => {
+                  const request = store.add(item);
+                  request.onerror = () => {
+                    console.error('Error adding item:', item.id, request.error);
+                  };
+                });
+                
+                processed += chunk.length;
+                progressCallback(processed);
+                
+                // Gunakan setTimeout untuk memberi jeda antara chunk
+                setTimeout(() => processNextChunk(endIdx), 50);
+              };
+              
+              processNextChunk(0);
+            };
+            
+            clearRequest.onerror = (event) => {
+              clearTimeout(timeout);
+              reject(event.target.error);
+            };
+          });
+        }
+        
+        document.getElementById('loadDataBtn').addEventListener('click', async function() {
+          // Tambahkan ini di awal event handler
+          if (db) {
+            db.close();
+            db = null;
+          }
+          this.disabled = true;
+          this.innerHTML = '<span class="spinner"></span> Memuat...';
+          
+          try {
+            // Pastikan tidak ada instance database yang menggantung
+            if (db) {
+              try {
+                db.close();
+              } catch (e) {
+                console.log('Error closing database:', e);
+              }
+              db = null;
+            }
+            
+            await loadAllData();
+          } catch (error) {
+            console.error('Error:', error);
+            
+            // Coba reset database state
+            try {
+              if (db) db.close();
+              db = null;
+              db = await openDatabase();
+            } catch (e) {
+              console.error('Error resetting database:', e);
+            }
+            
+            showProgressNotification('Gagal memuat data. Silakan coba lagi.', false);
+          } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
+          }
+        });
+    
+        // ---------------- END POINT untuk mengambil menampilkan data dari indexDB-------------//
+        // Fungsi untuk mendapatkan data dari IndexedDB
+        async function getDataFromDB(storeName, key) {
+          try {
+            const db = await openDatabase();
+            return new Promise((resolve, reject) => {
+              const transaction = db.transaction([storeName], 'readonly');
+              const store = transaction.objectStore(storeName);
+              const request = store.getAll();
+              
+              request.onsuccess = () => {
+                resolve(request.result);
+              };
+              
+              request.onerror = (event) => {
+                reject(event.target.error);
               };
             });
-            
-            processed += chunk.length;
-            progressCallback(processed);
-            
-            // Gunakan setTimeout untuk memberi jeda antara chunk
-            setTimeout(() => processNextChunk(endIdx), 50);
-          };
-          
-          processNextChunk(0);
-        };
+          } catch (error) {
+            console.error(`Error getting data from ${storeName}:`, error);
+            return [];
+          }
+        }
         
-        clearRequest.onerror = (event) => {
-          clearTimeout(timeout);
-          reject(event.target.error);
-        };
-      });
-    }
-    
-    document.getElementById('loadDataBtn').addEventListener('click', async function() {
-      // Tambahkan ini di awal event handler
-      if (db) {
-        db.close();
-        db = null;
-      }
-      this.disabled = true;
-      this.innerHTML = '<span class="spinner"></span> Memuat...';
-      
-      try {
-        // Pastikan tidak ada instance database yang menggantung
-        if (db) {
+        // Enhanced showBlockDetails function
+        async function showBlockDetails(blockCode, kebun, divisi) {
+          console.log('Showing details for:', { blockCode, kebun, divisi });
+        
+          // Dapatkan properti blok dari geoJsonData
+          const blockFeature = geoJsonData.features.find(f => 
+            f.properties.blok === blockCode && 
+            f.properties.kebun === kebun && 
+            f.properties.divisi === divisi.replace('_', ' ')
+          );
+          
+          const blockProps = blockFeature ? blockFeature.properties : {
+            kebun, 
+            divisi: divisi.replace('_', ' '), 
+            blok: blockCode,
+            kode: '',
+            luas: '',
+            tahun: '',
+            umur: ''
+          };
+        
+          // Buat header info blok
+          const blockInfoHeader = createBlockInfoHeader(blockProps);
+        
+          // Show the container and activate production tab first
+          const dataDetails = document.getElementById('dataDetails');
+          dataDetails.style.display = 'block';
+        
+          // Initialize charts if not already done
+          if (!productionChart) {
+            initializeCharts();
+          }
+          
+          // Activate production tab
+          document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
+          document.getElementById('productionTab').classList.add('active');
+          document.getElementById('productionTab').style.display = 'block';
+          
+          // Hide other tabs
+          document.querySelectorAll('.tab-content').forEach(tab => {
+            if (tab.id !== 'productionTab') {
+              tab.classList.remove('active');
+              tab.style.display = 'none';
+            }
+          });
+        
+          // Get elements fresh each time
+          const prodBudgetDiv = document.getElementById('prodBudgetData');
+          const prodActualDiv = document.getElementById('prodActualData');
+          const comparisonDiv = document.getElementById('prodComparison');
+          const costTab = document.getElementById('costTab');
+        
+          // Show loading state
+          const loadingHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
+          prodBudgetDiv.innerHTML = loadingHTML;
+          prodActualDiv.innerHTML = loadingHTML;
+          comparisonDiv.innerHTML = loadingHTML;
+          costTab.innerHTML = loadingHTML;
+        
           try {
-            db.close();
-          } catch (e) {
-            console.log('Error closing database:', e);
-          }
-          db = null;
-        }
+            // Load all data in parallel
+            const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
+              getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
+              getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
+              getDataFromDB(STORES.BUDGET).catch(() => []),
+              getDataFromDB(STORES.ACTUAL).catch(() => [])
+            ]);
         
-        await loadAllData();
-      } catch (error) {
-        console.error('Error:', error);
+            // Normalize divisi format for filtering
+            const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
         
-        // Coba reset database state
-        try {
-          if (db) db.close();
-          db = null;
-          db = await openDatabase();
-        } catch (e) {
-          console.error('Error resetting database:', e);
-        }
-        
-        showProgressNotification('Gagal memuat data. Silakan coba lagi.', false);
-      } finally {
-        this.disabled = false;
-        this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
-      }
-    });
-
-    // ---------------- END POINT untuk mengambil menampilkan data dari indexDB-------------//
-    // Fungsi untuk mendapatkan data dari IndexedDB
-    async function getDataFromDB(storeName, key) {
-      try {
-        const db = await openDatabase();
-        return new Promise((resolve, reject) => {
-          const transaction = db.transaction([storeName], 'readonly');
-          const store = transaction.objectStore(storeName);
-          const request = store.getAll();
-          
-          request.onsuccess = () => {
-            resolve(request.result);
-          };
-          
-          request.onerror = (event) => {
-            reject(event.target.error);
-          };
-        });
-      } catch (error) {
-        console.error(`Error getting data from ${storeName}:`, error);
-        return [];
-      }
-    }
-    
-    // Enhanced showBlockDetails function
-    async function showBlockDetails(blockCode, kebun, divisi) {
-      console.log('Showing details for:', { blockCode, kebun, divisi });
-    
-      // Dapatkan properti blok dari geoJsonData
-      const blockFeature = geoJsonData.features.find(f => 
-        f.properties.blok === blockCode && 
-        f.properties.kebun === kebun && 
-        f.properties.divisi === divisi.replace('_', ' ')
-      );
-      
-      const blockProps = blockFeature ? blockFeature.properties : {
-        kebun, 
-        divisi: divisi.replace('_', ' '), 
-        blok: blockCode,
-        kode: '',
-        luas: '',
-        tahun: '',
-        umur: ''
-      };
-    
-      // Buat header info blok
-      const blockInfoHeader = createBlockInfoHeader(blockProps);
-    
-      // Show the container and activate production tab first
-      const dataDetails = document.getElementById('dataDetails');
-      dataDetails.style.display = 'block';
-    
-      // Initialize charts if not already done
-      if (!productionChart) {
-        initializeCharts();
-      }
-      
-      // Activate production tab
-      document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
-      document.getElementById('productionTab').classList.add('active');
-      document.getElementById('productionTab').style.display = 'block';
-      
-      // Hide other tabs
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        if (tab.id !== 'productionTab') {
-          tab.classList.remove('active');
-          tab.style.display = 'none';
-        }
-      });
-    
-      // Get elements fresh each time
-      const prodBudgetDiv = document.getElementById('prodBudgetData');
-      const prodActualDiv = document.getElementById('prodActualData');
-      const comparisonDiv = document.getElementById('prodComparison');
-      const costTab = document.getElementById('costTab');
-    
-      // Show loading state
-      const loadingHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
-      prodBudgetDiv.innerHTML = loadingHTML;
-      prodActualDiv.innerHTML = loadingHTML;
-      comparisonDiv.innerHTML = loadingHTML;
-      costTab.innerHTML = loadingHTML;
-    
-      try {
-        // Load all data in parallel
-        const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-          getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
-          getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
-          getDataFromDB(STORES.BUDGET).catch(() => []),
-          getDataFromDB(STORES.ACTUAL).catch(() => [])
-        ]);
-    
-        // Normalize divisi format for filtering
-        const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
-    
-        // Filter data
-        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
-        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
-        
-        // Process cost data
-        const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
-          aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
-        const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
-          aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
-    
-        // Display data
-        displayProductionData(filteredProdBudget, filteredProdActual);
-        
-        // Tambahkan header info blok ke tab produksi dan grafik
-        ['productionTab', 'chartTab'].forEach(tabId => {
-          const tab = document.getElementById(tabId);
-          const existingHeader = tab.querySelector('.block-info-header');
-          if (existingHeader) {
-            existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
-          } else {
-            tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
-          }
-        });
-    
-        // Display cost data (ini akan meng-generate konten tab biaya)
-        displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
-        
-        // Setelah konten biaya di-generate, baru tambahkan header info blok
-        const costTab = document.getElementById('costTab');
-        const existingCostHeader = costTab.querySelector('.block-info-header');
-        if (existingCostHeader) {
-          existingCostHeader.replaceWith(blockInfoHeader.cloneNode(true));
-        } else {
-          costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
-        }
-
-        // Lakukan analisis
-        const prodAnalysis = analyzeBlockProductivity(filteredProdActual, filteredProdBudget);
-        const costAnalysis = analyzeCostEfficiency(filteredActual, filteredBudget);
-        
-        // Simpan dalam currentBlockData untuk analisis lebih lanjut
-        currentBlockData.prodAnalysis = prodAnalysis;
-        currentBlockData.costAnalysis = costAnalysis;
-        
-        // Tampilkan analisis
-        displayAnalysis(currentBlockData);
-    
-        // Update charts with all data
-        updateCharts({
-          kebun,
-          divisi: normalizedDivisi,
-          blok: blockCode,
-          prodBudget: filteredProdBudget,
-          prodActual: filteredProdActual,
-          budget: filteredBudget,
-          actual: filteredActual
-        });
-    
-      } catch (error) {
-        console.error('Error:', error);
-        const errorHTML = '<p class="error">Gagal memuat data</p>';
-        prodBudgetDiv.innerHTML = errorHTML;
-        prodActualDiv.innerHTML = errorHTML;
-        comparisonDiv.innerHTML = errorHTML;
-        costTab.innerHTML = errorHTML;
-      }
-    }
-
-    //membuat header informasi blok
-    function createBlockInfoHeader(props) {
-      const header = document.createElement('div');
-      header.className = 'block-info-header';
-      header.innerHTML = `
-        <div class="block-info-grid">
-          <div class="block-info-item">
-            <span class="block-info-label">Kebun:</span>
-            <span class="block-info-value">${props.kebun || '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Divisi:</span>
-            <span class="block-info-value">${props.divisi || '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Blok:</span>
-            <span class="block-info-value">${props.blok || '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Kode:</span>
-            <span class="block-info-value">${props.kode || '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Luas:</span>
-            <span class="block-info-value">${props.luas ? props.luas + ' Ha' : '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Tahun Tanam:</span>
-            <span class="block-info-value">${props.tahun || '-'}</span>
-          </div>
-          <div class="block-info-item">
-            <span class="block-info-label">Umur:</span>
-            <span class="block-info-value">${props.umur ? props.umur + ' tahun' : '-'}</span>
-          </div>
-        </div>
-      `;
-      return header;
-    }
-    
-    // Helper function to safely access nested properties
-    function getSafe(fn, defaultVal) {
-      try {
-        return fn();
-      } catch (e) {
-        return defaultVal;
-      }
-    }
-    
-    // Enhanced filterProductionData function
-    function filterProductionData(data, blockCode, kebun, divisi) {
-      if (!Array.isArray(data)) return [];
-      
-      // Normalize divisi format from "DIVISI_I" to "Divisi_I"
-      const normalizedDivisi = divisi.replace(' ', '_');
-      
-      return data.filter(item => {
-        // Normalize kebun name (case insensitive)
-        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
-        const targetKebun = kebun ? kebun.toUpperCase() : '';
-        
-        // Normalize divisi format (case insensitive and handle both formats)
-        const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
-        const targetDivisi = normalizedDivisi.toUpperCase();
-        
-        // Exact match for block code
-        const itemBlok = getSafe(() => item.Blok, '');
-        
-        return itemBlok === blockCode && 
-               itemKebun === targetKebun && 
-               itemDivisi === targetDivisi;
-      });
-    }
-    
-    // Enhanced aggregateCostData function
-    function aggregateCostData(data, blockCode, kebun, divisi) {
-      if (!Array.isArray(data)) {
-        return {
-          aggregatedCostData: [],
-          totalCostData: {
-            HK: 0,
-            'Luas/Hasil': 0,
-            'Biaya (Rp)': 0
-          }
-        };
-      }
-    
-      const filteredData = data.filter(item => {
-        // Normalize kebun name
-        const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
-        const targetKebun = kebun ? kebun.toUpperCase() : '';
-        
-        // Normalize divisi format
-        const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
-        const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
-        
-        // Exact match for block code
-        const itemBlok = getSafe(() => item.Blok, '');
-        
-        return itemBlok === blockCode && 
-               itemKebun === targetKebun && 
-               itemDivisi === targetDivisi;
-      });
-
-      const aggregated = {};
-      let totalHK = 0;
-      let totalArea = 0;
-      let totalCost = 0;
-    
-      filteredData.forEach(item => {
-        const kodeKerja = getSafe(() => item['Kode Kerja'], '');
-        const objekKerja = getSafe(() => item['Objek Kerja'], '');
-        const key = `${kodeKerja}_${objekKerja}`;
-        
-        if (!aggregated[key]) {
-          aggregated[key] = {
-            'Kode Kerja': kodeKerja,
-            'Objek Kerja': objekKerja,
-            HK: 0,
-            'Luas/Hasil': 0,
-            'Biaya (Rp)': 0
-          };
-        }
-        
-        // Handle property names with parentheses
-        const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
-        const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
-        const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
-        
-        aggregated[key].HK += hk;
-        aggregated[key]['Luas/Hasil'] += luas;
-        aggregated[key]['Biaya (Rp)'] += biaya;
-    
-        totalHK += hk;
-        totalArea += luas;
-        totalCost += biaya;
-      });
-    
-      return {
-        aggregatedCostData: Object.values(aggregated),
-        totalCostData: {
-          HK: totalHK,
-          'Luas/Hasil': totalArea,
-          'Biaya (Rp)': totalCost
-        }
-      };
-    }
-    
-    // Enhanced displayProductionData function
-    function displayProductionData(budgetData = [], actualData = []) {
-      // Get fresh references each time
-      const prodBudgetDiv = document.getElementById('prodBudgetData');
-      const prodActualDiv = document.getElementById('prodActualData');
-      const comparisonDiv = document.getElementById('prodComparison');
-    
-      if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-        console.error('Display elements not found');
-        return;
-      }
-    
-      // Clear previous content safely
-      [prodBudgetDiv, prodActualDiv, comparisonDiv].forEach(el => {
-        el.innerHTML = '';
-      });
-
-      // Calculate totals with safe property access
-      const budgetTotals = calculateProductionTotals(budgetData);
-      const actualTotals = calculateProductionTotals(actualData);
-    
-      // Helper function to create data item
-      const createDataItem = (label, value) => {
-        const div = document.createElement('div');
-        div.className = 'data-item';
-        div.innerHTML = `
-          <span class="label">${label}:</span>
-          <span class="value">${value}</span>
-        `;
-        return div;
-      };
-    
-      // Display budget data
-      if (budgetData.length > 0) {
-        prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
-        prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
-        prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
-        prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
-      } else {
-        prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
-      }
-      
-      // Display actual data
-      if (actualData.length > 0) {
-        prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
-        prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
-        prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
-        prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
-      } else {
-        prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
-      }
-      
-      // Display comparison if both exist
-      if (budgetData.length > 0 && actualData.length > 0) {
-        const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
-        const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
-          (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
-        
-        const diffTonase = actualTotals.tonase - budgetTotals.tonase;
-        const percentageTonase = budgetTotals.tonase !== 0 ? 
-          (diffTonase / budgetTotals.tonase * 100) : 0;
-        
-        // Create comparison elements
-        const diffTonPerHaEl = createDataItem(
-          'Selisih Ton/Ha',
-          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-            ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
-          </span>`
-        );
-        
-        const diffTonaseEl = createDataItem(
-          'Selisih Tonase',
-          `<span class="${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-            ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
-          </span>`
-        );
-        
-        const statusEl = createDataItem(
-          'Status',
-          `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-            ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
-          </span>`
-        );
-        
-        comparisonDiv.appendChild(diffTonPerHaEl);
-        comparisonDiv.appendChild(diffTonaseEl);
-        comparisonDiv.appendChild(statusEl);
-      } else {
-        comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
-      }
-      
-      console.log('Production data displayed successfully');
-    }
-    
-    // Enhanced calculateProductionTotals function
-    function calculateProductionTotals(data = []) {
-      // Use a Set to track processed IDs to avoid duplicates
-      const processedIds = new Set();
-      
-      return data.reduce((totals, item) => {
-        // Skip duplicates
-        if (processedIds.has(item.id)) {
-          return totals;
-        }
-        processedIds.add(item.id);
-        
-        const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
-        
-        // Handle both actual and budget data
-        const produksi = parseFloat(
-          getSafe(() => item['Actual Produksi (Kg)'], 0) || 
-          getSafe(() => item['Budget Produksi (Kg)'], 0)
-        ) || 0;
-        
-        const tonase = parseFloat(
-          getSafe(() => item['Actual Tonase (Ton)'], 0) || 
-          getSafe(() => item['Budget Tonase (Ton)'], 0)
-        ) || 0;
-        
-        let tonPerHa = 0;
-        if (item['Actual Ton/Ha'] !== undefined) {
-          tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
-        } else if (item['Budget Ton/Ha'] !== undefined) {
-          tonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
-        } else if (luas > 0) {
-          tonPerHa = tonase / luas;
-        }
-        
-        totals.luas += luas;
-        totals.produksi += produksi;
-        totals.tonase += tonase;
-        totals.tonPerHa = tonPerHa; // Will be averaged correctly
-        
-        return totals;
-      }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
-    }
-    
-    // Enhanced displayCostData function
-    function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
-      const costTab = document.getElementById('costTab');
-      if (!costTab) return;
-    
-      // Initialize totals with default values
-      totalBudget = {
-        HK: getSafe(() => totalBudget.HK, 0),
-        'Luas/Hasil': getSafe(() => totalBudget['Luas/Hasil'], 0),
-        'Biaya (Rp)': getSafe(() => totalBudget['Biaya (Rp)'], 0)
-      };
-    
-      totalActual = {
-        HK: getSafe(() => totalActual.HK, 0),
-        'Luas/Hasil': getSafe(() => totalActual['Luas/Hasil'], 0),
-        'Biaya (Rp)': getSafe(() => totalActual['Biaya (Rp)'], 0)
-      };
-    
-      let tableHTML = `
-        <table class="cost-table">
-          <thead>
-            <tr>
-              <th>Kode Kerja</th>
-              <th>Objek Kerja</th>
-              <th>HK (Budget)</th>
-              <th>HK (Actual)</th>
-              <th>Luas/Hasil (Budget)</th>
-              <th>Luas/Hasil (Actual)</th>
-              <th>Biaya (Budget)</th>
-              <th>Biaya (Actual)</th>
-              <th>Selisih Biaya</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-    
-      if (budgetData.length === 0 && actualData.length === 0) {
-        tableHTML += `
-          <tr>
-            <td colspan="9" style="text-align: center;">Tidak ada data biaya untuk blok ini</td>
-          </tr>
-        `;
-      } else {
-        // Get unique work codes from both datasets
-        const allWorkCodes = new Set([
-          ...budgetData.map(item => getSafe(() => item['Kode Kerja'], '')),
-          ...actualData.map(item => getSafe(() => item['Kode Kerja'], ''))
-        ]);
-    
-        // Process each work code
-        Array.from(allWorkCodes).forEach(kodeKerja => {
-          if (!kodeKerja) return;
-    
-          const budgetItems = budgetData.filter(item => 
-            getSafe(() => item['Kode Kerja'], '') === kodeKerja
-          );
-          const actualItems = actualData.filter(item => 
-            getSafe(() => item['Kode Kerja'], '') === kodeKerja
-          );
-    
-          // Get unique work objects
-          const allObjekKerja = new Set([
-            ...budgetItems.map(item => getSafe(() => item['Objek Kerja'], '')),
-            ...actualItems.map(item => getSafe(() => item['Objek Kerja'], ''))
-          ]);
-    
-          // Process each work object
-          Array.from(allObjekKerja).forEach(objekKerja => {
-            if (!objekKerja) return;
-    
-            const budgetItem = budgetItems.find(item => 
-              getSafe(() => item['Objek Kerja'], '') === objekKerja
-            ) || {};
-            const actualItem = actualItems.find(item => 
-              getSafe(() => item['Objek Kerja'], '') === objekKerja
-            ) || {};
-    
-            const costDiff = (getSafe(() => actualItem['Biaya (Rp)'], 0) || 0) - 
-                            (getSafe(() => budgetItem['Biaya (Rp)'], 0) || 0);
-            const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
+            // Filter data
+            const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+            const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
             
+            // Process cost data
+            const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
+              aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
+            const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
+              aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
+        
+            // Display data
+            displayProductionData(filteredProdBudget, filteredProdActual);
+            
+            // Tambahkan header info blok ke tab produksi dan grafik
+            ['productionTab', 'chartTab'].forEach(tabId => {
+              const tab = document.getElementById(tabId);
+              const existingHeader = tab.querySelector('.block-info-header');
+              if (existingHeader) {
+                existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
+              } else {
+                tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
+              }
+            });
+        
+            // Display cost data (ini akan meng-generate konten tab biaya)
+            displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
+            
+            // Setelah konten biaya di-generate, baru tambahkan header info blok
+            const costTab = document.getElementById('costTab');
+            const existingCostHeader = costTab.querySelector('.block-info-header');
+            if (existingCostHeader) {
+              existingCostHeader.replaceWith(blockInfoHeader.cloneNode(true));
+            } else {
+              costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
+            }
+    
+            // Lakukan analisis
+            const prodAnalysis = analyzeBlockProductivity(filteredProdActual, filteredProdBudget);
+            const costAnalysis = analyzeCostEfficiency(filteredActual, filteredBudget);
+            
+            // Simpan dalam currentBlockData untuk analisis lebih lanjut
+            currentBlockData.prodAnalysis = prodAnalysis;
+            currentBlockData.costAnalysis = costAnalysis;
+            
+            // Tampilkan analisis
+            displayAnalysis(currentBlockData);
+        
+            // Update charts with all data
+            updateCharts({
+              kebun,
+              divisi: normalizedDivisi,
+              blok: blockCode,
+              prodBudget: filteredProdBudget,
+              prodActual: filteredProdActual,
+              budget: filteredBudget,
+              actual: filteredActual
+            });
+        
+          } catch (error) {
+            console.error('Error:', error);
+            const errorHTML = '<p class="error">Gagal memuat data</p>';
+            prodBudgetDiv.innerHTML = errorHTML;
+            prodActualDiv.innerHTML = errorHTML;
+            comparisonDiv.innerHTML = errorHTML;
+            costTab.innerHTML = errorHTML;
+          }
+        }
+    
+        //membuat header informasi blok
+        function createBlockInfoHeader(props) {
+          const header = document.createElement('div');
+          header.className = 'block-info-header';
+          header.innerHTML = `
+            <div class="block-info-grid">
+              <div class="block-info-item">
+                <span class="block-info-label">Kebun:</span>
+                <span class="block-info-value">${props.kebun || '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Divisi:</span>
+                <span class="block-info-value">${props.divisi || '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Blok:</span>
+                <span class="block-info-value">${props.blok || '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Kode:</span>
+                <span class="block-info-value">${props.kode || '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Luas:</span>
+                <span class="block-info-value">${props.luas ? props.luas + ' Ha' : '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Tahun Tanam:</span>
+                <span class="block-info-value">${props.tahun || '-'}</span>
+              </div>
+              <div class="block-info-item">
+                <span class="block-info-label">Umur:</span>
+                <span class="block-info-value">${props.umur ? props.umur + ' tahun' : '-'}</span>
+              </div>
+            </div>
+          `;
+          return header;
+        }
+        
+        // Helper function to safely access nested properties
+        function getSafe(fn, defaultVal) {
+          try {
+            return fn();
+          } catch (e) {
+            return defaultVal;
+          }
+        }
+        
+        // Enhanced filterProductionData function
+        function filterProductionData(data, blockCode, kebun, divisi) {
+          if (!Array.isArray(data)) return [];
+          
+          // Normalize divisi format from "DIVISI_I" to "Divisi_I"
+          const normalizedDivisi = divisi.replace(' ', '_');
+          
+          return data.filter(item => {
+            // Normalize kebun name (case insensitive)
+            const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
+            const targetKebun = kebun ? kebun.toUpperCase() : '';
+            
+            // Normalize divisi format (case insensitive and handle both formats)
+            const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
+            const targetDivisi = normalizedDivisi.toUpperCase();
+            
+            // Exact match for block code
+            const itemBlok = getSafe(() => item.Blok, '');
+            
+            return itemBlok === blockCode && 
+                   itemKebun === targetKebun && 
+                   itemDivisi === targetDivisi;
+          });
+        }
+        
+        // Enhanced aggregateCostData function
+        function aggregateCostData(data, blockCode, kebun, divisi) {
+          if (!Array.isArray(data)) {
+            return {
+              aggregatedCostData: [],
+              totalCostData: {
+                HK: 0,
+                'Luas/Hasil': 0,
+                'Biaya (Rp)': 0
+              }
+            };
+          }
+        
+          const filteredData = data.filter(item => {
+            // Normalize kebun name
+            const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
+            const targetKebun = kebun ? kebun.toUpperCase() : '';
+            
+            // Normalize divisi format
+            const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
+            const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
+            
+            // Exact match for block code
+            const itemBlok = getSafe(() => item.Blok, '');
+            
+            return itemBlok === blockCode && 
+                   itemKebun === targetKebun && 
+                   itemDivisi === targetDivisi;
+          });
+    
+          const aggregated = {};
+          let totalHK = 0;
+          let totalArea = 0;
+          let totalCost = 0;
+        
+          filteredData.forEach(item => {
+            const kodeKerja = getSafe(() => item['Kode Kerja'], '');
+            const objekKerja = getSafe(() => item['Objek Kerja'], '');
+            const key = `${kodeKerja}_${objekKerja}`;
+            
+            if (!aggregated[key]) {
+              aggregated[key] = {
+                'Kode Kerja': kodeKerja,
+                'Objek Kerja': objekKerja,
+                HK: 0,
+                'Luas/Hasil': 0,
+                'Biaya (Rp)': 0
+              };
+            }
+            
+            // Handle property names with parentheses
+            const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
+            const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
+            const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
+            
+            aggregated[key].HK += hk;
+            aggregated[key]['Luas/Hasil'] += luas;
+            aggregated[key]['Biaya (Rp)'] += biaya;
+        
+            totalHK += hk;
+            totalArea += luas;
+            totalCost += biaya;
+          });
+        
+          return {
+            aggregatedCostData: Object.values(aggregated),
+            totalCostData: {
+              HK: totalHK,
+              'Luas/Hasil': totalArea,
+              'Biaya (Rp)': totalCost
+            }
+          };
+        }
+        
+        // Enhanced displayProductionData function
+        function displayProductionData(budgetData = [], actualData = []) {
+          // Get fresh references each time
+          const prodBudgetDiv = document.getElementById('prodBudgetData');
+          const prodActualDiv = document.getElementById('prodActualData');
+          const comparisonDiv = document.getElementById('prodComparison');
+        
+          if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
+            console.error('Display elements not found');
+            return;
+          }
+        
+          // Clear previous content safely
+          [prodBudgetDiv, prodActualDiv, comparisonDiv].forEach(el => {
+            el.innerHTML = '';
+          });
+    
+          // Calculate totals with safe property access
+          const budgetTotals = calculateProductionTotals(budgetData);
+          const actualTotals = calculateProductionTotals(actualData);
+        
+          // Helper function to create data item
+          const createDataItem = (label, value) => {
+            const div = document.createElement('div');
+            div.className = 'data-item';
+            div.innerHTML = `
+              <span class="label">${label}:</span>
+              <span class="value">${value}</span>
+            `;
+            return div;
+          };
+        
+          // Display budget data
+          if (budgetData.length > 0) {
+            prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
+            prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
+            prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
+            prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
+          } else {
+            prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
+          }
+          
+          // Display actual data
+          if (actualData.length > 0) {
+            prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
+            prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
+            prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
+            prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
+          } else {
+            prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
+          }
+          
+          // Display comparison if both exist
+          if (budgetData.length > 0 && actualData.length > 0) {
+            const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
+            const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
+              (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
+            
+            const diffTonase = actualTotals.tonase - budgetTotals.tonase;
+            const percentageTonase = budgetTotals.tonase !== 0 ? 
+              (diffTonase / budgetTotals.tonase * 100) : 0;
+            
+            // Create comparison elements
+            const diffTonPerHaEl = createDataItem(
+              'Selisih Ton/Ha',
+              `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+                ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
+              </span>`
+            );
+            
+            const diffTonaseEl = createDataItem(
+              'Selisih Tonase',
+              `<span class="${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+                ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
+              </span>`
+            );
+            
+            const statusEl = createDataItem(
+              'Status',
+              `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
+                ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
+              </span>`
+            );
+            
+            comparisonDiv.appendChild(diffTonPerHaEl);
+            comparisonDiv.appendChild(diffTonaseEl);
+            comparisonDiv.appendChild(statusEl);
+          } else {
+            comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
+          }
+          
+          console.log('Production data displayed successfully');
+        }
+        
+        // Enhanced calculateProductionTotals function
+        function calculateProductionTotals(data = []) {
+          // Use a Set to track processed IDs to avoid duplicates
+          const processedIds = new Set();
+          
+          return data.reduce((totals, item) => {
+            // Skip duplicates
+            if (processedIds.has(item.id)) {
+              return totals;
+            }
+            processedIds.add(item.id);
+            
+            const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
+            
+            // Handle both actual and budget data
+            const produksi = parseFloat(
+              getSafe(() => item['Actual Produksi (Kg)'], 0) || 
+              getSafe(() => item['Budget Produksi (Kg)'], 0)
+            ) || 0;
+            
+            const tonase = parseFloat(
+              getSafe(() => item['Actual Tonase (Ton)'], 0) || 
+              getSafe(() => item['Budget Tonase (Ton)'], 0)
+            ) || 0;
+            
+            let tonPerHa = 0;
+            if (item['Actual Ton/Ha'] !== undefined) {
+              tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+            } else if (item['Budget Ton/Ha'] !== undefined) {
+              tonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+            } else if (luas > 0) {
+              tonPerHa = tonase / luas;
+            }
+            
+            totals.luas += luas;
+            totals.produksi += produksi;
+            totals.tonase += tonase;
+            totals.tonPerHa = tonPerHa; // Will be averaged correctly
+            
+            return totals;
+          }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
+        }
+        
+        // Enhanced displayCostData function
+        function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
+          const costTab = document.getElementById('costTab');
+          if (!costTab) return;
+        
+          // Initialize totals with default values
+          totalBudget = {
+            HK: getSafe(() => totalBudget.HK, 0),
+            'Luas/Hasil': getSafe(() => totalBudget['Luas/Hasil'], 0),
+            'Biaya (Rp)': getSafe(() => totalBudget['Biaya (Rp)'], 0)
+          };
+        
+          totalActual = {
+            HK: getSafe(() => totalActual.HK, 0),
+            'Luas/Hasil': getSafe(() => totalActual['Luas/Hasil'], 0),
+            'Biaya (Rp)': getSafe(() => totalActual['Biaya (Rp)'], 0)
+          };
+        
+          let tableHTML = `
+            <table class="cost-table">
+              <thead>
+                <tr>
+                  <th>Kode Kerja</th>
+                  <th>Objek Kerja</th>
+                  <th>HK (Budget)</th>
+                  <th>HK (Actual)</th>
+                  <th>Luas/Hasil (Budget)</th>
+                  <th>Luas/Hasil (Actual)</th>
+                  <th>Biaya (Budget)</th>
+                  <th>Biaya (Actual)</th>
+                  <th>Selisih Biaya</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+        
+          if (budgetData.length === 0 && actualData.length === 0) {
             tableHTML += `
               <tr>
-                <td>${kodeKerja || '-'}</td>
-                <td>${objekKerja || '-'}</td>
-                <td>${formatNumber(getSafe(() => budgetItem.HK, 0))}</td>
-                <td>${formatNumber(getSafe(() => actualItem.HK, 0))}</td>
-                <td>${formatNumber(getSafe(() => budgetItem['Luas/Hasil'], 0))}</td>
-                <td>${formatNumber(getSafe(() => actualItem['Luas/Hasil'], 0))}</td>
-                <td>${formatCurrency(getSafe(() => budgetItem['Biaya (Rp)'], 0))}</td>
-                <td>${formatCurrency(getSafe(() => actualItem['Biaya (Rp)'], 0))}</td>
-                <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
+                <td colspan="9" style="text-align: center;">Tidak ada data biaya untuk blok ini</td>
               </tr>
             `;
-          });
-        });
-      }
-    
-      tableHTML += `</tbody></table>`;
-    
-      // Calculate summary data
-      const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
-      const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
-      const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
-      const totalCostDiffPercent = totalBudgetCost > 0 ? 
-        (totalCostDiff / totalBudgetCost * 100) : 0;
-    
-      // Add summary cards
-      tableHTML += `
-        <div class="data-grid">
-          <div class="summary-card">
-            <h4>Total Budget</h4>
-            <div class="summary-item">
-              <span>Total HK:</span>
-              <span>${formatNumber(totalBudget.HK || 0)}</span>
-            </div>
-            <div class="summary-item">
-              <span>Total Luas:</span>
-              <span>${formatNumber(totalBudget['Luas/Hasil'] || 0)} Ha</span>
-            </div>
-            <div class="summary-item">
-              <span>Total Biaya:</span>
-              <span>${formatCurrency(totalBudget['Biaya (Rp)'] || 0)}</span>
-            </div>
-          </div>
-          
-          <div class="summary-card">
-            <h4>Total Actual</h4>
-            <div class="summary-item">
-              <span>Total HK:</span>
-              <span>${formatNumber(totalActual.HK || 0)}</span>
-            </div>
-            <div class="summary-item">
-              <span>Total Hasil:</span>
-              <span>${formatNumber(totalActual['Luas/Hasil'] || 0)} Ha</span>
-            </div>
-            <div class="summary-item">
-              <span>Total Biaya:</span>
-              <span>${formatCurrency(totalActual['Biaya (Rp)'] || 0)}</span>
-            </div>
-          </div>
-          
-          <div class="summary-card">
-            <h4>Perbandingan</h4>
-            <div class="summary-item">
-              <span>Selisih HK:</span>
-              <span>${formatNumber((totalActual.HK || 0) - (totalBudget.HK || 0))}</span>
-            </div>
-            <div class="summary-item">
-              <span>Selisih Luas:</span>
-              <span>${formatNumber((totalActual['Luas/Hasil'] || 0) - (totalBudget['Luas/Hasil'] || 0))} Ha</span>
-            </div>
-            <div class="summary-item">
-              <span>Selisih Biaya:</span>
-              <span class="${totalCostDiffClass}">
-                ${formatCurrency(totalCostDiff)} (${Math.abs(totalCostDiffPercent).toFixed(2)}%)
-              </span>
-            </div>
-          </div>
-        </div>
-      `;
-    
-      costTab.innerHTML = tableHTML;
-    }
-    
-    // Helper function to format numbers
-    function formatNumber(value) {
-      if (isNaN(value) || value === undefined || value === null) return '-';
-      return new Intl.NumberFormat('id-ID').format(value);
-    }
-    
-    // Enhanced currency formatting
-    function formatCurrency(amount) {
-      if (amount === undefined || amount === null || isNaN(amount)) return '-';
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(amount);
-    }
-
-    // ---------------- END POINT untuk menampilkan tab grafik-------------//
-    // Add these variables at the top of your script section
-    let productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart;
-    let currentBlockData = {
-      kebun: '',
-      divisi: '',
-      blok: '',
-      prodBudget: [],
-      prodActual: [],
-      budget: [],
-      actual: []
-    }
-    
-    // Add this function to initialize charts
-    function initializeCharts() {
-      // Production Chart (Tonase)
-      const productionCtx = document.getElementById('productionChart').getContext('2d');
-      productionChart = new Chart(productionCtx, {
-        type: 'line',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-          datasets: [
-            {
-              label: 'Budget Tonase',
-              data: [],
-              borderColor: '#4285f4',
-              backgroundColor: 'rgba(66, 133, 244, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true
-            },
-            {
-              label: 'Actual Tonase',
-              data: [],
-              borderColor: '#34a853',
-              backgroundColor: 'rgba(52, 168, 83, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: {
-              display: false
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Tonase (Ton)'
-              },
-              ticks: {
-                callback: function(value) {
-                  return formatNumber(value);
-                }
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Bulan'
-              }
-            }
-          }
-        }
-      });
-    
-      // Cost Chart (Biaya)
-      const costCtx = document.getElementById('costChart').getContext('2d');
-      costChart = new Chart(costCtx, {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-          datasets: [
-            {
-              label: 'Budget Biaya',
-              data: [],
-              backgroundColor: 'rgba(66, 133, 244, 0.7)',
-              borderColor: '#4285f4',
-              borderWidth: 1
-            },
-            {
-              label: 'Actual Biaya',
-              data: [],
-              backgroundColor: 'rgba(52, 168, 83, 0.7)',
-              borderColor: '#34a853',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: {
-              display: false
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ': ' + formatCurrency(context.raw);
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Biaya (Rp)'
-              },
-              ticks: {
-                callback: function(value) {
-                  return formatCurrency(value);
-                }
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Bulan'
-              }
-            }
-          }
-        }
-      });
-    
-      // Area Chart (Luas/Hasil)
-      const areaCtx = document.getElementById('areaChart').getContext('2d');
-      areaChart = new Chart(areaCtx, {
-        type: 'line',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-          datasets: [
-            {
-              label: 'Budget Luas',
-              data: [],
-              borderColor: '#4285f4',
-              backgroundColor: 'rgba(66, 133, 244, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true
-            },
-            {
-              label: 'Actual Hasil',
-              data: [],
-              borderColor: '#34a853',
-              backgroundColor: 'rgba(52, 168, 83, 0.1)',
-              borderWidth: 2,
-              tension: 0.1,
-              fill: true
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: {
-              display: false
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Luas/Hasil (Ha)'
-              },
-              ticks: {
-                callback: function(value) {
-                  return formatNumber(value);
-                }
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Bulan'
-              }
-            }
-          }
-        }
-      });
-    
-      // Add event listeners for work object filters
-      document.getElementById('costWorkObject').addEventListener('change', function() {
-        updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
-      });
-    
-      document.getElementById('areaWorkObject').addEventListener('change', function() {
-        updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
-      });
-
-      // Initialize analysis charts
-      initializeAnalysisCharts();
-    }
-    
-    // Add this function to update charts when data is loaded
-    function updateCharts(blockData) {
-      console.log('Data untuk grafik:', blockData);
-      
-      try {
-        currentBlockData = blockData;
+          } else {
+            // Get unique work codes from both datasets
+            const allWorkCodes = new Set([
+              ...budgetData.map(item => getSafe(() => item['Kode Kerja'], '')),
+              ...actualData.map(item => getSafe(() => item['Kode Kerja'], ''))
+            ]);
         
-        // Update production chart (tonase)
-        updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            // Process each work code
+            Array.from(allWorkCodes).forEach(kodeKerja => {
+              if (!kodeKerja) return;
         
-        // Update work object filters
-        updateWorkObjectFilters(blockData.budget, blockData.actual);
+              const budgetItems = budgetData.filter(item => 
+                getSafe(() => item['Kode Kerja'], '') === kodeKerja
+              );
+              const actualItems = actualData.filter(item => 
+                getSafe(() => item['Kode Kerja'], '') === kodeKerja
+              );
         
-        // Update cost chart with default selection (all)
-        updateCostChart(blockData.budget, blockData.actual, '');
+              // Get unique work objects
+              const allObjekKerja = new Set([
+                ...budgetItems.map(item => getSafe(() => item['Objek Kerja'], '')),
+                ...actualItems.map(item => getSafe(() => item['Objek Kerja'], ''))
+              ]);
         
-        // Update area chart with default selection (all)
-        updateAreaChart(blockData.budget, blockData.actual, '');
-      } catch (error) {
-        console.error('Error updating charts:', error);
-      }
-    }
-    
-    // Helper function to update production chart
-    function updateProductionChart(budgetData, actualData) {
-      if (!budgetData || !actualData) return;
-  
-      const monthlyBudget = aggregateMonthlyData(budgetData, 'Budget Tonase (Ton)');
-      const monthlyActual = aggregateMonthlyData(actualData, 'Actual Tonase (Ton)');
-      
-      // Jika tidak ada data, gunakan array kosong
-      productionChart.data.datasets[0].data = monthlyBudget || Array(12).fill(0);
-      productionChart.data.datasets[1].data = monthlyActual || Array(12).fill(0);
-      productionChart.update();
-    }
-    
-    // Helper function to update cost chart
-    function updateCostChart(budgetData, actualData, workObjectFilter) {
-      const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
-      const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
-      
-      costChart.data.datasets[0].data = monthlyBudget;
-      costChart.data.datasets[1].data = monthlyActual;
-      costChart.update();
-    }
-    
-    // Helper function to update area chart
-    function updateAreaChart(budgetData, actualData, workObjectFilter) {
-      const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
-      const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
-      
-      areaChart.data.datasets[0].data = monthlyBudget;
-      areaChart.data.datasets[1].data = monthlyActual;
-      areaChart.update();
-    }
-    
-    // Helper function to aggregate monthly production data
-    function aggregateMonthlyData(data, fieldName) {
-      const monthlyData = Array(12).fill(0);
-      
-      data.forEach(item => {
-        const month = getMonthFromDate(item.Bulan);
-        if (month >= 0 && month < 12) {
-          monthlyData[month] += parseFloat(item[fieldName]) || 0;
-        }
-      });
-      
-      return monthlyData;
-    }
-    
-    // Helper function to aggregate monthly cost data
-    function aggregateMonthlyCostData(data, workObjectFilter) {
-      const monthlyData = Array(12).fill(0);
-      
-      if (!Array.isArray(data)) return monthlyData;
-      
-      data.forEach(item => {
-        // Handle filter - sesuaikan dengan format dropdown
-        const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
-        if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
-          return;
-        }
+              // Process each work object
+              Array.from(allObjekKerja).forEach(objekKerja => {
+                if (!objekKerja) return;
         
-        // Default ke bulan 0 jika tidak ada data bulan
-        const month = 0; // Sementara di-set ke Januari (index 0)
+                const budgetItem = budgetItems.find(item => 
+                  getSafe(() => item['Objek Kerja'], '') === objekKerja
+                ) || {};
+                const actualItem = actualItems.find(item => 
+                  getSafe(() => item['Objek Kerja'], '') === objekKerja
+                ) || {};
         
-        if (month >= 0 && month < 12) {
-          const biaya = parseFloat(item['Biaya (Rp)']) || 0;
-          monthlyData[month] += biaya;
-        }
-      });
-      
-      return monthlyData;
-    }
-    
-    // Helper function to aggregate monthly area data
-    function aggregateMonthlyAreaData(data, workObjectFilter) {
-      const monthlyData = Array(12).fill(0);
-      
-      if (!Array.isArray(data)) return monthlyData;
-      
-      data.forEach(item => {
-        // Handle filter - sesuaikan dengan format dropdown
-        const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
-        if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
-          return;
-        }
-        
-        // Default ke bulan 0 jika tidak ada data bulan
-        const month = 0; // Sementara di-set ke Januari (index 0)
-        
-        if (month >= 0 && month < 12) {
-          // Gunakan Luas/Hasil dari data yang sudah di-agregasi
-          const value = parseFloat(item['Luas/Hasil']) || 0;
-          monthlyData[month] += value;
-        }
-      });
-      
-      return monthlyData;
-    }
-    
-    // Helper function to get month index (0-11) from date string
-    function getMonthFromDate(dateStr) {
-      if (!dateStr) return -1;
-      
-      try {
-        // Handle both Date objects and ISO strings
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) throw new Error('Invalid date');
-        return date.getMonth(); // Returns 0-11
-      } catch (e) {
-        console.warn('Failed to parse date:', dateStr, e);
-        return -1;
-      }
-    }
-    
-    // Helper function to update work object filters
-    function updateWorkObjectFilters(budgetData, actualData) {
-      const workObjects = new Map();
-      
-      const addWorkObjects = (data) => {
-        data.forEach(item => {
-          const kodeKerja = item['Kode Kerja'] || '';
-          const objekKerja = item['Objek Kerja'] || '';
-          
-          if (kodeKerja && objekKerja) {
-            // Gunakan format yang konsisten dengan dropdown (dengan dash)
-            const key = `${kodeKerja}-${objekKerja}`;
-            if (!workObjects.has(key)) {
-              workObjects.set(key, {
-                key,
-                kodeKerja,
-                objekKerja,
-                displayText: `${kodeKerja} - ${objekKerja}`
+                const costDiff = (getSafe(() => actualItem['Biaya (Rp)'], 0) || 0) - 
+                                (getSafe(() => budgetItem['Biaya (Rp)'], 0) || 0);
+                const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
+                
+                tableHTML += `
+                  <tr>
+                    <td>${kodeKerja || '-'}</td>
+                    <td>${objekKerja || '-'}</td>
+                    <td>${formatNumber(getSafe(() => budgetItem.HK, 0))}</td>
+                    <td>${formatNumber(getSafe(() => actualItem.HK, 0))}</td>
+                    <td>${formatNumber(getSafe(() => budgetItem['Luas/Hasil'], 0))}</td>
+                    <td>${formatNumber(getSafe(() => actualItem['Luas/Hasil'], 0))}</td>
+                    <td>${formatCurrency(getSafe(() => budgetItem['Biaya (Rp)'], 0))}</td>
+                    <td>${formatCurrency(getSafe(() => actualItem['Biaya (Rp)'], 0))}</td>
+                    <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
+                  </tr>
+                `;
               });
-            }
+            });
           }
-        });
-      };
-      
-      addWorkObjects(budgetData);
-      addWorkObjects(actualData);
-      
-      const costDropdown = document.getElementById('costWorkObject');
-      const areaDropdown = document.getElementById('areaWorkObject');
-      
-      // Clear existing options except the first one
-      while (costDropdown.options.length > 1) costDropdown.remove(1);
-      while (areaDropdown.options.length > 1) areaDropdown.remove(1);
-      
-      // Sort work objects
-      const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => 
-        a.displayText.localeCompare(b.displayText));
-      
-      // Add new options
-      sortedWorkObjects.forEach(workObject => {
-        const option = document.createElement('option');
-        option.value = workObject.key; // Gunakan key yang sudah diformat
-        option.textContent = workObject.displayText;
         
-        costDropdown.appendChild(option.cloneNode(true));
-        areaDropdown.appendChild(option.cloneNode(true));
-      });
-    }
-
-    // ---------------- END POINT untuk analisa mendalam-------------//
-    //1. Analisa prodktifitas blok
-    function analyzeBlockProductivity(prodActual, prodBudget) {
-      const analysis = {
-        totalActualTonase: 0,
-        totalBudgetTonase: 0,
-        totalActualLuas: 0,
-        totalBudgetLuas: 0,
-        productivityByMonth: {},
-        performanceStatus: 'normal'
-      };
-    
-      // Hitung total tonase dan luas
-      prodActual.forEach(item => {
-        analysis.totalActualTonase += parseFloat(item['Actual Tonase (Ton)']) || 0;
-        analysis.totalActualLuas += parseFloat(item['Luas (Ha)']) || 0;
-      });
-    
-      prodBudget.forEach(item => {
-        analysis.totalBudgetTonase += parseFloat(item['Budget Tonase (Ton)']) || 0;
-        analysis.totalBudgetLuas += parseFloat(item['Luas (Ha)']) || 0;
-      });
-    
-      // Hitung produktivitas per bulan
-      for (let month = 0; month < 12; month++) {
-        const monthName = new Date(0, month).toLocaleString('id-ID', { month: 'short' });
-        const actual = prodActual.filter(item => new Date(item.Bulan).getMonth() === month);
-        const budget = prodBudget.filter(item => new Date(item.Bulan).getMonth() === month);
+          tableHTML += `</tbody></table>`;
         
-        const actualTonase = actual.reduce((sum, item) => sum + (parseFloat(item['Actual Tonase (Ton)']) || 0), 0);
-        const budgetTonase = budget.reduce((sum, item) => sum + (parseFloat(item['Budget Tonase (Ton)']) || 0), 0);
+          // Calculate summary data
+          const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
+          const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
+          const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
+          const totalCostDiffPercent = totalBudgetCost > 0 ? 
+            (totalCostDiff / totalBudgetCost * 100) : 0;
         
-        analysis.productivityByMonth[monthName] = {
-          actual: actualTonase,
-          budget: budgetTonase,
-          difference: actualTonase - budgetTonase,
-          percentage: budgetTonase > 0 ? ((actualTonase - budgetTonase) / budgetTonase * 100) : 0
-        };
-      }
-    
-      // Tentukan status performa
-      const overallPercentage = analysis.totalBudgetTonase > 0 ? 
-        ((analysis.totalActualTonase - analysis.totalBudgetTonase) / analysis.totalBudgetTonase * 100) : 0;
-      
-      if (overallPercentage > 20) {
-        analysis.performanceStatus = 'excellent';
-      } else if (overallPercentage > 0) {
-        analysis.performanceStatus = 'good';
-      } else if (overallPercentage > -10) {
-        analysis.performanceStatus = 'normal';
-      } else {
-        analysis.performanceStatus = 'poor';
-      }
-    
-      return analysis;
-    }
-
-    // 2. Analisis Biaya dan Efisiensi
-    function analyzeCostEfficiency(actualCosts, budgetCosts) {
-      const analysis = {
-        totalActualCost: 0,
-        totalBudgetCost: 0,
-        costByCategory: {},
-        efficiencyScore: 0,
-        costOverruns: []
-      };
-    
-      // Hitung total biaya
-      actualCosts.forEach(item => {
-        analysis.totalActualCost += parseFloat(item['Biaya (Rp)']) || 0;
-      });
-    
-      budgetCosts.forEach(item => {
-        analysis.totalBudgetCost += parseFloat(item['Biaya (Rp)']) || 0;
-      });
-    
-      // Analisis per kategori
-      const categories = [...new Set([
-        ...actualCosts.map(item => item['Objek Kerja']),
-        ...budgetCosts.map(item => item['Objek Kerja'])
-      ])];
-    
-      categories.forEach(category => {
-        const actual = actualCosts.filter(item => item['Objek Kerja'] === category)
-          .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+          // Add summary cards
+          tableHTML += `
+            <div class="data-grid">
+              <div class="summary-card">
+                <h4>Total Budget</h4>
+                <div class="summary-item">
+                  <span>Total HK:</span>
+                  <span>${formatNumber(totalBudget.HK || 0)}</span>
+                </div>
+                <div class="summary-item">
+                  <span>Total Luas:</span>
+                  <span>${formatNumber(totalBudget['Luas/Hasil'] || 0)} Ha</span>
+                </div>
+                <div class="summary-item">
+                  <span>Total Biaya:</span>
+                  <span>${formatCurrency(totalBudget['Biaya (Rp)'] || 0)}</span>
+                </div>
+              </div>
+              
+              <div class="summary-card">
+                <h4>Total Actual</h4>
+                <div class="summary-item">
+                  <span>Total HK:</span>
+                  <span>${formatNumber(totalActual.HK || 0)}</span>
+                </div>
+                <div class="summary-item">
+                  <span>Total Hasil:</span>
+                  <span>${formatNumber(totalActual['Luas/Hasil'] || 0)} Ha</span>
+                </div>
+                <div class="summary-item">
+                  <span>Total Biaya:</span>
+                  <span>${formatCurrency(totalActual['Biaya (Rp)'] || 0)}</span>
+                </div>
+              </div>
+              
+              <div class="summary-card">
+                <h4>Perbandingan</h4>
+                <div class="summary-item">
+                  <span>Selisih HK:</span>
+                  <span>${formatNumber((totalActual.HK || 0) - (totalBudget.HK || 0))}</span>
+                </div>
+                <div class="summary-item">
+                  <span>Selisih Luas:</span>
+                  <span>${formatNumber((totalActual['Luas/Hasil'] || 0) - (totalBudget['Luas/Hasil'] || 0))} Ha</span>
+                </div>
+                <div class="summary-item">
+                  <span>Selisih Biaya:</span>
+                  <span class="${totalCostDiffClass}">
+                    ${formatCurrency(totalCostDiff)} (${Math.abs(totalCostDiffPercent).toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          `;
         
-        const budget = budgetCosts.filter(item => item['Objek Kerja'] === category)
-          .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+          costTab.innerHTML = tableHTML;
+        }
         
-        if (budget > 0) {
-          const variance = actual - budget;
-          const percentage = (variance / budget) * 100;
+        // Helper function to format numbers
+        function formatNumber(value) {
+          if (isNaN(value) || value === undefined || value === null) return '-';
+          return new Intl.NumberFormat('id-ID').format(value);
+        }
+        
+        // Enhanced currency formatting
+        function formatCurrency(amount) {
+          if (amount === undefined || amount === null || isNaN(amount)) return '-';
+          return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          }).format(amount);
+        }
+    
+        // ---------------- END POINT untuk menampilkan tab grafik-------------//
+        // Add these variables at the top of your script section
+        let productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart;
+        let currentBlockData = {
+          kebun: '',
+          divisi: '',
+          blok: '',
+          prodBudget: [],
+          prodActual: [],
+          budget: [],
+          actual: []
+        }
+        
+        // Add this function to initialize charts
+        function initializeCharts() {
+          // Production Chart (Tonase)
+          const productionCtx = document.getElementById('productionChart').getContext('2d');
+          productionChart = new Chart(productionCtx, {
+            type: 'line',
+            data: {
+              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+              datasets: [
+                {
+                  label: 'Budget Tonase',
+                  data: [],
+                  borderColor: '#4285f4',
+                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  fill: true
+                },
+                {
+                  label: 'Actual Tonase',
+                  data: [],
+                  borderColor: '#34a853',
+                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  fill: true
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Tonase (Ton)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatNumber(value);
+                    }
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
+              }
+            }
+          });
+        
+          // Cost Chart (Biaya)
+          const costCtx = document.getElementById('costChart').getContext('2d');
+          costChart = new Chart(costCtx, {
+            type: 'bar',
+            data: {
+              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+              datasets: [
+                {
+                  label: 'Budget Biaya',
+                  data: [],
+                  backgroundColor: 'rgba(66, 133, 244, 0.7)',
+                  borderColor: '#4285f4',
+                  borderWidth: 1
+                },
+                {
+                  label: 'Actual Biaya',
+                  data: [],
+                  backgroundColor: 'rgba(52, 168, 83, 0.7)',
+                  borderColor: '#34a853',
+                  borderWidth: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + formatCurrency(context.raw);
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Biaya (Rp)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatCurrency(value);
+                    }
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
+              }
+            }
+          });
+        
+          // Area Chart (Luas/Hasil)
+          const areaCtx = document.getElementById('areaChart').getContext('2d');
+          areaChart = new Chart(areaCtx, {
+            type: 'line',
+            data: {
+              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+              datasets: [
+                {
+                  label: 'Budget Luas',
+                  data: [],
+                  borderColor: '#4285f4',
+                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  fill: true
+                },
+                {
+                  label: 'Actual Hasil',
+                  data: [],
+                  borderColor: '#34a853',
+                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                  borderWidth: 2,
+                  tension: 0.1,
+                  fill: true
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                title: {
+                  display: false
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Luas/Hasil (Ha)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatNumber(value);
+                    }
+                  }
+                },
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
+              }
+            }
+          });
+        
+          // Add event listeners for work object filters
+          document.getElementById('costWorkObject').addEventListener('change', function() {
+            updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
+          });
+        
+          document.getElementById('areaWorkObject').addEventListener('change', function() {
+            updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
+          });
+    
+          // Initialize analysis charts
+          initializeAnalysisCharts();
+        }
+        
+        // Add this function to update charts when data is loaded
+        function updateCharts(blockData) {
+          console.log('Data untuk grafik:', blockData);
           
-          analysis.costByCategory[category] = {
-            actual,
-            budget,
-            variance,
-            percentage
+          try {
+            currentBlockData = blockData;
+            
+            // Update production chart (tonase)
+            updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            
+            // Update work object filters
+            updateWorkObjectFilters(blockData.budget, blockData.actual);
+            
+            // Update cost chart with default selection (all)
+            updateCostChart(blockData.budget, blockData.actual, '');
+            
+            // Update area chart with default selection (all)
+            updateAreaChart(blockData.budget, blockData.actual, '');
+          } catch (error) {
+            console.error('Error updating charts:', error);
+          }
+        }
+        
+        // Helper function to update production chart
+        function updateProductionChart(budgetData, actualData) {
+          if (!budgetData || !actualData) return;
+      
+          const monthlyBudget = aggregateMonthlyData(budgetData, 'Budget Tonase (Ton)');
+          const monthlyActual = aggregateMonthlyData(actualData, 'Actual Tonase (Ton)');
+          
+          // Jika tidak ada data, gunakan array kosong
+          productionChart.data.datasets[0].data = monthlyBudget || Array(12).fill(0);
+          productionChart.data.datasets[1].data = monthlyActual || Array(12).fill(0);
+          productionChart.update();
+        }
+        
+        // Helper function to update cost chart
+        function updateCostChart(budgetData, actualData, workObjectFilter) {
+          const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
+          const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
+          
+          costChart.data.datasets[0].data = monthlyBudget;
+          costChart.data.datasets[1].data = monthlyActual;
+          costChart.update();
+        }
+        
+        // Helper function to update area chart
+        function updateAreaChart(budgetData, actualData, workObjectFilter) {
+          const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
+          const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
+          
+          areaChart.data.datasets[0].data = monthlyBudget;
+          areaChart.data.datasets[1].data = monthlyActual;
+          areaChart.update();
+        }
+        
+        // Helper function to aggregate monthly production data
+        function aggregateMonthlyData(data, fieldName) {
+          const monthlyData = Array(12).fill(0);
+          
+          data.forEach(item => {
+            const month = getMonthFromDate(item.Bulan);
+            if (month >= 0 && month < 12) {
+              monthlyData[month] += parseFloat(item[fieldName]) || 0;
+            }
+          });
+          
+          return monthlyData;
+        }
+        
+        // Helper function to aggregate monthly cost data
+        function aggregateMonthlyCostData(data, workObjectFilter) {
+          const monthlyData = Array(12).fill(0);
+          
+          if (!Array.isArray(data)) return monthlyData;
+          
+          data.forEach(item => {
+            // Handle filter - sesuaikan dengan format dropdown
+            const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
+            if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
+              return;
+            }
+            
+            // Default ke bulan 0 jika tidak ada data bulan
+            const month = 0; // Sementara di-set ke Januari (index 0)
+            
+            if (month >= 0 && month < 12) {
+              const biaya = parseFloat(item['Biaya (Rp)']) || 0;
+              monthlyData[month] += biaya;
+            }
+          });
+          
+          return monthlyData;
+        }
+        
+        // Helper function to aggregate monthly area data
+        function aggregateMonthlyAreaData(data, workObjectFilter) {
+          const monthlyData = Array(12).fill(0);
+          
+          if (!Array.isArray(data)) return monthlyData;
+          
+          data.forEach(item => {
+            // Handle filter - sesuaikan dengan format dropdown
+            const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
+            if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
+              return;
+            }
+            
+            // Default ke bulan 0 jika tidak ada data bulan
+            const month = 0; // Sementara di-set ke Januari (index 0)
+            
+            if (month >= 0 && month < 12) {
+              // Gunakan Luas/Hasil dari data yang sudah di-agregasi
+              const value = parseFloat(item['Luas/Hasil']) || 0;
+              monthlyData[month] += value;
+            }
+          });
+          
+          return monthlyData;
+        }
+        
+        // Helper function to get month index (0-11) from date string
+        function getMonthFromDate(dateStr) {
+          if (!dateStr) return -1;
+          
+          try {
+            // Handle both Date objects and ISO strings
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) throw new Error('Invalid date');
+            return date.getMonth(); // Returns 0-11
+          } catch (e) {
+            console.warn('Failed to parse date:', dateStr, e);
+            return -1;
+          }
+        }
+        
+        // Helper function to update work object filters
+        function updateWorkObjectFilters(budgetData, actualData) {
+          const workObjects = new Map();
+          
+          const addWorkObjects = (data) => {
+            data.forEach(item => {
+              const kodeKerja = item['Kode Kerja'] || '';
+              const objekKerja = item['Objek Kerja'] || '';
+              
+              if (kodeKerja && objekKerja) {
+                // Gunakan format yang konsisten dengan dropdown (dengan dash)
+                const key = `${kodeKerja}-${objekKerja}`;
+                if (!workObjects.has(key)) {
+                  workObjects.set(key, {
+                    key,
+                    kodeKerja,
+                    objekKerja,
+                    displayText: `${kodeKerja} - ${objekKerja}`
+                  });
+                }
+              }
+            });
           };
+          
+          addWorkObjects(budgetData);
+          addWorkObjects(actualData);
+          
+          const costDropdown = document.getElementById('costWorkObject');
+          const areaDropdown = document.getElementById('areaWorkObject');
+          
+          // Clear existing options except the first one
+          while (costDropdown.options.length > 1) costDropdown.remove(1);
+          while (areaDropdown.options.length > 1) areaDropdown.remove(1);
+          
+          // Sort work objects
+          const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => 
+            a.displayText.localeCompare(b.displayText));
+          
+          // Add new options
+          sortedWorkObjects.forEach(workObject => {
+            const option = document.createElement('option');
+            option.value = workObject.key; // Gunakan key yang sudah diformat
+            option.textContent = workObject.displayText;
+            
+            costDropdown.appendChild(option.cloneNode(true));
+            areaDropdown.appendChild(option.cloneNode(true));
+          });
+        }
     
-          if (percentage > 15) {
-            analysis.costOverruns.push({
-              category,
-              actual,
-              budget,
-              variance,
-              percentage
+        // ---------------- END POINT untuk analisa mendalam-------------//
+        //1. Analisa prodktifitas blok
+        function analyzeBlockProductivity(prodActual, prodBudget) {
+          const analysis = {
+            totalActualTonase: 0,
+            totalBudgetTonase: 0,
+            totalActualLuas: 0,
+            totalBudgetLuas: 0,
+            productivityByMonth: {},
+            performanceStatus: 'normal'
+          };
+        
+          // Hitung total tonase dan luas
+          prodActual.forEach(item => {
+            analysis.totalActualTonase += parseFloat(item['Actual Tonase (Ton)']) || 0;
+            analysis.totalActualLuas += parseFloat(item['Luas (Ha)']) || 0;
+          });
+        
+          prodBudget.forEach(item => {
+            analysis.totalBudgetTonase += parseFloat(item['Budget Tonase (Ton)']) || 0;
+            analysis.totalBudgetLuas += parseFloat(item['Luas (Ha)']) || 0;
+          });
+        
+          // Hitung produktivitas per bulan
+          for (let month = 0; month < 12; month++) {
+            const monthName = new Date(0, month).toLocaleString('id-ID', { month: 'short' });
+            const actual = prodActual.filter(item => new Date(item.Bulan).getMonth() === month);
+            const budget = prodBudget.filter(item => new Date(item.Bulan).getMonth() === month);
+            
+            const actualTonase = actual.reduce((sum, item) => sum + (parseFloat(item['Actual Tonase (Ton)']) || 0), 0);
+            const budgetTonase = budget.reduce((sum, item) => sum + (parseFloat(item['Budget Tonase (Ton)']) || 0), 0);
+            
+            analysis.productivityByMonth[monthName] = {
+              actual: actualTonase,
+              budget: budgetTonase,
+              difference: actualTonase - budgetTonase,
+              percentage: budgetTonase > 0 ? ((actualTonase - budgetTonase) / budgetTonase * 100) : 0
+            };
+          }
+        
+          // Tentukan status performa
+          const overallPercentage = analysis.totalBudgetTonase > 0 ? 
+            ((analysis.totalActualTonase - analysis.totalBudgetTonase) / analysis.totalBudgetTonase * 100) : 0;
+          
+          if (overallPercentage > 20) {
+            analysis.performanceStatus = 'excellent';
+          } else if (overallPercentage > 0) {
+            analysis.performanceStatus = 'good';
+          } else if (overallPercentage > -10) {
+            analysis.performanceStatus = 'normal';
+          } else {
+            analysis.performanceStatus = 'poor';
+          }
+        
+          return analysis;
+        }
+    
+        // 2. Analisis Biaya dan Efisiensi
+        function analyzeCostEfficiency(actualCosts, budgetCosts) {
+          const analysis = {
+            totalActualCost: 0,
+            totalBudgetCost: 0,
+            costByCategory: {},
+            efficiencyScore: 0,
+            costOverruns: []
+          };
+        
+          // Hitung total biaya
+          actualCosts.forEach(item => {
+            analysis.totalActualCost += parseFloat(item['Biaya (Rp)']) || 0;
+          });
+        
+          budgetCosts.forEach(item => {
+            analysis.totalBudgetCost += parseFloat(item['Biaya (Rp)']) || 0;
+          });
+        
+          // Analisis per kategori
+          const categories = [...new Set([
+            ...actualCosts.map(item => item['Objek Kerja']),
+            ...budgetCosts.map(item => item['Objek Kerja'])
+          ])];
+        
+          categories.forEach(category => {
+            const actual = actualCosts.filter(item => item['Objek Kerja'] === category)
+              .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+            
+            const budget = budgetCosts.filter(item => item['Objek Kerja'] === category)
+              .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
+            
+            if (budget > 0) {
+              const variance = actual - budget;
+              const percentage = (variance / budget) * 100;
+              
+              analysis.costByCategory[category] = {
+                actual,
+                budget,
+                variance,
+                percentage
+              };
+        
+              if (percentage > 15) {
+                analysis.costOverruns.push({
+                  category,
+                  actual,
+                  budget,
+                  variance,
+                  percentage
+                });
+              }
+            }
+          });
+        
+          // Hitung skor efisiensi (0-100)
+          if (analysis.totalBudgetCost > 0) {
+            const costRatio = Math.min(analysis.totalActualCost / analysis.totalBudgetCost, 2); // Maksimal 2x budget
+            analysis.efficiencyScore = Math.max(0, 100 - (costRatio * 50)); // Skor 100 jika actual <= budget
+          }
+        
+          return analysis;
+        }
+    
+        // Fungsi untuk menampilkan analisis
+        function displayAnalysis(blockData) {
+          const performanceAnalysis = analyzeBlockProductivity(blockData.prodActual, blockData.prodBudget);
+          const costAnalysis = analyzeCostEfficiency(blockData.actual, blockData.budget);
+          
+          // Tampilkan ringkasan kinerja
+          const performanceHTML = `
+            <div class="performance-card ${performanceAnalysis.performanceStatus}">
+              <div class="performance-metric">
+                <span class="metric-label">Total Produksi:</span>
+                <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase)} Ton</span>
+                <span class="metric-comparison ${performanceAnalysis.totalActualTonase >= performanceAnalysis.totalBudgetTonase ? 'positive' : 'negative'}">
+                  (${formatNumber(performanceAnalysis.totalActualTonase - performanceAnalysis.totalBudgetTonase)} Ton)
+                </span>
+              </div>
+              <div class="performance-metric">
+                <span class="metric-label">Produktivitas:</span>
+                <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase / performanceAnalysis.totalActualLuas)} Ton/Ha</span>
+              </div>
+              <div class="performance-status">
+                Status: <span class="status-badge">${getPerformanceStatusText(performanceAnalysis.performanceStatus)}</span>
+              </div>
+            </div>
+          `;
+          
+          document.getElementById('performanceSummary').innerHTML = performanceHTML;
+          
+          // Tampilkan efisiensi biaya
+          const efficiencyHTML = `
+            <div class="efficiency-card">
+              <div class="efficiency-metric">
+                <span class="metric-label">Total Biaya:</span>
+                <span class="metric-value">${formatCurrency(costAnalysis.totalActualCost)}</span>
+                <span class="metric-comparison ${costAnalysis.totalActualCost <= costAnalysis.totalBudgetCost ? 'positive' : 'negative'}">
+                  (${formatCurrency(costAnalysis.totalActualCost - costAnalysis.totalBudgetCost)})
+                </span>
+              </div>
+              <div class="efficiency-metric">
+                <span class="metric-label">Skor Efisiensi:</span>
+                <div class="efficiency-score">
+                  <div class="score-bar" style="width: ${costAnalysis.efficiencyScore}%"></div>
+                  <span class="score-text">${Math.round(costAnalysis.efficiencyScore)}/100</span>
+                </div>
+              </div>
+              ${costAnalysis.costOverruns.length > 0 ? `
+                <div class="cost-overruns">
+                  <h5>Biaya Melebihi Budget:</h5>
+                  <ul>
+                    ${costAnalysis.costOverruns.map(item => `
+                      <li>
+                        <span class="category">${item.category}</span>
+                        <span class="overrun-amount negative">+${formatCurrency(item.variance)} (${item.percentage.toFixed(1)}%)</span>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+            </div>
+          `;
+          
+          document.getElementById('costEfficiency').innerHTML = efficiencyHTML;
+          
+          // Update chart trend produktivitas
+          updateProductivityTrendChart(performanceAnalysis.productivityByMonth);
+          
+          // Update chart distribusi biaya
+          updateCostDistributionChart(costAnalysis.costByCategory);
+        }
+    
+        // 4.  Chart Analisis Tambahan
+        function initializeAnalysisCharts() {
+          // Chart Trend Produktivitas
+          const trendCtx = document.getElementById('productivityTrendChart')?.getContext('2d');
+          if (trendCtx) {
+            productivityTrendChart = new Chart(trendCtx, {
+              type: 'line',
+              data: {
+                labels: [],
+                datasets: [
+                  {
+                    label: 'Actual Produksi',
+                    data: [],
+                    borderColor: '#34a853',
+                    backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                  },
+                  {
+                    label: 'Target Produksi',
+                    data: [],
+                    borderColor: '#4285f4',
+                    backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true,
+                    borderDash: [5, 5]
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  title: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
+                      }
+                    }
+                  }
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Tonase (Ton)' },
+                    ticks: { callback: formatNumber }
+                  },
+                  x: { title: { display: true, text: 'Bulan' } }
+                }
+              }
+            });
+          }
+    
+          // Chart Distribusi Biaya
+          const distCtx = document.getElementById('costDistributionChart')?.getContext('2d');
+          if (distCtx) {
+            costDistributionChart = new Chart(distCtx, {
+              type: 'doughnut',
+              data: {
+                labels: [],
+                datasets: [{
+                  data: [],
+                  backgroundColor: [],
+                  borderWidth: 1
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  title: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
+                      }
+                    }
+                  },
+                  legend: { position: 'right' }
+                }
+              }
             });
           }
         }
-      });
-    
-      // Hitung skor efisiensi (0-100)
-      if (analysis.totalBudgetCost > 0) {
-        const costRatio = Math.min(analysis.totalActualCost / analysis.totalBudgetCost, 2); // Maksimal 2x budget
-        analysis.efficiencyScore = Math.max(0, 100 - (costRatio * 50)); // Skor 100 jika actual <= budget
-      }
-    
-      return analysis;
-    }
-
-    // Fungsi untuk menampilkan analisis
-    function displayAnalysis(blockData) {
-      const performanceAnalysis = analyzeBlockProductivity(blockData.prodActual, blockData.prodBudget);
-      const costAnalysis = analyzeCostEfficiency(blockData.actual, blockData.budget);
-      
-      // Tampilkan ringkasan kinerja
-      const performanceHTML = `
-        <div class="performance-card ${performanceAnalysis.performanceStatus}">
-          <div class="performance-metric">
-            <span class="metric-label">Total Produksi:</span>
-            <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase)} Ton</span>
-            <span class="metric-comparison ${performanceAnalysis.totalActualTonase >= performanceAnalysis.totalBudgetTonase ? 'positive' : 'negative'}">
-              (${formatNumber(performanceAnalysis.totalActualTonase - performanceAnalysis.totalBudgetTonase)} Ton)
-            </span>
-          </div>
-          <div class="performance-metric">
-            <span class="metric-label">Produktivitas:</span>
-            <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase / performanceAnalysis.totalActualLuas)} Ton/Ha</span>
-          </div>
-          <div class="performance-status">
-            Status: <span class="status-badge">${getPerformanceStatusText(performanceAnalysis.performanceStatus)}</span>
-          </div>
-        </div>
-      `;
-      
-      document.getElementById('performanceSummary').innerHTML = performanceHTML;
-      
-      // Tampilkan efisiensi biaya
-      const efficiencyHTML = `
-        <div class="efficiency-card">
-          <div class="efficiency-metric">
-            <span class="metric-label">Total Biaya:</span>
-            <span class="metric-value">${formatCurrency(costAnalysis.totalActualCost)}</span>
-            <span class="metric-comparison ${costAnalysis.totalActualCost <= costAnalysis.totalBudgetCost ? 'positive' : 'negative'}">
-              (${formatCurrency(costAnalysis.totalActualCost - costAnalysis.totalBudgetCost)})
-            </span>
-          </div>
-          <div class="efficiency-metric">
-            <span class="metric-label">Skor Efisiensi:</span>
-            <div class="efficiency-score">
-              <div class="score-bar" style="width: ${costAnalysis.efficiencyScore}%"></div>
-              <span class="score-text">${Math.round(costAnalysis.efficiencyScore)}/100</span>
-            </div>
-          </div>
-          ${costAnalysis.costOverruns.length > 0 ? `
-            <div class="cost-overruns">
-              <h5>Biaya Melebihi Budget:</h5>
-              <ul>
-                ${costAnalysis.costOverruns.map(item => `
-                  <li>
-                    <span class="category">${item.category}</span>
-                    <span class="overrun-amount negative">+${formatCurrency(item.variance)} (${item.percentage.toFixed(1)}%)</span>
-                  </li>
-                `).join('')}
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-      `;
-      
-      document.getElementById('costEfficiency').innerHTML = efficiencyHTML;
-      
-      // Update chart trend produktivitas
-      updateProductivityTrendChart(performanceAnalysis.productivityByMonth);
-      
-      // Update chart distribusi biaya
-      updateCostDistributionChart(costAnalysis.costByCategory);
-    }
-
-    // 4.  Chart Analisis Tambahan
-    function initializeAnalysisCharts() {
-      // Chart Trend Produktivitas
-      const trendCtx = document.getElementById('productivityTrendChart')?.getContext('2d');
-      if (trendCtx) {
-        productivityTrendChart = new Chart(trendCtx, {
-          type: 'line',
-          data: {
-            labels: [],
-            datasets: [
-              {
-                label: 'Actual Produksi',
-                data: [],
-                borderColor: '#34a853',
-                backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                borderWidth: 2,
-                tension: 0.1,
-                fill: true
-              },
-              {
-                label: 'Target Produksi',
-                data: [],
-                borderColor: '#4285f4',
-                backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                borderWidth: 2,
-                tension: 0.1,
-                fill: true,
-                borderDash: [5, 5]
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              title: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: { display: true, text: 'Tonase (Ton)' },
-                ticks: { callback: formatNumber }
-              },
-              x: { title: { display: true, text: 'Bulan' } }
-            }
+        
+        function updateProductivityTrendChart(monthlyData) {
+          if (!productivityTrendChart || !monthlyData) return;
+          
+          const months = Object.keys(monthlyData);
+          productivityTrendChart.data.labels = months;
+          productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
+          productivityTrendChart.data.datasets[1].data = months.map(m => monthlyData[m].budget);
+          productivityTrendChart.update();
+        }
+        
+        function updateCostDistributionChart(costByCategory) {
+          if (!costDistributionChart || !costByCategory) return;
+          
+          const categories = Object.keys(costByCategory);
+          const colors = generateColors(categories.length);
+          
+          costDistributionChart.data.labels = categories;
+          costDistributionChart.data.datasets[0].data = categories.map(c => costByCategory[c].actual);
+          costDistributionChart.data.datasets[0].backgroundColor = colors;
+          costDistributionChart.update();
+        }
+        
+        function generateColors(count) {
+          const colors = [];
+          const hueStep = 360 / count;
+          
+          for (let i = 0; i < count; i++) {
+            const hue = i * hueStep;
+            colors.push(`hsl(${hue}, 70%, 60%)`);
           }
-        });
-      }
-
-      // Chart Distribusi Biaya
-      const distCtx = document.getElementById('costDistributionChart')?.getContext('2d');
-      if (distCtx) {
-        costDistributionChart = new Chart(distCtx, {
-          type: 'doughnut',
-          data: {
-            labels: [],
-            datasets: [{
-              data: [],
-              backgroundColor: [],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              title: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
-                  }
-                }
-              },
-              legend: { position: 'right' }
+          
+          return colors;
+        }
+    
+        // 5. Fungsi Tambahan untuk Mendukung Analisis
+        function getPerformanceStatusText(status) {
+          const statusText = {
+            'excellent': 'Sangat Baik (Melebihi Target >20%)',
+            'good': 'Baik (Melebihi Target 0-20%)',
+            'normal': 'Normal (Di Bawah Target <10%)',
+            'poor': 'Perlu Perhatian (Di Bawah Target >10%)'
+          };
+          return statusText[status] || status;
+        }
+        
+        function compareBlocks(blocksData) {
+          const comparison = {
+            mostProductive: null,
+            mostEfficient: null,
+            highestCost: null,
+            bestROI: null,
+            blocks: []
+          };
+        
+          blocksData.forEach(block => {
+            const productivity = block.prodAnalysis.totalActualTonase / block.prodAnalysis.totalActualLuas;
+            const costEfficiency = block.costAnalysis.totalActualCost / block.prodAnalysis.totalActualTonase; // Cost per ton
+            const roi = (block.prodAnalysis.totalActualTonase * 1000) / block.costAnalysis.totalActualCost; // ROI sederhana
+            
+            const blockStats = {
+              blok: block.blok,
+              productivity,
+              costEfficiency,
+              roi,
+              actualTonase: block.prodAnalysis.totalActualTonase,
+              actualCost: block.costAnalysis.totalActualCost
+            };
+            
+            comparison.blocks.push(blockStats);
+            
+            // Update yang terbaik
+            if (!comparison.mostProductive || productivity > comparison.mostProductive.productivity) {
+              comparison.mostProductive = blockStats;
             }
-          }
-        });
-      }
-    }
-    
-    function updateProductivityTrendChart(monthlyData) {
-      if (!productivityTrendChart || !monthlyData) return;
-      
-      const months = Object.keys(monthlyData);
-      productivityTrendChart.data.labels = months;
-      productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
-      productivityTrendChart.data.datasets[1].data = months.map(m => monthlyData[m].budget);
-      productivityTrendChart.update();
-    }
-    
-    function updateCostDistributionChart(costByCategory) {
-      if (!costDistributionChart || !costByCategory) return;
-      
-      const categories = Object.keys(costByCategory);
-      const colors = generateColors(categories.length);
-      
-      costDistributionChart.data.labels = categories;
-      costDistributionChart.data.datasets[0].data = categories.map(c => costByCategory[c].actual);
-      costDistributionChart.data.datasets[0].backgroundColor = colors;
-      costDistributionChart.update();
-    }
-    
-    function generateColors(count) {
-      const colors = [];
-      const hueStep = 360 / count;
-      
-      for (let i = 0; i < count; i++) {
-        const hue = i * hueStep;
-        colors.push(`hsl(${hue}, 70%, 60%)`);
-      }
-      
-      return colors;
-    }
-
-    // 5. Fungsi Tambahan untuk Mendukung Analisis
-    function getPerformanceStatusText(status) {
-      const statusText = {
-        'excellent': 'Sangat Baik (Melebihi Target >20%)',
-        'good': 'Baik (Melebihi Target 0-20%)',
-        'normal': 'Normal (Di Bawah Target <10%)',
-        'poor': 'Perlu Perhatian (Di Bawah Target >10%)'
-      };
-      return statusText[status] || status;
-    }
-    
-    function compareBlocks(blocksData) {
-      const comparison = {
-        mostProductive: null,
-        mostEfficient: null,
-        highestCost: null,
-        bestROI: null,
-        blocks: []
-      };
-    
-      blocksData.forEach(block => {
-        const productivity = block.prodAnalysis.totalActualTonase / block.prodAnalysis.totalActualLuas;
-        const costEfficiency = block.costAnalysis.totalActualCost / block.prodAnalysis.totalActualTonase; // Cost per ton
-        const roi = (block.prodAnalysis.totalActualTonase * 1000) / block.costAnalysis.totalActualCost; // ROI sederhana
+            
+            if (!comparison.mostEfficient || costEfficiency < comparison.mostEfficient.costEfficiency) {
+              comparison.mostEfficient = blockStats;
+            }
+            
+            if (!comparison.highestCost || blockStats.actualCost > comparison.highestCost.actualCost) {
+              comparison.highestCost = blockStats;
+            }
+            
+            if (!comparison.bestROI || roi > comparison.bestROI.roi) {
+              comparison.bestROI = blockStats;
+            }
+          });
         
-        const blockStats = {
-          blok: block.blok,
-          productivity,
-          costEfficiency,
-          roi,
-          actualTonase: block.prodAnalysis.totalActualTonase,
-          actualCost: block.costAnalysis.totalActualCost
-        };
-        
-        comparison.blocks.push(blockStats);
-        
-        // Update yang terbaik
-        if (!comparison.mostProductive || productivity > comparison.mostProductive.productivity) {
-          comparison.mostProductive = blockStats;
+          return comparison;
         }
-        
-        if (!comparison.mostEfficient || costEfficiency < comparison.mostEfficient.costEfficiency) {
-          comparison.mostEfficient = blockStats;
-        }
-        
-        if (!comparison.highestCost || blockStats.actualCost > comparison.highestCost.actualCost) {
-          comparison.highestCost = blockStats;
-        }
-        
-        if (!comparison.bestROI || roi > comparison.bestROI.roi) {
-          comparison.bestROI = blockStats;
-        }
-      });
-    
-      return comparison;
-    }
   </script>
   
 </body>
