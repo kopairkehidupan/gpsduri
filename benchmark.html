@@ -509,7 +509,8 @@
   <script>
     let map;
     let geoJsonLayer;
-    let geoJsonData; // Simpan data GeoJSON secara global
+    let geoJsonData;
+    let blokLabels = []; // Untuk menyimpan label blok
     
     // Initialize map
     function initMap() {
@@ -519,6 +520,47 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
+    }
+
+    // Fungsi untuk menambahkan label blok di tengah poligon
+    function addBlokLabels(data) {
+      // Hapus label yang sudah ada
+      removeBlokLabels();
+      
+      data.features.forEach(feature => {
+        const blokName = feature.properties.blok;
+        const layer = L.geoJSON(feature);
+        
+        // Dapatkan pusat poligon
+        const center = layer.getBounds().getCenter();
+        
+        // Buat label untuk blok
+        const label = L.marker(center, {
+          icon: L.divIcon({
+            className: 'blok-label',
+            html: `<div>${blokName}</div>`,
+            iconSize: [100, 20] // Sesuaikan ukuran sesuai kebutuhan
+          }),
+          zIndexOffset: 1000, // Pastikan label muncul di atas poligon
+          interactive: false // Non-aktifkan interaksi dengan label
+        }).addTo(map);
+        
+        blokLabels.push(label);
+      });
+    }
+
+    // Fungsi untuk menghapus semua label blok
+    function removeBlokLabels() {
+      blokLabels.forEach(label => map.removeLayer(label));
+      blokLabels = [];
+    }
+
+    function onEachFeature(feature, layer) {
+      layer.on('click', function() {
+        const props = feature.properties;
+        const divisiForQuery = props.divisi.replace(' ', '_');
+        showBlockDetails(props.blok, props.kebun, divisiForQuery);
+      });
     }
     
     // Load GeoJSON data from GitHub
@@ -531,14 +573,6 @@
         console.error('Error loading GeoJSON:', error);
         return null;
       }
-    }
-
-    function onEachFeature(feature, layer) {
-      layer.on('click', function() {
-        const props = feature.properties;
-        const divisiForQuery = props.divisi.replace(' ', '_');
-        showBlockDetails(props.blok, props.kebun, divisiForQuery);
-      });
     }
     
     function showGeoJsonOnMap(data) {
@@ -559,6 +593,9 @@
         },
         onEachFeature: onEachFeature
       }).addTo(map);
+      
+      // Tambahkan label blok
+      addBlokLabels(data);
       
       map.fitBounds(geoJsonLayer.getBounds());
     }
