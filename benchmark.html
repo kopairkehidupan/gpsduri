@@ -2422,8 +2422,6 @@
             document.getElementById('areaWorkObject')?.addEventListener('change', function() {
               updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
             });
-          }
-          
           // Tambahkan event listener untuk resize window
           window.addEventListener('resize', function() {
             if (productionChart) productionChart.resize();
@@ -2432,8 +2430,8 @@
             if (productivityTrendChart) productivityTrendChart.resize();
             if (costDistributionChart) costDistributionChart.resize();
           });
-        }
-
+        } 
+          
         // Helper function for common chart options
         function getBaseChartOptions(yAxisTitle, tickCallback) {
           return {
