@@ -218,7 +218,9 @@ canvas {
 
 /* Tambahkan style untuk label blok */
 .blok-label {
-  text-align: center;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   font-weight: bold;
   color: #333;
   text-shadow: 
@@ -227,10 +229,7 @@ canvas {
     -1px  1px 0 #fff,
      1px  1px 0 #fff;
   pointer-events: none;
-}
-
-.blok-label div {
-  transform: translate(-50%, -50%);
+  font-size: 12px;
   white-space: nowrap;
 }
 
