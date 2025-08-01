@@ -435,7 +435,9 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <canvas id="productionChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="productionChart"></canvas>
+          </div>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -450,10 +452,11 @@
               </select>
             </div>
           </div>
-          <canvas id="costChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="costChart"></canvas>
+          </div>
         </div>
         
-        <!-- Chart 3: Area Line Chart -->
         <div class="chart-container">
           <h4>Grafik Luas/Hasil</h4>
           <div class="chart-description">
@@ -465,7 +468,9 @@
               </select>
             </div>
           </div>
-          <canvas id="areaChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="areaChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -2127,206 +2132,354 @@
         }
         
         // Add this function to initialize charts
+        // Perbarui fungsi initializeCharts
         function initializeCharts() {
+          // Buat wrapper untuk setiap chart
+          ['productionChart', 'costChart', 'areaChart', 'productivityTrendChart', 'costDistributionChart'].forEach(chartId => {
+            if (document.getElementById(chartId)) {
+              createChartWrapper(chartId);
+            }
+          });
+        
           // Production Chart (Tonase)
-          const productionCtx = document.getElementById('productionChart').getContext('2d');
-          productionChart = new Chart(productionCtx, {
-            type: 'line',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Tonase',
-                  data: [],
-                  borderColor: '#4285f4',
-                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                },
-                {
-                  label: 'Actual Tonase',
-                  data: [],
-                  borderColor: '#34a853',
-                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Tonase (Ton)'
+          const productionCtx = document.getElementById('productionChart')?.getContext('2d');
+          if (productionCtx) {
+            productionChart = new Chart(productionCtx, {
+              type: 'line',
+              data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                datasets: [
+                  {
+                    label: 'Budget Tonase',
+                    data: [],
+                    borderColor: '#4285f4',
+                    backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#4285f4',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                   },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
+                  {
+                    label: 'Actual Tonase',
+                    data: [],
+                    borderColor: '#34a853',
+                    backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#34a853',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: false
+                  },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                      label: function(context) {
+                        return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
+                      }
+                    }
+                  },
+                  legend: {
+                    position: 'top',
+                    labels: {
+                      usePointStyle: true,
+                      padding: 20
                     }
                   }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
+                interaction: {
+                  mode: 'nearest',
+                  axis: 'x',
+                  intersect: false
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Tonase (Ton)'
+                    },
+                    ticks: {
+                      callback: function(value) {
+                        return formatNumber(value);
+                      }
+                    },
+                    grid: {
+                      color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Bulan'
+                    },
+                    grid: {
+                      display: false
+                    }
                   }
                 }
               }
-            }
-          });
-        
+            });
+            
+            configureChartResponsiveness(productionChart);
+          }
+          
           // Cost Chart (Biaya)
-          const costCtx = document.getElementById('costChart').getContext('2d');
-          costChart = new Chart(costCtx, {
-            type: 'bar',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Biaya',
-                  data: [],
-                  backgroundColor: 'rgba(66, 133, 244, 0.7)',
-                  borderColor: '#4285f4',
-                  borderWidth: 1
-                },
-                {
-                  label: 'Actual Biaya',
-                  data: [],
-                  backgroundColor: 'rgba(52, 168, 83, 0.7)',
-                  borderColor: '#34a853',
-                  borderWidth: 1
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      return context.dataset.label + ': ' + formatCurrency(context.raw);
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Biaya (Rp)'
+          const costCtx = document.getElementById('costChart')?.getContext('2d');
+          if (costCtx) {
+            costChart = new Chart(costCtx, {
+              type: 'bar',
+              data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                datasets: [
+                  {
+                    label: 'Budget Biaya',
+                    data: [],
+                    backgroundColor: 'rgba(66, 133, 244, 0.7)',
+                    borderColor: '#4285f4',
+                    borderWidth: 1,
+                    borderRadius: 4
                   },
-                  ticks: {
-                    callback: function(value) {
-                      return formatCurrency(value);
+                  {
+                    label: 'Actual Biaya',
+                    data: [],
+                    backgroundColor: 'rgba(52, 168, 83, 0.7)',
+                    borderColor: '#34a853',
+                    borderWidth: 1,
+                    borderRadius: 4
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: false
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+                      }
+                    }
+                  },
+                  legend: {
+                    position: 'top',
+                    labels: {
+                      usePointStyle: true,
+                      padding: 20
                     }
                   }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Biaya (Rp)'
+                    },
+                    ticks: {
+                      callback: function(value) {
+                        return formatCurrency(value);
+                      }
+                    },
+                    grid: {
+                      color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Bulan'
+                    },
+                    grid: {
+                      display: false
+                    }
                   }
                 }
               }
-            }
-          });
-        
+            });
+            
+            configureChartResponsiveness(costChart);
+          }
+          
           // Area Chart (Luas/Hasil)
-          const areaCtx = document.getElementById('areaChart').getContext('2d');
-          areaChart = new Chart(areaCtx, {
-            type: 'line',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Luas',
-                  data: [],
-                  borderColor: '#4285f4',
-                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                },
-                {
-                  label: 'Actual Hasil',
-                  data: [],
-                  borderColor: '#34a853',
-                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                }
-              ]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Luas/Hasil (Ha)'
+          const areaCtx = document.getElementById('areaChart')?.getContext('2d');
+          if (areaCtx) {
+            areaChart = new Chart(areaCtx, {
+              type: 'line',
+              data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+                datasets: [
+                  {
+                    label: 'Budget Luas',
+                    data: [],
+                    borderColor: '#4285f4',
+                    backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#4285f4',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                   },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
+                  {
+                    label: 'Actual Hasil',
+                    data: [],
+                    borderColor: '#34a853',
+                    backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    pointBackgroundColor: '#34a853',
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  title: {
+                    display: false
+                  },
+                  tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                      label: function(context) {
+                        return `${context.dataset.label}: ${formatNumber(context.raw)} Ha`;
+                      }
+                    }
+                  },
+                  legend: {
+                    position: 'top',
+                    labels: {
+                      usePointStyle: true,
+                      padding: 20
                     }
                   }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
+                interaction: {
+                  mode: 'nearest',
+                  axis: 'x',
+                  intersect: false
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Luas/Hasil (Ha)'
+                    },
+                    ticks: {
+                      callback: function(value) {
+                        return formatNumber(value);
+                      }
+                    },
+                    grid: {
+                      color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                  },
+                  x: {
+                    title: {
+                      display: true,
+                      text: 'Bulan'
+                    },
+                    grid: {
+                      display: false
+                    }
                   }
                 }
               }
-            }
-          });
-        
-          // Add event listeners for work object filters
-          document.getElementById('costWorkObject').addEventListener('change', function() {
-            updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
-          });
-        
-          document.getElementById('areaWorkObject').addEventListener('change', function() {
-            updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
-          });
-    
+            });
+            
+            configureChartResponsiveness(areaChart);
+          }
+          
           // Initialize analysis charts
           initializeAnalysisCharts();
+          
+          // Tambahkan event listener untuk resize window
+          window.addEventListener('resize', function() {
+            if (productionChart) productionChart.resize();
+            if (costChart) costChart.resize();
+            if (areaChart) areaChart.resize();
+            if (productivityTrendChart) productivityTrendChart.resize();
+            if (costDistributionChart) costDistributionChart.resize();
+          });
+        }
+
+        // Fungsi untuk mengatur responsivitas chart
+        function configureChartResponsiveness(chart) {
+          // Responsiveness configuration
+          chart.options.responsive = true;
+          chart.options.maintainAspectRatio = false;
+          
+          // Font size adjustments based on screen width
+          const baseFontSize = window.innerWidth < 600 ? 10 : 12;
+          
+          // Configure scales
+          if (chart.options.scales) {
+            Object.keys(chart.options.scales).forEach(scaleId => {
+              chart.options.scales[scaleId].ticks = chart.options.scales[scaleId].ticks || {};
+              chart.options.scales[scaleId].ticks.font = {
+                size: baseFontSize
+              };
+              
+              if (chart.options.scales[scaleId].title) {
+                chart.options.scales[scaleId].title.font = {
+                  size: baseFontSize + 1
+                };
+              }
+            });
+          }
+          
+          // Configure plugins
+          if (chart.options.plugins) {
+            if (chart.options.plugins.legend) {
+              chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
+              chart.options.plugins.legend.labels.font = {
+                size: baseFontSize
+              };
+            }
+            
+            if (chart.options.plugins.tooltip) {
+              chart.options.plugins.tooltip.bodyFont = {
+                size: baseFontSize
+              };
+              chart.options.plugins.tooltip.titleFont = {
+                size: baseFontSize + 1
+              };
+            }
+          }
+          
+          chart.update();
+        }
+        
+        // Fungsi untuk membuat wrapper div untuk chart
+        function createChartWrapper(chartId) {
+          const canvas = document.getElementById(chartId);
+          const parent = canvas.parentNode;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'chart-wrapper';
+          parent.insertBefore(wrapper, canvas);
+          wrapper.appendChild(canvas);
+          return wrapper;
         }
         
         // Add this function to update charts when data is loaded
