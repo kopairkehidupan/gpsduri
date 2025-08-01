@@ -72,16 +72,23 @@
     }
     
     .filter-container {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
       margin-bottom: 1.5rem;
-      align-items: flex-end;
+      align-items: end;
     }
     
     .filter-group {
-      flex: 1;
-      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-group label {
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark-gray);
+      font-size: 0.9rem;
     }
     
     label {
@@ -92,21 +99,42 @@
       font-size: 0.9rem;
     }
     
+    /* Enhanced Select Styles */
+    .select-wrapper {
+      position: relative;
+    }
+    
+    .select-wrapper::after {
+      content: "▼";
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    
     select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
       width: 100%;
-      padding: 0.6rem;
+      padding: 0.75rem 1rem;
       border: 1px solid var(--medium-gray);
-      border-radius: 6px;
+      border-radius: 8px;
       font-family: inherit;
       font-size: 0.9rem;
       background-color: var(--white);
+      color: var(--dark-gray);
+      cursor: pointer;
       transition: var(--transition);
     }
     
     select:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
     }
     
     .btn {
@@ -134,12 +162,18 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     
-    #map {
-      height: 500px;
-      width: 100%;
+    #mapContainer {
+      position: relative;
+      margin-bottom: 1.5rem;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: var(--shadow);
+    }
+    
+    #map {
+      height: 500px;
+      width: 100%;
+      transition: height 0.3s ease;
     }
     
     .loading {
@@ -385,24 +419,28 @@
       <div class="filter-container">
         <div class="filter-group">
           <label for="kebunSelect">Kebun</label>
-          <select id="kebunSelect">
-            <option value="">Pilih Kebun</option>
-            <option value="SAMSAM">Samsam</option>
-            <!-- Tambahkan kebun lain jika ada -->
-          </select>
+          <div class="select-wrapper">
+            <select id="kebunSelect">
+              <option value="">Pilih Kebun</option>
+              <option value="SAMSAM">Samsam</option>
+              <!-- Tambahkan kebun lain jika ada -->
+            </select>
+          </div>
         </div>
         
         <div class="filter-group">
           <label for="divisiSelect">Divisi</label>
-          <select id="divisiSelect" disabled>
-            <option value="">Pilih Divisi</option>
-            <option value="">Divisi I</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="divisiSelect" disabled>
+              <option value="">Pilih Divisi</option>
+              <option value="">Divisi I</option>
+            </select>
+          </div>
         </div>
         
-        <div class="filter-group">
+        <div class="filter-group load-data-container">
           <button id="loadDataBtn" class="btn">
-            <i class="material-icons" style="font-size: 16px;">refresh</i>
+            <i class="material-icons">refresh</i>
             <span>Muat Data</span>
           </button>
         </div>
@@ -410,6 +448,18 @@
       
       <div id="mapContainer">
         <div id="map"></div>
+        <div class="map-controls">
+          <button class="map-control-btn" id="zoomInBtn" title="Zoom In">
+            <i class="material-icons">add</i>
+          </button>
+          <button class="map-control-btn" id="zoomOutBtn" title="Zoom Out">
+            <i class="material-icons">remove</i>
+          </button>
+          <button class="map-control-btn" id="resetViewBtn" title="Reset View">
+            <i class="material-icons">home</i>
+          </button>
+        </div>
+        <div class="map-legend" id="mapLegend"></div>
       </div>
       
       <div id="dataDetails" class="card" style="display: none;">
@@ -557,14 +607,36 @@
     // Initialize map
     function initMap() {
       // Default center (will be updated when data loads)
-      map = L.map('map').setView([1.0, 101.05], 15);
+      map = L.map('map', {
+        zoomControl: false, // We'll add custom zoom control
+        attributionControl: false // We'll add custom attribution
+      }).setView([1.0, 101.05], 15);
       
+      // Add tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
       
-      // Initialize geoJsonLayer as a LayerGroup
+      // Add custom controls
+      L.control.attribution({
+        position: 'bottomleft'
+      }).addTo(map);
+      
+      // Initialize geoJsonLayer
       geoJsonLayer = L.layerGroup().addTo(map);
+      
+      // Add map controls functionality
+      document.getElementById('zoomInBtn').addEventListener('click', function() {
+        map.zoomIn();
+      });
+      
+      document.getElementById('zoomOutBtn').addEventListener('click', function() {
+        map.zoomOut();
+      });
+      
+      document.getElementById('resetViewBtn').addEventListener('click', function() {
+        map.setView([1.0, 101.05], 15);
+      });
     }
     
     // Fungsi untuk menambahkan label blok di tengah poligon
@@ -629,6 +701,33 @@
             const bounds = new L.LatLngBounds(boundsArray);
             map.fitBounds(bounds);
           }
+
+        // Update legend
+        updateLegend(data);
+        }
+
+        function updateLegend(data) {
+          const legend = document.getElementById('mapLegend');
+          if (!legend) return;
+          
+          // Get unique divisions
+          const divisions = [...new Set(
+            data.features.map(f => f.properties.divisi)
+          )].sort();
+          
+          let legendHTML = '<h4>Legenda Divisi</h4>';
+          
+          divisions.forEach(div => {
+            const color = getColorByDivisi(div);
+            legendHTML += `
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: ${color};"></div>
+                <span>${div.replace('DIVISI ', '')}</span>
+              </div>
+            `;
+          });
+          
+          legend.innerHTML = legendHTML;
         }
         
         // Fungsi untuk menghapus semua label blok
@@ -1466,8 +1565,12 @@
             db.close();
             db = null;
           }
-          this.disabled = true;
-          this.innerHTML = '<span class="spinner"></span> Memuat...';
+          const btn = this;
+          const icon = btn.querySelector('.material-icons');
+          
+          // Add loading state
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner"></span> Memuat...';
           
           try {
             // Pastikan tidak ada instance database yang menggantung
@@ -1481,6 +1584,17 @@
             }
             
             await loadAllData();
+
+            // Success state
+            btn.innerHTML = '<i class="material-icons">check</i> Data Dimuat';
+            btn.style.backgroundColor = 'var(--secondary)';
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+              btn.innerHTML = '<i class="material-icons">refresh</i> Muat Data';
+              btn.style.backgroundColor = 'var(--primary)';
+              btn.disabled = false;
+            }, 2000);
           } catch (error) {
             console.error('Error:', error);
             
@@ -1494,6 +1608,16 @@
             }
             
             showProgressNotification('Gagal memuat data. Silakan coba lagi.', false);
+            btn.innerHTML = '<i class="material-icons">error</i> Gagal';
+            btn.style.backgroundColor = '#ea4335';
+            
+              // Reset after 2 seconds
+              setTimeout(() => {
+                btn.innerHTML = '<i class="material-icons">refresh</i> Muat Data';
+                btn.style.backgroundColor = 'var(--primary)';
+                btn.disabled = false;
+              }, 2000);
+            }
           } finally {
             this.disabled = false;
             this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
