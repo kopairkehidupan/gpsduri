@@ -508,34 +508,42 @@
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
     let map;
-    let geoJsonLayer = null; // Initialize as null
-    let geoJsonData;
-    let blokLabels = []; // Untuk menyimpan label blok
-    
-    // Initialize map
-    function initMap() {
-      // Default center (will be updated when data loads)
-      map = L.map('map').setView([1.0, 101.05], 15);
-      
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
+let geoJsonLayer = null; // Initialize as null
+let geoJsonData;
+let blokLabels = []; // Untuk menyimpan label blok
 
-      // Initialize geoJsonLayer as a LayerGroup
-      geoJsonLayer = L.layerGroup().addTo(map);
-    }
+// Initialize map
+function initMap() {
+  // Default center (will be updated when data loads)
+  map = L.map('map').setView([1.0, 101.05], 15);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+  
+  // Initialize geoJsonLayer as a LayerGroup
+  geoJsonLayer = L.layerGroup().addTo(map);
+}
 
-    // Fungsi untuk menambahkan label blok di tengah poligon
-    function addBlokLabels(data) {
-      // Hapus label yang sudah ada
-      removeBlokLabels();
-      
-      data.features.forEach(feature => {
-        const blokName = feature.properties.blok;
-        const layer = L.geoJSON(feature, {
-          style: function(feature) {
-            return {
-              fillColor: getColorByDivisi(feature.properties.divisi),
+// Fungsi untuk menambahkan label blok di tengah poligon
+function addBlokLabels(data) {
+  // Hapus label yang sudah ada
+  removeBlokLabels();
+  
+  // Pastikan geoJsonLayer ada
+  if (!geoJsonLayer) {
+    geoJsonLayer = L.layerGroup().addTo(map);
+  }
+  
+  // Buat array untuk menyimpan bounds
+  const boundsArray = [];
+  
+  data.features.forEach(feature => {
+    const blokName = feature.properties.blok;
+    const layer = L.geoJSON(feature, {
+      style: function(feature) {
+        return {
+          fillColor: getColorByDivisi(feature.properties.divisi),
               weight: 2,
               opacity: 1,
               color: 'white',
@@ -545,7 +553,10 @@
           },
           onEachFeature: function(feature, layer) {
             // Tambahkan tooltip permanen di tengah poligon
-            const center = layer.getBounds().getCenter();
+            const bounds = layer.getBounds();
+            boundsArray.push(bounds); // Simpan bounds untuk fitBounds nanti
+            
+            const center = bounds.getCenter();
             const tooltip = L.tooltip({
               permanent: true,
               direction: 'center',
@@ -571,16 +582,17 @@
         geoJsonLayer.addLayer(layer);
       });
       
-      // Fit bounds only if we have layers
-      if (geoJsonLayer.getLayers().length > 0) {
-        map.fitBounds(geoJsonLayer.getBounds());
+      // Fit bounds jika ada features
+      if (boundsArray.length > 0) {
+        const bounds = new L.LatLngBounds(boundsArray);
+        map.fitBounds(bounds);
       }
     }
     
     // Fungsi untuk menghapus semua label blok
     function removeBlokLabels() {
       blokLabels.forEach(item => {
-        if (item.layer && map.hasLayer(item.layer)) {
+        if (item.layer && geoJsonLayer && map.hasLayer(item.layer)) {
           item.layer.unbindTooltip();
           geoJsonLayer.removeLayer(item.layer);
         }
@@ -596,18 +608,6 @@
       });
     }
     
-    // Load GeoJSON data from GitHub
-    async function loadGeoJsonData() {
-      try {
-        const response = await fetch('koordinatkebundivisiblok.geojson');
-        if (!response.ok) throw new Error('Network response was not ok');
-        return await response.json();
-      } catch (error) {
-        console.error('Error loading GeoJSON:', error);
-        return null;
-      }
-    }
-    
     function showGeoJsonOnMap(data) {
       // Clear existing layers
       if (geoJsonLayer) {
@@ -619,6 +619,18 @@
       
       // Tambahkan blok dengan label
       addBlokLabels(data);
+    }
+    
+    // Load GeoJSON data from GitHub
+    async function loadGeoJsonData() {
+      try {
+        const response = await fetch('koordinatkebundivisiblok.geojson');
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+      } catch (error) {
+        console.error('Error loading GeoJSON:', error);
+        return null;
+      }
     }
     
     function getColorByDivisi(divisi) {
