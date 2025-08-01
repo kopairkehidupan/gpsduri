@@ -170,62 +170,58 @@ canvas {
   height: 300px !important;
 }
 
-.block-info-header {
-  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
-  color: white;
-  padding: 1rem;
-  border-radius: 8px 8px 0 0;
-  margin-bottom: 1rem;
-}
-
+/* Block Info Card Styles */
 .block-info-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-}
-
-.block-info-item {
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  min-width: 150px;
-}
-
-.block-info-label {
-  font-weight: 500;
-  margin-right: 0.5rem;
-  font-size: 0.85rem;
-  opacity: 0.9;
-}
-
-.block-info-value {
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .block-info-container {
-    flex-direction: column;
-    align-items: flex-start;
+    background-color: var(--light-gray);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--primary);
+  }
+  
+  .block-info-title {
+    font-size: 1.1rem;
+    color: var(--primary);
+    margin-top: 0;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
     gap: 0.5rem;
   }
   
-  .block-info-item {
-    width: 100%;
-    justify-content: space-between;
-    border-radius: 8px;
-  }
-}
-
-@media (max-width: 480px) {
-  .block-info-label {
-    font-size: 0.8rem;
+  .block-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
   }
   
+  .block-info-item {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .block-info-label {
+    font-size: 0.8rem;
+    color: var(--dark-gray);
+    margin-bottom: 0.25rem;
+  }
+  
+  .block-info-value {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  
+  .block-info-icon {
+    color: var(--primary);
+    font-size: 1.2rem;
+  }
+  
+  @media (max-width: 600px) {
+    .block-info-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
   .block-info-value {
     font-size: 0.85rem;
   }
