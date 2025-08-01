@@ -508,7 +508,7 @@
   <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
     let map;
-    let geoJsonLayer;
+    let geoJsonLayer = null; // Initialize as null
     let geoJsonData;
     let blokLabels = []; // Untuk menyimpan label blok
     
@@ -520,6 +520,9 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
+
+      // Initialize geoJsonLayer as a LayerGroup
+      geoJsonLayer = L.layerGroup().addTo(map);
     }
 
     // Fungsi untuk menambahkan label blok di tengah poligon
@@ -563,10 +566,15 @@
               showBlockDetails(props.blok, props.kebun, divisiForQuery);
             });
           }
-        }).addTo(map);
+        });
         
         geoJsonLayer.addLayer(layer);
       });
+      
+      // Fit bounds only if we have layers
+      if (geoJsonLayer.getLayers().length > 0) {
+        map.fitBounds(geoJsonLayer.getBounds());
+      }
     }
     
     // Fungsi untuk menghapus semua label blok
@@ -574,7 +582,7 @@
       blokLabels.forEach(item => {
         if (item.layer && map.hasLayer(item.layer)) {
           item.layer.unbindTooltip();
-          map.removeLayer(item.layer);
+          geoJsonLayer.removeLayer(item.layer);
         }
       });
       blokLabels = [];
@@ -601,19 +609,16 @@
     }
     
     function showGeoJsonOnMap(data) {
-      // Hapus layer yang sudah ada
+      // Clear existing layers
       if (geoJsonLayer) {
-        map.removeLayer(geoJsonLayer);
+        geoJsonLayer.clearLayers();
+      } else {
+        // Initialize if not already done
+        geoJsonLayer = L.layerGroup().addTo(map);
       }
-      
-      // Buat layer group baru
-      geoJsonLayer = L.layerGroup().addTo(map);
       
       // Tambahkan blok dengan label
       addBlokLabels(data);
-      
-      // Sesuaikan view
-      map.fitBounds(geoJsonLayer.getBounds());
     }
     
     function getColorByDivisi(divisi) {
@@ -714,6 +719,7 @@
           this.classList.add('active');
         });
       });
+    });
 
       function getElementSafe(id) {
         const el = document.getElementById(id);
