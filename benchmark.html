@@ -1540,6 +1540,12 @@
           if (!productionChart) {
             initializeCharts();
           }
+
+          setTimeout(() => {
+            if (productionChart) productionChart.resize();
+            if (costChart) costChart.resize();
+            if (areaChart) areaChart.resize();
+          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -2129,6 +2135,45 @@
         // Add this function to initialize charts
         function initializeCharts() {
           // Production Chart (Tonase)
+
+          const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false, // Penting untuk responsif
+            plugins: {
+              title: { display: false },
+              legend: {
+                position: 'top',
+                labels: {
+                  boxWidth: 12,
+                  padding: 20,
+                  font: {
+                    size: 12
+                  }
+                }
+              }
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeInOutQuad'
+            }
+          };
+
+          const commonTooltipOptions = {
+            enabled: true,
+            mode: 'index',
+            intersect: false,
+            position: 'nearest',
+            bodyFont: {
+              size: window.innerWidth < 600 ? 10 : 12
+            },
+            titleFont: {
+              size: window.innerWidth < 600 ? 10 : 12
+            },
+            padding: window.innerWidth < 600 ? 8 : 12,
+            caretSize: window.innerWidth < 600 ? 6 : 8,
+            displayColors: true
+          };
+          
           const productionCtx = document.getElementById('productionChart').getContext('2d');
           productionChart = new Chart(productionCtx, {
             type: 'line',
@@ -2156,6 +2201,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                  tooltip: commonTooltipOptions
+                },
               responsive: true,
               plugins: {
                 title: {
@@ -2216,6 +2265,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
               plugins: {
                 title: {
@@ -2280,6 +2333,10 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
               plugins: {
                 title: {
@@ -2324,10 +2381,40 @@
           document.getElementById('areaWorkObject').addEventListener('change', function() {
             updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
           });
+
+          // Tambahkan event listener untuk resize
+          window.addEventListener('resize', function() {
+            productionChart.resize();
+            costChart.resize();
+            areaChart.resize();
+          });
     
           // Initialize analysis charts
           initializeAnalysisCharts();
         }
+
+        function handleChartResize() {
+          const charts = [productionChart, costChart, areaChart];
+          charts.forEach(chart => {
+            if (chart) {
+              chart.resize();
+            }
+          });
+        }
+        
+        // Panggil saat tab diubah
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            setTimeout(handleChartResize, 300); // Beri sedikit delay
+          });
+        });
+        
+        // Panggil saat window di-resize
+        let resizeTimer;
+        window.addEventListener('resize', function() {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(handleChartResize, 200);
+        });
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
