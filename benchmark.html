@@ -1782,6 +1782,16 @@
               budget: filteredBudget,
               actual: filteredActual
             });
+
+            // Tambahkan ini untuk memaksa render ulang grafik di tab Analisa
+            setTimeout(() => {
+              if (productivityTrendChart) {
+                productivityTrendChart.update();
+              }
+              if (costDistributionChart) {
+                costDistributionChart.update();
+              }
+            }, 100);
         
           } catch (error) {
             console.error('Error:', error);
@@ -1792,6 +1802,19 @@
             costTab.innerHTML = errorHTML;
           }
         }
+
+        document.querySelector('.tab-btn[data-tab="analysis"]').addEventListener('click', function() {
+          setTimeout(() => {
+            if (productivityTrendChart) {
+              productivityTrendChart.update();
+              // Force tooltip untuk muncul
+              forceTooltips(productivityTrendChart);
+            }
+            if (costDistributionChart) {
+              costDistributionChart.update();
+            }
+          }, 300);
+        });
     
         //membuat header informasi blok
         function createBlockInfoHeader(props) {
@@ -3119,16 +3142,38 @@
               }
             });
           }
+
+          // Tambahkan ini di akhir fungsi
+          setTimeout(() => {
+            if (productivityTrendChart) {
+              productivityTrendChart.update();
+            }
+            if (costDistributionChart) {
+              costDistributionChart.update();
+            }
+          }, 500);
         }
         
         function updateProductivityTrendChart(monthlyData) {
-          if (!productivityTrendChart || !monthlyData) return;
+          if (!productivityTrendChart) return;
           
+          // Jika tidak ada data, set array kosong
+          if (!monthlyData) {
+            monthlyData = {};
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            months.forEach(m => {
+              monthlyData[m] = { actual: 0, budget: 0 };
+            });
+          }
+        
           const months = Object.keys(monthlyData);
           productivityTrendChart.data.labels = months;
           productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
           productivityTrendChart.data.datasets[1].data = months.map(m => monthlyData[m].budget);
+          
+          // Tambahkan ini untuk memastikan update
           productivityTrendChart.update();
+          setTimeout(() => forceTooltips(productivityTrendChart), 200);
         }
         
         function updateCostDistributionChart(costByCategory) {
