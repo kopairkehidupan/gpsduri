@@ -2310,7 +2310,13 @@
             },
             padding: window.innerWidth < 600 ? 8 : 12,
             caretSize: window.innerWidth < 600 ? 6 : 8,
-            displayColors: true
+            displayColors: true,
+            // Tambahkan ini untuk tooltip permanen
+            callbacks: {
+              label: function(context) {
+                return `${context.dataset.label}: ${formatNumber(context.raw)}${context.chart.config.type === 'line' ? ' Ton' : ''}`;
+              }
+            }
           };
         
           const productionCtx = document.getElementById('productionChart').getContext('2d');
@@ -2342,7 +2348,20 @@
             options: {
               ...commonChartOptions,
               plugins: {
-                tooltip: commonTooltipOptions
+                tooltip: {
+                  ...commonTooltipOptions,
+                  // Tooltip selalu muncul
+                  mode: 'index',
+                  intersect: false,
+                  // Posisi tooltip
+                  position: 'average',
+                  // Background color
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  // Animasi tooltip
+                  animation: {
+                    duration: 0 // Hilangkan animasi
+                  }
+                }
               },
               responsive: true,
               plugins: {
@@ -2406,7 +2425,20 @@
             options: {
               ...commonChartOptions,
               plugins: {
-                tooltip: commonTooltipOptions
+                tooltip: {
+                  ...commonTooltipOptions,
+                  // Tooltip selalu muncul
+                  mode: 'index',
+                  intersect: false,
+                  // Posisi tooltip
+                  position: 'average',
+                  // Background color
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  // Animasi tooltip
+                  animation: {
+                    duration: 0 // Hilangkan animasi
+                  }
+                }
               },
               responsive: true,
               plugins: {
@@ -2474,7 +2506,20 @@
             options: {
               ...commonChartOptions,
               plugins: {
-                tooltip: commonTooltipOptions
+                tooltip: {
+                  ...commonTooltipOptions,
+                  // Tooltip selalu muncul
+                  mode: 'index',
+                  intersect: false,
+                  // Posisi tooltip
+                  position: 'average',
+                  // Background color
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  // Animasi tooltip
+                  animation: {
+                    duration: 0 // Hilangkan animasi
+                  }
+                }
               },
               responsive: true,
               plugins: {
@@ -2557,25 +2602,23 @@
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
-          console.log('Data untuk grafik:', blockData);
+          currentBlockData = blockData;
           
-          try {
-            currentBlockData = blockData;
-            
-            // Update production chart (tonase)
-            updateProductionChart(blockData.prodBudget, blockData.prodActual);
-            
-            // Update work object filters
-            updateWorkObjectFilters(blockData.budget, blockData.actual);
-            
-            // Update cost chart with default selection (all)
-            updateCostChart(blockData.budget, blockData.actual, '');
-            
-            // Update area chart with default selection (all)
-            updateAreaChart(blockData.budget, blockData.actual, '');
-          } catch (error) {
-            console.error('Error updating charts:', error);
-          }
+          // Update production chart
+          updateProductionChart(blockData.prodBudget, blockData.prodActual);
+          forceTooltips(productionChart);
+          
+          // Update cost chart
+          updateCostChart(blockData.budget, blockData.actual, '');
+          forceTooltips(costChart);
+          
+          // Update area chart
+          updateAreaChart(blockData.budget, blockData.actual, '');
+          forceTooltips(areaChart);
+          
+          // Update analysis charts
+          updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+          updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
         }
         
         // Helper function to update production chart
@@ -3003,18 +3046,69 @@
                 plugins: {
                   title: { display: false },
                   tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
-                      }
-                    }
+                    enabled: false // Nonaktifkan tooltip karena kita gunakan legend
                   },
-                  legend: { position: 'right' }
+                  legend: {
+                    position: 'right',
+                    // Modifikasi legend untuk menampilkan data
+                    labels: {
+                      generateLabels: function(chart) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                          return data.labels.map(function(label, i) {
+                            const dataset = data.datasets[0];
+                            const value = dataset.data[i];
+                            const percentage = Math.round((value / dataset.data.reduce((a, b) => a + b, 0)) * 100;
+                            
+                            return {
+                              text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
+                              fillStyle: dataset.backgroundColor[i],
+                              hidden: false,
+                              lineCap: 'butt',
+                              lineDash: [],
+                              lineDashOffset: 0,
+                              lineJoin: 'miter',
+                              lineWidth: 1,
+                              strokeStyle: dataset.backgroundColor[i],
+                              pointStyle: 'circle'
+                            };
+                          });
+                        }
+                        return [];
+                      },
+                      font: {
+                        size: window.innerWidth < 600 ? 10 : 12
+                      },
+                      padding: 20
+                    }
+                  }
                 }
               }
             });
           }
         }
+
+        function forceTooltips(chart) {
+          const tooltip = chart.tooltip;
+          if (!tooltip) return;
+        
+          // Buat tooltip selalu aktif
+          tooltip.initialize();
+          tooltip._active = chart.data.datasets.map((dataset, i) => ({
+            datasetIndex: i,
+            element: {
+              _model: {
+                // Sesuaikan dengan kebutuhan
+              }
+            }
+          }));
+          tooltip.update();
+          chart.draw();
+        }
+        
+        // Panggil setelah chart.update()
+        productionChart.update();
+        forceTooltips(productionChart);
         
         function updateProductivityTrendChart(monthlyData) {
           if (!productivityTrendChart || !monthlyData) return;
