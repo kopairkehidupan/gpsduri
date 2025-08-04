@@ -2346,32 +2346,18 @@
               ]
             },
             options: {
-              ...commonChartOptions,
+              responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
-                  ...commonTooltipOptions,
-                  // Tooltip selalu muncul
+                  enabled: true,
                   mode: 'index',
                   intersect: false,
-                  // Posisi tooltip
                   position: 'average',
-                  // Background color
                   backgroundColor: 'rgba(0,0,0,0.7)',
-                  // Animasi tooltip
-                  animation: {
-                    duration: 0 // Hilangkan animasi
-                  }
-                }
-              },
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
+                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
                     }
                   }
                 }
@@ -2379,22 +2365,10 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Tonase (Ton)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
-                    }
-                  }
+                  title: { display: true, text: 'Tonase (Ton)' },
+                  ticks: { callback: formatNumber }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
+                x: { title: { display: true, text: 'Bulan' } }
               }
             }
           });
@@ -2423,32 +2397,18 @@
               ]
             },
             options: {
-              ...commonChartOptions,
+              responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
-                  ...commonTooltipOptions,
-                  // Tooltip selalu muncul
+                  enabled: true,
                   mode: 'index',
                   intersect: false,
-                  // Posisi tooltip
                   position: 'average',
-                  // Background color
                   backgroundColor: 'rgba(0,0,0,0.7)',
-                  // Animasi tooltip
-                  animation: {
-                    duration: 0 // Hilangkan animasi
-                  }
-                }
-              },
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatCurrency(context.raw);
+                      return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
                     }
                   }
                 }
@@ -2456,22 +2416,10 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Biaya (Rp)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatCurrency(value);
-                    }
-                  }
+                  title: { display: true, text: 'Biaya (Rp)' },
+                  ticks: { callback: formatCurrency }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
+                x: { title: { display: true, text: 'Bulan' } }
               }
             }
           });
@@ -2504,32 +2452,18 @@
               ]
             },
             options: {
-              ...commonChartOptions,
+              responsive: true,
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
-                  ...commonTooltipOptions,
-                  // Tooltip selalu muncul
+                  enabled: true,
                   mode: 'index',
                   intersect: false,
-                  // Posisi tooltip
                   position: 'average',
-                  // Background color
                   backgroundColor: 'rgba(0,0,0,0.7)',
-                  // Animasi tooltip
-                  animation: {
-                    duration: 0 // Hilangkan animasi
-                  }
-                }
-              },
-              responsive: true,
-              plugins: {
-                title: {
-                  display: false
-                },
-                tooltip: {
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
+                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ha`;
                     }
                   }
                 }
@@ -2537,22 +2471,10 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Luas/Hasil (Ha)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
-                    }
-                  }
+                  title: { display: true, text: 'Luas/Hasil (Ha)' },
+                  ticks: { callback: formatNumber }
                 },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
+                x: { title: { display: true, text: 'Bulan' } }
               }
             }
           });
@@ -2606,19 +2528,23 @@
           
           // Update production chart
           updateProductionChart(blockData.prodBudget, blockData.prodActual);
-          forceTooltips(productionChart);
           
           // Update cost chart
           updateCostChart(blockData.budget, blockData.actual, '');
-          forceTooltips(costChart);
           
           // Update area chart
           updateAreaChart(blockData.budget, blockData.actual, '');
-          forceTooltips(areaChart);
           
           // Update analysis charts
           updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
           updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+          
+          // Force tooltips after a small delay to ensure charts are rendered
+          setTimeout(() => {
+            if (productionChart) forceTooltips(productionChart);
+            if (costChart) forceTooltips(costChart);
+            if (areaChart) forceTooltips(areaChart);
+          }, 300);
         }
         
         // Helper function to update production chart
@@ -3044,41 +2970,35 @@
               options: {
                 responsive: true,
                 plugins: {
-                  title: { display: false },
-                  tooltip: {
-                    enabled: false // Nonaktifkan tooltip karena kita gunakan legend
-                  },
+                  tooltip: { enabled: false },
                   legend: {
                     position: 'right',
-                    // Modifikasi legend untuk menampilkan data
                     labels: {
                       generateLabels: function(chart) {
                         const data = chart.data;
                         if (data.labels.length && data.datasets.length) {
-                          return data.labels.map(function(label, i) {
-                            const dataset = data.datasets[0];
-                            const value = dataset.data[i];
-                            const percentage = Math.round((value / dataset.data.reduce((a, b) => a + b, 0)) * 100);
+                          const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                          return data.labels.map((label, i) => {
+                            const value = data.datasets[0].data[i];
+                            const percentage = Math.round((value / total) * 100);
                             
                             return {
                               text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
-                              fillStyle: dataset.backgroundColor[i],
+                              fillStyle: data.datasets[0].backgroundColor[i],
                               hidden: false,
                               lineCap: 'butt',
                               lineDash: [],
                               lineDashOffset: 0,
                               lineJoin: 'miter',
                               lineWidth: 1,
-                              strokeStyle: dataset.backgroundColor[i],
+                              strokeStyle: data.datasets[0].backgroundColor[i],
                               pointStyle: 'circle'
                             };
                           });
                         }
                         return [];
                       },
-                      font: {
-                        size: window.innerWidth < 600 ? 10 : 12
-                      },
+                      font: { size: window.innerWidth < 600 ? 10 : 12 },
                       padding: 20
                     }
                   }
@@ -3089,20 +3009,19 @@
         }
 
         function forceTooltips(chart) {
-          const tooltip = chart.tooltip;
-          if (!tooltip) return;
-        
-          // Buat tooltip selalu aktif
-          tooltip.initialize();
-          tooltip._active = chart.data.datasets.map((dataset, i) => ({
-            datasetIndex: i,
+          if (!chart || !chart.tooltip) return;
+          
+          // Create fake active elements for each dataset
+          const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
+            datasetIndex,
             element: {
-              _model: {
-                // Sesuaikan dengan kebutuhan
-              }
+              _model: {}
             }
           }));
-          tooltip.update();
+          
+          // Update tooltip with these active elements
+          chart.tooltip._active = activeElements;
+          chart.tooltip.update();
           chart.draw();
         }
         
