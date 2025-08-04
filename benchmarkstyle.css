@@ -612,3 +612,25 @@
   margin-right: 0.5rem;
   border: 1px solid rgba(0,0,0,0.1);
 }
+
+/* Tambahkan indikator scroll di mobile */
+@media (max-width: 767px) {
+  .chart-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    padding-bottom: 15px; /* Ruang untuk indikator scroll */
+  }
+  
+  .chart-container::-webkit-scrollbar {
+    height: 5px;
+  }
+  
+  .chart-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 10px;
+  }
+  
+  .chart-container::-webkit-scrollbar-track {
+    background-color: rgba(0,0,0,0.05);
+  }
+}
