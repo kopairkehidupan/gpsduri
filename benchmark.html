@@ -3058,7 +3058,7 @@
                           return data.labels.map(function(label, i) {
                             const dataset = data.datasets[0];
                             const value = dataset.data[i];
-                            const percentage = Math.round((value / dataset.data.reduce((a, b) => a + b, 0)) * 100;
+                            const percentage = Math.round((value / dataset.data.reduce((a, b) => a + b, 0)) * 100);
                             
                             return {
                               text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
