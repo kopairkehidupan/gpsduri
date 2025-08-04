@@ -1691,6 +1691,14 @@
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
           document.getElementById('productionTab').classList.add('active');
           document.getElementById('productionTab').style.display = 'block';
+
+          // Tambahkan ini untuk memastikan data analisis dimuat
+          const analysisTab = document.getElementById('analysisTab');
+          if (analysisTab.classList.contains('active')) {
+            displayAnalysis(currentBlockData);
+            updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
+            updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
+          }
           
           // Hide other tabs
           document.querySelectorAll('.tab-content').forEach(tab => {
