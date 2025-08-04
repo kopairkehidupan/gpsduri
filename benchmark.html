@@ -498,18 +498,17 @@
         <!-- Chart 1: Production Line Chart -->
         <div class="chart-container">
             <h4>Grafik Produksi (Tonase)</h4>
-            <div class="chart-wrapper">
             <div class="chart-description">
               <p>Perbandingan antara budget dan actual tonase per bulan</p>
             </div>
+            <div class="chart-wrapper">
             <canvas id="productionChart"></canvas>
-          </div>
+            </div>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
         <div class="chart-container">
           <h4>Grafik Biaya</h4>
-          <div class="chart-wrapper">
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual biaya per bulan</p>
             <div class="chart-filter">
@@ -519,6 +518,7 @@
               </select>
             </div>
           </div>
+          <div class="chart-wrapper">
           <canvas id="costChart"></canvas>
           </div>
         </div>
@@ -526,7 +526,7 @@
         <!-- Chart 3: Area Line Chart -->
         <div class="chart-container">
           <h4>Grafik Luas/Hasil</h4>
-          <div class="chart-wrapper">
+          
           <div class="chart-description">
             <p>Perbandingan antara budget luas dan actual hasil per bulan</p>
             <div class="chart-filter">
@@ -536,9 +536,9 @@
               </select>
             </div>
           </div>
+          <div class="chart-wrapper">
           <canvas id="areaChart"></canvas>
           </div>
-        </div>
       </div>
 
       <!-- 4. Tambahkan tab baru di HTML-->
@@ -556,16 +556,20 @@
         </div>
         
         <div class="analysis-section">
+          <div class="chart-container">
           <h4>Trend Produktivitas</h4>
           <div class="chart-wrapper">
           <canvas id="productivityTrendChart"></canvas>
           </div>
+          </div>
         </div>
         
         <div class="analysis-section">
+          <div class="chart-container">
           <h4>Distribusi Biaya</h4>
           <div class="chart-wrapper">
           <canvas id="costDistributionChart"></canvas>
+          </div>
           </div>
         </div>
       </div>
