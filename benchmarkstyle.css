@@ -626,3 +626,24 @@
   margin-right: 0.5rem;
   border: 1px solid rgba(0,0,0,0.1);
 }
+
+@media (max-width: 600px) {
+  .chart-wrapper {
+    min-width: 800px; /* Lebar lebih besar di mobile untuk scroll lebih lebar */
+    height: 250px;
+  }
+  
+  .analysis-chart-wrapper {
+    min-width: 600px;
+    height: 250px;
+  }
+  
+  /* Perbesar ukuran font di mobile */
+  .chart-container h4 {
+    font-size: 1.1rem;
+  }
+  
+  .chart-description {
+    font-size: 0.9rem;
+  }
+}
