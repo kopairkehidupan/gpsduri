@@ -497,11 +497,13 @@
         
         <!-- Chart 1: Production Line Chart -->
         <div class="chart-container">
-          <h4>Grafik Produksi (Tonase)</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget dan actual tonase per bulan</p>
+          <div class="chart-wrapper">
+            <h4>Grafik Produksi (Tonase)</h4>
+            <div class="chart-description">
+              <p>Perbandingan antara budget dan actual tonase per bulan</p>
+            </div>
+            <canvas id="productionChart"></canvas>
           </div>
-          <canvas id="productionChart"></canvas>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -2290,6 +2292,35 @@
           if (costDistributionChart && typeof costDistributionChart.destroy === 'function') {
             costDistributionChart.destroy();
           }
+
+          // Production Chart
+          const productionCtx = document.getElementById('productionChart');
+          productionCtx.style.width = '100%';
+          productionCtx.style.height = '300px';
+          
+          // Cost Chart
+          const costCtx = document.getElementById('costChart');
+          costCtx.style.width = '100%';
+          costCtx.style.height = '300px';
+          
+          // Area Chart
+          const areaCtx = document.getElementById('areaChart');
+          areaCtx.style.width = '100%';
+          areaCtx.style.height = '300px';
+          
+          // Productivity Trend Chart
+          const trendCtx = document.getElementById('productivityTrendChart');
+          if (trendCtx) {
+            trendCtx.style.width = '100%';
+            trendCtx.style.height = '300px';
+          }
+          
+          // Cost Distribution Chart
+          const distCtx = document.getElementById('costDistributionChart');
+          if (distCtx) {
+            distCtx.style.width = '100%';
+            distCtx.style.height = '300px';
+          }
           
           // Production Chart (Tonase)
           const commonChartOptions = {
@@ -2589,10 +2620,21 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
+          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
+          
           charts.forEach(chart => {
             if (chart) {
+              // Setel ulang ukuran canvas
+              const canvas = chart.canvas;
+              const container = canvas.parentElement.parentElement; // chart-container
+              
+              // Sesuaikan ukuran canvas dengan container scroll
+              canvas.style.width = '100%';
+              canvas.style.height = '300px';
+              
+              // Update chart
               chart.resize();
+              chart.update();
             }
           });
         }
@@ -3231,5 +3273,18 @@
         observer.observe(document.getElementById('analysisTab'), {
           attributes: true,
           attributeFilter: ['class']
+        });
+
+        // Panggil saat inisialisasi
+        window.addEventListener('resize', function() {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(handleChartResize, 200);
+        });
+        
+        // Panggil juga saat tab diubah
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            setTimeout(handleChartResize, 300);
+          });
         });
   </script>
