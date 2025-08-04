@@ -129,11 +129,12 @@
   background: var(--white);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   box-shadow: var(--shadow);
   width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
   position: relative;
+  -webkit-overflow-scrolling: touch; /* Untuk scroll halus di iOS */
 }
 
 .chart-container h4 {
@@ -209,6 +210,18 @@
 @media (min-width: 993px) {
   .chart-container {
     min-height: 350px;
+  }
+}
+
+.chart-wrapper {
+  min-width: 600px; /* Lebar minimum untuk grafik */
+  position: relative;
+  height: 300px; /* Sesuaikan tinggi sesuai kebutuhan */
+}
+
+@media (min-width: 768px) {
+  .chart-wrapper {
+    min-width: 100%; /* Di desktop, gunakan lebar penuh */
   }
 }
 
