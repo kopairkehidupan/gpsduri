@@ -3309,21 +3309,23 @@
         }
 
         // Tambahkan observer untuk memantau perubahan tab
-        const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            setTimeout(() => {
-              if (entry.target.id === 'chartTab') {
-                handleChartResize();
-              } else if (entry.target.id === 'analysisTab') {
-                handleChartResize();
+         const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+              const analysisTab = document.getElementById('analysisTab');
+              if (analysisTab.classList.contains('active') && currentBlockData.blok) {
+                // Jika tab analisis aktif dan ada data blok yang dipilih
+                displayAnalysis(currentBlockData);
+                updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
+                updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
               }
-            }, 100);
-          }
+            }
+          });
         });
-      }, { threshold: 0.1 });
-      
-      // Observe tab containers
-      observer.observe(document.getElementById('chartTab'));
-      observer.observe(document.getElementById('analysisTab'));
+        
+        // Mulai mengamati tab analisis
+        observer.observe(document.getElementById('analysisTab'), {
+          attributes: true,
+          attributeFilter: ['class']
+        });
   </script>
