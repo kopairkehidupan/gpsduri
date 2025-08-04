@@ -886,6 +886,21 @@
               
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
+
+              // Tambahkan timeout untuk memastikan tab benar-benar visible
+              setTimeout(() => {
+                handleChartResize();
+                
+                // Force update tooltip untuk chart yang aktif
+                if (tabId === 'chart') {
+                  if (productionChart) forceTooltips(productionChart);
+                  if (costChart) forceTooltips(costChart);
+                  if (areaChart) forceTooltips(areaChart);
+                } else if (tabId === 'analysis') {
+                  if (productivityTrendChart) forceTooltips(productivityTrendChart);
+                  if (costDistributionChart) forceTooltips(costDistributionChart);
+                }
+              }, 100);
             });
           });
     
@@ -1813,6 +1828,16 @@
               budget: filteredBudget,
               actual: filteredActual
             });
+
+            // Tambahkan ini:
+            setTimeout(() => {
+              handleChartResize();
+              if (productionChart) productionChart.resize();
+              if (costChart) costChart.resize();
+              if (areaChart) areaChart.resize();
+              if (productivityTrendChart) productivityTrendChart.resize();
+              if (costDistributionChart) costDistributionChart.resize();
+            }, 300);
         
           } catch (error) {
             console.error('Error:', error);
@@ -2625,25 +2650,29 @@
         function handleChartResize() {
           const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
           charts.forEach(chart => {
-            if (chart) {
-              // Atur ulang ukuran canvas berdasarkan parent wrapper
+            if (chart && !chart._destroyed) {
               const canvas = chart.canvas;
               const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
               if (wrapper) {
+                // Simpan state tooltip sebelum resize
+                const activeTooltip = chart.tooltip._active;
+                
+                // Update ukuran canvas
                 canvas.style.width = wrapper.offsetWidth + 'px';
                 canvas.style.height = wrapper.offsetHeight + 'px';
+                
+                // Resize chart
+                chart.resize();
+                
+                // Restore tooltip state
+                if (activeTooltip && activeTooltip.length > 0) {
+                  chart.tooltip._active = activeTooltip;
+                  chart.update();
+                }
               }
-              chart.resize();
             }
           });
         }
-        
-        // Panggil saat tab diubah
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            setTimeout(handleChartResize, 300); // Beri sedikit delay
-          });
-        });
         
         // Panggil saat window di-resize
         let resizeTimer;
