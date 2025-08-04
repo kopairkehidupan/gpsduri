@@ -501,7 +501,9 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <canvas id="productionChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="productionChart"></canvas>
+          </div>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -516,7 +518,9 @@
               </select>
             </div>
           </div>
-          <canvas id="costChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="costChart"></canvas>
+          </div>
         </div>
         
         <!-- Chart 3: Area Line Chart -->
@@ -531,7 +535,9 @@
               </select>
             </div>
           </div>
-          <canvas id="areaChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="areaChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -551,12 +557,20 @@
         
         <div class="analysis-section">
           <h4>Trend Produktivitas</h4>
-          <canvas id="productivityTrendChart"></canvas>
+          <div class="analysis-chart-container">
+            <div class="analysis-chart-wrapper">
+              <canvas id="productivityTrendChart"></canvas>
+            </div>
+          </div>
         </div>
         
         <div class="analysis-section">
           <h4>Distribusi Biaya</h4>
-          <canvas id="costDistributionChart"></canvas>
+          <div class="analysis-chart-container">
+            <div class="analysis-chart-wrapper">
+              <canvas id="costDistributionChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -824,6 +838,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
           initMap();
           initializeCharts(); // Initialize all charts
+          setupChartScroll();
           
           // Load GeoJSON data
           geoJsonData = await loadGeoJsonData();
@@ -886,6 +901,22 @@
             return el;
           }
         });
+
+        // Fungsi untuk mengatur ulang ukuran chart saat container di-scroll
+        function setupChartScroll() {
+          document.querySelectorAll('.chart-container, .analysis-chart-container').forEach(container => {
+            container.addEventListener('scroll', function() {
+              const canvas = this.querySelector('canvas');
+              if (canvas) {
+                // Trigger resize untuk memastikan chart tetap tajam
+                const chart = Chart.getChart(canvas);
+                if (chart) {
+                  chart.resize();
+                }
+              }
+            });
+          });
+        }
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
         // Database setup for IndexedDB
@@ -2361,7 +2392,8 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2427,7 +2459,8 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2497,7 +2530,8 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2589,9 +2623,16 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
+          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
           charts.forEach(chart => {
             if (chart) {
+              // Atur ulang ukuran canvas berdasarkan parent wrapper
+              const canvas = chart.canvas;
+              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
+              if (wrapper) {
+                canvas.style.width = wrapper.offsetWidth + 'px';
+                canvas.style.height = wrapper.offsetHeight + 'px';
+              }
               chart.resize();
             }
           });
@@ -3039,7 +3080,8 @@
                 ]
               },
               options: {
-                responsive: true,
+                responsive: false,
+                maintainAspectRatio: false,
                 plugins: {
                   title: { display: false },
                   tooltip: {
@@ -3081,7 +3123,8 @@
                 }]
               },
               options: {
-                responsive: true,
+                responsive: false,
+                maintainAspectRatio: false,
                 plugins: {
                   tooltip: { enabled: false },
                   legend: {
