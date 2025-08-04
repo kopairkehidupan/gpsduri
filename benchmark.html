@@ -2274,6 +2274,13 @@
         
         // Add this function to initialize charts
         function initializeCharts() {
+          // Destroy existing charts if they exist
+          if (productionChart && !productionChart._destroyed) productionChart.destroy();
+          if (costChart && !costChart._destroyed) costChart.destroy();
+          if (areaChart && !areaChart._destroyed) areaChart.destroy();
+          if (productivityTrendChart && !productivityTrendChart._destroyed) productivityTrendChart.destroy();
+          if (costDistributionChart && !costDistributionChart._destroyed) costDistributionChart.destroy();
+          
           // Production Chart (Tonase)
           const commonChartOptions = {
             responsive: true,
@@ -2539,20 +2546,24 @@
         }
 
         function forceTooltips(chart) {
-          if (!chart || !chart.tooltip) return;
+          if (!chart || !chart.tooltip || !chart.tooltip._active) return;
           
-          // Create fake active elements for each dataset
-          const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
-            datasetIndex,
-            element: {
-              _model: {}
-            }
-          }));
-          
-          // Update tooltip with these active elements
-          chart.tooltip._active = activeElements;
-          chart.tooltip.update();
-          chart.draw();
+          try {
+            // Create fake active elements for each dataset
+            const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
+              datasetIndex,
+              element: {
+                _model: {}
+              }
+            }));
+            
+            // Update tooltip with these active elements
+            chart.tooltip._active = activeElements;
+            chart.tooltip.update();
+            chart.draw();
+          } catch (error) {
+            console.error('Error forcing tooltips:', error);
+          }
         }
 
         function handleChartResize() {
@@ -2586,26 +2597,36 @@
             currentBlockData = blockData;
             
             // Update production chart (tonase)
-            updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            if (productionChart) {
+              updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            }
             
             // Update work object filters
             updateWorkObjectFilters(blockData.budget, blockData.actual);
             
             // Update cost chart with default selection (all)
-            updateCostChart(blockData.budget, blockData.actual, '');
+            if (costChart) {
+              updateCostChart(blockData.budget, blockData.actual, '');
+            }
             
             // Update area chart with default selection (all)
-            updateAreaChart(blockData.budget, blockData.actual, '');
+            if (areaChart) {
+              updateAreaChart(blockData.budget, blockData.actual, '');
+            }
 
             // Update analysis charts
-            updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
-            updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+            if (productivityTrendChart) {
+              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+            }
+            if (costDistributionChart) {
+              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+            }
             
             // Force tooltips after a small delay to ensure charts are rendered
             setTimeout(() => {
-              if (productionChart) forceTooltips(productionChart);
-              if (costChart) forceTooltips(costChart);
-              if (areaChart) forceTooltips(areaChart);
+              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
+              if (costChart && !costChart._destroyed) forceTooltips(costChart);
+              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
             }, 300);
           } catch (error) {
             console.error('Error updating charts:', error);
