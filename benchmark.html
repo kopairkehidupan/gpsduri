@@ -3043,6 +3043,11 @@
                 plugins: {
                   title: { display: false },
                   tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    position: 'average',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
                     callbacks: {
                       label: function(context) {
                         return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
