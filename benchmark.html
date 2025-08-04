@@ -2310,13 +2310,7 @@
             },
             padding: window.innerWidth < 600 ? 8 : 12,
             caretSize: window.innerWidth < 600 ? 6 : 8,
-            displayColors: true,
-            // Tambahkan ini untuk tooltip permanen
-            callbacks: {
-              label: function(context) {
-                return `${context.dataset.label}: ${formatNumber(context.raw)}${context.chart.config.type === 'line' ? ' Ton' : ''}`;
-              }
-            }
+            displayColors: true
           };
         
           const productionCtx = document.getElementById('productionChart').getContext('2d');
@@ -2346,8 +2340,11 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
-              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2365,10 +2362,22 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: { display: true, text: 'Tonase (Ton)' },
-                  ticks: { callback: formatNumber }
+                  title: {
+                    display: true,
+                    text: 'Tonase (Ton)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatNumber(value);
+                    }
+                  }
                 },
-                x: { title: { display: true, text: 'Bulan' } }
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
               }
             }
           });
@@ -2397,8 +2406,11 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
-              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2416,10 +2428,22 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: { display: true, text: 'Biaya (Rp)' },
-                  ticks: { callback: formatCurrency }
+                  title: {
+                    display: true,
+                    text: 'Biaya (Rp)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatCurrency(value);
+                    }
+                  }
                 },
-                x: { title: { display: true, text: 'Bulan' } }
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
               }
             }
           });
@@ -2452,8 +2476,11 @@
               ]
             },
             options: {
+              ...commonChartOptions,
+              plugins: {
+                tooltip: commonTooltipOptions
+              },
               responsive: true,
-              maintainAspectRatio: false,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2471,10 +2498,22 @@
               scales: {
                 y: {
                   beginAtZero: true,
-                  title: { display: true, text: 'Luas/Hasil (Ha)' },
-                  ticks: { callback: formatNumber }
+                  title: {
+                    display: true,
+                    text: 'Luas/Hasil (Ha)'
+                  },
+                  ticks: {
+                    callback: function(value) {
+                      return formatNumber(value);
+                    }
+                  }
                 },
-                x: { title: { display: true, text: 'Bulan' } }
+                x: {
+                  title: {
+                    display: true,
+                    text: 'Bulan'
+                  }
+                }
               }
             }
           });
@@ -2497,6 +2536,23 @@
             costChart.resize();
             areaChart.resize();
           });
+        }
+
+        function forceTooltips(chart) {
+          if (!chart || !chart.tooltip) return;
+          
+          // Create fake active elements for each dataset
+          const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
+            datasetIndex,
+            element: {
+              _model: {}
+            }
+          }));
+          
+          // Update tooltip with these active elements
+          chart.tooltip._active = activeElements;
+          chart.tooltip.update();
+          chart.draw();
         }
 
         function handleChartResize() {
@@ -2524,27 +2580,36 @@
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
-          currentBlockData = blockData;
+          console.log('Data untuk grafik:', blockData);
           
-          // Update production chart
-          updateProductionChart(blockData.prodBudget, blockData.prodActual);
-          
-          // Update cost chart
-          updateCostChart(blockData.budget, blockData.actual, '');
-          
-          // Update area chart
-          updateAreaChart(blockData.budget, blockData.actual, '');
-          
-          // Update analysis charts
-          updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
-          updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
-          
-          // Force tooltips after a small delay to ensure charts are rendered
-          setTimeout(() => {
-            if (productionChart) forceTooltips(productionChart);
-            if (costChart) forceTooltips(costChart);
-            if (areaChart) forceTooltips(areaChart);
-          }, 300);
+          try {
+            currentBlockData = blockData;
+            
+            // Update production chart (tonase)
+            updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            
+            // Update work object filters
+            updateWorkObjectFilters(blockData.budget, blockData.actual);
+            
+            // Update cost chart with default selection (all)
+            updateCostChart(blockData.budget, blockData.actual, '');
+            
+            // Update area chart with default selection (all)
+            updateAreaChart(blockData.budget, blockData.actual, '');
+
+            // Update analysis charts
+            updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+            updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+            
+            // Force tooltips after a small delay to ensure charts are rendered
+            setTimeout(() => {
+              if (productionChart) forceTooltips(productionChart);
+              if (costChart) forceTooltips(costChart);
+              if (areaChart) forceTooltips(areaChart);
+            }, 300);
+          } catch (error) {
+            console.error('Error updating charts:', error);
+          }
         }
         
         // Helper function to update production chart
@@ -3007,27 +3072,6 @@
             });
           }
         }
-
-        function forceTooltips(chart) {
-          if (!chart || !chart.tooltip) return;
-          
-          // Create fake active elements for each dataset
-          const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
-            datasetIndex,
-            element: {
-              _model: {}
-            }
-          }));
-          
-          // Update tooltip with these active elements
-          chart.tooltip._active = activeElements;
-          chart.tooltip.update();
-          chart.draw();
-        }
-        
-        // Panggil setelah chart.update()
-        productionChart.update();
-        forceTooltips(productionChart);
         
         function updateProductivityTrendChart(monthlyData) {
           if (!productivityTrendChart || !monthlyData) return;
