@@ -1692,14 +1692,6 @@
           document.getElementById('productionTab').classList.add('active');
           document.getElementById('productionTab').style.display = 'block';
 
-          // Tambahkan ini untuk memastikan data analisis dimuat
-          const analysisTab = document.getElementById('analysisTab');
-          if (analysisTab.classList.contains('active')) {
-            displayAnalysis(currentBlockData);
-            updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
-            updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
-          }
-          
           // Hide other tabs
           document.querySelectorAll('.tab-content').forEach(tab => {
             if (tab.id !== 'productionTab') {
@@ -3219,4 +3211,25 @@
         
           return comparison;
         }
+
+        // Tambahkan observer untuk memantau perubahan tab
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+              const analysisTab = document.getElementById('analysisTab');
+              if (analysisTab.classList.contains('active') && currentBlockData.blok) {
+                // Jika tab analisis aktif dan ada data blok yang dipilih
+                displayAnalysis(currentBlockData);
+                updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
+                updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
+              }
+            }
+          });
+        });
+        
+        // Mulai mengamati tab analisis
+        observer.observe(document.getElementById('analysisTab'), {
+          attributes: true,
+          attributeFilter: ['class']
+        });
   </script>
