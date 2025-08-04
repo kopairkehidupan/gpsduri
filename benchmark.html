@@ -2275,11 +2275,20 @@
         // Add this function to initialize charts
         function initializeCharts() {
           // Destroy existing charts if they exist
-          if (productionChart && !productionChart._destroyed) productionChart.destroy();
-          if (costChart && !costChart._destroyed) costChart.destroy();
-          if (areaChart && !areaChart._destroyed) areaChart.destroy();
-          if (productivityTrendChart && !productivityTrendChart._destroyed) productivityTrendChart.destroy();
-          if (costDistributionChart && !costDistributionChart._destroyed) costDistributionChart.destroy();
+          if (productionChart && typeof productionChart.destroy === 'function') {
+            productionChart.destroy();
+          }
+          if (costChart && typeof costChart.destroy === 'function') {
+            costChart.destroy();
+          }
+          if (areaChart && typeof areaChart.destroy === 'function') {
+            areaChart.destroy();
+          }
+          if (productivityTrendChart && typeof productivityTrendChart.destroy === 'function') {
+            productivityTrendChart.destroy();
+          }
+          if (costDistributionChart && typeof costDistributionChart.destroy === 'function') {
+            costDistributionChart.destroy();
           
           // Production Chart (Tonase)
           const commonChartOptions = {
@@ -2546,9 +2555,17 @@
         }
 
         function forceTooltips(chart) {
-          if (!chart || !chart.tooltip || !chart.tooltip._active) return;
-          
           try {
+            // Check if chart exists and is in a valid state
+            if (!chart || 
+                chart._destroyed || 
+                !chart.tooltip || 
+                !chart.tooltip._active || 
+                !chart.data || 
+                !chart.data.datasets) {
+              return;
+            }
+            
             // Create fake active elements for each dataset
             const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
               datasetIndex,
@@ -2559,8 +2576,12 @@
             
             // Update tooltip with these active elements
             chart.tooltip._active = activeElements;
-            chart.tooltip.update();
-            chart.draw();
+            
+            // Only update if chart is not destroyed
+            if (!chart._destroyed) {
+              chart.tooltip.update();
+              chart.draw();
+            }
           } catch (error) {
             console.error('Error forcing tooltips:', error);
           }
@@ -2597,7 +2618,7 @@
             currentBlockData = blockData;
             
             // Update production chart (tonase)
-            if (productionChart) {
+            if (productionChart && !productionChart._destroyed) {
               updateProductionChart(blockData.prodBudget, blockData.prodActual);
             }
             
@@ -2605,20 +2626,20 @@
             updateWorkObjectFilters(blockData.budget, blockData.actual);
             
             // Update cost chart with default selection (all)
-            if (costChart) {
+            if (costChart && !costChart._destroyed) {
               updateCostChart(blockData.budget, blockData.actual, '');
             }
             
             // Update area chart with default selection (all)
-            if (areaChart) {
+            if (areaChart && !areaChart._destroyed) {
               updateAreaChart(blockData.budget, blockData.actual, '');
             }
-
+        
             // Update analysis charts
-            if (productivityTrendChart) {
+            if (productivityTrendChart && !productivityTrendChart._destroyed) {
               updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
             }
-            if (costDistributionChart) {
+            if (costDistributionChart && !costDistributionChart._destroyed) {
               updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
             }
             
@@ -2627,7 +2648,7 @@
               if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
               if (costChart && !costChart._destroyed) forceTooltips(costChart);
               if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
-            }, 300);
+            }, 500); // Increased delay to 500ms
           } catch (error) {
             console.error('Error updating charts:', error);
           }
