@@ -2656,22 +2656,11 @@
             if (chart && !chart._destroyed) {
               const canvas = chart.canvas;
               const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
-              if (wrapper) {
-                // Simpan state tooltip sebelum resize
-                const activeTooltip = chart.tooltip._active;
-                
-                // Update ukuran canvas
-                canvas.style.width = wrapper.offsetWidth + 'px';
-                canvas.style.height = wrapper.offsetHeight + 'px';
-                
-                // Resize chart
+              if (wrapper && wrapper.offsetWidth > 0) {
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
                 chart.resize();
-                
-                // Restore tooltip state
-                if (activeTooltip && activeTooltip.length > 0) {
-                  chart.tooltip._active = activeTooltip;
-                  chart.update();
-                }
+                chart.update();
               }
             }
           });
