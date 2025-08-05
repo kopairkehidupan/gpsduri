@@ -1825,6 +1825,22 @@
               budget: filteredBudget,
               actual: filteredActual
             });
+
+            // Setelah update data, tambahkan:
+            setTimeout(() => {
+              if (productionChart) {
+                productionChart.update();
+                productionChart.resize();
+              }
+              if (costChart) {
+                costChart.update();
+                costChart.resize();
+              }
+              if (areaChart) {
+                areaChart.update();
+                areaChart.resize();
+              }
+            }, 300);
         
           } catch (error) {
             console.error('Error:', error);
@@ -2912,6 +2928,7 @@
 
           // Setelah update dropdown, paksa render ulang chart
           setTimeout(() => {
+            if (productionChart) productionChart.update()
             if (costChart) costChart.update();
             if (areaChart) areaChart.update();
           }, 100);
