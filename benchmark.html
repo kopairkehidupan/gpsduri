@@ -1722,13 +1722,6 @@
           if (!productionChart) {
             initializeCharts();
           }
-
-          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
-          setTimeout(() => {
-            if (productionChart) productionChart.resize();
-            if (costChart) costChart.resize();
-            if (areaChart) areaChart.resize();
-          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -1825,30 +1818,6 @@
               budget: filteredBudget,
               actual: filteredActual
             });
-
-            // Setelah update data, tambahkan:
-            setTimeout(() => {
-              if (productionChart) {
-                productionChart.update();
-                productionChart.resize();
-              }
-              if (costChart) {
-                costChart.update();
-                costChart.resize();
-              }
-              if (areaChart) {
-                areaChart.update();
-                areaChart.resize();
-              }
-              if (productivityTrendChart) {
-                productivityTrendChart.update();
-                productivityTrendChart.resize();
-              }
-              if (costDistributionChart) {
-                costDistributionChart.update();
-                costDistributionChart.resize();
-              }
-            }, 300);
         
           } catch (error) {
             console.error('Error:', error);
@@ -2663,13 +2632,23 @@
           charts.forEach(chart => {
             if (chart && !chart._destroyed) {
               const canvas = chart.canvas;
-              const wrapper = canvas.closest('.chart-wrapper');
-              
-              if (wrapper && wrapper.offsetWidth > 0) {
-                canvas.style.width = '100%';
-                canvas.style.height = 'auto';
+              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
+              if (wrapper) {
+                // Simpan state tooltip sebelum resize
+                const activeTooltip = chart.tooltip._active;
+                
+                // Update ukuran canvas
+                canvas.style.width = wrapper.offsetWidth + 'px';
+                canvas.style.height = wrapper.offsetHeight + 'px';
+                
+                // Resize chart
                 chart.resize();
-                chart.update();
+                
+                // Restore tooltip state
+                if (activeTooltip && activeTooltip.length > 0) {
+                  chart.tooltip._active = activeTooltip;
+                  chart.update();
+                }
               }
             }
           });
