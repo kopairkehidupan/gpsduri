@@ -891,13 +891,20 @@
               setTimeout(() => {
                 if (this.getAttribute('data-tab') === 'chart') {
                   handleChartResize();
+                  
+                  // Force tooltips untuk semua chart utama
                   forceTooltips(productionChart);
                   forceTooltips(costChart);
                   forceTooltips(areaChart);
+                }
+                
+                // Tambahkan juga untuk tab analisis
+                if (this.getAttribute('data-tab') === 'analysis') {
+                  handleChartResize();
                   forceTooltips(productivityTrendChart);
                   forceTooltips(costDistributionChart);
                 }
-              }, 300); // Tambahkan delay lebih besar untuk mobile
+              }, 300); // Delay untuk mobile
             });
           });
     
