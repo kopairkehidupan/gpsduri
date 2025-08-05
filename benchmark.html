@@ -894,6 +894,8 @@
                   forceTooltips(productionChart);
                   forceTooltips(costChart);
                   forceTooltips(areaChart);
+                  forceTooltips(productivityTrendChart);
+                  forceTooltips(costDistributionChart);
                 }
               }, 300); // Tambahkan delay lebih besar untuk mobile
             });
@@ -1838,6 +1840,14 @@
                 areaChart.update();
                 areaChart.resize();
               }
+              if (productivityTrendChart) {
+                productivityTrendChart.update();
+                productivityTrendChart.resize();
+              }
+              if (costDistributionChart) {
+                costDistributionChart.update();
+                costDistributionChart.resize();
+              }
             }, 300);
         
           } catch (error) {
@@ -2649,7 +2659,7 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
+          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
           charts.forEach(chart => {
             if (chart && !chart._destroyed) {
               const canvas = chart.canvas;
@@ -2747,6 +2757,8 @@
               if (productionChart) productionChart.update();
               if (costChart) costChart.update();
               if (areaChart) areaChart.update();
+              if (productivityTrendChart) productivityTrendChart.update();
+              if (costDistributionChart) costDistributionChart.update();
             }, 100);
           });
         }
