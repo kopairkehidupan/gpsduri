@@ -1825,22 +1825,6 @@
               budget: filteredBudget,
               actual: filteredActual
             });
-
-            // Setelah update data, tambahkan:
-            setTimeout(() => {
-              if (productionChart) {
-                productionChart.update();
-                productionChart.resize();
-              }
-              if (costChart) {
-                costChart.update();
-                costChart.resize();
-              }
-              if (areaChart) {
-                areaChart.update();
-                areaChart.resize();
-              }
-            }, 300);
         
           } catch (error) {
             console.error('Error:', error);
@@ -2656,11 +2640,22 @@
             if (chart && !chart._destroyed) {
               const canvas = chart.canvas;
               const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
-              if (wrapper && wrapper.offsetWidth > 0) {
-                canvas.style.width = '100%';
-                canvas.style.height = 'auto';
+              if (wrapper) {
+                // Simpan state tooltip sebelum resize
+                const activeTooltip = chart.tooltip._active;
+                
+                // Update ukuran canvas
+                canvas.style.width = wrapper.offsetWidth + 'px';
+                canvas.style.height = wrapper.offsetHeight + 'px';
+                
+                // Resize chart
                 chart.resize();
-                chart.update();
+                
+                // Restore tooltip state
+                if (activeTooltip && activeTooltip.length > 0) {
+                  chart.tooltip._active = activeTooltip;
+                  chart.update();
+                }
               }
             }
           });
@@ -2914,12 +2909,6 @@
             costDropdown.appendChild(option.cloneNode(true));
             areaDropdown.appendChild(option.cloneNode(true));
           });
-
-          // Setelah update dropdown, paksa render ulang chart
-          setTimeout(() => {
-            if (costChart) costChart.update();
-            if (areaChart) areaChart.update();
-          }, 100);
         }
     
         // ---------------- END POINT untuk analisa mendalam-------------//
