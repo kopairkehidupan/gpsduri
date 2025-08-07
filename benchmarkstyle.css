@@ -172,9 +172,18 @@
 
 .chart-container canvas {
   width: 100% !important;
-  height: auto !important;
-  min-height: 250px; /* Minimum height untuk mobile */
-  max-height: 400px; /* Maximum height untuk desktop */
+  height: 250px !important; /* Fixed height untuk mobile */
+  min-height: 250px;
+  max-height: 250px;
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .chart-container canvas {
+    height: 300px !important;
+    min-height: 300px;
+    max-height: 300px;
+  }
 }
 
 /* Responsive adjustments */
