@@ -886,21 +886,25 @@
               
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
-              
+
+              // Tambahkan timeout untuk memastikan tab benar-benar visible
               setTimeout(() => {
                 if (this.getAttribute('data-tab') === 'chart') {
                   handleChartResize();
+                  
+                  // Force tooltips untuk semua chart utama
                   forceTooltips(productionChart);
                   forceTooltips(costChart);
                   forceTooltips(areaChart);
                 }
                 
+                // Tambahkan juga untuk tab analisis
                 if (this.getAttribute('data-tab') === 'analysis') {
                   handleChartResize();
                   forceTooltips(productivityTrendChart);
                   forceTooltips(costDistributionChart);
                 }
-              }, 300);
+              }, 300); // Delay untuk mobile
             });
           });
     
@@ -2580,19 +2584,6 @@
           // Add event listeners for work object filters
           document.getElementById('costWorkObject').addEventListener('change', function() {
             updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
-            
-            // Tambahkan ini untuk memaksa update
-            setTimeout(() => {
-              if (costChart && !costChart._destroyed) {
-                costChart.update();
-                forceTooltips(costChart);
-              }
-
-              if (areaChart && !areaChart._destroyed) {
-                areaChart.update();
-                forceTooltips(areaChart);
-              }
-            }, 100);
           });
         
           document.getElementById('areaWorkObject').addEventListener('change', function() {
@@ -2683,8 +2674,47 @@
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
-          currentBlockData = blockData;
+          console.log('Data untuk grafik:', blockData);
           
+          try {
+            currentBlockData = blockData;
+            
+            // Update production chart (tonase)
+            if (productionChart && !productionChart._destroyed) {
+              updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            }
+            
+            // Update work object filters
+            updateWorkObjectFilters(blockData.budget, blockData.actual);
+            
+            // Update cost chart with default selection (all)
+            if (costChart && !costChart._destroyed) {
+              updateCostChart(blockData.budget, blockData.actual, '');
+            }
+            
+            // Update area chart with default selection (all)
+            if (areaChart && !areaChart._destroyed) {
+              updateAreaChart(blockData.budget, blockData.actual, '');
+            }
+        
+            // Update analysis charts
+            if (productivityTrendChart && !productivityTrendChart._destroyed) {
+              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+            }
+            if (costDistributionChart && !costDistributionChart._destroyed) {
+              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+            }
+            
+            // Force tooltips after a small delay to ensure charts are rendered
+            setTimeout(() => {
+              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
+              if (costChart && !costChart._destroyed) forceTooltips(costChart);
+              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
+            }, 500); // Increased delay to 500ms
+          } catch (error) {
+            console.error('Error updating charts:', error);
+          }
+
           // Gunakan requestAnimationFrame untuk memastikan update setelah render
           requestAnimationFrame(() => {
             if (productionChart) {
@@ -2707,8 +2737,8 @@
               costDistributionChart.resize();
               costDistributionChart.update();
             }
-        
-            // Paksa update setelah 100ms
+
+          // Paksa update setelah 100ms
             setTimeout(() => {
               if (productionChart) productionChart.update();
               if (costChart) costChart.update();
@@ -3297,20 +3327,6 @@
         observer.observe(document.getElementById('analysisTab'), {
           attributes: true,
           attributeFilter: ['class']
-        });
-
-        // Tambahkan observer untuk mendeteksi perubahan ukuran container
-        const resizeObserver = new ResizeObserver(entries => {
-          entries.forEach(entry => {
-            if (entry.contentRect.width > 0) {
-              handleChartResize();
-            }
-          });
-        });
-        
-        // Observe semua container chart
-        document.querySelectorAll('.chart-wrapper, .analysis-chart-wrapper').forEach(container => {
-          resizeObserver.observe(container);
         });
   </script>
 </body>
