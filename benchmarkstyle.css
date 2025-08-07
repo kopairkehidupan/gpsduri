@@ -630,9 +630,8 @@
 @media (max-width: 600px) {
   .chart-wrapper, .analysis-chart-wrapper {
     min-width: 100%;
-    width: 100%;
+    width: 800px; /* Lebar minimum untuk scroll horizontal */
     height: 300px;
-    overflow: visible !important;
   }
   
   .tab-content {
