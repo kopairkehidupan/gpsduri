@@ -887,16 +887,24 @@
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
 
-              // Optimasi khusus mobile
-                if (window.innerWidth < 768) {
-                  setTimeout(() => {
-                    handleChartResize();
-                    if (this.getAttribute('data-tab') === 'chart' || 
-                        this.getAttribute('data-tab') === 'analysis') {
-                      window.dispatchEvent(new Event('resize'));
-                    }
-                  }, 500);
+              // Tambahkan timeout untuk memastikan tab benar-benar visible
+              setTimeout(() => {
+                if (this.getAttribute('data-tab') === 'chart') {
+                  handleChartResize();
+                  
+                  // Force tooltips untuk semua chart utama
+                  forceTooltips(productionChart);
+                  forceTooltips(costChart);
+                  forceTooltips(areaChart);
                 }
+                
+                // Tambahkan juga untuk tab analisis
+                if (this.getAttribute('data-tab') === 'analysis') {
+                  handleChartResize();
+                  forceTooltips(productivityTrendChart);
+                  forceTooltips(costDistributionChart);
+                }
+              }, 300); // Delay untuk mobile
             });
           });
     
@@ -2306,33 +2314,25 @@
           budget: [],
           actual: []
         }
-
-        // Utility functions
-        function safeChartUpdate(chart) {
-          if (!chart || chart._destroyed) return;
-          
-          requestAnimationFrame(() => {
-            try {
-              chart.resize();
-              chart.update();
-            } catch (error) {
-              console.error('Error updating chart:', error);
-            }
-          });
-        }
         
         // Add this function to initialize charts
         function initializeCharts() {
-          // Destroy existing charts lebih agresif
-          [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart].forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') {
-              try {
-                chart.destroy();
-              } catch (e) {
-                console.log('Error destroying chart:', e);
-              }
-            }
-          });
+          // Destroy existing charts if they exist
+          if (productionChart && typeof productionChart.destroy === 'function') {
+            productionChart.destroy();
+          }
+          if (costChart && typeof costChart.destroy === 'function') {
+            costChart.destroy();
+          }
+          if (areaChart && typeof areaChart.destroy === 'function') {
+            areaChart.destroy();
+          }
+          if (productivityTrendChart && typeof productivityTrendChart.destroy === 'function') {
+            productivityTrendChart.destroy();
+          }
+          if (costDistributionChart && typeof costDistributionChart.destroy === 'function') {
+            costDistributionChart.destroy();
+          }
           
           // Production Chart (Tonase)
           const commonChartOptions = {
@@ -2636,31 +2636,26 @@
 
         function handleChartResize() {
           const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
-          
           charts.forEach(chart => {
             if (chart && !chart._destroyed) {
-              try {
-                const canvas = chart.canvas;
-                const parent = canvas.parentElement;
+              const canvas = chart.canvas;
+              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
+              if (wrapper) {
+                // Simpan state tooltip sebelum resize
+                const activeTooltip = chart.tooltip._active;
                 
-                if (parent) {
-                  // Simpan aspect ratio
-                  const aspectRatio = canvas.width / canvas.height;
-                  
-                  // Set dimensi berdasarkan parent
-                  canvas.style.width = '100%';
-                  canvas.style.height = '100%';
-                  
-                  // Update chart
-                  chart.resize();
+                // Update ukuran canvas
+                canvas.style.width = wrapper.offsetWidth + 'px';
+                canvas.style.height = wrapper.offsetHeight + 'px';
+                
+                // Resize chart
+                chart.resize();
+                
+                // Restore tooltip state
+                if (activeTooltip && activeTooltip.length > 0) {
+                  chart.tooltip._active = activeTooltip;
                   chart.update();
-                  
-                  // Restore aspect ratio
-                  canvas.width = parent.offsetWidth;
-                  canvas.height = parent.offsetWidth / aspectRatio;
                 }
-              } catch (error) {
-                console.error('Error resizing chart:', error);
               }
             }
           });
@@ -2679,60 +2674,80 @@
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
-            console.log('Data untuk grafik:', blockData);
-            // Pastikan chart ada sebelum update
-            if (!productionChart || productionChart._destroyed) {
-              initializeCharts();
-            }
-  
-            // Gunakan requestAnimationFrame untuk memastikan update setelah render
-            requestAnimationFrame(() => {
-              if (productionChart) {
-                productionChart.resize();
-                safeChartUpdate(productionChart);
-              }
-              if (costChart) {
-                costChart.resize();
-                safeChartUpdate(costChart);
-              }
-              if (areaChart) {
-                areaChart.resize();
-                safeChartUpdate(areaChart);
-              }
-              if (productivityTrendChart) {
-                productivityTrendChart.resize();
-                safeChartUpdate(productivityTrendChart);
-              }
-              if (costDistributionChart) {
-                costDistributionChart.resize();
-                safeChartUpdate(costDistributionChart);
-              }
-  
-            // Beri sedikit delay untuk memastikan DOM siap
-            setTimeout(() => {
-              // Update production chart
+          console.log('Data untuk grafik:', blockData);
+          
+          try {
+            currentBlockData = blockData;
+            
+            // Update production chart (tonase)
+            if (productionChart && !productionChart._destroyed) {
               updateProductionChart(blockData.prodBudget, blockData.prodActual);
-              
-              // Update cost chart
+            }
+            
+            // Update work object filters
+            updateWorkObjectFilters(blockData.budget, blockData.actual);
+            
+            // Update cost chart with default selection (all)
+            if (costChart && !costChart._destroyed) {
               updateCostChart(blockData.budget, blockData.actual, '');
-              
-              // Update area chart
+            }
+            
+            // Update area chart with default selection (all)
+            if (areaChart && !areaChart._destroyed) {
               updateAreaChart(blockData.budget, blockData.actual, '');
-              
-              // Update analysis charts
+            }
+        
+            // Update analysis charts
+            if (productivityTrendChart && !productivityTrendChart._destroyed) {
               updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+            }
+            if (costDistributionChart && !costDistributionChart._destroyed) {
               updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
-              
-              // Paksa resize dan update setelah delay
-              setTimeout(() => {
-                handleChartResize();
-                forceTooltips(productionChart);
-                forceTooltips(costChart);
-                forceTooltips(areaChart);
-              }, 300);
-            }, 50);
-            });
+            }
+            
+            // Force tooltips after a small delay to ensure charts are rendered
+            setTimeout(() => {
+              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
+              if (costChart && !costChart._destroyed) forceTooltips(costChart);
+              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
+            }, 500); // Increased delay to 500ms
+          } catch (error) {
+            console.error('Error updating charts:', error);
           }
+
+          // Gunakan requestAnimationFrame untuk memastikan update setelah render
+          requestAnimationFrame(() => {
+            if (productionChart) {
+              productionChart.resize();
+              productionChart.update();
+            }
+            if (costChart) {
+              costChart.resize();
+              costChart.update();
+            }
+            if (areaChart) {
+              areaChart.resize();
+              areaChart.update();
+            }
+            if (productivityTrendChart) {
+              productivityTrendChart.resize();
+              productivityTrendChart.update();
+            }
+            if (costDistributionChart) {
+              costDistributionChart.resize();
+              costDistributionChart.update();
+            }
+
+          // Paksa update setelah 100ms
+            setTimeout(() => {
+              if (productionChart) productionChart.update();
+              if (costChart) costChart.update();
+              if (areaChart) areaChart.update();
+              if (productivityTrendChart) productivityTrendChart.update();
+              if (costDistributionChart) costDistributionChart.update();
+            }, 100);
+          });
+        }
         
         // Helper function to update production chart
         function updateProductionChart(budgetData, actualData) {
