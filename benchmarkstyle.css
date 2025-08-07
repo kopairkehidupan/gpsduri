@@ -627,31 +627,22 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  .chart-container, .analysis-chart-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    width: 100%;
+  }
+  
   .chart-wrapper, .analysis-chart-wrapper {
     min-width: 100%;
     width: 800px; /* Lebar minimum untuk scroll horizontal */
     height: 300px;
   }
   
-  .tab-content {
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .chart-container, .analysis-chart-container {
-    -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
-  }
-  
-  /* Perbesar ukuran font di mobile */
-  .chart-container h4 {
-    font-size: 1.1rem;
-  }
-  
-  .chart-description {
-    font-size: 0.9rem;
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 250px;
   }
 }
-
