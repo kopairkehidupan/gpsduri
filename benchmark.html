@@ -2731,98 +2731,66 @@
         
         // Add this function to update charts when data is loaded
         function updateCharts(blockData) {
-          console.log('Data untuk grafik:', blockData);
+          console.log('Updating charts with:', blockData); // Debugging
           
-          try {
-            currentBlockData = blockData;
-            
-            // Update production chart (tonase)
-            if (productionChart && !productionChart._destroyed) {
-              updateProductionChart(blockData.prodBudget, blockData.prodActual);
-            }
-            
-            // Update work object filters
-            updateWorkObjectFilters(blockData.budget, blockData.actual);
-            
-            // Update cost chart with default selection (all)
-            if (costChart && !costChart._destroyed) {
-              updateCostChart(blockData.budget, blockData.actual, '');
-            }
-            
-            // Update area chart with default selection (all)
-            if (areaChart && !areaChart._destroyed) {
-              updateAreaChart(blockData.budget, blockData.actual, '');
-            }
+          // Pastikan blockData ada
+          if (!blockData) return;
         
-            // Update analysis charts
-            if (productivityTrendChart && !productivityTrendChart._destroyed) {
-              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
-            }
-            if (costDistributionChart && !costDistributionChart._destroyed) {
-              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
-            }
-            
-            // Force tooltips after a small delay to ensure charts are rendered
-            setTimeout(() => {
-              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
-              if (costChart && !costChart._destroyed) forceTooltips(costChart);
-              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
-            }, 500); // Increased delay to 500ms
-          } catch (error) {
-            console.error('Error updating charts:', error);
-          }
-
-          // Gunakan requestAnimationFrame untuk memastikan update setelah render
+          // Gunakan requestAnimationFrame untuk sinkronisasi render
           requestAnimationFrame(() => {
-            if (productionChart) {
-              productionChart.data.datasets[0].data = /* data baru */;
-              productionChart.update();
-              
-              // Fix khusus untuk mobile: force resize
-              setTimeout(() => {
-                productionChart.resize();
-                productionChart.update();
-              }, 100);
-            }
-            if (costChart) {
-                costChart.data.datasets[0].data = /* data baru */;
-                costChart.update();
+            try {
+              // 1. Update Production Chart (Tonase)
+              if (productionChart && !productionChart._destroyed) {
+                const monthlyBudget = aggregateMonthlyData(blockData.prodBudget, 'Budget Tonase (Ton)');
+                const monthlyActual = aggregateMonthlyData(blockData.prodActual, 'Actual Tonase (Ton)');
                 
-                // Fix khusus untuk mobile: force resize
+                productionChart.data.datasets[0].data = monthlyBudget || [];
+                productionChart.data.datasets[1].data = monthlyActual || [];
+                
+                // Force update untuk mobile
                 setTimeout(() => {
+                  productionChart.update('none'); // 'none' untuk mencegah animasi
+                  productionChart.resize();
+                }, 50);
+              }
+        
+              // 2. Update Cost Chart (Biaya)
+              if (costChart && !costChart._destroyed) {
+                const workObjectFilter = document.getElementById('costWorkObject').value;
+                const monthlyBudget = aggregateMonthlyCostData(blockData.budget, workObjectFilter);
+                const monthlyActual = aggregateMonthlyCostData(blockData.actual, workObjectFilter);
+                
+                costChart.data.datasets[0].data = monthlyBudget;
+                costChart.data.datasets[1].data = monthlyActual;
+                
+                setTimeout(() => {
+                  costChart.update('none');
                   costChart.resize();
-                  costChart.update();
-                }, 100);
-            }
-            if (areaChart) {
-              areaChart.data.datasets[0].data = /* data baru */;
-              areaChart.update();
-              
-              // Fix khusus untuk mobile: force resize
-              setTimeout(() => {
-                areaChart.resize();
-                areaChart.update();
-              }, 100);
-            }
-            if (productivityTrendChart) {
-              productivityTrendChart.data.datasets[0].data = /* data baru */;
-              productivityTrendChart.update();
-              
-              // Fix khusus untuk mobile: force resize
-              setTimeout(() => {
-                productivityTrendChart.resize();
-                productivityTrendChart.update();
-              }, 100);
-            }
-            if (costDistributionChart) {
-              costDistributionChart.data.datasets[0].data = /* data baru */;
-              costDistributionChart.update();
-              
-              // Fix khusus untuk mobile: force resize
-              setTimeout(() => {
-                costDistributionChart.resize();
-                costDistributionChart.update();
-              }, 100);
+                }, 50);
+              }
+        
+              // 3. Update Area Chart (Luas/Hasil)
+              if (areaChart && !areaChart._destroyed) {
+                const workObjectFilter = document.getElementById('areaWorkObject').value;
+                const monthlyBudget = aggregateMonthlyAreaData(blockData.budget, workObjectFilter);
+                const monthlyActual = aggregateMonthlyAreaData(blockData.actual, workObjectFilter);
+                
+                areaChart.data.datasets[0].data = monthlyBudget;
+                areaChart.data.datasets[1].data = monthlyActual;
+                
+                setTimeout(() => {
+                  areaChart.update('none');
+                  areaChart.resize();
+                }, 50);
+              }
+        
+              // 4. Update Analysis Charts
+              updateAnalysisCharts(blockData);
+        
+            } catch (error) {
+              console.error('Error updating charts:', error);
+              // Fallback: Reinitialize charts jika error
+              initializeCharts(); 
             }
           });
         }
