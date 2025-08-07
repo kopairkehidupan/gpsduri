@@ -2785,7 +2785,8 @@
               }
         
               // 4. Update Analysis Charts
-              updateAnalysisCharts(blockData);
+              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
         
             } catch (error) {
               console.error('Error updating charts:', error);
