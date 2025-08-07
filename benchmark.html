@@ -871,6 +871,22 @@
           // Event listener untuk tab (tetap sama seperti sebelumnya)
           document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+              const tabId = this.getAttribute('data-tab');
+              
+              document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.display = 'none';
+              });
+              
+              const activeTab = document.getElementById(`${tabId}Tab`);
+              if (activeTab) {
+                activeTab.classList.add('active');
+                activeTab.style.display = 'block';
+              }
+              
+              document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+              this.classList.add('active');
+              
               setTimeout(() => {
                 if (this.getAttribute('data-tab') === 'chart') {
                   handleChartResize();
@@ -2570,6 +2586,11 @@
               if (costChart && !costChart._destroyed) {
                 costChart.update();
                 forceTooltips(costChart);
+              }
+
+              if (areaChart && !areaChart._destroyed) {
+                areaChart.update();
+                forceTooltips(areaChart);
               }
             }, 100);
           });
