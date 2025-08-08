@@ -501,9 +501,7 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="productionChart"></canvas>
-          </div>
+          <canvas id="productionChart"></canvas>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -518,9 +516,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="costChart"></canvas>
-          </div>
+          <canvas id="costChart"></canvas>
         </div>
         
         <!-- Chart 3: Area Line Chart -->
@@ -535,9 +531,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="areaChart"></canvas>
-          </div>
+          <canvas id="areaChart"></canvas>
         </div>
       </div>
 
@@ -557,20 +551,12 @@
         
         <div class="analysis-section">
           <h4>Trend Produktivitas</h4>
-          <div class="analysis-chart-container">
-            <div class="analysis-chart-wrapper">
-              <canvas id="productivityTrendChart"></canvas>
-            </div>
-          </div>
+          <canvas id="productivityTrendChart"></canvas>
         </div>
         
         <div class="analysis-section">
           <h4>Distribusi Biaya</h4>
-          <div class="analysis-chart-container">
-            <div class="analysis-chart-wrapper">
-              <canvas id="costDistributionChart"></canvas>
-            </div>
-          </div>
+          <canvas id="costDistributionChart"></canvas>
         </div>
       </div>
     </div>
@@ -838,7 +824,6 @@
         document.addEventListener('DOMContentLoaded', async function() {
           initMap();
           initializeCharts(); // Initialize all charts
-          setupChartScroll();
           
           // Load GeoJSON data
           geoJsonData = await loadGeoJsonData();
@@ -886,25 +871,6 @@
               
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
-
-              // Tambahkan timeout untuk memastikan tab benar-benar visible
-              setTimeout(() => {
-                if (this.getAttribute('data-tab') === 'chart') {
-                  handleChartResize();
-                  
-                  // Force tooltips untuk semua chart utama
-                  forceTooltips(productionChart);
-                  forceTooltips(costChart);
-                  forceTooltips(areaChart);
-                }
-                
-                // Tambahkan juga untuk tab analisis
-                if (this.getAttribute('data-tab') === 'analysis') {
-                  handleChartResize();
-                  forceTooltips(productivityTrendChart);
-                  forceTooltips(costDistributionChart);
-                }
-              }, 300); // Delay untuk mobile
             });
           });
     
@@ -920,22 +886,6 @@
             return el;
           }
         });
-
-        // Fungsi untuk mengatur ulang ukuran chart saat container di-scroll
-        function setupChartScroll() {
-          document.querySelectorAll('.chart-container, .analysis-chart-container').forEach(container => {
-            container.addEventListener('scroll', function() {
-              const canvas = this.querySelector('canvas');
-              if (canvas) {
-                // Trigger resize untuk memastikan chart tetap tajam
-                const chart = Chart.getChart(canvas);
-                if (chart) {
-                  chart.resize();
-                }
-              }
-            });
-          });
-        }
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
         // Database setup for IndexedDB
@@ -1729,6 +1679,13 @@
           if (!productionChart) {
             initializeCharts();
           }
+
+          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
+          setTimeout(() => {
+            if (productionChart) productionChart.resize();
+            if (costChart) costChart.resize();
+            if (areaChart) areaChart.resize();
+          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -2404,8 +2361,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2471,8 +2427,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2542,8 +2497,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2635,34 +2589,19 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
+          const charts = [productionChart, costChart, areaChart];
           charts.forEach(chart => {
-            if (chart && !chart._destroyed) {
-              const canvas = chart.canvas;
-              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
-              if (wrapper) {
-                // Simpan state tooltip sebelum resize
-                const activeTooltip = chart.tooltip._active;
-                
-                // Update ukuran canvas
-                canvas.style.width = wrapper.offsetWidth + 'px';
-                canvas.style.height = wrapper.offsetHeight + 'px';
-                
-                // Resize chart
-                chart.resize();
-                
-                // Restore tooltip state
-                if (activeTooltip && activeTooltip.length > 0) {
-                  chart.tooltip._active = activeTooltip;
-                  chart.update();
-                }
-              }
+            if (chart) {
+              chart.resize();
             }
           });
         }
-
-        window.addEventListener('orientationchange', function() {
-          setTimeout(handleChartResize, 500);
+        
+        // Panggil saat tab diubah
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            setTimeout(handleChartResize, 300); // Beri sedikit delay
+          });
         });
         
         // Panggil saat window di-resize
@@ -2714,39 +2653,6 @@
           } catch (error) {
             console.error('Error updating charts:', error);
           }
-
-          // Gunakan requestAnimationFrame untuk memastikan update setelah render
-          requestAnimationFrame(() => {
-            if (productionChart) {
-              productionChart.resize();
-              productionChart.update();
-            }
-            if (costChart) {
-              costChart.resize();
-              costChart.update();
-            }
-            if (areaChart) {
-              areaChart.resize();
-              areaChart.update();
-            }
-            if (productivityTrendChart) {
-              productivityTrendChart.resize();
-              productivityTrendChart.update();
-            }
-            if (costDistributionChart) {
-              costDistributionChart.resize();
-              costDistributionChart.update();
-            }
-
-          // Paksa update setelah 100ms
-            setTimeout(() => {
-              if (productionChart) productionChart.update();
-              if (costChart) costChart.update();
-              if (areaChart) areaChart.update();
-              if (productivityTrendChart) productivityTrendChart.update();
-              if (costDistributionChart) costDistributionChart.update();
-            }, 100);
-          });
         }
         
         // Helper function to update production chart
@@ -3133,8 +3039,7 @@
                 ]
               },
               options: {
-                responsive: false,
-                maintainAspectRatio: false,
+                responsive: true,
                 plugins: {
                   title: { display: false },
                   tooltip: {
@@ -3176,8 +3081,7 @@
                 }]
               },
               options: {
-                responsive: false,
-                maintainAspectRatio: false,
+                responsive: true,
                 plugins: {
                   tooltip: { enabled: false },
                   legend: {
@@ -3309,7 +3213,7 @@
         }
 
         // Tambahkan observer untuk memantau perubahan tab
-         const observer = new MutationObserver(function(mutations) {
+        const observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
               const analysisTab = document.getElementById('analysisTab');
@@ -3329,5 +3233,3 @@
           attributeFilter: ['class']
         });
   </script>
-</body>
-</html>
