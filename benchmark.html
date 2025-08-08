@@ -197,6 +197,29 @@
       100% { transform: rotate(360deg); }
     }
     
+    /* Mobile (up to 600px) */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .subtitle {
+        font-size: 0.9rem;
+      }
+      
+      .filter-container {
+        flex-direction: column;
+      }
+      
+      .filter-group {
+        width: 100%;
+      }
+      
+      #map {
+        height: 400px;
+      }
+    }
+    
     /* Tablet (601px - 992px) */
     @media (min-width: 601px) and (max-width: 992px) {
       .container {
@@ -249,6 +272,17 @@
       color: var(--dark-gray);
       cursor: pointer;
       transition: var(--transition);
+    }
+
+    @media (max-width: 600px) {
+      .tab-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+      }
+      
+      .tab-content {
+        padding: 0.75rem;
+      }
     }
     
     .tab-btn.active {
@@ -467,9 +501,7 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <div class="chart-wrapper">
           <canvas id="productionChart"></canvas>
-          </div>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -484,9 +516,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
           <canvas id="costChart"></canvas>
-          </div>
         </div>
         
         <!-- Chart 3: Area Line Chart -->
@@ -501,9 +531,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
           <canvas id="areaChart"></canvas>
-          </div>
         </div>
       </div>
 
@@ -523,9 +551,7 @@
         
         <div class="analysis-section">
           <h4>Trend Produktivitas</h4>
-          <div class="chart-wrapper">
           <canvas id="productivityTrendChart"></canvas>
-          </div>
         </div>
         
         <div class="analysis-section">
