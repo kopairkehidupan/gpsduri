@@ -132,10 +132,17 @@
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow);
   width: 100%;
+  min-width: 300px; /* Lebar minimum untuk mobile */
   overflow-x: auto;
   overflow-y: hidden;
   position: relative;
   -webkit-overflow-scrolling: touch; /* Untuk scroll halus di iOS */
+  position: relative;
+}
+
+.chart-wrapper {
+  width: 800px; /* Lebar yang cukup untuk menampilkan semua bulan */
+  height: 300px;
 }
 
 .chart-container h4 {
@@ -179,8 +186,20 @@
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
+  .chart-wrapper {
+    width: 600px; /* Lebar yang cukup untuk mobile */
+    height: 250px;
+  }
+  
   .chart-container {
-    padding: 0.75rem;
+    padding: 0;
+    margin: 0 -15px; /* Memberi ruang untuk scroll */
+  }
+
+  /* Perkecil font label pada mobile */
+  .chartjs-size-monitor, 
+  .chartjs-render-monitor {
+    font-size: 10px;
   }
   
   .chart-container h4 {
