@@ -141,7 +141,7 @@
 }
 
 .chart-wrapper {
-  width: 800px; /* Lebar yang cukup untuk menampilkan semua bulan */
+  width: 100%; /* Lebar yang cukup untuk menampilkan semua bulan */
   height: 300px;
 }
 
