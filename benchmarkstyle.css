@@ -177,34 +177,35 @@
   max-height: 400px; /* Maximum height untuk desktop */
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .chart-container {
-    padding: 0.75rem;
-  }
-  
-  .chart-container h4 {
-    font-size: 1rem;
-  }
-  
-  .chart-description {
-    font-size: 0.8rem;
-  }
-  
-  .chart-filter {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .chart-filter select {
-    max-width: 100%;
-    width: 100%;
-  }
-}
-
 @media (min-width: 601px) and (max-width: 992px) {
   .chart-container {
     min-height: 300px;
+  }
+
+  .chart-wrapper, .analysis-chart-wrapper {
+    min-width: 100%;
+    width: 800px; /* Lebar minimum untuk scroll horizontal */
+    height: 300px;
+  }
+  
+  .tab-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chart-container, .analysis-chart-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+  
+  /* Perbesar ukuran font di mobile */
+  .chart-container h4 {
+    font-size: 1.1rem;
+  }
+  
+  .chart-description {
+    font-size: 0.9rem;
   }
 }
 
@@ -272,19 +273,6 @@
   color: var(--primary);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .block-info-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .block-info-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 /* Tambahkan style untuk label blok */
 .blok-label {
   background: transparent !important;
@@ -300,13 +288,6 @@
   pointer-events: none;
   font-size: 12px;
   white-space: nowrap;
-}
-
-/* Untuk mobile, ukuran font lebih kecil */
-@media (max-width: 600px) {
-  .blok-label {
-    font-size: 10px;
-  }
 }
 
 /* Analysis Tab Styles */
@@ -479,43 +460,6 @@
   color: #ea4335;
 }
 
-/* General Mobile Layout */
-@media (max-width: 600px) {
-  .container {
-    padding: 0.75rem;
-  }
-  
-  .filter-container {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .filter-group {
-    width: 100%;
-    min-width: unset;
-  }
-  
-  #map {
-    height: 300px;
-  }
-  
-  .data-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-  
-  .summary-card {
-    padding: 0.75rem;
-  }
-  
-  .cost-table th, 
-  .cost-table td {
-    padding: 0.5rem;
-    font-size: 0.8rem;
-  }
-}
-
-
 .load-data-container {
   display: flex;
   justify-content: flex-end;
@@ -538,35 +482,6 @@
 
 #loadDataBtn:hover .material-icons {
   transform: rotate(180deg);
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .filter-container {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .load-data-container {
-    grid-column: span 2;
-  }
-  
-  #map {
-    height: 400px;
-  }
-}
-
-@media (max-width: 480px) {
-  .filter-container {
-    grid-template-columns: 1fr;
-  }
-  
-  .load-data-container {
-    grid-column: span 1;
-  }
-  
-  #map {
-    height: 350px;
-  }
 }
 
 /* Map Controls */
@@ -627,30 +542,93 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
+/* Responsive adjustments */
 @media (max-width: 600px) {
-  .chart-wrapper, .analysis-chart-wrapper {
-    min-width: 100%;
-    width: 800px; /* Lebar minimum untuk scroll horizontal */
-    height: 300px;
-  }
-  
-  .tab-content {
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+  .chart-container {
+    padding: 0;
+    margin: 0 -15px; /* Memberi ruang untuk scroll */
   }
 
-  .chart-container, .analysis-chart-container {
-    -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
+  .chart-wrapper {
+    width: 600px; /* Lebar yang cukup untuk mobile */
+    height: 250px;
+  }
+
+  /* Perkecil font label pada mobile */
+  .chartjs-size-monitor, 
+  .chartjs-render-monitor {
+    font-size: 10px;
   }
   
-  /* Perbesar ukuran font di mobile */
   .chart-container h4 {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .chart-description {
+    font-size: 0.8rem;
+  }
+  
+  .chart-filter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-filter select {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .blok-label {
+    font-size: 10px;
+  }
+
+  .container {
+    padding: 0.75rem;
+  }
+  
+  .filter-container {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .filter-group {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  #map {
+    height: 300px;
+  }
+  
+  .data-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .summary-card {
+    padding: 0.75rem;
+  }
+  
+  .cost-table th, 
+  .cost-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  .subtitle {
     font-size: 0.9rem;
+  }
+
+  .tab-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .tab-content {
+    padding: 0.75rem;
   }
 }
