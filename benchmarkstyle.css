@@ -138,6 +138,11 @@
   -webkit-overflow-scrolling: touch; /* Untuk scroll halus di iOS */
 }
 
+.chart-wrapper {
+  width: 100%; /* Lebar yang cukup untuk menampilkan semua bulan */
+  height: 300px;
+}
+
 .chart-container h4 {
   color: var(--primary);
   margin-top: 0;
@@ -550,7 +555,7 @@
   }
 
   .chart-wrapper {
-    width: 100%; /* Lebar yang cukup untuk mobile */
+    width: 600px; /* Lebar yang cukup untuk mobile */
     height: 250px;
   }
 
