@@ -550,7 +550,7 @@
   }
 
   .chart-wrapper {
-    width: 600px; /* Lebar yang cukup untuk mobile */
+    width: 100%; /* Lebar yang cukup untuk mobile */
     height: 250px;
   }
 
