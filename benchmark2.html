@@ -501,7 +501,9 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <canvas id="productionChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="productionChart"></canvas>
+          </div>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -516,7 +518,9 @@
               </select>
             </div>
           </div>
-          <canvas id="costChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="costChart"></canvas>
+          </div>
         </div>
         
         <!-- Chart 3: Area Line Chart -->
@@ -531,7 +535,9 @@
               </select>
             </div>
           </div>
-          <canvas id="areaChart"></canvas>
+          <div class="chart-wrapper">
+            <canvas id="areaChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -551,12 +557,20 @@
         
         <div class="analysis-section">
           <h4>Trend Produktivitas</h4>
-          <canvas id="productivityTrendChart"></canvas>
+          <div class="analysis-chart-container">
+            <div class="analysis-chart-wrapper">
+              <canvas id="productivityTrendChart"></canvas>
+            </div>
+          </div>
         </div>
         
         <div class="analysis-section">
           <h4>Distribusi Biaya</h4>
-          <canvas id="costDistributionChart"></canvas>
+          <div class="analysis-chart-container">
+            <div class="analysis-chart-wrapper">
+              <canvas id="costDistributionChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -824,6 +838,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
           initMap();
           initializeCharts(); // Initialize all charts
+          setupChartScroll();
           
           // Load GeoJSON data
           geoJsonData = await loadGeoJsonData();
@@ -871,6 +886,25 @@
               
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
+
+              // Tambahkan timeout untuk memastikan tab benar-benar visible
+              setTimeout(() => {
+                if (this.getAttribute('data-tab') === 'chart') {
+                  handleChartResize();
+                  
+                  // Force tooltips untuk semua chart utama
+                  forceTooltips(productionChart);
+                  forceTooltips(costChart);
+                  forceTooltips(areaChart);
+                }
+                
+                // Tambahkan juga untuk tab analisis
+                if (this.getAttribute('data-tab') === 'analysis') {
+                  handleChartResize();
+                  forceTooltips(productivityTrendChart);
+                  forceTooltips(costDistributionChart);
+                }
+              }, 300); // Delay untuk mobile
             });
           });
     
@@ -886,6 +920,22 @@
             return el;
           }
         });
+
+        // Fungsi untuk mengatur ulang ukuran chart saat container di-scroll
+        function setupChartScroll() {
+          document.querySelectorAll('.chart-container, .analysis-chart-container').forEach(container => {
+            container.addEventListener('scroll', function() {
+              const canvas = this.querySelector('canvas');
+              if (canvas) {
+                // Trigger resize untuk memastikan chart tetap tajam
+                const chart = Chart.getChart(canvas);
+                if (chart) {
+                  chart.resize();
+                }
+              }
+            });
+          });
+        }
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
         // Database setup for IndexedDB
@@ -1679,19 +1729,12 @@
           if (!productionChart) {
             initializeCharts();
           }
-
-          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
-          setTimeout(() => {
-            if (productionChart) productionChart.resize();
-            if (costChart) costChart.resize();
-            if (areaChart) areaChart.resize();
-          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
           document.getElementById('productionTab').classList.add('active');
           document.getElementById('productionTab').style.display = 'block';
-          
+
           // Hide other tabs
           document.querySelectorAll('.tab-content').forEach(tab => {
             if (tab.id !== 'productionTab') {
@@ -2274,6 +2317,23 @@
         
         // Add this function to initialize charts
         function initializeCharts() {
+          // Destroy existing charts if they exist
+          if (productionChart && typeof productionChart.destroy === 'function') {
+            productionChart.destroy();
+          }
+          if (costChart && typeof costChart.destroy === 'function') {
+            costChart.destroy();
+          }
+          if (areaChart && typeof areaChart.destroy === 'function') {
+            areaChart.destroy();
+          }
+          if (productivityTrendChart && typeof productivityTrendChart.destroy === 'function') {
+            productivityTrendChart.destroy();
+          }
+          if (costDistributionChart && typeof costDistributionChart.destroy === 'function') {
+            costDistributionChart.destroy();
+          }
+          
           // Production Chart (Tonase)
           const commonChartOptions = {
             responsive: true,
@@ -2344,15 +2404,18 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
-                title: {
-                  display: false
-                },
                 tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false,
+                  position: 'average',
+                  backgroundColor: 'rgba(0,0,0,0.7)',
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ton';
+                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
                     }
                   }
                 }
@@ -2408,15 +2471,18 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
-                title: {
-                  display: false
-                },
                 tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false,
+                  position: 'average',
+                  backgroundColor: 'rgba(0,0,0,0.7)',
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatCurrency(context.raw);
+                      return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
                     }
                   }
                 }
@@ -2476,15 +2542,18 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: true,
+              responsive: false, // Nonaktifkan responsive bawaan
+              maintainAspectRatio: false,
               plugins: {
-                title: {
-                  display: false
-                },
                 tooltip: {
+                  enabled: true,
+                  mode: 'index',
+                  intersect: false,
+                  position: 'average',
+                  backgroundColor: 'rgba(0,0,0,0.7)',
                   callbacks: {
                     label: function(context) {
-                      return context.dataset.label + ': ' + formatNumber(context.raw) + ' Ha';
+                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ha`;
                     }
                   }
                 }
@@ -2532,20 +2601,68 @@
           });
         }
 
+        function forceTooltips(chart) {
+          try {
+            // Check if chart exists and is in a valid state
+            if (!chart || 
+                chart._destroyed || 
+                !chart.tooltip || 
+                !chart.tooltip._active || 
+                !chart.data || 
+                !chart.data.datasets) {
+              return;
+            }
+            
+            // Create fake active elements for each dataset
+            const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
+              datasetIndex,
+              element: {
+                _model: {}
+              }
+            }));
+            
+            // Update tooltip with these active elements
+            chart.tooltip._active = activeElements;
+            
+            // Only update if chart is not destroyed
+            if (!chart._destroyed) {
+              chart.tooltip.update();
+              chart.draw();
+            }
+          } catch (error) {
+            console.error('Error forcing tooltips:', error);
+          }
+        }
+
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
+          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
           charts.forEach(chart => {
-            if (chart) {
-              chart.resize();
+            if (chart && !chart._destroyed) {
+              const canvas = chart.canvas;
+              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
+              if (wrapper) {
+                // Simpan state tooltip sebelum resize
+                const activeTooltip = chart.tooltip._active;
+                
+                // Update ukuran canvas
+                canvas.style.width = wrapper.offsetWidth + 'px';
+                canvas.style.height = wrapper.offsetHeight + 'px';
+                
+                // Resize chart
+                chart.resize();
+                
+                // Restore tooltip state
+                if (activeTooltip && activeTooltip.length > 0) {
+                  chart.tooltip._active = activeTooltip;
+                  chart.update();
+                }
+              }
             }
           });
         }
-        
-        // Panggil saat tab diubah
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            setTimeout(handleChartResize, 300); // Beri sedikit delay
-          });
+
+        window.addEventListener('orientationchange', function() {
+          setTimeout(handleChartResize, 500);
         });
         
         // Panggil saat window di-resize
@@ -2563,19 +2680,73 @@
             currentBlockData = blockData;
             
             // Update production chart (tonase)
-            updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            if (productionChart && !productionChart._destroyed) {
+              updateProductionChart(blockData.prodBudget, blockData.prodActual);
+            }
             
             // Update work object filters
             updateWorkObjectFilters(blockData.budget, blockData.actual);
             
             // Update cost chart with default selection (all)
-            updateCostChart(blockData.budget, blockData.actual, '');
+            if (costChart && !costChart._destroyed) {
+              updateCostChart(blockData.budget, blockData.actual, '');
+            }
             
             // Update area chart with default selection (all)
-            updateAreaChart(blockData.budget, blockData.actual, '');
+            if (areaChart && !areaChart._destroyed) {
+              updateAreaChart(blockData.budget, blockData.actual, '');
+            }
+        
+            // Update analysis charts
+            if (productivityTrendChart && !productivityTrendChart._destroyed) {
+              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
+            }
+            if (costDistributionChart && !costDistributionChart._destroyed) {
+              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
+            }
+            
+            // Force tooltips after a small delay to ensure charts are rendered
+            setTimeout(() => {
+              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
+              if (costChart && !costChart._destroyed) forceTooltips(costChart);
+              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
+            }, 500); // Increased delay to 500ms
           } catch (error) {
             console.error('Error updating charts:', error);
           }
+
+          // Gunakan requestAnimationFrame untuk memastikan update setelah render
+          requestAnimationFrame(() => {
+            if (productionChart) {
+              productionChart.resize();
+              productionChart.update();
+            }
+            if (costChart) {
+              costChart.resize();
+              costChart.update();
+            }
+            if (areaChart) {
+              areaChart.resize();
+              areaChart.update();
+            }
+            if (productivityTrendChart) {
+              productivityTrendChart.resize();
+              productivityTrendChart.update();
+            }
+            if (costDistributionChart) {
+              costDistributionChart.resize();
+              costDistributionChart.update();
+            }
+
+          // Paksa update setelah 100ms
+            setTimeout(() => {
+              if (productionChart) productionChart.update();
+              if (costChart) costChart.update();
+              if (areaChart) areaChart.update();
+              if (productivityTrendChart) productivityTrendChart.update();
+              if (costDistributionChart) costDistributionChart.update();
+            }, 100);
+          });
         }
         
         // Helper function to update production chart
@@ -2962,10 +3133,16 @@
                 ]
               },
               options: {
-                responsive: true,
+                responsive: false,
+                maintainAspectRatio: false,
                 plugins: {
                   title: { display: false },
                   tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    position: 'average',
+                    backgroundColor: 'rgba(0,0,0,0.7)',
                     callbacks: {
                       label: function(context) {
                         return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
@@ -2999,17 +3176,41 @@
                 }]
               },
               options: {
-                responsive: true,
+                responsive: false,
+                maintainAspectRatio: false,
                 plugins: {
-                  title: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.label}: ${formatCurrency(context.raw)} (${context.formattedValue})`;
-                      }
+                  tooltip: { enabled: false },
+                  legend: {
+                    position: 'right',
+                    labels: {
+                      generateLabels: function(chart) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                          const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                          return data.labels.map((label, i) => {
+                            const value = data.datasets[0].data[i];
+                            const percentage = Math.round((value / total) * 100);
+                            
+                            return {
+                              text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
+                              fillStyle: data.datasets[0].backgroundColor[i],
+                              hidden: false,
+                              lineCap: 'butt',
+                              lineDash: [],
+                              lineDashOffset: 0,
+                              lineJoin: 'miter',
+                              lineWidth: 1,
+                              strokeStyle: data.datasets[0].backgroundColor[i],
+                              pointStyle: 'circle'
+                            };
+                          });
+                        }
+                        return [];
+                      },
+                      font: { size: window.innerWidth < 600 ? 10 : 12 },
+                      padding: 20
                     }
-                  },
-                  legend: { position: 'right' }
+                  }
                 }
               }
             });
@@ -3106,5 +3307,27 @@
         
           return comparison;
         }
+
+        // Tambahkan observer untuk memantau perubahan tab
+         const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+              const analysisTab = document.getElementById('analysisTab');
+              if (analysisTab.classList.contains('active') && currentBlockData.blok) {
+                // Jika tab analisis aktif dan ada data blok yang dipilih
+                displayAnalysis(currentBlockData);
+                updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
+                updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
+              }
+            }
+          });
+        });
+        
+        // Mulai mengamati tab analisis
+        observer.observe(document.getElementById('analysisTab'), {
+          attributes: true,
+          attributeFilter: ['class']
+        });
   </script>
-  
+</body>
+</html>
