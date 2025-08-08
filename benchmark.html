@@ -638,9 +638,63 @@
         map.setView([1.0, 101.05], 15);
       });
     }
+
+    async function calculateBlockColor(divisi, blockCode, kebun) {
+      try {
+        const [prodActualData, prodBudgetData] = await Promise.all([
+          getDataFromDB(STORES.PROD_ACTUAL),
+          getDataFromDB(STORES.PROD_BUDGET)
+        ]);
+    
+        const normalizedDivisi = divisi.replace(' ', '_');
+        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+    
+        const monthlyPercentages = [];
+        const monthlyData = {};
+    
+        // Proses data aktual
+        filteredProdActual.forEach(item => {
+          const month = new Date(item.Bulan).getMonth();
+          if (!monthlyData[month]) monthlyData[month] = {};
+          monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+        });
+    
+        // Proses data budget
+        filteredProdBudget.forEach(item => {
+          const month = new Date(item.Bulan).getMonth();
+          if (!monthlyData[month]) monthlyData[month] = {};
+          monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+        });
+    
+        // Hitung persentase
+        Object.values(monthlyData).forEach(data => {
+          if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
+            const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
+            monthlyPercentages.push(percentage);
+          }
+        });
+    
+        // Hitung rata-rata
+        let averagePercentage = 0;
+        if (monthlyPercentages.length > 0) {
+          averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
+        }
+    
+        // Tentukan warna
+        if (averagePercentage >= 95) return '#34A853'; // Hijau
+        if (averagePercentage >= 90) return '#FBBC05'; // Orange
+        if (averagePercentage >= 75) return '#EA4335'; // Merah
+        return '#000000'; // Hitam
+        
+      } catch (error) {
+        console.error('Error calculating block color:', error);
+        return '#888888'; // Default jika error
+      }
+    }
     
     // Fungsi untuk menambahkan label blok di tengah poligon
-    function addBlokLabels(data) {
+    async function addBlokLabels(data) {
           // Hapus label yang sudah ada
           removeBlokLabels();
           
@@ -652,26 +706,41 @@
           // Buat array untuk menyimpan bounds
           const boundsArray = [];
           
+          // Buat array untuk menyimpan semua promise
+          const colorPromises = [];
+          
+          // Pertama, hitung semua warna untuk setiap blok
           data.features.forEach(feature => {
             const blokName = feature.properties.blok;
             const kebunName = feature.properties.kebun;
             const divisiName = feature.properties.divisi;
             
+            colorPromises.push(
+              calculateBlockColor(divisiName, blokName, kebunName)
+                .then(color => {
+                  feature.properties._color = color; // Simpan warna di properti feature
+                })
+            );
+          });
+          
+          // Tunggu semua warna selesai dihitung
+          await Promise.all(colorPromises);
+          
+          // Kemudian buat layer dengan warna yang sudah dihitung
+          data.features.forEach(feature => {
+            const blokName = feature.properties.blok;
+            const color = feature.properties._color || '#888888';
+            
             const layer = L.geoJSON(feature, {
-              style: function(feature) {
-                // Dapatkan warna berdasarkan performa blok
-                const color = getColorByDivisi(divisiName, blokName, kebunName);
-                return {
-                  fillColor: color,
-                  weight: 2,
-                  opacity: 1,
-                  color: 'white',
-                  dashArray: '3',
-                  fillOpacity: 0.7
-                };
+              style: {
+                fillColor: color,
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7
               },
               onEachFeature: function(feature, layer) {
-                // Tambahkan tooltip permanen di tengah poligon
                 const bounds = layer.getBounds();
                 boundsArray.push(bounds);
                 
@@ -686,10 +755,8 @@
                 layer.bindTooltip(tooltip);
                 layer.setTooltipContent(blokName);
                 
-                // Simpan referensi tooltip
                 blokLabels.push({layer: layer, tooltip: tooltip});
                 
-                // Tetap pertahankan event click
                 layer.on('click', function() {
                   const props = feature.properties;
                   const divisiForQuery = props.divisi.replace(' ', '_');
@@ -913,11 +980,22 @@
             });
             
             // Event listener untuk dropdown divisi
-            document.getElementById('divisiSelect').addEventListener('change', function() {
+            document.getElementById('divisiSelect').addEventListener('change', async function() {
               const kebun = document.getElementById('kebunSelect').value;
               const divisi = this.value;
               const filteredData = filterGeoJson(kebun, divisi);
-              showGeoJsonOnMap(filteredData);
+              
+              // Tampilkan loading state
+              const loadingIndicator = L.divIcon({html: '<div class="spinner"></div>', className: 'loading-indicator'});
+              const loadingLayer = L.marker(map.getCenter(), {icon: loadingIndicator}).addTo(map);
+              
+              try {
+                await showGeoJsonOnMap(filteredData);
+              } catch (error) {
+                console.error('Error showing geoJSON:', error);
+              } finally {
+                map.removeLayer(loadingLayer);
+              }
             });
           }
     
