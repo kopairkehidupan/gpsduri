@@ -2298,12 +2298,30 @@
             plugins: {
               title: { display: false },
               legend: {
-                position: 'top',
+                position: 'bottom', // Pindahkan legend ke bawah
                 labels: {
                   boxWidth: 12,
                   padding: 20,
                   font: {
-                    size: 12
+                    size: window.innerWidth < 600 ? 10 : 12
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                ticks: {
+                  maxRotation: 45,
+                  minRotation: 45,
+                  font: {
+                    size: window.innerWidth < 600 ? 10 : 12
+                  }
+                }
+              },
+              y: {
+                ticks: {
+                  font: {
+                    size: window.innerWidth < 600 ? 10 : 12
                   }
                 }
               }
@@ -2362,6 +2380,15 @@
                 tooltip: commonTooltipOptions
               },
               responsive: true,
+              maintainAspectRatio: false,
+              layout: {
+                padding: {
+                  left: 10,
+                  right: 10,
+                  top: 10,
+                  bottom: 10
+                }
+              },
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2393,6 +2420,11 @@
                   title: {
                     display: true,
                     text: 'Bulan'
+                  },
+                  ticks: {
+                    autoSkip: false, // Pastikan semua label bulan ditampilkan
+                    maxRotation: 90,
+                    minRotation: 90
                   }
                 }
               }
@@ -2428,6 +2460,15 @@
                 tooltip: commonTooltipOptions
               },
               responsive: true,
+              maintainAspectRatio: false,
+              layout: {
+                padding: {
+                  left: 10,
+                  right: 10,
+                  top: 10,
+                  bottom: 10
+                }
+              },
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2459,6 +2500,11 @@
                   title: {
                     display: true,
                     text: 'Bulan'
+                  },
+                  ticks: {
+                    autoSkip: false, // Pastikan semua label bulan ditampilkan
+                    maxRotation: 90,
+                    minRotation: 90
                   }
                 }
               }
@@ -2498,6 +2544,15 @@
                 tooltip: commonTooltipOptions
               },
               responsive: true,
+              maintainAspectRatio: false,
+              layout: {
+                padding: {
+                  left: 10,
+                  right: 10,
+                  top: 10,
+                  bottom: 10
+                }
+              },
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2529,6 +2584,11 @@
                   title: {
                     display: true,
                     text: 'Bulan'
+                  },
+                  ticks: {
+                    autoSkip: false, // Pastikan semua label bulan ditampilkan
+                    maxRotation: 90,
+                    minRotation: 90
                   }
                 }
               }
@@ -2589,13 +2649,23 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
+          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
           charts.forEach(chart => {
             if (chart) {
-              chart.resize();
+              // Perbarui ukuran font berdasarkan lebar layar
+              const fontSize = window.innerWidth < 600 ? 10 : 12;
+              
+              chart.options.plugins.legend.labels.font.size = fontSize;
+              chart.options.scales.x.ticks.font.size = fontSize;
+              chart.options.scales.y.ticks.font.size = fontSize;
+              
+              chart.update();
             }
           });
         }
+        
+        // Panggil saat resize
+        window.addEventListener('resize', handleChartResize);
         
         // Panggil saat tab diubah
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -3061,7 +3131,17 @@
                     title: { display: true, text: 'Tonase (Ton)' },
                     ticks: { callback: formatNumber }
                   },
-                  x: { title: { display: true, text: 'Bulan' } }
+                  x: { 
+                    title: { 
+                      display: true, 
+                      text: 'Bulan' 
+                    },
+                    ticks: {
+                      autoSkip: false, // Pastikan semua label bulan ditampilkan
+                      maxRotation: 90,
+                      minRotation: 90
+                    }
+                  }
                 }
               }
             });
