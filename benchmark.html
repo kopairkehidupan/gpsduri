@@ -197,29 +197,6 @@
       100% { transform: rotate(360deg); }
     }
     
-    /* Mobile (up to 600px) */
-    @media (max-width: 600px) {
-      h1 {
-        font-size: 1.5rem;
-      }
-      
-      .subtitle {
-        font-size: 0.9rem;
-      }
-      
-      .filter-container {
-        flex-direction: column;
-      }
-      
-      .filter-group {
-        width: 100%;
-      }
-      
-      #map {
-        height: 400px;
-      }
-    }
-    
     /* Tablet (601px - 992px) */
     @media (min-width: 601px) and (max-width: 992px) {
       .container {
@@ -272,17 +249,6 @@
       color: var(--dark-gray);
       cursor: pointer;
       transition: var(--transition);
-    }
-
-    @media (max-width: 600px) {
-      .tab-btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-      }
-      
-      .tab-content {
-        padding: 0.75rem;
-      }
     }
     
     .tab-btn.active {
