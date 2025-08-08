@@ -641,23 +641,28 @@
     
     // Fungsi untuk menambahkan label blok di tengah poligon
     function addBlokLabels(data) {
-      // Hapus label yang sudah ada
-      removeBlokLabels();
-      
-      // Pastikan geoJsonLayer ada
-      if (!geoJsonLayer) {
-        geoJsonLayer = L.layerGroup().addTo(map);
-      }
-      
-      // Buat array untuk menyimpan bounds
-      const boundsArray = [];
-      
-      data.features.forEach(feature => {
-        const blokName = feature.properties.blok;
-        const layer = L.geoJSON(feature, {
-          style: function(feature) {
-            return {
-              fillColor: getColorByDivisi(feature.properties.divisi),
+          // Hapus label yang sudah ada
+          removeBlokLabels();
+          
+          // Pastikan geoJsonLayer ada
+          if (!geoJsonLayer) {
+            geoJsonLayer = L.layerGroup().addTo(map);
+          }
+          
+          // Buat array untuk menyimpan bounds
+          const boundsArray = [];
+          
+          data.features.forEach(feature => {
+            const blokName = feature.properties.blok;
+            const kebunName = feature.properties.kebun;
+            const divisiName = feature.properties.divisi;
+            
+            const layer = L.geoJSON(feature, {
+              style: function(feature) {
+                // Dapatkan warna berdasarkan performa blok
+                const color = getColorByDivisi(divisiName, blokName, kebunName);
+                return {
+                  fillColor: color,
                   weight: 2,
                   opacity: 1,
                   color: 'white',
@@ -668,7 +673,7 @@
               onEachFeature: function(feature, layer) {
                 // Tambahkan tooltip permanen di tengah poligon
                 const bounds = layer.getBounds();
-                boundsArray.push(bounds); // Simpan bounds untuk fitBounds nanti
+                boundsArray.push(bounds);
                 
                 const center = bounds.getCenter();
                 const tooltip = L.tooltip({
@@ -701,33 +706,34 @@
             const bounds = new L.LatLngBounds(boundsArray);
             map.fitBounds(bounds);
           }
-
-        // Update legend
-        updateLegend(data);
+        
+          // Update legend
+          updateLegend(data);
         }
 
         function updateLegend(data) {
           const legend = document.getElementById('mapLegend');
           if (!legend) return;
           
-          // Get unique divisions
-          const divisions = [...new Set(
-            data.features.map(f => f.properties.divisi)
-          )].sort();
-          
-          let legendHTML = '<h4>Legenda Divisi</h4>';
-          
-          divisions.forEach(div => {
-            const color = getColorByDivisi(div);
-            legendHTML += `
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: ${color};"></div>
-                <span>${div.replace('DIVISI ', '')}</span>
-              </div>
-            `;
-          });
-          
-          legend.innerHTML = legendHTML;
+          legend.innerHTML = `
+            <h4>Legenda Performa Blok</h4>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #34A853;"></div>
+              <span>≥ 95% (Sangat Baik)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #FBBC05;"></div>
+              <span>90% - 95% (Baik)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #EA4335;"></div>
+              <span>75% - 90% (Perlu Perbaikan)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #000000;"></div>
+              <span>&lt; 75% (Kritis)</span>
+            </div>
+          `;
         }
         
         // Fungsi untuk menghapus semua label blok
@@ -774,17 +780,79 @@
           }
         }
         
-        function getColorByDivisi(divisi) {
-          const divisiColors = {
-            'DIVISI I': '#FF5733',
-            'DIVISI II': '#33FF57',
-            'DIVISI III': '#3357FF',
-            'DIVISI IV': '#F3FF33',
-            'DIVISI V': '#FF33F3',
-            'DIVISI VI': '#33FFF3',
-            'DIVISI VII': '#8A2BE2'
-          };
-          return divisiColors[divisi] || '#888888';
+        function getColorByDivisi(divisi, blockCode, kebun) {
+          // Jika tidak ada parameter blockCode dan kebun, kembalikan warna default berdasarkan divisi
+          if (!blockCode || !kebun) {
+            const divisiColors = {
+              'DIVISI I': '#FF5733',
+              'DIVISI II': '#33FF57',
+              'DIVISI III': '#3357FF',
+              'DIVISI IV': '#F3FF33',
+              'DIVISI V': '#FF33F3',
+              'DIVISI VI': '#33FFF3',
+              'DIVISI VII': '#8A2BE2'
+            };
+            return divisiColors[divisi] || '#888888';
+          }
+        
+          // Ambil data produksi dari IndexedDB
+          Promise.all([
+            getDataFromDB(STORES.PROD_ACTUAL),
+            getDataFromDB(STORES.PROD_BUDGET)
+          ]).then(([prodActualData, prodBudgetData]) => {
+            // Filter data untuk blok dan kebun yang dipilih
+            const normalizedDivisi = divisi.replace(' ', '_');
+            const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+            const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+        
+            // Hitung persentase ton/ha per bulan
+            const monthlyPercentages = [];
+            
+            // Buat objek untuk mengelompokkan data per bulan
+            const monthlyData = {};
+            
+            // Proses data aktual
+            filteredProdActual.forEach(item => {
+              const month = new Date(item.Bulan).getMonth(); // 0-11
+              if (!monthlyData[month]) monthlyData[month] = {};
+              monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+            });
+            
+            // Proses data budget
+            filteredProdBudget.forEach(item => {
+              const month = new Date(item.Bulan).getMonth(); // 0-11
+              if (!monthlyData[month]) monthlyData[month] = {};
+              monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+            });
+            
+            // Hitung persentase untuk setiap bulan yang memiliki data lengkap
+            Object.values(monthlyData).forEach(data => {
+              if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
+                const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
+                monthlyPercentages.push(percentage);
+              }
+            });
+            
+            // Hitung rata-rata persentase
+            let averagePercentage = 0;
+            if (monthlyPercentages.length > 0) {
+              averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
+            }
+        
+            // Tentukan warna berdasarkan rata-rata persentase
+            if (averagePercentage >= 95) {
+              return '#34A853'; // Hijau
+            } else if (averagePercentage >= 90) {
+              return '#FBBC05'; // Orange
+            } else if (averagePercentage >= 75) {
+              return '#EA4335'; // Merah
+            } else {
+              return '#000000'; // Hitam
+            }
+          }).catch(error => {
+            console.error('Error calculating block color:', error);
+            return '#888888'; // Warna default jika terjadi error
+          });
         }
         
         function loadDivisiOptions(kebun) {
