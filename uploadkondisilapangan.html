@@ -707,7 +707,7 @@
       statusEl.style.display = 'block';
     }
 
-    // Handle form submission
+    // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       
@@ -728,15 +728,14 @@
         const tahun = document.getElementById("tahun").value;
         const photoFiles = document.getElementById("photoFiles").files;
     
-        // Validasi input
+        // Validate inputs
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
         if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
         if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
     
-        // Convert photos to base64 for upload
+        // Convert photos to base64
         const photosData = [];
-        
         for (let i = 0; i < photoFiles.length; i++) {
           const file = photoFiles[i];
           const base64Data = await fileToBase64(file);
@@ -746,6 +745,7 @@
           });
         }
     
+        // Prepare payload
         const payload = {
           timestamp: new Date().toISOString(),
           kebun,
@@ -756,31 +756,26 @@
           photos: photosData
         };
     
-        // Submit the form data to Google Apps Script
-        const formData = new FormData();
-        formData.append('data', JSON.stringify(payload));
-        
-        const iframe = document.createElement('iframe');
-        iframe.name = 'hidden-iframe';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-        
-        const form = document.createElement('form');
-        form.target = 'hidden-iframe';
-        form.method = 'POST';
-        form.action = 'https://script.google.com/macros/s/AKfycbzXnDIRGFCBmiMEp4_b6xATkYtLjigcHsKL14EoGXgR0LCuHgYpICCWHz-wq1NNQ5zU/exec';
-        
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'data';
-        input.value = JSON.stringify(payload);
-        form.appendChild(input);
-        
-        document.body.appendChild(form);
-        form.submit();
-        
-        // Show success message
-        showStatus(`Data berhasil diupload! ${photoFiles.length} foto telah dikirim.`);
+        // Send to Google Apps Script
+        const response = await fetch('YOUR_WEB_APP_URL', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+    
+        const result = await response.json();
+    
+        if (result.status === 'success') {
+          showStatus(`Data berhasil diupload! ${result.photoCount} foto telah disimpan.`);
+          // Optional: Reset form
+          form.reset();
+          document.getElementById("selectedInfo").style.display = "none";
+          document.getElementById("fileList").innerHTML = '';
+        } else {
+          throw new Error(result.message);
+        }
         
       } catch (error) {
         console.error('Upload error:', error);
