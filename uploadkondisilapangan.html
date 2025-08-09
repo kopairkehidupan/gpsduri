@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Kondisi Lapangan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --success: #4caf50;
+      --error: #f44336;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding: 0 1rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      transition: var(--transition);
+      margin-bottom: 1.5rem;
+    }
+    
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    
+    label {
+      font-weight: 500;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    
+    select, input[type="text"], input[type="file"] {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--medium-gray);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      background-color: var(--white);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1rem;
+    }
+    
+    .file-input-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      border: 2px dashed var(--medium-gray);
+      border-radius: 8px;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .file-input-label:hover {
+      border-color: var(--primary);
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .file-input-label i {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    
+    .file-input-label span {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .file-list {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .file-item:last-child {
+      border-bottom: none;
+    }
+    
+    .btn {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.9rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    
+    .btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn:disabled {
+      background-color: var(--medium-gray);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--dark-gray);
+      font-size: 0.9rem;
+    }
+    
+    .spinner {
+      border: 2px solid rgba(66, 133, 244, 0.2);
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .status {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    
+    .error-input {
+      border-color: var(--error) !important;
+    }
+    
+    small {
+      font-size: 0.75rem;
+      color: var(--dark-gray);
+    }
+    
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Map container styles */
+    #map {
+      height: 500px;
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .map-container {
+      position: relative;
+    }
+
+    .selected-info {
+      background-color: var(--white);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .selected-info h3 {
+      margin-top: 0;
+      color: var(--primary);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-label {
+      font-weight: 500;
+      color: var(--dark-gray);
+    }
+
+    .info-value {
+      font-weight: 600;
+    }
+
+    /* Legend styles */
+    .legend {
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      line-height: 1.5;
+      z-index: 1000;
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+    }
+
+    .legend h4 {
+      margin: 0 0 5px;
+      font-size: 0.9rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+
+    .legend-color {
+      width: 18px;
+      height: 18px;
+      margin-right: 5px;
+      border: 1px solid #999;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0.8rem;
+      }
+      
+      .card {
+        padding: 1rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .subtitle {
+        font-size: 0.9rem;
+      }
+      
+      select, input[type="text"], input[type="file"] {
+        padding: 0.7rem 0.8rem;
+        font-size: 0.85rem;
+      }
+      
+      .file-input-label {
+        padding: 1rem 0.8rem;
+      }
+      
+      .file-input-label i {
+        font-size: 1.5rem;
+      }
+      
+      .file-input-label span {
+        font-size: 0.8rem;
+      }
+      
+      .btn {
+        padding: 0.8rem;
+        font-size: 0.9rem;
+      }
+      
+      .material-icons {
+        font-size: 18px;
+      }
+
+      #map {
+        height: 400px;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Upload Kondisi Lapangan</h1>
+      <p class="subtitle">Pilih lokasi blok dan unggah foto kondisi lapangan</p>
+    </div>
+    
+    <div class="card">
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="kebun">Kebun</label>
+          <select id="kebun" required>
+            <option value="">-- Pilih Kebun --</option>
+            <option value="SAMSAM">Samsam</option>
+            <option value="DURI">Duri</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="divisi">Divisi</label>
+          <select id="divisi" required disabled>
+            <option value="">-- Pilih Kebun terlebih dahulu --</option>
+          </select>
+        </div>
+
+        <div class="selected-info" id="selectedInfo">
+          <h3>Blok Terpilih</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Kode Tahun Tanam:</span>
+              <span class="info-value" id="infoKode">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Blok:</span>
+              <span class="info-value" id="infoBlok">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tahun Tanam:</span>
+              <span class="info-value" id="infoTahun">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Luas (Ha):</span>
+              <span class="info-value" id="infoLuas">-</span>
+            </div>
+          </div>
+          <input type="hidden" id="kode" name="kode">
+          <input type="hidden" id="blok" name="blok">
+          <input type="hidden" id="tahun" name="tahun">
+        </div>
+
+        <div class="map-container">
+          <div id="map"></div>
+          <div class="legend">
+            <h4>Keterangan:</h4>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #1f78b4;"></div>
+              <span>SAMSAM</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #33a02c;"></div>
+              <span>DURI</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Foto Kondisi Lapangan</label>
+          <div class="file-input-container">
+            <label class="file-input-label" for="photoFiles">
+              <i class="material-icons">photo_camera</i>
+              <span>Klik untuk memilih foto atau tarik file ke sini</span>
+              <small>Format yang didukung: .jpg, .jpeg, .png</small>
+            </label>
+            <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+          </div>
+          <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <button type="submit" class="btn">
+          <i class="material-icons">file_upload</i>
+          <span>Upload Data</span>
+        </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          <span>Mengunggah... Harap tunggu</span>
+        </div>
+        <div id="status" class="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Data divisi berdasarkan kebun
+    const divisiData = {
+      "SAMSAM": ["DIVISI I", "DIVISI II", "DIVISI III", "DIVISI IV", "DIVISI V", "DIVISI VI", "DIVISI VII"],
+      "DURI": ["DIVISI I TEGAR", "DIVISI II TEGAR", "DIVISI III CUCUT", "DIVISI III MEKARSARI", "DIVISI IV RANGAU", "DIVISI V RANGAU", "DIVISI VI RANGAU"]
+    };
+
+    // Inisialisasi dropdown divisi berdasarkan kebun yang dipilih
+    document.getElementById("kebun").addEventListener("change", function() {
+      const kebun = this.value;
+      const divisiSelect = document.getElementById("divisi");
+      
+      // Kosongkan dropdown divisi
+      divisiSelect.innerHTML = '';
+      
+      if (kebun) {
+        // Aktifkan dropdown divisi
+        divisiSelect.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Divisi --";
+        divisiSelect.appendChild(defaultOption);
+        
+        // Tambahkan opsi divisi berdasarkan kebun
+        divisiData[kebun].forEach(divisi => {
+          const option = document.createElement("option");
+          option.value = divisi;
+          option.textContent = divisi;
+          divisiSelect.appendChild(option);
+        });
+      } else {
+        // Nonaktifkan dropdown divisi jika kebun tidak dipilih
+        divisiSelect.disabled = true;
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kebun terlebih dahulu --";
+        divisiSelect.appendChild(defaultOption);
+      }
+    });
+
+    // Tampilkan daftar file yang dipilih
+    document.getElementById("photoFiles").addEventListener("change", function() {
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = '';
+      
+      if (this.files.length > 0) {
+        Array.from(this.files).forEach(file => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+          fileItem.innerHTML = `
+            <i class="material-icons">image</i>
+            <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          `;
+          fileList.appendChild(fileItem);
+        });
+      } else {
+        fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
+      }
+    });
+
+    // Inisialisasi peta Leaflet
+    const map = L.map('map').setView([1.0, 101.0], 12);
+
+    // Tambahkan tile layer (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Variabel untuk menyimpan data GeoJSON dan layer yang aktif
+    let geoJsonData;
+    let geoJsonLayer;
+    let selectedFeature = null;
+
+    // Warna untuk kebun yang berbeda
+    const kebunColors = {
+      "SAMSAM": "#1f78b4",
+      "DURI": "#33a02c"
+    };
+
+    // Fungsi untuk menampilkan popup informasi
+    function showFeatureInfo(feature, layer) {
+      if (feature.properties && feature.properties.kebun) {
+        const popupContent = `
+          <strong>Kebun:</strong> ${feature.properties.kebun}<br>
+          <strong>Divisi:</strong> ${feature.properties.divisi}<br>
+          <strong>Blok:</strong> ${feature.properties.blok}<br>
+          <strong>Kode:</strong> ${feature.properties.kode}<br>
+          <strong>Tahun Tanam:</strong> ${feature.properties.tahun}<br>
+          <strong>Luas:</strong> ${feature.properties.luas} Ha
+        `;
+        
+        layer.bindPopup(popupContent);
+      }
+    }
+
+    // Fungsi untuk menandai blok yang dipilih
+    function highlightFeature(e) {
+      const layer = e.target;
+
+      // Reset style sebelumnya jika ada yang dipilih
+      if (selectedFeature) {
+        geoJsonLayer.resetStyle(selectedFeature);
+      }
+
+      // Set style untuk layer yang dipilih
+      layer.setStyle({
+        weight: 3,
+        color: '#ff0000',
+        dashArray: '',
+        fillOpacity: 0.7
+      });
+
+      // Buka popup
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
+
+      // Simpan feature yang dipilih
+      selectedFeature = layer;
+      
+      // Tampilkan informasi blok yang dipilih
+      const props = layer.feature.properties;
+      document.getElementById("selectedInfo").style.display = "block";
+      document.getElementById("infoKode").textContent = props.kode;
+      document.getElementById("infoBlok").textContent = props.blok;
+      document.getElementById("infoTahun").textContent = props.tahun;
+      document.getElementById("infoLuas").textContent = props.luas;
+      
+      // Isi nilai form
+      document.getElementById("kode").value = props.kode;
+      document.getElementById("blok").value = props.blok;
+      document.getElementById("tahun").value = props.tahun;
+    }
+
+    // Fungsi untuk reset highlight
+    function resetHighlight(e) {
+      if (e.target !== selectedFeature) {
+        geoJsonLayer.resetStyle(e.target);
+      }
+    }
+
+    // Fungsi untuk zoom ke blok yang dipilih
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // Fungsi untuk menambahkan event listeners ke setiap feature
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: highlightFeature,
+        mouseout: resetHighlight,
+        click: zoomToFeature
+      });
+      
+      showFeatureInfo(feature, layer);
+    }
+
+    // Fungsi untuk menentukan style berdasarkan kebun
+    function styleByKebun(feature) {
+      return {
+        fillColor: kebunColors[feature.properties.kebun] || "#cccccc",
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+      };
+    }
+
+    // Load GeoJSON data
+    fetch('koordinatkebundivisiblok.geojson')
+      .then(response => response.json())
+      .then(data => {
+        geoJsonData = data;
+        
+        // Tambahkan GeoJSON ke peta
+        geoJsonLayer = L.geoJSON(data, {
+          style: styleByKebun,
+          onEachFeature: onEachFeature
+        }).addTo(map);
+        
+        // Fit bounds ke seluruh data
+        map.fitBounds(geoJsonLayer.getBounds());
+      })
+      .catch(error => {
+        console.error('Error loading GeoJSON:', error);
+      });
+
+    // Helper function untuk menampilkan status
+    function showStatus(message, isError = false) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'status error' : 'status success';
+      statusEl.style.display = 'block';
+    }
+
+    // Handle form submission
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const loading = document.getElementById("loading");
+      const statusEl = document.getElementById("status");
+      
+      try {
+        submitBtn.disabled = true;
+        loading.style.display = 'flex';
+        statusEl.style.display = 'none';
+        
+        const kebun = document.getElementById("kebun").value;
+        const divisi = document.getElementById("divisi").value;
+        const kode = document.getElementById("kode").value;
+        const blok = document.getElementById("blok").value;
+        const tahun = document.getElementById("tahun").value;
+        const photoFiles = document.getElementById("photoFiles").files;
+    
+        // Validasi input
+        if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
+        if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
+        if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
+        if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
+    
+        // Convert photos to base64 for upload
+        const photosData = [];
+        
+        for (let i = 0; i < photoFiles.length; i++) {
+          const file = photoFiles[i];
+          const base64Data = await fileToBase64(file);
+          photosData.push({
+            name: file.name,
+            data: base64Data
+          });
+        }
+    
+        const payload = {
+          timestamp: new Date().toISOString(),
+          kebun,
+          divisi,
+          kode,
+          blok,
+          tahun,
+          photos: photosData
+        };
+    
+        // Submit the form data to Google Apps Script
+        const formData = new FormData();
+        formData.append('data', JSON.stringify(payload));
+        
+        const iframe = document.createElement('iframe');
+        iframe.name = 'hidden-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        
+        const form = document.createElement('form');
+        form.target = 'hidden-iframe';
+        form.method = 'POST';
+        form.action = 'https://script.google.com/macros/s/AKfycbyEEr70Qbi_ETP3AAlavRQXb2ZTcU5IGcKP8grLHDERQCEI364Jw1gTI9yESuP-zjwH0A/exec';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(payload);
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+        
+        // Show success message
+        showStatus(`Data berhasil diupload! ${photoFiles.length} foto telah dikirim.`);
+        
+      } catch (error) {
+        console.error('Upload error:', error);
+        showStatus('Error: ' + error.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
+      }
+    });
+
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>
