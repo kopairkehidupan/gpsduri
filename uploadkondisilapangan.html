@@ -551,6 +551,35 @@
       }
     });
 
+    document.getElementById("divisi").addEventListener("change", function() {
+      const divisi = this.value;
+      if (divisi && geoJsonLayer) {
+        filterBlokByDivisi(divisi);
+      }
+    });
+
+    function filterBlokByDivisi(divisi) {
+      // Reset semua layer ke style default
+      geoJsonLayer.resetStyle();
+      
+      // Sembunyikan semua blok terlebih dahulu
+      geoJsonLayer.eachLayer(function(layer) {
+        map.removeLayer(layer);
+      });
+      
+      // Tampilkan hanya blok dari divisi yang dipilih
+      geoJsonLayer.eachLayer(function(layer) {
+        if (layer.feature.properties.divisi === divisi) {
+          layer.addTo(map);
+          layer.setStyle(styleByKebun(layer.feature));
+        }
+      });
+      
+      // Reset selected feature
+      selectedFeature = null;
+      document.getElementById("selectedInfo").style.display = "none";
+    }
+
     // Tampilkan daftar file yang dipilih
     document.getElementById("photoFiles").addEventListener("change", function() {
       const fileList = document.getElementById("fileList");
@@ -666,6 +695,9 @@
       });
       
       showFeatureInfo(feature, layer);
+      
+      // Sembunyikan layer awalnya
+      map.removeLayer(layer);
     }
 
     // Fungsi untuk menentukan style berdasarkan kebun
@@ -705,6 +737,13 @@
       statusEl.textContent = message;
       statusEl.className = isError ? 'status error' : 'status success';
       statusEl.style.display = 'block';
+    }
+
+    function showAllBloks() {
+      geoJsonLayer.eachLayer(function(layer) {
+        layer.addTo(map);
+        layer.setStyle(styleByKebun(layer.feature));
+      });
     }
 
     // Update the form submission handler
