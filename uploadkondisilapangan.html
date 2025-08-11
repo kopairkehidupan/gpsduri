@@ -755,9 +755,6 @@
           tahun,
           photos: photosData
         };
-    
-        // Try multiple submission methods
-        let submissionSuccess = false;
         
         // Method 1: Standard fetch with error handling
         try {
@@ -781,12 +778,10 @@
           } else {
             throw new Error(result.message || 'Unknown error');
           }
-      } catch (error) {
-        console.error('Upload error:', error);
-        showStatus('Error: ' + error.message, true);
-      } finally {
-        submitBtn.disabled = false;
-        loading.style.display = 'none';
+        } catch (error) {
+          console.error('Upload error:', error);
+          showStatus('Error: ' + error.message, true);
+        } 
       }
     });
     
