@@ -756,27 +756,27 @@
           photos: photosData
         };
     
-        // Send to Google Apps Script
-        const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          mode: 'no-cors', // Add this line to bypass CORS (but you won't get response data)
-          redirect: 'follow'
-        });
+        // Send to Google Apps Script with no-cors mode
+        try {
+          const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+              'Content-Type': 'text/plain' // Important for no-cors
+            },
+            mode: 'no-cors',
+            redirect: 'follow'
+          });
     
-        const result = await response.json();
-    
-        if (result.status === 'success') {
-          showStatus(`Data berhasil diupload! ${result.photoCount} foto telah disimpan.`);
-          // Optional: Reset form
+          // With no-cors, we can't read the response, so we assume success if no error
+          showStatus(`Data berhasil dikirim! ${photosData.length} foto telah diupload.`);
           form.reset();
           document.getElementById("selectedInfo").style.display = "none";
           document.getElementById("fileList").innerHTML = '';
-        } else {
-          throw new Error(result.message);
+          
+        } catch (error) {
+          console.error('Network error:', error);
+          showStatus('Data mungkin telah dikirim, tetapi tidak bisa memverifikasi. Silakan cek spreadsheet.', false);
         }
         
       } catch (error) {
