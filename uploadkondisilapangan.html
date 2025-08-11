@@ -578,6 +578,20 @@
       // Reset selected feature
       selectedFeature = null;
       document.getElementById("selectedInfo").style.display = "none";
+      
+      // Sesuaikan view peta berdasarkan blok yang ditampilkan
+      const visibleBounds = getVisibleLayersBounds();
+      if (!visibleBounds.isValid()) {
+        // Jika tidak ada blok yang ditampilkan, kembalikan ke view awal
+        map.fitBounds(geoJsonLayer.getBounds());
+      } else {
+        // Jika ada blok yang ditampilkan, zoom ke area blok tersebut
+        map.flyToBounds(visibleBounds, {
+          padding: [50, 50],
+          maxZoom: 16,
+          duration: 1 // Durasi animasi dalam detik
+        });
+      }
     }
 
     // Tampilkan daftar file yang dipilih
@@ -744,6 +758,18 @@
         layer.addTo(map);
         layer.setStyle(styleByKebun(layer.feature));
       });
+    }
+
+    function getVisibleLayersBounds() {
+      let bounds = new L.LatLngBounds();
+      
+      geoJsonLayer.eachLayer(function(layer) {
+        if (map.hasLayer(layer)) {
+          bounds.extend(layer.getBounds());
+        }
+      });
+      
+      return bounds;
     }
 
     // Update the form submission handler
