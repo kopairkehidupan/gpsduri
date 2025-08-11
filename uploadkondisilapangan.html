@@ -558,13 +558,17 @@
       }
     });
 
+    // Modifikasi fungsi filterBlokByDivisi untuk mengelola label:
     function filterBlokByDivisi(divisi) {
       // Reset semua layer ke style default
       geoJsonLayer.resetStyle();
       
-      // Sembunyikan semua blok terlebih dahulu
+      // Sembunyikan semua blok dan label terlebih dahulu
       geoJsonLayer.eachLayer(function(layer) {
         map.removeLayer(layer);
+        if (layer.label) {
+          map.removeLayer(layer.label);
+        }
       });
       
       // Tampilkan hanya blok dari divisi yang dipilih
@@ -572,6 +576,13 @@
         if (layer.feature.properties.divisi === divisi) {
           layer.addTo(map);
           layer.setStyle(styleByKebun(layer.feature));
+          
+          // Tambahkan label jika belum ada
+          if (!layer.label) {
+            addBlokLabels(layer.feature, layer);
+          } else {
+            layer.label.addTo(map);
+          }
         }
       });
       
@@ -579,20 +590,37 @@
       selectedFeature = null;
       document.getElementById("selectedInfo").style.display = "none";
       
-      // Sesuaikan view peta berdasarkan blok yang ditampilkan
+      // Sesuaikan view peta
       const visibleBounds = getVisibleLayersBounds();
       if (!visibleBounds.isValid()) {
-        // Jika tidak ada blok yang ditampilkan, kembalikan ke view awal
         map.fitBounds(geoJsonLayer.getBounds());
       } else {
-        // Jika ada blok yang ditampilkan, zoom ke area blok tersebut
         map.flyToBounds(visibleBounds, {
           padding: [50, 50],
           maxZoom: 16,
-          duration: 1 // Durasi animasi dalam detik
+          duration: 1
         });
       }
     }
+    
+    // Tambahkan CSS untuk label blok:
+    const style = document.createElement('style');
+    style.textContent = `
+      .blok-label {
+        text-align: center;
+        pointer-events: none; /* Agar tidak mengganggu interaksi polygon */
+      }
+      .blok-label div {
+        background-color: rgba(255, 255, 255, 0.7);
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-weight: bold;
+        font-size: 12px;
+        text-shadow: 0 0 3px white;
+        white-space: nowrap;
+      }
+    `;
+    document.head.appendChild(style);
 
     // Tampilkan daftar file yang dipilih
     document.getElementById("photoFiles").addEventListener("change", function() {
@@ -701,6 +729,7 @@
     }
 
     // Fungsi untuk menambahkan event listeners ke setiap feature
+    // Modifikasi fungsi onEachFeature:
     function onEachFeature(feature, layer) {
       layer.on({
         mouseover: highlightFeature,
@@ -708,10 +737,8 @@
         click: zoomToFeature
       });
       
-      showFeatureInfo(feature, layer);
-      
-      // Sembunyikan layer awalnya
-      map.removeLayer(layer);
+      addBlokLabels(feature, layer); // Ganti showFeatureInfo dengan addBlokLabels
+      map.removeLayer(layer); // Sembunyikan layer awalnya
     }
 
     // Fungsi untuk menentukan style berdasarkan kebun
@@ -770,6 +797,25 @@
       });
       
       return bounds;
+    }
+
+    // Hapus fungsi showFeatureInfo dan ganti dengan fungsi berikut:
+    function addBlokLabels(feature, layer) {
+      // Buat label untuk blok
+      if (feature.properties && feature.properties.blok) {
+        const center = layer.getBounds().getCenter();
+        const label = L.marker(center, {
+          icon: L.divIcon({
+            className: 'blok-label',
+            html: `<div>${feature.properties.blok}</div>`,
+            iconSize: null // Ukuran akan diatur oleh CSS
+          }),
+          zIndexOffset: 1000 // Pastikan label di atas polygon
+        });
+        
+        layer.label = label; // Simpan referensi label di layer
+        label.addTo(map);
+      }
     }
 
     // Update the form submission handler
