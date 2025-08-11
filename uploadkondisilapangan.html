@@ -767,21 +767,24 @@
             mode: 'no-cors'
           });
           
-          if (!response.ok) throw new Error('Network response was not ok');
-  
-          const result = await response.json();
-          if (result.status === 'success') {
-            showStatus(`Data berhasil diupload! ${result.photoCount} foto telah disimpan.`);
-            form.reset();
-            document.getElementById("selectedInfo").style.display = "none";
-            document.getElementById("fileList").innerHTML = '';
-          } else {
-            throw new Error(result.message || 'Unknown error');
-          }
+          // Note: With mode: 'no-cors', you won't be able to read the response
+          // So we'll assume success if the request completes
+          showStatus('Data berhasil diupload! Silakan verifikasi di spreadsheet.');
+          form.reset();
+          document.getElementById("selectedInfo").style.display = "none";
+          document.getElementById("fileList").innerHTML = '';
+          
         } catch (error) {
           console.error('Upload error:', error);
           showStatus('Error: ' + error.message, true);
-        } 
+        }
+        
+      } catch (error) {
+        console.error('Validation error:', error);
+        showStatus('Error: ' + error.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
       }
     });
     
