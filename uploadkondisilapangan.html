@@ -762,9 +762,12 @@
           body: JSON.stringify(payload),
           headers: {
             'Content-Type': 'application/json'
-          },
-          mode: 'no-cors' // Add this line to bypass CORS (but you won't get response data)
+          }
         });
+    
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
     
         const result = await response.json();
     
@@ -775,7 +778,7 @@
           document.getElementById("selectedInfo").style.display = "none";
           document.getElementById("fileList").innerHTML = '';
         } else {
-          throw new Error(result.message);
+          throw new Error(result.message || 'Unknown error occurred');
         }
         
       } catch (error) {
