@@ -768,7 +768,7 @@
               'Content-Type': 'application/json'
             },
             // Add this mode to handle CORS
-            //mode: 'no-cors' // This is a fallback, but won't let you read the response
+            mode: 'no-cors' // This is a fallback, but won't let you read the response
           });
           
           if (response.ok) {
@@ -783,57 +783,6 @@
           }
         } catch (error) {
           console.log('Standard fetch failed, trying alternative methods');
-        }
-        
-        // Method 2: FormData approach if first method failed
-        if (!submissionSuccess) {
-          try {
-            const formData = new FormData();
-            formData.append('data', JSON.stringify(payload));
-            
-            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-              method: 'POST',
-              body: formData
-            });
-            
-            if (response.ok) {
-              submissionSuccess = true;
-              showStatus(`Data berhasil dikirim (metode alternatif). Silakan verifikasi.`);
-              form.reset();
-              document.getElementById("selectedInfo").style.display = "none";
-              document.getElementById("fileList").innerHTML = '';
-            }
-          } catch (error) {
-            console.log('FormData method failed');
-          }
-        }
-        
-        // Method 3: JSONP fallback if both methods failed
-        if (!submissionSuccess) {
-          try {
-            await jsonpFallback(payload);
-            submissionSuccess = true;
-          } catch (error) {
-            console.log('JSONP fallback failed');
-          }
-        }
-        
-        // Method 4: Final fallback - traditional form submission
-        if (!submissionSuccess) {
-          try {
-            traditionalFormSubmit(payload);
-            submissionSuccess = true;
-            showStatus('Data sedang diproses. Silakan verifikasi nanti.');
-            form.reset();
-            document.getElementById("selectedInfo").style.display = "none";
-            document.getElementById("fileList").innerHTML = '';
-          } catch (error) {
-            console.log('Traditional form submit failed');
-          }
-        }
-        
-        if (!submissionSuccess) {
-          throw new Error('Gagal mengirim data setelah mencoba semua metode');
         }
         
       } catch (error) {
