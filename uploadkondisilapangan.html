@@ -766,7 +766,7 @@
           const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
             method: 'POST',
             body: formData,
-            mode: 'cors' // Ubah ke cors untuk bisa menangkap error
+            mode: 'no-cors' // Ubah ke cors untuk bisa menangkap error
           });
           
           // Jika response tidak OK, lempar error
