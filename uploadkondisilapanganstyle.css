@@ -229,4 +229,10 @@
   .info-value {
     font-weight: 500;
   }
+
+  .blok-label div {
+    font-size: 2vw; /* Ukuran relatif terhadap lebar viewport */
+    padding: 0.2vw 0.6vw;
+    text-shadow: 0 0 0.5vw white;
+  }
 }
