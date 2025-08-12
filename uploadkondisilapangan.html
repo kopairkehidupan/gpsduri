@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="uploadkondisilapanganstyle.css" />
   <style>
     :root {
       --primary: #4285f4;
@@ -643,11 +644,42 @@
     });
 
     // Inisialisasi peta Leaflet
-    const map = L.map('map').setView([1.0, 101.0], 12);
+    
+    // Definisikan base layers
+    const baseLayers = {
+      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }),
+      "Satelit (Google)": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: 'Imagery © <a href="https://www.google.com/maps">Google Maps</a>',
+        maxZoom: 20
+      }),
+      "Topografi (OpenTopoMap)": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+        maxZoom: 17
+      }),
+      "Terrain (Stamen)": L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
+        attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        subdomains: 'abcd',
+        maxZoom: 18
+      })
 
-    // Tambahkan tile layer (OpenStreetMap)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      "Satelit (Google)": L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: 'Imagery © <a href="https://www.google.com/maps">Google Maps</a>',
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }),
+    };
+    
+    // Inisialisasi peta Leaflet dengan layer default OpenStreetMap
+    const map = L.map('map', {
+      layers: [baseLayers["OpenStreetMap"]] // Set layer default
+    }).setView([1.0, 101.0], 12);
+    
+    // Tambahkan kontrol layer ke peta
+    L.control.layers(baseLayers, null, {
+      position: 'topright', // Posisi kontrol di pojok kanan atas
+      collapsed: false // Tampilkan dalam keadaan terbuka
     }).addTo(map);
 
     // Variabel untuk menyimpan data GeoJSON dan layer yang aktif
@@ -660,22 +692,6 @@
       "SAMSAM": "#1f78b4",
       "DURI": "#33a02c"
     };
-
-    // Fungsi untuk menampilkan popup informasi
-    function showFeatureInfo(feature, layer) {
-      if (feature.properties && feature.properties.kebun) {
-        const popupContent = `
-          <strong>Kebun:</strong> ${feature.properties.kebun}<br>
-          <strong>Divisi:</strong> ${feature.properties.divisi}<br>
-          <strong>Blok:</strong> ${feature.properties.blok}<br>
-          <strong>Kode:</strong> ${feature.properties.kode}<br>
-          <strong>Tahun Tanam:</strong> ${feature.properties.tahun}<br>
-          <strong>Luas:</strong> ${feature.properties.luas} Ha
-        `;
-        
-        layer.bindPopup(popupContent);
-      }
-    }
 
     // Fungsi untuk menandai blok yang dipilih
     function highlightFeature(e) {
