@@ -70,6 +70,56 @@
 
 /* Untuk versi mobile */
 @media (max-width: 600px) {
+  .container {
+    padding: 0.8rem;
+  }
+  
+  .card {
+    padding: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  select, input[type="text"], input[type="file"] {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .file-input-label {
+    padding: 1rem 0.8rem;
+  }
+  
+  .file-input-label i {
+    font-size: 1.5rem;
+  }
+  
+  .file-input-label span {
+    font-size: 0.8rem;
+  }
+  
+  .btn {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .material-icons {
+    font-size: 18px;
+  }
+
+  #map {
+    height: 400px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .leaflet-control-layers {
     margin-bottom: 15px;
     margin-left: 5px;
