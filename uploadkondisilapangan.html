@@ -715,7 +715,41 @@
     const capturePhotoBtn = document.getElementById('capturePhoto');
     const fileList = document.getElementById('fileList');
     
-    // Mulai kamera belakang
+    // Fallback untuk desktop (tidak ada kamera)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const fileInputContainer = document.querySelector('.file-input-container');
+      fileInputContainer.innerHTML = `
+        <label class="file-input-label" for="photoFiles">
+          <i class="material-icons">photo_camera</i>
+          <span>Klik untuk memilih foto</span>
+          <small>Format yang didukung: .jpg, .jpeg, .png</small>
+        </label>
+        <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+      `;
+      
+      // Tambahkan event listener untuk input file fallback
+      document.getElementById("photoFiles").addEventListener("change", function() {
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = '';
+        
+        if (this.files.length > 0) {
+          Array.from(this.files).forEach(file => {
+            const fileItem = document.createElement("div");
+            fileItem.className = "file-item";
+            fileItem.innerHTML = `
+              <i class="material-icons">image</i>
+              <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+            `;
+            fileList.appendChild(fileItem);
+          });
+        } else {
+          fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
+        }
+      });
+    } else {
+    // Kode untuk kamera mobile
+    startCameraBtn.style.display = 'block';
+      
     startCameraBtn.addEventListener('click', async () => {
       try {
         // Hentikan kamera jika sudah aktif
@@ -791,7 +825,7 @@
         });
       });
     }
-
+    }
 
     // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
