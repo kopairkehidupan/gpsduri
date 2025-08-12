@@ -840,13 +840,17 @@
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
         if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
     
-        // Ganti photoFiles dengan capturedPhotos
-        if (capturedPhotos.length === 0) throw new Error('Ambil setidaknya satu foto');
-      
+        // Gunakan capturedPhotos jika ada, jika tidak gunakan photoFiles
+        const photosToUpload = capturedPhotos.length > 0 ? capturedPhotos : Array.from(photoFiles.files);
+        
+        if (photosToUpload.length === 0) {
+          throw new Error('Ambil atau pilih setidaknya satu foto');
+        }
+        
         // Convert photos to base64
         const photosData = [];
-        for (let i = 0; i < capturedPhotos.length; i++) {
-          const file = capturedPhotos[i];
+        for (let i = 0; i < photosToUpload.length; i++) {
+          const file = photosToUpload[i];
           const base64Data = await fileToBase64(file);
           photosData.push({
             name: file.name,
