@@ -367,18 +367,10 @@
         
         <div class="form-group">
           <label>Foto Kondisi Lapangan</label>
-          <div class="file-input-container">
-            <button id="startCamera" class="btn" type="button">
-              <i class="material-icons">photo_camera</i>
-              <span>Buka Kamera Belakang</span>
-            </button>
-            <video id="cameraPreview" autoplay playsinline style="display:none; width:100%; border-radius:8px;"></video>
-            <canvas id="photoCanvas" style="display:none;"></canvas>
-            <button id="capturePhoto" class="btn" type="button" style="display:none; margin-top:10px;">
-              <i class="material-icons">camera</i>
-              <span>Ambil Foto</span>
-            </button>
-          </div>
+          <button id="openCamera" class="btn" type="button">
+            <i class="material-icons">photo_camera</i>
+            <span>Ambil Foto</span>
+          </button>
           <div class="file-list" id="fileList"></div>
         </div>
         
@@ -392,6 +384,21 @@
         </div>
         <div id="status" class="status"></div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal untuk Kamera -->
+  <div id="cameraModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div class="camera-container">
+        <video id="cameraPreview" autoplay playsinline style="width:100%; border-radius:8px;"></video>
+        <canvas id="photoCanvas" style="display:none;"></canvas>
+        <button id="capturePhoto" class="btn" style="margin-top:10px;">
+          <i class="material-icons">camera</i>
+          <span>Ambil Foto</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -714,17 +721,73 @@
     const photoCanvas = document.getElementById('photoCanvas');
     const capturePhotoBtn = document.getElementById('capturePhoto');
     const fileList = document.getElementById('fileList');
+
+    // Variabel modal
+    const cameraModal = document.getElementById("cameraModal");
+    const openCameraBtn = document.getElementById("openCamera");
+    const closeModalBtn = document.querySelector(".close-modal");
+    
+    // Buka modal kamera
+    openCameraBtn.addEventListener('click', () => {
+      cameraModal.style.display = "block";
+      startCamera();
+    });
+    
+    // Tutup modal
+    closeModalBtn.addEventListener('click', () => {
+      stopCamera();
+      cameraModal.style.display = "none";
+    });
+    
+    // Fungsi untuk memulai kamera
+    async function startCamera() {
+      try {
+        // Hentikan kamera jika sudah aktif
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+        }
+    
+        // Akses kamera belakang
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+    
+        // Tampilkan preview kamera
+        cameraPreview.srcObject = cameraStream;
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Tidak dapat mengakses kamera: ' + error.message);
+        cameraModal.style.display = "none";
+      }
+    }
+    
+    // Fungsi untuk menghentikan kamera
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+    }
     
     // Fallback untuk desktop (tidak ada kamera)
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const fileInputContainer = document.querySelector('.file-input-container');
-      fileInputContainer.innerHTML = `
-        <label class="file-input-label" for="photoFiles">
-          <i class="material-icons">photo_camera</i>
-          <span>Klik untuk memilih foto</span>
-          <small>Format yang didukung: .jpg, .jpeg, .png</small>
-        </label>
-        <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+      const formGroup = document.querySelector('.form-group:has(#openCamera)');
+      formGroup.innerHTML = `
+        <label>Foto Kondisi Lapangan</label>
+        <div class="file-input-container">
+          <label class="file-input-label" for="photoFiles">
+            <i class="material-icons">photo_camera</i>
+            <span>Klik untuk memilih foto</span>
+            <small>Format yang didukung: .jpg, .jpeg, .png</small>
+          </label>
+          <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+        </div>
+        <div class="file-list" id="fileList"></div>
       `;
       
       // Tambahkan event listener untuk input file fallback
@@ -747,37 +810,9 @@
         }
       });
     } else {
-    // Kode untuk kamera mobile
-    startCameraBtn.style.display = 'block';
-      
-    startCameraBtn.addEventListener('click', async () => {
-      try {
-        // Hentikan kamera jika sudah aktif
-        if (cameraStream) {
-          cameraStream.getTracks().forEach(track => track.stop());
-        }
-    
-        // Akses kamera belakang (facingMode: 'environment')
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment', // Kamera belakang
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-    
-        // Tampilkan preview kamera
-        cameraPreview.srcObject = cameraStream;
-        cameraPreview.style.display = 'block';
-        startCameraBtn.style.display = 'none';
-        capturePhotoBtn.style.display = 'block';
-    
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        alert('Tidak dapat mengakses kamera belakang: ' + error.message);
-      }
-    });
+      // Kode untuk kamera mobile
+      openCameraBtn.style.display = 'block';
+    }
     
     // Ambil foto dari kamera
     capturePhotoBtn.addEventListener('click', () => {
@@ -797,6 +832,10 @@
         // Simpan foto
         capturedPhotos.push(file);
         updateFileList();
+        
+        // Tutup modal setelah mengambil foto
+        stopCamera();
+        cameraModal.style.display = "none";
       }, 'image/jpeg', 0.9);
     });
     
@@ -824,7 +863,6 @@
           updateFileList();
         });
       });
-    }
     }
 
     // Update the form submission handler
