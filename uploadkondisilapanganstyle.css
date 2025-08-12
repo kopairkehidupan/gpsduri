@@ -44,8 +44,28 @@
 }
 
 .legend {
-  /* Pindahkan legend ke kanan bawah */
-  right: 10px;
-  left: auto; /* Hapus left jika ada */
-  top: 30px;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+  line-height: 1.5;
+  z-index: 1000;
+  position: absolute;
+  top: 10px;       /* Posisi dari atas */
+  right: 10px;     /* Posisi dari kanan */
+  bottom: auto;    /* Pastikan bottom tidak aktif */
+  left: auto;      /* Pastikan left tidak aktif */
+}
+
+.legend h4 {
+  margin: 0 0 5px;
+  font-size: 0.9rem;
+  color: #333; /* Warna teks */
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+  font-size: 0.8rem; /* Ukuran font lebih kecil */
 }
