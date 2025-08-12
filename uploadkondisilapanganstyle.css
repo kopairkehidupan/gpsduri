@@ -1,4 +1,4 @@
-/* Tambahkan di bagian CSS Anda */
+/* Tambahkan di bagian CSS Anda *//* Tambahkan di bagian CSS Anda */
 .leaflet-control-layers {
   margin-bottom: 30px; /* Memberi jarak dari bagian bawah peta */
   margin-left: 10px; /* Memberi jarak dari bagian kiri peta */
@@ -34,15 +34,6 @@
   border-color: var(--medium-gray) !important;
 }
 
-/* Untuk versi mobile */
-@media (max-width: 600px) {
-  .leaflet-control-layers {
-    margin-bottom: 20px;
-    margin-left: 5px;
-    font-size: 0.8rem;
-  }
-}
-
 .legend {
   background: white;
   padding: 0.5rem 1rem;
@@ -51,21 +42,75 @@
   line-height: 1.5;
   z-index: 1000;
   position: absolute;
-  top: 10px;       /* Posisi dari atas */
-  right: 10px;     /* Posisi dari kanan */
-  bottom: auto;    /* Pastikan bottom tidak aktif */
-  left: auto;      /* Pastikan left tidak aktif */
+  top: 10px;
+  right: 10px;
+  bottom: auto;
+  left: auto;
 }
 
 .legend h4 {
   margin: 0 0 5px;
   font-size: 0.9rem;
-  color: #333; /* Warna teks */
+  color: #333;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   margin-bottom: 2px;
-  font-size: 0.8rem; /* Ukuran font lebih kecil */
+  font-size: 0.8rem;
+}
+
+.legend-color {
+  width: 18px;
+  height: 18px;
+  margin-right: 5px;
+  border: 1px solid #999;
+}
+
+/* Untuk versi mobile */
+@media (max-width: 600px) {
+  .leaflet-control-layers {
+    margin-bottom: 15px;
+    margin-left: 5px;
+    font-size: 0.7rem;
+  }
+  
+  .leaflet-control-layers-toggle {
+    width: 28px !important;
+    height: 28px !important;
+    background-size: 16px !important;
+  }
+  
+  .leaflet-control-layers-expanded {
+    padding: 0.5rem !important;
+    width: 150px !important;
+  }
+  
+  .leaflet-control-layers label {
+    font-size: 0.7rem !important;
+    gap: 0.3rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+  
+  .legend {
+    padding: 0.3rem 0.6rem;
+    max-width: 120px;
+  }
+  
+  .legend h4 {
+    font-size: 0.7rem;
+    margin-bottom: 3px;
+  }
+  
+  .legend-item {
+    font-size: 0.6rem;
+    margin-bottom: 1px;
+  }
+  
+  .legend-color {
+    width: 14px;
+    height: 14px;
+    margin-right: 3px;
+  }
 }
