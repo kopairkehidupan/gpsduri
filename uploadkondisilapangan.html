@@ -368,12 +368,16 @@
         <div class="form-group">
           <label>Foto Kondisi Lapangan</label>
           <div class="file-input-container">
-            <label class="file-input-label" for="photoFiles">
+            <button id="startCamera" class="btn" type="button">
               <i class="material-icons">photo_camera</i>
-              <span>Klik untuk memilih foto atau tarik file ke sini</span>
-              <small>Format yang didukung: .jpg, .jpeg, .png</small>
-            </label>
-            <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+              <span>Buka Kamera Belakang</span>
+            </button>
+            <video id="cameraPreview" autoplay playsinline style="display:none; width:100%; border-radius:8px;"></video>
+            <canvas id="photoCanvas" style="display:none;"></canvas>
+            <button id="capturePhoto" class="btn" type="button" style="display:none; margin-top:10px;">
+              <i class="material-icons">camera</i>
+              <span>Ambil Foto</span>
+            </button>
           </div>
           <div class="file-list" id="fileList"></div>
         </div>
@@ -720,6 +724,95 @@
       }
     }
 
+    // Variabel untuk menyimpan stream kamera dan foto yang diambil
+    let cameraStream = null;
+    const capturedPhotos = [];
+    
+    // Elemen DOM
+    const startCameraBtn = document.getElementById('startCamera');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const capturePhotoBtn = document.getElementById('capturePhoto');
+    const fileList = document.getElementById('fileList');
+    
+    // Mulai kamera belakang
+    startCameraBtn.addEventListener('click', async () => {
+      try {
+        // Hentikan kamera jika sudah aktif
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+        }
+    
+        // Akses kamera belakang (facingMode: 'environment')
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment', // Kamera belakang
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+    
+        // Tampilkan preview kamera
+        cameraPreview.srcObject = cameraStream;
+        cameraPreview.style.display = 'block';
+        startCameraBtn.style.display = 'none';
+        capturePhotoBtn.style.display = 'block';
+    
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Tidak dapat mengakses kamera belakang: ' + error.message);
+      }
+    });
+    
+    // Ambil foto dari kamera
+    capturePhotoBtn.addEventListener('click', () => {
+      if (!cameraStream) return;
+    
+      // Siapkan canvas untuk menangkap gambar
+      const context = photoCanvas.getContext('2d');
+      photoCanvas.width = cameraPreview.videoWidth;
+      photoCanvas.height = cameraPreview.videoHeight;
+      context.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+    
+      // Konversi canvas ke blob
+      photoCanvas.toBlob(blob => {
+        const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        
+        // Simpan foto
+        capturedPhotos.push(file);
+        updateFileList();
+      }, 'image/jpeg', 0.9);
+    });
+    
+    // Update tampilan daftar file
+    function updateFileList() {
+      fileList.innerHTML = '';
+      capturedPhotos.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+          <i class="material-icons">image</i>
+          <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red;">
+            <i class="material-icons">delete</i>
+          </button>
+        `;
+        fileList.appendChild(fileItem);
+      });
+    
+      // Tambahkan event listener untuk tombol hapus
+      document.querySelectorAll('.delete-photo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.target.closest('button').dataset.index);
+          capturedPhotos.splice(index, 1);
+          updateFileList();
+        });
+      });
+    }
+
+
     // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -747,10 +840,13 @@
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
         if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
     
+        // Ganti photoFiles dengan capturedPhotos
+        if (capturedPhotos.length === 0) throw new Error('Ambil setidaknya satu foto');
+      
         // Convert photos to base64
         const photosData = [];
-        for (let i = 0; i < photoFiles.length; i++) {
-          const file = photoFiles[i];
+        for (let i = 0; i < capturedPhotos.length; i++) {
+          const file = capturedPhotos[i];
           const base64Data = await fileToBase64(file);
           photosData.push({
             name: file.name,
