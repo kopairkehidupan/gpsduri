@@ -647,21 +647,16 @@
     
     // Definisikan base layers
     const baseLayers = {
-      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'KPAK Smart System'
-      }),
-      "Satelit (Google)": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      "Satelite": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         attribution: 'KPAK Smart System',
         maxZoom: 20
       }),
-      "Topografi (OpenTopoMap)": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'KPAK Smart System'
+      }),
+      "Topografi": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         attribution: 'KPAK Smart System',
         maxZoom: 17
-      }),
-      "Terrain (Stamen)": L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
-        attribution: 'KPAK Smart System',
-        subdomains: 'abcd',
-        maxZoom: 18
       })
     };
     
@@ -672,7 +667,7 @@
     
     // Tambahkan kontrol layer ke peta
     L.control.layers(baseLayers, null, {
-      position: 'topright', // Posisi kontrol di pojok kanan atas
+      position: 'bottomleft', // Posisi kontrol di pojok kanan atas
       collapsed: false // Tampilkan dalam keadaan terbuka
     }).addTo(map);
 
