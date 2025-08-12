@@ -1,5 +1,7 @@
 /* Tambahkan di bagian CSS Anda */
 .leaflet-control-layers {
+  margin-bottom: 30px; /* Memberi jarak dari bagian bawah peta */
+  margin-left: 10px; /* Memberi jarak dari bagian kiri peta */
   border-radius: 8px;
   box-shadow: var(--shadow) !important;
   background: var(--white) !important;
@@ -30,4 +32,20 @@
 .leaflet-control-layers-separator {
   margin: 0.5rem 0 !important;
   border-color: var(--medium-gray) !important;
+}
+
+/* Untuk versi mobile */
+@media (max-width: 600px) {
+  .leaflet-control-layers {
+    margin-bottom: 20px;
+    margin-left: 5px;
+    font-size: 0.8rem;
+  }
+}
+
+.legend {
+  /* Pindahkan legend ke kanan bawah */
+  right: 10px;
+  left: auto; /* Hapus left jika ada */
+  bottom: 30px;
 }
