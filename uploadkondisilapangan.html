@@ -855,7 +855,15 @@
         if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
     
         // Gunakan capturedPhotos jika ada, jika tidak gunakan photoFiles
-        const photosToUpload = capturedPhotos.length > 0 ? capturedPhotos : Array.from(photoFiles.files);
+        let photosToUpload = [];
+        if (capturedPhotos.length > 0) {
+          photosToUpload = capturedPhotos;
+        } else {
+          const photoFilesInput = document.getElementById("photoFiles");
+          if (photoFilesInput && photoFilesInput.files) {
+            photosToUpload = Array.from(photoFilesInput.files);
+          }
+        }
         
         if (photosToUpload.length === 0) {
           throw new Error('Ambil atau pilih setidaknya satu foto');
