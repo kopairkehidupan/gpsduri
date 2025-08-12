@@ -489,26 +489,29 @@
     
     // Tambahkan CSS untuk label blok:
     const style = document.createElement('style');
-    // Ganti bagian ini:
     style.textContent = `
       .blok-label {
+        position: absolute;
         text-align: center;
-        pointer-events: none; /* Agar tidak mengganggu interaksi polygon */
+        pointer-events: none;
+        transform: translate(-50%, -50%); /* Pusatkan tepat di tengah */
       }
       .blok-label div {
-        background-color: rgba(255, 255, 255, 0.7);
-        padding: 0.2em 0.4em;
-        border-radius: 0.2em;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 0.15em 0.4em;
+        border-radius: 0.3em;
         font-weight: bold;
-        font-size: 0.8em;
-        text-shadow: 0 0 0.2em white;
+        font-size: 0.7em;
+        text-shadow: 0 0 2px white;
         white-space: nowrap;
-      }  
+        border: 1px solid rgba(0,0,0,0.1); /* Tambahkan border halus */
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Tambahkan shadow untuk kontras */
+      }
+      
       @media (max-width: 600px) {
         .blok-label div {
-          font-size: 0.8em;
-          padding: 0.2em 0.4em;
-          text-shadow: 0 0 0.2em white;
+          font-size: 0.6em;
+          padding: 0.1em 0.3em;
         }
       }
     `;
@@ -697,19 +700,22 @@
 
     // Hapus fungsi showFeatureInfo dan ganti dengan fungsi berikut:
     function addBlokLabels(feature, layer) {
-      // Buat label untuk blok
       if (feature.properties && feature.properties.blok) {
-        const center = layer.getBounds().getCenter();
-        const label = L.marker(center, {
+        // Hitung centroid (titik pusat) dari poligon
+        const centroid = layer.getBounds().getCenter();
+        
+        const label = L.marker(centroid, {
           icon: L.divIcon({
             className: 'blok-label',
             html: `<div>${feature.properties.blok}</div>`,
-            iconSize: null // Ukuran akan diatur oleh CSS
+            iconSize: null, // Ukuran akan diatur oleh CSS
+            iconAnchor: [0, 0] // Anchor di tengah div
           }),
-          zIndexOffset: 1000 // Pastikan label di atas polygon
+          zIndexOffset: 1000,
+          interactive: false // Nonaktifkan interaksi
         });
         
-        layer.label = label; // Simpan referensi label di layer
+        layer.label = label;
         label.addTo(map);
       }
     }
