@@ -880,7 +880,7 @@
           
           // Note: With mode: 'no-cors', you won't be able to read the response
           // So we'll assume success if the request completes
-          showStatus('Data berhasil diupload! Silakan verifikasi di spreadsheet.');
+          showStatus('Data berhasil diupload!');
           form.reset();
           document.getElementById("selectedInfo").style.display = "none";
           document.getElementById("fileList").innerHTML = '';
@@ -898,33 +898,6 @@
         loading.style.display = 'none';
       }
     });
-    
-    // JSONP Fallback method
-    function jsonpFallback(payload) {
-      return new Promise((resolve, reject) => {
-        window.handleJsonpResponse = function(response) {
-          if (response && response.status === 'success') {
-            showStatus(`Data berhasil diupload! ${response.photoCount} foto telah disimpan.`);
-            document.getElementById("uploadForm").reset();
-            document.getElementById("selectedInfo").style.display = "none";
-            document.getElementById("fileList").innerHTML = '';
-            resolve();
-          } else {
-            reject(new Error(response?.message || 'Unknown error'));
-          }
-        };
-        
-        const script = document.createElement('script');
-        script.src = `https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec?callback=handleJsonpResponse&data=${encodeURIComponent(JSON.stringify(payload))}`;
-        script.onerror = reject;
-        document.body.appendChild(script);
-        
-        // Clean up after timeout
-        setTimeout(() => {
-          document.body.removeChild(script);
-        }, 10000);
-      });
-    }
     
     // Traditional form submission
     function traditionalFormSubmit(payload) {
