@@ -298,40 +298,6 @@
     .map-container {
       position: relative;
     }
-
-    .selected-info {
-      background-color: var(--white);
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      margin-bottom: 1rem;
-      display: none;
-    }
-
-    .selected-info h3 {
-      margin-top: 0;
-      color: var(--primary);
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem;
-    }
-
-    .info-item {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .info-label {
-      font-weight: 500;
-      color: var(--dark-gray);
-    }
-
-    .info-value {
-      font-weight: 600;
-    }
   </style>
 </head>
 <body>
@@ -523,6 +489,7 @@
     
     // Tambahkan CSS untuk label blok:
     const style = document.createElement('style');
+    // Ganti bagian ini:
     style.textContent = `
       .blok-label {
         text-align: center;
@@ -536,6 +503,13 @@
         font-size: 12px;
         text-shadow: 0 0 3px white;
         white-space: nowrap;
+      }    
+      @media (max-width: 600px) {
+        .blok-label div {
+          font-size: 10px;
+          padding: 1px 3px;
+          text-shadow: 0 0 2px white;
+        }
       }
     `;
     document.head.appendChild(style);
