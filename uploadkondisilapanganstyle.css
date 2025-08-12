@@ -47,5 +47,5 @@
   /* Pindahkan legend ke kanan bawah */
   right: 10px;
   left: auto; /* Hapus left jika ada */
-  bottom: 30px;
+  top: 30px;
 }
