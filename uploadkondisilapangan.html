@@ -521,26 +521,6 @@
     `;
     document.head.appendChild(style);
 
-    // Tampilkan daftar file yang dipilih
-    document.getElementById("photoFiles").addEventListener("change", function() {
-      const fileList = document.getElementById("fileList");
-      fileList.innerHTML = '';
-      
-      if (this.files.length > 0) {
-        Array.from(this.files).forEach(file => {
-          const fileItem = document.createElement("div");
-          fileItem.className = "file-item";
-          fileItem.innerHTML = `
-            <i class="material-icons">image</i>
-            <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
-          `;
-          fileList.appendChild(fileItem);
-        });
-      } else {
-        fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
-      }
-    });
-
     // Inisialisasi peta Leaflet
     
     // Definisikan base layers
