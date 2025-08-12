@@ -846,13 +846,11 @@
         const kode = document.getElementById("kode").value;
         const blok = document.getElementById("blok").value;
         const tahun = document.getElementById("tahun").value;
-        const photoFiles = document.getElementById("photoFiles").files;
-    
+        
         // Validate inputs
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
         if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
-        if (photoFiles.length === 0) throw new Error('Pilih setidaknya satu foto');
     
         // Gunakan capturedPhotos jika ada, jika tidak gunakan photoFiles
         let photosToUpload = [];
@@ -860,7 +858,7 @@
           photosToUpload = capturedPhotos;
         } else {
           const photoFilesInput = document.getElementById("photoFiles");
-          if (photoFilesInput && photoFilesInput.files) {
+          if (photoFilesInput && photoFilesInput.files && photoFilesInput.files.length > 0) {
             photosToUpload = Array.from(photoFilesInput.files);
           }
         }
@@ -908,6 +906,9 @@
           form.reset();
           document.getElementById("selectedInfo").style.display = "none";
           document.getElementById("fileList").innerHTML = '';
+          
+          // Reset captured photos
+          capturedPhotos.length = 0;
           
         } catch (error) {
           console.error('Upload error:', error);
