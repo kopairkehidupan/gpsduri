@@ -402,9 +402,31 @@
     </div>
   </div>
 
+  <!-- Modal baru untuk Preview Foto -->
+  <div id="previewModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-preview-modal">&times;</span>
+      <div class="preview-container">
+        <h3>Preview Foto</h3>
+        <img id="previewImage" style="width:100%; max-height:60vh; object-fit:contain; border-radius:8px; margin-bottom:10px;">
+        <div class="preview-actions">
+          <button id="deletePhoto" class="btn" style="background-color:var(--error);">
+            <i class="material-icons">delete</i>
+            <span>Hapus Foto</span>
+          </button>
+          <button id="savePhoto" class="btn" style="background-color:var(--success);">
+            <i class="material-icons">save</i>
+            <span>Simpan Foto</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    //---------------------END POINT UNTUK TAMPILAN PETA PER DIVISI------------////
     // Data divisi berdasarkan kebun
     const divisiData = {
       "SAMSAM": ["DIVISI I", "DIVISI II", "DIVISI III", "DIVISI IV", "DIVISI V", "DIVISI VI", "DIVISI VII"],
@@ -711,6 +733,8 @@
       }
     }
 
+    //---------------------END POINT UNTUK TAKE FOTO------------////
+
     // Variabel untuk menyimpan stream kamera dan foto yang diambil
     let cameraStream = null;
     const capturedPhotos = [];
@@ -864,6 +888,135 @@
         });
       });
     }
+
+    //---------------------END POINT UNTUK REVIEW FOTO------------////
+
+    // Variabel untuk menyimpan foto yang sedang diproses
+    let currentPhoto = null;
+
+    // Ambil foto dari kamera
+    capturePhotoBtn.addEventListener('click', () => {
+      if (!cameraStream) return;
+    
+      // Siapkan canvas untuk menangkap gambar
+      const context = photoCanvas.getContext('2d');
+      photoCanvas.width = cameraPreview.videoWidth;
+      photoCanvas.height = cameraPreview.videoHeight;
+      context.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+    
+      // Konversi canvas ke data URL untuk preview
+      const photoDataUrl = photoCanvas.toDataURL('image/jpeg', 0.9);
+      currentPhoto = photoDataUrl;
+      
+      // Tampilkan preview modal
+      showPreviewModal(photoDataUrl);
+    });
+
+    // Fungsi untuk menampilkan modal preview
+    function showPreviewModal(photoDataUrl) {
+      const previewModal = document.getElementById('previewModal');
+      const previewImage = document.getElementById('previewImage');
+      
+      // Tampilkan gambar di preview
+      previewImage.src = photoDataUrl;
+      
+      // Buka modal preview
+      previewModal.style.display = "block";
+      
+      // Hentikan kamera (tapi jangan tutup modal kamera dulu)
+      stopCamera();
+    }
+
+    // Tutup modal preview
+    document.querySelector(".close-preview-modal").addEventListener('click', () => {
+      document.getElementById('previewModal').style.display = "none";
+      
+      // Jika user menutup modal tanpa memilih, lanjutkan ke kamera
+      startCamera();
+    });
+
+    // Tombol hapus foto
+    document.getElementById('deletePhoto').addEventListener('click', () => {
+      // Hanya tutup modal preview dan kembali ke kamera
+      document.getElementById('previewModal').style.display = "none";
+      currentPhoto = null;
+      startCamera();
+    });
+
+    // Tombol simpan foto
+    document.getElementById('savePhoto').addEventListener('click', () => {
+      if (!currentPhoto) return;
+      
+      // Konversi data URL ke Blob
+      fetch(currentPhoto)
+        .then(res => res.blob())
+        .then(blob => {
+          const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
+          
+          // Simpan foto ke array
+          capturedPhotos.push(file);
+          updateFileList();
+          
+          // Tutup semua modal
+          document.getElementById('previewModal').style.display = "none";
+          document.getElementById('cameraModal').style.display = "none";
+          currentPhoto = null;
+        });
+    });
+
+    // Update CSS untuk modal preview
+    const previewModalStyle = document.createElement('style');
+    previewModalStyle.textContent = `
+      .preview-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      
+      .preview-actions .btn {
+        flex: 1;
+      }
+      
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.8);
+        overflow: auto;
+      }
+      
+      .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        position: relative;
+      }
+      
+      .close-modal, .close-preview-modal {
+        color: #aaa;
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      
+      .close-modal:hover, .close-preview-modal:hover {
+        color: black;
+      }
+    `;
+    document.head.appendChild(previewModalStyle);
+
+    //---------------------END POINT UNTUK UPLOAD FOTO------------////
 
     // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
