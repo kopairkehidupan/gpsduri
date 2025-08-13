@@ -865,6 +865,12 @@
     // Update tampilan daftar file
     function updateFileList() {
       fileList.innerHTML = '';
+      
+      if (capturedPhotos.length === 0) {
+        fileList.innerHTML = '<div class="file-item">Belum ada foto yang diambil</div>';
+        return;
+      }
+      
       capturedPhotos.forEach((file, index) => {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
