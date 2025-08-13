@@ -9,6 +9,7 @@
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="uploadkondisilapanganstyle.css" />
+  <script src="kodekerja.js"></script>
   <style>
     :root {
       --primary: #4285f4;
@@ -937,6 +938,41 @@
 
     //-------------------END POINT UNTUK UPLOAD FOTO-----------------------//
 
+    // Handle kategori change
+    document.getElementById("kategori").addEventListener("change", function() {
+      const kategori = this.value;
+      const objekKerjaSelect = document.getElementById("objekKerja");
+      
+      // Kosongkan dropdown objek kerja
+      objekKerjaSelect.innerHTML = '';
+      
+      if (kategori) {
+        // Aktifkan dropdown objek kerja
+        objekKerjaSelect.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Objek Kerja --";
+        objekKerjaSelect.appendChild(defaultOption);
+        
+        // Tambahkan opsi objek kerja berdasarkan kategori
+        kerjaData[kategori].forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.kode;
+          option.textContent = `${item.kode} - ${item.kerja}`;
+          objekKerjaSelect.appendChild(option);
+        });
+      } else {
+        // Nonaktifkan dropdown objek kerja jika kategori tidak dipilih
+        objekKerjaSelect.disabled = true;
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kategori terlebih dahulu --";
+        objekKerjaSelect.appendChild(defaultOption);
+      }
+    });
+    
     // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
@@ -956,31 +992,23 @@
         const kode = document.getElementById("kode").value;
         const blok = document.getElementById("blok").value;
         const tahun = document.getElementById("tahun").value;
+        const kategori = document.getElementById("kategori").value;
+        const objekKerja = document.getElementById("objekKerja").value;
+        
+        // Get the selected objek kerja text (kode - kerja)
+        const objekKerjaText = document.getElementById("objekKerja").options[document.getElementById("objekKerja").selectedIndex].text;
         
         // Validate inputs
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
         if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
+        if (!kategori) throw new Error('Pilih kategori terlebih dahulu');
+        if (!objekKerja) throw new Error('Pilih objek kerja terlebih dahulu');
     
-        // Gunakan capturedPhotos jika ada, jika tidak gunakan photoFiles
-        let photosToUpload = [];
-        if (capturedPhotos.length > 0) {
-          photosToUpload = capturedPhotos;
-        } else {
-          const photoFilesInput = document.getElementById("photoFiles");
-          if (photoFilesInput && photoFilesInput.files && photoFilesInput.files.length > 0) {
-            photosToUpload = Array.from(photoFilesInput.files);
-          }
-        }
-        
-        if (photosToUpload.length === 0) {
-          throw new Error('Ambil atau pilih setidaknya satu foto');
-        }
-        
         // Convert photos to base64
         const photosData = [];
-        for (let i = 0; i < photosToUpload.length; i++) {
-          const file = photosToUpload[i];
+        for (let i = 0; i < capturedPhotos.length; i++) {
+          const file = capturedPhotos[i];
           const base64Data = await fileToBase64(file);
           photosData.push({
             name: file.name,
@@ -988,7 +1016,7 @@
           });
         }
     
-        // Prepare payload
+        // Prepare payload with new fields
         const payload = {
           timestamp: new Date().toISOString(),
           kebun,
@@ -996,37 +1024,33 @@
           kode,
           blok,
           tahun,
+          kategori,
+          objekKerja: objekKerjaText, // Send both code and description
           photos: photosData
         };
         
-        // Method 1: Standard fetch with error handling
-        try {
-          const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            mode: 'no-cors'
-          });
-          
-          // Note: With mode: 'no-cors', you won't be able to read the response
-          // So we'll assume success if the request completes
-          showStatus('Data berhasil diupload!');
-          form.reset();
-          document.getElementById("selectedInfo").style.display = "none";
-          document.getElementById("fileList").innerHTML = '';
-          
-          // Reset captured photos
-          capturedPhotos.length = 0;
-          
-        } catch (error) {
-          console.error('Upload error:', error);
-          showStatus('Error: ' + error.message, true);
-        }
+        // Send data to Google Apps Script
+        const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          mode: 'no-cors'
+        });
+        
+        // Note: With mode: 'no-cors', you won't be able to read the response
+        // So we'll assume success if the request completes
+        showStatus('Data berhasil diupload!');
+        form.reset();
+        document.getElementById("selectedInfo").style.display = "none";
+        document.getElementById("fileList").innerHTML = '';
+        
+        // Reset captured photos
+        capturedPhotos.length = 0;
         
       } catch (error) {
-        console.error('Validation error:', error);
+        console.error('Error:', error);
         showStatus('Error: ' + error.message, true);
       } finally {
         submitBtn.disabled = false;
