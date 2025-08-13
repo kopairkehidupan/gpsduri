@@ -4,11 +4,11 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: 60px; /* Pastikan ini sama dengan padding-top body */
   background-color: var(--primary);
   color: white;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 1000; /* Pastikan header selalu di atas konten lain */
+  z-index: 1000;
   display: flex;
   align-items: center;
   padding: 0 15px;
