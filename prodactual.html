@@ -535,10 +535,73 @@
   #xspreadsheet .x-spreadsheet-cell {
     padding: 4px;
   }
+
+  /* CSS untuk fixed header */
+  .fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--primary);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+  }
+  
+  .header-content {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .header-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 0;
+    color: white;
+    text-align: center;
+    flex-grow: 1;
+    padding: 0 10px;
+  }
+  
+  .header-btn {
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+  }
+  
+  .header-btn:hover {
+    background-color: rgba(255,255,255,0.2);
+  }
+  
+  .header-btn i {
+    font-size: 24px;
+  }
 </style>
 </head>
 <body>
-  <div class="container">
+  <!-- Tambahkan di bagian atas body, sebelum container utama -->
+  <header class="fixed-header">
+    <div class="header-content">
+      <button id="backButton" class="header-btn">
+        <i class="material-icons">arrow_back</i>
+      </button>
+    </div>
+  </header>
+  
+  <div class="container" style="padding-top: 70px;">
     <div class="header">
       <h1>Input Realisasi Produksi</h1>
       <p class="subtitle">Silahkan input realisasi produksi yang sedang berjalan</p>
@@ -1739,6 +1802,11 @@
         showSimpleToast("Aplikasi tidak dapat berjalan karena masalah database");
     });
     
+  });
+
+  // Tambahkan event listener untuk tombol back
+  document.getElementById('backButton').addEventListener('click', function() {
+    window.history.back();
   });
   </script>
 </body>
