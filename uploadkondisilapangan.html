@@ -346,9 +346,15 @@
           
           <div class="form-group">
             <label for="objekKerja">Objek Kerja</label>
-            <select id="objekKerja" required disabled>
-              <option value="">-- Pilih Kategori terlebih dahulu --</option>
-            </select>
+            <div class="dropdown-container">
+              <div class="search-container">
+                <input type="text" id="objekKerjaSearch" class="search-input" placeholder="Cari objek kerja..." disabled>
+              </div>
+              <select id="objekKerja" required disabled style="display: none;">
+                <option value="">-- Pilih Kategori terlebih dahulu --</option>
+              </select>
+              <div id="objekKerjaDropdown" class="dropdown-list"></div>
+            </div>
           </div>
         </div>
 
@@ -967,14 +973,17 @@
     // Handle kategori change
     document.getElementById("kategori").addEventListener("change", function() {
       const kategori = this.value;
+      const objekKerjaSearch = document.getElementById("objekKerjaSearch");
       const objekKerjaSelect = document.getElementById("objekKerja");
+      const objekKerjaDropdown = document.getElementById("objekKerjaDropdown");
       
-      // Kosongkan dropdown objek kerja
+      // Kosongkan dropdown dan search
       objekKerjaSelect.innerHTML = '';
+      objekKerjaDropdown.innerHTML = '';
       
       if (kategori) {
-        // Aktifkan dropdown objek kerja
-        objekKerjaSelect.disabled = false;
+        // Aktifkan search input
+        objekKerjaSearch.disabled = false;
         
         // Tambahkan opsi default
         const defaultOption = document.createElement("option");
@@ -982,20 +991,71 @@
         defaultOption.textContent = "-- Pilih Objek Kerja --";
         objekKerjaSelect.appendChild(defaultOption);
         
-        // Tambahkan opsi objek kerja berdasarkan kategori
+        // Tambahkan semua opsi ke select dan dropdown
         kerjaData[kategori].forEach(item => {
           const option = document.createElement("option");
           option.value = item.kode;
           option.textContent = `${item.kode} - ${item.kerja}`;
           objekKerjaSelect.appendChild(option);
+          
+          const dropdownItem = document.createElement("div");
+          dropdownItem.className = "dropdown-item";
+          dropdownItem.textContent = `${item.kode} - ${item.kerja}`;
+          dropdownItem.dataset.value = item.kode;
+          dropdownItem.addEventListener("click", function() {
+            objekKerjaSelect.value = this.dataset.value;
+            objekKerjaSearch.value = this.textContent;
+            objekKerjaDropdown.style.display = "none";
+          });
+          objekKerjaDropdown.appendChild(dropdownItem);
         });
       } else {
-        // Nonaktifkan dropdown objek kerja jika kategori tidak dipilih
-        objekKerjaSelect.disabled = true;
+        // Nonaktifkan search input
+        objekKerjaSearch.disabled = true;
+        objekKerjaSearch.value = "";
+        objekKerjaDropdown.style.display = "none";
+        
         const defaultOption = document.createElement("option");
         defaultOption.value = "";
         defaultOption.textContent = "-- Pilih Kategori terlebih dahulu --";
         objekKerjaSelect.appendChild(defaultOption);
+      }
+    });
+    
+    // Handle search input
+    document.getElementById("objekKerjaSearch").addEventListener("input", function() {
+      const searchTerm = this.value.toLowerCase();
+      const dropdownItems = document.querySelectorAll("#objekKerjaDropdown .dropdown-item");
+      let hasMatches = false;
+      
+      dropdownItems.forEach(item => {
+        if (item.textContent.toLowerCase().includes(searchTerm)) {
+          item.style.display = "block";
+          hasMatches = true;
+        } else {
+          item.style.display = "none";
+        }
+      });
+      
+      if (hasMatches && searchTerm.length > 0) {
+        document.getElementById("objekKerjaDropdown").style.display = "block";
+      } else {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
+      }
+    });
+    
+    // Tampilkan dropdown ketika search input diklik
+    document.getElementById("objekKerjaSearch").addEventListener("click", function() {
+      if (this.value === "") {
+        const dropdown = document.getElementById("objekKerjaDropdown");
+        dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+      }
+    });
+    
+    // Sembunyikan dropdown ketika klik di luar
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".dropdown-container")) {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
       }
     });
     
