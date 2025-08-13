@@ -72,11 +72,6 @@
   font-weight: bold;
 }
 
-/* Hapus header yang lama dari container */
-.container .header {
-  display: none;
-}
-
 /* Tambahkan di bagian CSS Anda *//* Tambahkan di bagian CSS Anda */
 .leaflet-control-layers {
   margin-bottom: 30px; /* Memberi jarak dari bagian bawah peta */
