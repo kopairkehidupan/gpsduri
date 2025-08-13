@@ -302,6 +302,22 @@
   </style>
 </head>
 <body>
+  <!-- Tambahkan di bagian atas body, sebelum container utama -->
+  <header class="fixed-header">
+    <div class="header-content">
+      <button id="backButton" class="header-btn">
+        <i class="material-icons">arrow_back</i>
+      </button>
+      <h1 class="header-title">Upload Kondisi Lapangan</h1>
+      <div class="header-actions">
+        <button id="openSyncModal" class="header-btn sync-btn">
+          <i class="material-icons">sync</i>
+          <span id="syncBadge" class="sync-badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
   <div class="container">
     <div class="header">
       <h1>Upload Kondisi Lapangan</h1>
@@ -452,6 +468,28 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Tambahkan modal untuk sinkronisasi -->
+  <div id="syncModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-sync-modal">&times;</span>
+      <h3>Sinkronisasi Data</h3>
+      <div id="syncStatus">
+        <p>Menemukan <span id="pendingCount">0</span> data yang belum disinkronisasi</p>
+        <div id="syncProgress" style="display:none;">
+          <div class="progress-bar">
+            <div class="progress" id="progressBar" style="width:0%"></div>
+          </div>
+          <p id="syncMessage">Menyinkronkan data...</p>
+        </div>
+      </div>
+      <button id="startSync" class="btn" style="margin-top:10px;">
+        <i class="material-icons">sync</i>
+        <span>Mulai Sinkronisasi</span>
+      </button>
+      <div id="syncResult" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -970,6 +1008,115 @@
 
     //-------------------END POINT UNTUK UPLOAD FOTO-----------------------//
 
+    // Inisialisasi IndexDB
+    let db;
+    const DB_NAME = "KondisiLapanganDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "pendingSubmissions";
+
+    // Buka atau buat database
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        request.onerror = (event) => {
+          console.error("Database error:", event.target.error);
+          reject("Gagal membuka database");
+        };
+        
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log("Database berhasil dibuka");
+          resolve(db);
+          updatePendingCount(); // Update counter saat database siap
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { 
+              keyPath: "id",
+              autoIncrement: true 
+            });
+            
+            // Buat index untuk pencarian
+            store.createIndex("timestamp", "timestamp", { unique: false });
+            store.createIndex("kebun", "kebun", { unique: false });
+            store.createIndex("divisi", "divisi", { unique: false });
+            store.createIndex("blok", "blok", { unique: false });
+          }
+        };
+      });
+    }
+
+    // Tambahkan data ke IndexDB
+    function addToPendingSubmissions(data) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const request = store.add(data);
+        
+        request.onsuccess = () => {
+          console.log("Data berhasil disimpan di IndexDB");
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error("Gagal menyimpan di IndexDB:", event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Ambil semua data yang belum disinkronkan
+    function getAllPendingSubmissions() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Hapus data yang sudah disinkronkan
+    function deleteSubmission(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Update counter data yang belum disinkronkan
+    async function updatePendingCount() {
+      try {
+        const submissions = await getAllPendingSubmissions();
+        const count = submissions.length;
+        document.getElementById("syncBadge").textContent = count;
+        document.getElementById("pendingCount").textContent = count;
+      } catch (error) {
+        console.error("Gagal update pending count:", error);
+      }
+    }
+
     // Handle kategori change
     document.getElementById("kategori").addEventListener("change", function() {
       const kategori = this.value;
@@ -1111,23 +1258,15 @@
           blok,
           tahun,
           kategori,
-          objekKerja: objekKerjaText, // Send both code and description
-          photos: photosData
+          objekKerja: objekKerjaText,
+          photos: photosData,
+          isSynced: false
         };
         
-        // Send data to Google Apps Script
-        const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          mode: 'no-cors'
-        });
+        // Simpan ke IndexDB
+        await addToPendingSubmissions(payload);
         
-        // Note: With mode: 'no-cors', you won't be able to read the response
-        // So we'll assume success if the request completes
-        showStatus('Data berhasil diupload!');
+        showStatus('Data berhasil disimpan secara offline!');
         form.reset();
         document.getElementById("selectedInfo").style.display = "none";
         document.getElementById("fileList").innerHTML = '';
@@ -1144,6 +1283,112 @@
       }
     });
 
+    // Fungsi untuk sinkronisasi data
+    async function syncData() {
+      try {
+        const syncProgress = document.getElementById("syncProgress");
+        const progressBar = document.getElementById("progressBar");
+        const syncMessage = document.getElementById("syncMessage");
+        const syncResult = document.getElementById("syncResult");
+        const startSyncBtn = document.getElementById("startSync");
+        
+        // Ambil semua data yang belum disinkronkan
+        const pendingData = await getAllPendingSubmissions();
+        const totalData = pendingData.length;
+        
+        if (totalData === 0) {
+          syncResult.innerHTML = '<div class="status success">Tidak ada data yang perlu disinkronkan</div>';
+          return;
+        }
+        
+        // Tampilkan progress
+        syncProgress.style.display = "block";
+        startSyncBtn.disabled = true;
+        syncResult.innerHTML = "";
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Proses sinkronisasi satu per satu
+        for (let i = 0; i < totalData; i++) {
+          const data = pendingData[i];
+          const progress = Math.round(((i + 1) / totalData) * 100);
+          
+          progressBar.style.width = `${progress}%`;
+          syncMessage.textContent = `Menyinkronkan data ${i + 1} dari ${totalData}...`;
+          
+          try {
+            // Kirim ke Google Apps Script
+            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+              method: 'POST',
+              body: JSON.stringify(data),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              mode: 'no-cors'
+            });
+            
+            // Jika berhasil, hapus dari IndexDB
+            await deleteSubmission(data.id);
+            successCount++;
+            
+          } catch (error) {
+            console.error(`Gagal sinkronisasi data ${data.id}:`, error);
+            errorCount++;
+          }
+        }
+        
+        // Tampilkan hasil
+        syncMessage.textContent = "Sinkronisasi selesai!";
+        syncResult.innerHTML = `
+          <div class="status success">
+            ${successCount} data berhasil disinkronkan
+            ${errorCount > 0 ? `<br><span class="error">${errorCount} data gagal disinkronkan</span>` : ''}
+          </div>
+        `;
+        
+        // Update counter
+        updatePendingCount();
+        
+      } catch (error) {
+        console.error("Error dalam proses sinkronisasi:", error);
+        document.getElementById("syncResult").innerHTML = `
+          <div class="status error">Gagal sinkronisasi: ${error.message}</div>
+        `;
+      } finally {
+        document.getElementById("startSync").disabled = false;
+      }
+    }
+
+    // Event listener untuk tombol sinkronisasi
+    document.getElementById("openSyncModal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "block";
+      updatePendingCount();
+    });
+    
+    document.querySelector(".close-sync-modal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "none";
+    });
+    
+    document.getElementById("startSync").addEventListener("click", syncData);
+
+    // Inisialisasi database saat halaman dimuat
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        await initDB();
+        
+        // Cek koneksi internet
+        window.addEventListener("online", updatePendingCount);
+        window.addEventListener("offline", () => {
+          showStatus("Anda sedang offline. Data akan disimpan secara lokal.", false);
+        });
+        
+      } catch (error) {
+        console.error("Gagal inisialisasi database:", error);
+        showStatus("Gagal mengakses penyimpanan lokal. Fitur offline tidak tersedia.", true);
+      }
+    });
+
     // Helper function to convert file to base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -1153,6 +1398,11 @@
         reader.readAsDataURL(file);
       });
     }
+
+    // Tambahkan event listener untuk tombol back
+    document.getElementById('backButton').addEventListener('click', function() {
+      window.history.back();
+    });
   </script>
 </body>
 </html>
