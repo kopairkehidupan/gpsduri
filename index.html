@@ -492,41 +492,47 @@
   
     // Fungsi utama untuk memeriksa akses
     async function checkIPAccess() {
-      const ipRules = await loadIPRules();
-      if (!ipRules) return;
-  
+      console.log("Memulai pemeriksaan IP...");
+      
       try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        const userIP = data.ip;
-        
-        // Sesuaikan section dengan data CSV
-        const section2 = document.querySelector('.section[data-section="section2"]');
-        const section34 = document.querySelectorAll('.section[data-section="section3"], .section[data-section="section4"]');
-        
-        // Periksa akses untuk section2
-        if (section2) {
-          const ipPattern = new RegExp('^' + ipRules.section2 + '$');
-          if (!ipPattern.test(userIP)) {
-            restrictSection(section2);
-          }
+        // 1. Ambil aturan IP dari CSV
+        const ipRules = await loadIPRules();
+        if (!ipRules) {
+          console.error("Aturan IP tidak ditemukan");
+          return;
         }
-        
-        // Periksa akses untuk section3 dan section4
-        section34.forEach(section => {
+        console.log("Aturan IP:", ipRules);
+    
+        // 2. Dapatkan IP pengguna
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        const userIP = ipData.ip;
+        console.log("IP Pengguna:", userIP);
+    
+        // 3. Periksa akses untuk setiap section
+        document.querySelectorAll('.restricted').forEach(section => {
           const sectionName = section.getAttribute('data-section');
           const ipPattern = new RegExp('^' + ipRules[sectionName] + '$');
-          if (!ipPattern.test(userIP)) {
+          const hasAccess = ipPattern.test(userIP);
+          
+          console.log(`Section ${sectionName}:`, 
+            `IP ${userIP}`, 
+            `Pattern: ${ipRules[sectionName]}`, 
+            `Access: ${hasAccess}`);
+    
+          if (!hasAccess) {
             restrictSection(section);
+          } else {
+            // Aktifkan section jika IP sesuai
+            section.style.opacity = '1';
+            section.style.pointerEvents = 'auto';
+            const overlay = section.querySelector('.restricted-overlay');
+            if (overlay) overlay.remove();
           }
         });
-        
+    
       } catch (error) {
-        console.error('Gagal memeriksa IP:', error);
-        // Restrict all jika gagal
-        document.querySelectorAll('.restricted').forEach(section => {
-          restrictSection(section);
-        });
+        console.error("Error dalam checkIPAccess:", error);
       }
     }
     
