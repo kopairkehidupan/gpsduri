@@ -330,7 +330,7 @@
     </div>
 
     <!-- Section 2: Form Kondisi Lapangan -->
-    <div class="section">
+    <div class="section restricted" data-allowed-ips="100.00.xxx">
       <h2 class="section-title">📷 Form Kondisi Lapangan</h2>
       <div class="menu-grid">
         <div class="menu-card" onclick="window.location.href='uploadkondisilapangan.html'">
@@ -349,7 +349,7 @@
     </div>
 
     <!-- Section 3: Biaya Perkebunan -->
-    <div class="section">
+    <div class="section restricted" data-allowed-ips="49.00.00.xx">
       <h2 class="section-title">💰 Biaya Perkebunan</h2>
       <div class="menu-grid">
         <div class="menu-card" onclick="window.location.href='budget.html'">
@@ -431,17 +431,75 @@
   <script>
     // Menambahkan active class ke tombol footer yang sesuai dengan halaman saat ini
     document.addEventListener('DOMContentLoaded', function() {
-      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-      const footerBtns = document.querySelectorAll('.footer-btn');
-      
-      footerBtns.forEach(btn => {
-        btn.classList.remove('active');
-        const href = btn.getAttribute('href');
-        if (currentPage === href) {
-          btn.classList.add('active');
-        }
-      });
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const footerBtns = document.querySelectorAll('.footer-btn');
+    
+    footerBtns.forEach(btn => {
+      btn.classList.remove('active');
+      const href = btn.getAttribute('href');
+      if (currentPage === href) {
+        btn.classList.add('active');
+      }
     });
+      
+    // Fungsi untuk memeriksa IP
+    async function checkIPAccess() {
+      try {
+        // Mendapatkan IP pengguna dari layanan eksternal
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        const userIP = data.ip;
+        
+        // Memeriksa setiap section yang dibatasi
+        document.querySelectorAll('.restricted').forEach(section => {
+          const allowedIPs = section.getAttribute('data-allowed-ips');
+          const ipPattern = new RegExp('^' + allowedIPs.replace(/\./g, '\\.').replace(/x/g, '\\d+') + '$');
+          
+          if (!ipPattern.test(userIP)) {
+            // Jika IP tidak sesuai, nonaktifkan section
+            section.style.opacity = '0.5';
+            section.style.pointerEvents = 'none';
+            
+            // Tambahkan overlay dengan pesan
+            const overlay = document.createElement('div');
+            overlay.style.position = 'absolute';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.right = '0';
+            overlay.style.bottom = '0';
+            overlay.style.backgroundColor = 'rgba(255,255,255,0.7)';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.zIndex = '10';
+            
+            const message = document.createElement('div');
+            message.textContent = 'Akses terbatas untuk IP tertentu';
+            message.style.backgroundColor = 'var(--danger)';
+            message.style.color = 'white';
+            message.style.padding = '10px 20px';
+            message.style.borderRadius = '5px';
+            message.style.fontWeight = 'bold';
+            
+            overlay.appendChild(message);
+            section.style.position = 'relative';
+            section.appendChild(overlay);
+          }
+        });
+        
+      } catch (error) {
+        console.error('Gagal memeriksa IP:', error);
+        // Jika gagal mendapatkan IP, anggap sebagai IP tidak terdaftar
+        document.querySelectorAll('.restricted').forEach(section => {
+          section.style.opacity = '0.5';
+          section.style.pointerEvents = 'none';
+        });
+      }
+    }
+    
+    // Panggil fungsi pemeriksaan IP
+    checkIPAccess();
+  });
   </script>
 </body>
 </html>
