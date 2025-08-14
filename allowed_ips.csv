@@ -1,4 +1,4 @@
 section,ip_pattern
-section2,10\.30\.\d+
-section3,10\.30\.\d+
-section4,10\.30\.\d+
+section2,10\.30\.\d+\.\d+|192\.168\.1\.\d+
+section3,10\.30\.\d+\.\d+|192\.168\.1\.\d+
+section4,10\.30\.\d+\.\d+|192\.168\.1\.\d+
