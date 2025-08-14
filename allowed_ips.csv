@@ -1,0 +1,4 @@
+section,ip_pattern
+section2,100\.00\.\d+
+section3,49\.00\.00\.\d+
+section4,49\.00\.00\.\d+
