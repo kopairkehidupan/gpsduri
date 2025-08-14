@@ -305,6 +305,26 @@
       font-size: 1rem;
       color: var(--teal);
     }
+    .restricted-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255,255,255,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    .restricted-message {
+      background-color: var(--danger);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -330,7 +350,7 @@
     </div>
 
     <!-- Section 2: Form Kondisi Lapangan -->
-    <div class="section restricted" data-allowed-ips="100.00.xxx">
+    <div class="section restricted" data-section="section2">
       <h2 class="section-title">📷 Form Kondisi Lapangan</h2>
       <div class="menu-grid">
         <div class="menu-card" onclick="window.location.href='uploadkondisilapangan.html'">
@@ -349,7 +369,7 @@
     </div>
 
     <!-- Section 3: Biaya Perkebunan -->
-    <div class="section restricted" data-allowed-ips="49.00.00.xx">
+    <div class="section restricted" data-section="section3">
       <h2 class="section-title">💰 Biaya Perkebunan</h2>
       <div class="menu-grid">
         <div class="menu-card" onclick="window.location.href='budget.html'">
@@ -373,7 +393,7 @@
     </div>
 
     <!-- Section 4: Produksi Perkebunan -->
-    <div class="section restricted" data-allowed-ips="49.00.00.xx">
+    <div class="section restricted" data-section="section4">
       <h2 class="section-title">📈 Produksi Perkebunan</h2>
       <div class="menu-grid">
         <div class="menu-card" onclick="window.location.href='prodbudget.html'">
@@ -443,61 +463,91 @@
     });
       
     // Fungsi untuk memeriksa IP
-    async function checkIPAccess() {
+    async function loadIPRules() {
       try {
-        // Mendapatkan IP pengguna dari layanan eksternal
+        const response = await fetch('allowed_ips.csv');
+        const csvData = await response.text();
+        const rules = {};
+        
+        // Parse CSV
+        const lines = csvData.split('\n');
+        const headers = lines[0].split(',');
+        
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim() === '') continue;
+          const values = lines[i].split(',');
+          const rule = {};
+          for (let j = 0; j < headers.length; j++) {
+            rule[headers[j].trim()] = values[j] ? values[j].trim() : '';
+          }
+          rules[rule.section] = rule.ip_pattern;
+        }
+        
+        return rules;
+      } catch (error) {
+        console.error('Gagal memuat aturan IP:', error);
+        return null;
+      }
+    }
+  
+    // Fungsi utama untuk memeriksa akses
+    async function checkIPAccess() {
+      const ipRules = await loadIPRules();
+      if (!ipRules) return;
+  
+      try {
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         const userIP = data.ip;
         
-        // Memeriksa setiap section yang dibatasi
-        document.querySelectorAll('.restricted').forEach(section => {
-          const allowedIPs = section.getAttribute('data-allowed-ips');
-          const ipPattern = new RegExp('^' + allowedIPs.replace(/\./g, '\\.').replace(/x/g, '\\d+') + '$');
-          
+        // Sesuaikan section dengan data CSV
+        const section2 = document.querySelector('.section[data-section="section2"]');
+        const section34 = document.querySelectorAll('.section[data-section="section3"], .section[data-section="section4"]');
+        
+        // Periksa akses untuk section2
+        if (section2) {
+          const ipPattern = new RegExp('^' + ipRules.section2 + '$');
           if (!ipPattern.test(userIP)) {
-            // Jika IP tidak sesuai, nonaktifkan section
-            section.style.opacity = '0.5';
-            section.style.pointerEvents = 'none';
-            
-            // Tambahkan overlay dengan pesan
-            const overlay = document.createElement('div');
-            overlay.style.position = 'absolute';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.right = '0';
-            overlay.style.bottom = '0';
-            overlay.style.backgroundColor = 'rgba(255,255,255,0.7)';
-            overlay.style.display = 'flex';
-            overlay.style.justifyContent = 'center';
-            overlay.style.alignItems = 'center';
-            overlay.style.zIndex = '10';
-            
-            const message = document.createElement('div');
-            message.textContent = 'Akses terbatas untuk IP tertentu';
-            message.style.backgroundColor = 'var(--danger)';
-            message.style.color = 'white';
-            message.style.padding = '10px 20px';
-            message.style.borderRadius = '5px';
-            message.style.fontWeight = 'bold';
-            
-            overlay.appendChild(message);
-            section.style.position = 'relative';
-            section.appendChild(overlay);
+            restrictSection(section2);
+          }
+        }
+        
+        // Periksa akses untuk section3 dan section4
+        section34.forEach(section => {
+          const sectionName = section.getAttribute('data-section');
+          const ipPattern = new RegExp('^' + ipRules[sectionName] + '$');
+          if (!ipPattern.test(userIP)) {
+            restrictSection(section);
           }
         });
         
       } catch (error) {
         console.error('Gagal memeriksa IP:', error);
-        // Jika gagal mendapatkan IP, anggap sebagai IP tidak terdaftar
+        // Restrict all jika gagal
         document.querySelectorAll('.restricted').forEach(section => {
-          section.style.opacity = '0.5';
-          section.style.pointerEvents = 'none';
+          restrictSection(section);
         });
       }
     }
     
-    // Panggil fungsi pemeriksaan IP
+    // Fungsi untuk membatasi akses ke section
+    function restrictSection(section) {
+      section.style.opacity = '0.5';
+      section.style.pointerEvents = 'none';
+      
+      const overlay = document.createElement('div');
+      overlay.className = 'restricted-overlay';
+      overlay.innerHTML = `
+        <div class="restricted-message">
+          Akses terbatas hanya untuk user tertentu saja
+        </div>
+      `;
+      
+      section.style.position = 'relative';
+      section.appendChild(overlay);
+    }
+    
+    // Panggil fungsi pemeriksaan
     checkIPAccess();
   });
   </script>
