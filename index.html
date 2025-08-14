@@ -172,7 +172,7 @@
       
       .menu-card {
         padding: 0.5rem;
-        min-height: 120px;
+        min-height: 150px; /* Tinggi sedikit ditambah */
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -180,22 +180,32 @@
       
       .menu-icon {
         font-size: 1.5rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
       }
       
       .menu-title {
         font-size: 0.7rem;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.2rem;
+        line-height: 1.1;
       }
       
       .menu-desc {
-        display: none; /* Sembunyikan deskripsi di mobile */
+        display: -webkit-box; /* Menampilkan deskripsi */
+        -webkit-line-clamp: 2; /* Batasi ke 2 baris */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.6rem;
+        line-height: 1.2;
+        margin: 0.2rem 0;
+        color: var(--dark-gray);
       }
       
       .btn {
         padding: 0.3rem 0.5rem;
         font-size: 0.6rem;
-        margin-top: 0.5rem;
+        margin-top: 0.3rem;
+        white-space: nowrap;
       }
       
       .btn i {
@@ -203,7 +213,7 @@
       }
       
       .spi-notice {
-        display: none; /* Sembunyikan notifikasi SPI di mobile */
+        display: none;
       }
       
       .section-title {
