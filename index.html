@@ -166,50 +166,51 @@
     /* Media queries untuk tampilan mobile khusus (webview) */
     @media (max-width: 600px) {
       .menu-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
+        grid-template-columns: repeat(2, 1fr); /* Ubah dari 3 kolom menjadi 2 kolom */
+        gap: 0.8rem; /* Jarak antar card ditambah */
       }
       
       .menu-card {
-        padding: 0.5rem;
-        min-height: 150px; /* Tinggi sedikit ditambah */
+        padding: 0.8rem; /* Padding diperbesar */
+        min-height: 180px; /* Tinggi card diperbesar */
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        border-radius: 10px; /* Border radius disesuaikan */
       }
       
       .menu-icon {
-        font-size: 1.5rem;
-        margin-bottom: 0.3rem;
+        font-size: 2rem; /* Ukuran icon diperbesar */
+        margin-bottom: 0.5rem;
       }
       
       .menu-title {
-        font-size: 0.7rem;
-        margin-bottom: 0.2rem;
-        line-height: 1.1;
+        font-size: 0.9rem; /* Ukuran judul diperbesar */
+        margin-bottom: 0.3rem;
+        line-height: 1.2;
       }
       
       .menu-desc {
-        display: -webkit-box; /* Menampilkan deskripsi */
-        -webkit-line-clamp: 2; /* Batasi ke 2 baris */
+        display: -webkit-box;
+        -webkit-line-clamp: 3; /* Baris deskripsi ditambah menjadi 3 */
         -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-size: 0.6rem;
-        line-height: 1.2;
-        margin: 0.2rem 0;
+        font-size: 0.75rem; /* Ukuran font deskripsi diperbesar */
+        line-height: 1.3;
+        margin: 0.3rem 0;
         color: var(--dark-gray);
       }
       
       .btn {
-        padding: 0.3rem 0.5rem;
-        font-size: 0.6rem;
-        margin-top: 0.3rem;
+        padding: 0.5rem 0.8rem; /* Ukuran tombol diperbesar */
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
         white-space: nowrap;
       }
       
       .btn i {
-        font-size: 0.7rem;
+        font-size: 0.9rem; /* Ukuran icon tombol diperbesar */
       }
       
       .spi-notice {
@@ -217,8 +218,12 @@
       }
       
       .section-title {
-        font-size: 0.9rem;
-        margin: 1rem 0 0.5rem;
+        font-size: 1rem; /* Ukuran judul section diperbesar */
+        margin: 1.2rem 0 0.8rem;
+      }
+      
+      .container {
+        padding: 1rem; /* Padding container disesuaikan */
       }
     }
 
