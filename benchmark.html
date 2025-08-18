@@ -1163,17 +1163,29 @@
           }
         });
 
-        document.getElementById('legendToggle').addEventListener('change', function() {
-          const legend = document.querySelector('.map-legend');
-          const toggleState = document.querySelector('.toggle-state');
-          
-          if (this.checked) {
-            legend.classList.remove('collapsed');
-            toggleState.textContent = 'Sembunyikan Legenda';
-          } else {
-            legend.classList.add('collapsed');
-            toggleState.textContent = 'Tampilkan Legenda';
+        // Hanya jalankan toggle functionality jika di mobile
+        function setupLegendToggle() {
+          if (window.innerWidth <= 600) {
+            const toggle = document.getElementById('legendToggle');
+            if (toggle) {
+              toggle.addEventListener('change', function() {
+                const legend = document.querySelector('.map-legend');
+                if (this.checked) {
+                  legend.style.display = 'block';
+                } else {
+                  legend.style.display = 'none';
+                }
+              });
+            }
           }
+        }
+        
+        // Panggil fungsi setup saat DOM siap dan saat resize
+        document.addEventListener('DOMContentLoaded', function() {
+          setupLegendToggle();
+          
+          // Juga setup saat window di-resize
+          window.addEventListener('resize', setupLegendToggle);
         });
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
