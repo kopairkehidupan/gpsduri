@@ -37,7 +37,7 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 2rem 1.5rem; /* Padding lebih besar di atas bawah */
       flex: 1;
       width: 100%;
       box-sizing: border-box;
@@ -64,11 +64,44 @@
     
     .card {
       background-color: var(--white);
-      border-radius: 12px;
+      border-radius: 16px; /* Border radius lebih besar */
       box-shadow: var(--shadow);
       overflow: hidden;
       transition: var(--transition);
+      margin-bottom: 2rem; /* Margin bawah lebih besar */
+      padding: 1.5rem; /* Padding dalam card */
+      border: 1px solid rgba(0, 0, 0, 0.05); /* Border halus */
+    }
+
+    .card-header {
       margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+
+    /* Efek hover yang lebih halus */
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+    
+    /* Untuk filter container dalam card */
+    .card .filter-container {
+      padding: 0;
+      margin: 0;
+     }
+
+    /* Untuk map container dalam card */
+    .card #mapContainer {
+      margin-bottom: 0;
+      border-radius: 12px;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 0;
     }
     
     .filter-container {
@@ -405,6 +438,15 @@
         display: block;
         overflow-x: auto;
       }
+
+      .container {
+        padding: 1.5rem 1rem;
+      }
+
+      .card {
+        padding: 1rem;
+        border-radius: 12px;
+      }
     }
 
     /* CSS untuk fixed header */
@@ -479,6 +521,10 @@
     </div>
     
     <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Filter Data</h2>
+      </div>
+      
       <div class="filter-container">
         <div class="filter-group">
           <label for="kebunSelect">Kebun</label>
@@ -508,6 +554,12 @@
           </button>
         </div>
       </div>
+      </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Peta Kebun</h2>
+      </div>
       
       <div id="mapContainer">
         <div id="map"></div>
@@ -524,6 +576,8 @@
         </div>
         <div class="map-legend" id="mapLegend"></div>
       </div>
+    </div>
+    </div>
       
       <div id="dataDetails" class="card" style="display: none;">
       <div class="data-tabs">
@@ -623,9 +677,6 @@
         </div>
       </div>
     </div>
-      
-    </div>
-  </div>
 
   <!-- Progress Modal -->
   <div id="progressModal" class="modal" style="display: none;">
