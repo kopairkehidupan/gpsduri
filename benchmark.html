@@ -1173,8 +1173,13 @@
                 const legend = document.querySelector('.map-legend');
                 if (this.checked) {
                   legend.style.display = 'block';
+                  legend.style.transition = 'opacity 0.3s ease';
+                  legend.style.opacity = '1';
                 } else {
-                  legend.style.display = 'none';
+                  legend.style.opacity = '0';
+                  setTimeout(() => {
+                    legend.style.display = 'none';
+                  }, 300); // Match with CSS transition duration
                 }
               });
             }
