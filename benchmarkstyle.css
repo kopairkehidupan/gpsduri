@@ -611,7 +611,7 @@
   border-radius: 8px;
   box-shadow: var(--shadow);
   font-size: 0.8rem;
-  max-width: 180px; /* Lebar maksimum untuk desktop */
+  max-width: 180px;
 }
 
 .legend-item {
@@ -628,95 +628,9 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* Legend Toggle Card Styles */
+/* Sembunyikan toggle di desktop */
 .legend-toggle-container {
-  padding: 1rem !important;
-  margin-bottom: 1.5rem;
-  background-color: var(--light-gray);
-}
-
-.toggle-card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.toggle-title {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--dark-gray);
-  font-weight: 500;
-}
-
-.toggle-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-/* New Toggle Switch Design */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 180px;
-  height: 34px;
-}
-
-.toggle-checkbox {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-label {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: .4s;
-  border-radius: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  box-sizing: border-box;
-}
-
-.toggle-state {
-  color: var(--white);
-  font-size: 0.8rem;
-  font-weight: 500;
-  z-index: 1;
-  transition: all 0.3s;
-  width: 100%;
-  text-align: center;
-}
-
-.toggle-slider {
-  position: absolute;
-  content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-  z-index: 2;
-}
-
-.toggle-checkbox:checked + .toggle-label {
-  background-color: var(--primary);
-}
-
-.toggle-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(146px);
-}
-
-.toggle-checkbox:checked + .toggle-label .toggle-state {
-  transform: translateX(-20px);
+  display: none;
 }
 
 @media (max-width: 600px) {
@@ -750,9 +664,10 @@
     right: auto;
     left: 8px;
     bottom: 20px;
-    max-width: 120px; /* Lebih sempit lagi */
-    padding: 0.4rem; /* Padding lebih kecil */
-    font-size: 0.65rem; /* Ukuran font lebih kecil */
+    max-width: 120px;
+    padding: 0.4rem;
+    font-size: 0.65rem;
+    display: block; /* Default visible */
   }
   
   .map-legend h4 {
@@ -775,9 +690,13 @@
   }
 
   .legend-toggle-container {
-    display: none;
+    display: block;
+    padding: 1rem !important;
+    margin-bottom: 1.5rem;
+    background-color: var(--light-gray);
   }
   
+  /* Style khusus untuk toggle di mobile */
   #mapContainer .toggle-switch {
     position: absolute;
     left: 10px;
@@ -789,7 +708,7 @@
   
   #mapContainer .toggle-label {
     height: 28px;
-    border-radius: 28px;
+    border-radius: 5px;
   }
   
   #mapContainer .toggle-slider {
