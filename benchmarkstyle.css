@@ -628,6 +628,22 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
+.legend-toggle-container {
+  text-align: center;
+  padding: 0.5rem !important;
+  margin-bottom: 1rem;
+}
+
+.legend-toggle-container .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Sembunyikan tombol toggle di mapContainer */
+#mapContainer .legend-toggle {
+  display: none;
+}
+
 @media (max-width: 600px) {
   .chart-wrapper, .analysis-chart-wrapper {
     min-width: 100%;
@@ -685,6 +701,29 @@
   
   .legend-toggle {
     display: none; /* Sembunyikan di desktop */
+  }
+
+  .legend-toggle-container {
+    display: none; /* Sembunyikan card toggle di mobile */
+  }
+  
+  #mapContainer .legend-toggle {
+    display: block; /* Tampilkan tombol toggle di mapContainer untuk mobile */
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 1001;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+  }
+  
+  .legend-toggle i {
+    font-size: 18px;
   }
   
   @media (max-width: 600px) {
