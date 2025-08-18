@@ -580,10 +580,14 @@
 
     <!-- Setelah card mapContainer dan sebelum card dataDetails -->
     <div class="card legend-toggle-container">
-      <button id="legendToggle" class="btn">
-        <i class="material-icons">info</i>
-        <span>Toggle Legend</span>
-      </button>
+      <div class="toggle-switch">
+        <input type="checkbox" id="legendToggle" class="toggle-checkbox">
+        <label for="legendToggle" class="toggle-label">
+          <span class="toggle-inner"></span>
+          <span class="toggle-switch"></span>
+        </label>
+        <span class="toggle-text">Show Legend</span>
+      </div>
     </div>
       
     <div id="dataDetails" class="card" style="display: none;">
@@ -1155,8 +1159,13 @@
           }
         });
 
-        document.getElementById('legendToggle').addEventListener('click', function() {
-          document.querySelector('.map-legend').classList.toggle('collapsed');
+        document.getElementById('legendToggle').addEventListener('change', function() {
+          const legend = document.querySelector('.map-legend');
+          if (this.checked) {
+            legend.classList.remove('collapsed');
+          } else {
+            legend.classList.add('collapsed');
+          }
         });
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
