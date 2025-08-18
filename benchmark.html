@@ -580,15 +580,19 @@
 
     <!-- Setelah card mapContainer dan sebelum card dataDetails -->
     <div class="card legend-toggle-container">
-      <div class="toggle-switch">
-        <input type="checkbox" id="legendToggle" class="toggle-checkbox">
-        <label for="legendToggle" class="toggle-label">
-          <span class="toggle-inner"></span>
-          <span class="toggle-switch"></span>
-        </label>
-        <span class="toggle-text">Show Legend</span>
+    <div class="toggle-card-content">
+      <h4 class="toggle-title">Pengaturan Legenda</h4>
+      <div class="toggle-wrapper">
+        <div class="toggle-switch">
+          <input type="checkbox" id="legendToggle" class="toggle-checkbox" checked>
+          <label for="legendToggle" class="toggle-label">
+            <span class="toggle-state">Sembunyikan Legenda</span>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
     </div>
+  </div>
       
     <div id="dataDetails" class="card" style="display: none;">
     <div class="data-tabs">
@@ -1161,10 +1165,14 @@
 
         document.getElementById('legendToggle').addEventListener('change', function() {
           const legend = document.querySelector('.map-legend');
+          const toggleState = document.querySelector('.toggle-state');
+          
           if (this.checked) {
             legend.classList.remove('collapsed');
+            toggleState.textContent = 'Sembunyikan Legenda';
           } else {
             legend.classList.add('collapsed');
+            toggleState.textContent = 'Tampilkan Legenda';
           }
         });
         
