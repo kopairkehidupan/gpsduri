@@ -406,10 +406,73 @@
         overflow-x: auto;
       }
     }
+
+    /* CSS untuk fixed header */
+  .fixed-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--primary);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+  }
+  
+  .header-content {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .header-title {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 0;
+    color: white;
+    text-align: center;
+    flex-grow: 1;
+    padding: 0 10px;
+  }
+  
+  .header-btn {
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+  }
+  
+  .header-btn:hover {
+    background-color: rgba(255,255,255,0.2);
+  }
+  
+  .header-btn i {
+    font-size: 24px;
+  }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- Tambahkan di bagian atas body, sebelum container utama -->
+  <header class="fixed-header">
+    <div class="header-content">
+      <button id="backButton" class="header-btn">
+        <i class="material-icons">arrow_back</i>
+      </button>
+    </div>
+  </header>
+  
+  <div class="container" style="padding-top: 70px;">
     <div class="header">
       <h1>Benchmark Kebun</h1>
       <p class="subtitle">Filter dan tampilkan data kebun berdasarkan divisi</p>
@@ -501,9 +564,7 @@
           <div class="chart-description">
             <p>Perbandingan antara budget dan actual tonase per bulan</p>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="productionChart"></canvas>
-          </div>
+          <canvas id="productionChart"></canvas>
         </div>
         
         <!-- Chart 2: Cost Bar Chart -->
@@ -518,9 +579,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="costChart"></canvas>
-          </div>
+          <canvas id="costChart"></canvas>
         </div>
         
         <!-- Chart 3: Area Line Chart -->
@@ -535,9 +594,7 @@
               </select>
             </div>
           </div>
-          <div class="chart-wrapper">
-            <canvas id="areaChart"></canvas>
-          </div>
+          <canvas id="areaChart"></canvas>
         </div>
       </div>
 
@@ -557,20 +614,12 @@
         
         <div class="analysis-section">
           <h4>Trend Produktivitas</h4>
-          <div class="analysis-chart-container">
-            <div class="analysis-chart-wrapper">
-              <canvas id="productivityTrendChart"></canvas>
-            </div>
-          </div>
+          <canvas id="productivityTrendChart"></canvas>
         </div>
         
         <div class="analysis-section">
           <h4>Distribusi Biaya</h4>
-          <div class="analysis-chart-container">
-            <div class="analysis-chart-wrapper">
-              <canvas id="costDistributionChart"></canvas>
-            </div>
-          </div>
+          <canvas id="costDistributionChart"></canvas>
         </div>
       </div>
     </div>
@@ -652,37 +701,111 @@
         map.setView([1.0, 101.05], 15);
       });
     }
+
+    async function calculateBlockColor(divisi, blockCode, kebun) {
+      try {
+        const [prodActualData, prodBudgetData] = await Promise.all([
+          getDataFromDB(STORES.PROD_ACTUAL),
+          getDataFromDB(STORES.PROD_BUDGET)
+        ]);
+    
+        const normalizedDivisi = divisi.replace(' ', '_');
+        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+    
+        const monthlyPercentages = [];
+        const monthlyData = {};
+    
+        // Proses data aktual
+        filteredProdActual.forEach(item => {
+          const month = new Date(item.Bulan).getMonth();
+          if (!monthlyData[month]) monthlyData[month] = {};
+          monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+        });
+    
+        // Proses data budget
+        filteredProdBudget.forEach(item => {
+          const month = new Date(item.Bulan).getMonth();
+          if (!monthlyData[month]) monthlyData[month] = {};
+          monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+        });
+    
+        // Hitung persentase
+        Object.values(monthlyData).forEach(data => {
+          if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
+            const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
+            monthlyPercentages.push(percentage);
+          }
+        });
+    
+        // Hitung rata-rata
+        let averagePercentage = 0;
+        if (monthlyPercentages.length > 0) {
+          averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
+        }
+    
+        // Tentukan warna
+        if (averagePercentage >= 95) return '#34A853'; // Hijau
+        if (averagePercentage >= 90) return '#FBBC05'; // Orange
+        if (averagePercentage >= 75) return '#EA4335'; // Merah
+        return '#000000'; // Hitam
+        
+      } catch (error) {
+        console.error('Error calculating block color:', error);
+        return '#888888'; // Default jika error
+      }
+    }
     
     // Fungsi untuk menambahkan label blok di tengah poligon
-    function addBlokLabels(data) {
-      // Hapus label yang sudah ada
-      removeBlokLabels();
-      
-      // Pastikan geoJsonLayer ada
-      if (!geoJsonLayer) {
-        geoJsonLayer = L.layerGroup().addTo(map);
-      }
-      
-      // Buat array untuk menyimpan bounds
-      const boundsArray = [];
-      
-      data.features.forEach(feature => {
-        const blokName = feature.properties.blok;
-        const layer = L.geoJSON(feature, {
-          style: function(feature) {
-            return {
-              fillColor: getColorByDivisi(feature.properties.divisi),
-                  weight: 2,
-                  opacity: 1,
-                  color: 'white',
-                  dashArray: '3',
-                  fillOpacity: 0.7
-                };
+    async function addBlokLabels(data) {
+          // Hapus label yang sudah ada
+          removeBlokLabels();
+          
+          // Pastikan geoJsonLayer ada
+          if (!geoJsonLayer) {
+            geoJsonLayer = L.layerGroup().addTo(map);
+          }
+          
+          // Buat array untuk menyimpan bounds
+          const boundsArray = [];
+          
+          // Buat array untuk menyimpan semua promise
+          const colorPromises = [];
+          
+          // Pertama, hitung semua warna untuk setiap blok
+          data.features.forEach(feature => {
+            const blokName = feature.properties.blok;
+            const kebunName = feature.properties.kebun;
+            const divisiName = feature.properties.divisi;
+            
+            colorPromises.push(
+              calculateBlockColor(divisiName, blokName, kebunName)
+                .then(color => {
+                  feature.properties._color = color; // Simpan warna di properti feature
+                })
+            );
+          });
+          
+          // Tunggu semua warna selesai dihitung
+          await Promise.all(colorPromises);
+          
+          // Kemudian buat layer dengan warna yang sudah dihitung
+          data.features.forEach(feature => {
+            const blokName = feature.properties.blok;
+            const color = feature.properties._color || '#888888';
+            
+            const layer = L.geoJSON(feature, {
+              style: {
+                fillColor: color,
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.7
               },
               onEachFeature: function(feature, layer) {
-                // Tambahkan tooltip permanen di tengah poligon
                 const bounds = layer.getBounds();
-                boundsArray.push(bounds); // Simpan bounds untuk fitBounds nanti
+                boundsArray.push(bounds);
                 
                 const center = bounds.getCenter();
                 const tooltip = L.tooltip({
@@ -695,10 +818,8 @@
                 layer.bindTooltip(tooltip);
                 layer.setTooltipContent(blokName);
                 
-                // Simpan referensi tooltip
                 blokLabels.push({layer: layer, tooltip: tooltip});
                 
-                // Tetap pertahankan event click
                 layer.on('click', function() {
                   const props = feature.properties;
                   const divisiForQuery = props.divisi.replace(' ', '_');
@@ -715,33 +836,34 @@
             const bounds = new L.LatLngBounds(boundsArray);
             map.fitBounds(bounds);
           }
-
-        // Update legend
-        updateLegend(data);
+        
+          // Update legend
+          updateLegend(data);
         }
 
         function updateLegend(data) {
           const legend = document.getElementById('mapLegend');
           if (!legend) return;
           
-          // Get unique divisions
-          const divisions = [...new Set(
-            data.features.map(f => f.properties.divisi)
-          )].sort();
-          
-          let legendHTML = '<h4>Legenda Divisi</h4>';
-          
-          divisions.forEach(div => {
-            const color = getColorByDivisi(div);
-            legendHTML += `
-              <div class="legend-item">
-                <div class="legend-color" style="background-color: ${color};"></div>
-                <span>${div.replace('DIVISI ', '')}</span>
-              </div>
-            `;
-          });
-          
-          legend.innerHTML = legendHTML;
+          legend.innerHTML = `
+            <h4>Legenda Performa Blok</h4>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #34A853;"></div>
+              <span>≥ 95% (Sangat Baik)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #FBBC05;"></div>
+              <span>90% - 95% (Baik)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #EA4335;"></div>
+              <span>75% - 90% (Perlu Perbaikan)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #000000;"></div>
+              <span>&lt; 75% (Kritis)</span>
+            </div>
+          `;
         }
         
         // Fungsi untuk menghapus semua label blok
@@ -788,17 +910,79 @@
           }
         }
         
-        function getColorByDivisi(divisi) {
-          const divisiColors = {
-            'DIVISI I': '#FF5733',
-            'DIVISI II': '#33FF57',
-            'DIVISI III': '#3357FF',
-            'DIVISI IV': '#F3FF33',
-            'DIVISI V': '#FF33F3',
-            'DIVISI VI': '#33FFF3',
-            'DIVISI VII': '#8A2BE2'
-          };
-          return divisiColors[divisi] || '#888888';
+        function getColorByDivisi(divisi, blockCode, kebun) {
+          // Jika tidak ada parameter blockCode dan kebun, kembalikan warna default berdasarkan divisi
+          if (!blockCode || !kebun) {
+            const divisiColors = {
+              'DIVISI I': '#FF5733',
+              'DIVISI II': '#33FF57',
+              'DIVISI III': '#3357FF',
+              'DIVISI IV': '#F3FF33',
+              'DIVISI V': '#FF33F3',
+              'DIVISI VI': '#33FFF3',
+              'DIVISI VII': '#8A2BE2'
+            };
+            return divisiColors[divisi] || '#888888';
+          }
+        
+          // Ambil data produksi dari IndexedDB
+          Promise.all([
+            getDataFromDB(STORES.PROD_ACTUAL),
+            getDataFromDB(STORES.PROD_BUDGET)
+          ]).then(([prodActualData, prodBudgetData]) => {
+            // Filter data untuk blok dan kebun yang dipilih
+            const normalizedDivisi = divisi.replace(' ', '_');
+            const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
+            const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
+        
+            // Hitung persentase ton/ha per bulan
+            const monthlyPercentages = [];
+            
+            // Buat objek untuk mengelompokkan data per bulan
+            const monthlyData = {};
+            
+            // Proses data aktual
+            filteredProdActual.forEach(item => {
+              const month = new Date(item.Bulan).getMonth(); // 0-11
+              if (!monthlyData[month]) monthlyData[month] = {};
+              monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
+            });
+            
+            // Proses data budget
+            filteredProdBudget.forEach(item => {
+              const month = new Date(item.Bulan).getMonth(); // 0-11
+              if (!monthlyData[month]) monthlyData[month] = {};
+              monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
+            });
+            
+            // Hitung persentase untuk setiap bulan yang memiliki data lengkap
+            Object.values(monthlyData).forEach(data => {
+              if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
+                const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
+                monthlyPercentages.push(percentage);
+              }
+            });
+            
+            // Hitung rata-rata persentase
+            let averagePercentage = 0;
+            if (monthlyPercentages.length > 0) {
+              averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
+            }
+        
+            // Tentukan warna berdasarkan rata-rata persentase
+            if (averagePercentage >= 95) {
+              return '#34A853'; // Hijau
+            } else if (averagePercentage >= 90) {
+              return '#FBBC05'; // Orange
+            } else if (averagePercentage >= 75) {
+              return '#EA4335'; // Merah
+            } else {
+              return '#000000'; // Hitam
+            }
+          }).catch(error => {
+            console.error('Error calculating block color:', error);
+            return '#888888'; // Warna default jika terjadi error
+          });
         }
         
         function loadDivisiOptions(kebun) {
@@ -838,7 +1022,6 @@
         document.addEventListener('DOMContentLoaded', async function() {
           initMap();
           initializeCharts(); // Initialize all charts
-          setupChartScroll();
           
           // Load GeoJSON data
           geoJsonData = await loadGeoJsonData();
@@ -860,11 +1043,22 @@
             });
             
             // Event listener untuk dropdown divisi
-            document.getElementById('divisiSelect').addEventListener('change', function() {
+            document.getElementById('divisiSelect').addEventListener('change', async function() {
               const kebun = document.getElementById('kebunSelect').value;
               const divisi = this.value;
               const filteredData = filterGeoJson(kebun, divisi);
-              showGeoJsonOnMap(filteredData);
+              
+              // Tampilkan loading state
+              const loadingIndicator = L.divIcon({html: '<div class="spinner"></div>', className: 'loading-indicator'});
+              const loadingLayer = L.marker(map.getCenter(), {icon: loadingIndicator}).addTo(map);
+              
+              try {
+                await showGeoJsonOnMap(filteredData);
+              } catch (error) {
+                console.error('Error showing geoJSON:', error);
+              } finally {
+                map.removeLayer(loadingLayer);
+              }
             });
           }
     
@@ -886,25 +1080,6 @@
               
               document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
               this.classList.add('active');
-
-              // Tambahkan timeout untuk memastikan tab benar-benar visible
-              setTimeout(() => {
-                if (this.getAttribute('data-tab') === 'chart') {
-                  handleChartResize();
-                  
-                  // Force tooltips untuk semua chart utama
-                  forceTooltips(productionChart);
-                  forceTooltips(costChart);
-                  forceTooltips(areaChart);
-                }
-                
-                // Tambahkan juga untuk tab analisis
-                if (this.getAttribute('data-tab') === 'analysis') {
-                  handleChartResize();
-                  forceTooltips(productivityTrendChart);
-                  forceTooltips(costDistributionChart);
-                }
-              }, 300); // Delay untuk mobile
             });
           });
     
@@ -920,22 +1095,6 @@
             return el;
           }
         });
-
-        // Fungsi untuk mengatur ulang ukuran chart saat container di-scroll
-        function setupChartScroll() {
-          document.querySelectorAll('.chart-container, .analysis-chart-container').forEach(container => {
-            container.addEventListener('scroll', function() {
-              const canvas = this.querySelector('canvas');
-              if (canvas) {
-                // Trigger resize untuk memastikan chart tetap tajam
-                const chart = Chart.getChart(canvas);
-                if (chart) {
-                  chart.resize();
-                }
-              }
-            });
-          });
-        }
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
         // Database setup for IndexedDB
@@ -1729,6 +1888,13 @@
           if (!productionChart) {
             initializeCharts();
           }
+
+          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
+          setTimeout(() => {
+            if (productionChart) productionChart.resize();
+            if (costChart) costChart.resize();
+            if (areaChart) areaChart.resize();
+          }, 100);
           
           // Activate production tab
           document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
@@ -2404,8 +2570,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2471,8 +2636,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2542,8 +2706,7 @@
               plugins: {
                 tooltip: commonTooltipOptions
               },
-              responsive: false, // Nonaktifkan responsive bawaan
-              maintainAspectRatio: false,
+              responsive: true,
               plugins: {
                 tooltip: {
                   enabled: true,
@@ -2635,34 +2798,19 @@
         }
 
         function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart];
+          const charts = [productionChart, costChart, areaChart];
           charts.forEach(chart => {
-            if (chart && !chart._destroyed) {
-              const canvas = chart.canvas;
-              const wrapper = canvas.closest('.chart-wrapper, .analysis-chart-wrapper');
-              if (wrapper) {
-                // Simpan state tooltip sebelum resize
-                const activeTooltip = chart.tooltip._active;
-                
-                // Update ukuran canvas
-                canvas.style.width = wrapper.offsetWidth + 'px';
-                canvas.style.height = wrapper.offsetHeight + 'px';
-                
-                // Resize chart
-                chart.resize();
-                
-                // Restore tooltip state
-                if (activeTooltip && activeTooltip.length > 0) {
-                  chart.tooltip._active = activeTooltip;
-                  chart.update();
-                }
-              }
+            if (chart) {
+              chart.resize();
             }
           });
         }
-
-        window.addEventListener('orientationchange', function() {
-          setTimeout(handleChartResize, 500);
+        
+        // Panggil saat tab diubah
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            setTimeout(handleChartResize, 300); // Beri sedikit delay
+          });
         });
         
         // Panggil saat window di-resize
@@ -2714,39 +2862,6 @@
           } catch (error) {
             console.error('Error updating charts:', error);
           }
-
-          // Gunakan requestAnimationFrame untuk memastikan update setelah render
-          requestAnimationFrame(() => {
-            if (productionChart) {
-              productionChart.resize();
-              productionChart.update();
-            }
-            if (costChart) {
-              costChart.resize();
-              costChart.update();
-            }
-            if (areaChart) {
-              areaChart.resize();
-              areaChart.update();
-            }
-            if (productivityTrendChart) {
-              productivityTrendChart.resize();
-              productivityTrendChart.update();
-            }
-            if (costDistributionChart) {
-              costDistributionChart.resize();
-              costDistributionChart.update();
-            }
-
-          // Paksa update setelah 100ms
-            setTimeout(() => {
-              if (productionChart) productionChart.update();
-              if (costChart) costChart.update();
-              if (areaChart) areaChart.update();
-              if (productivityTrendChart) productivityTrendChart.update();
-              if (costDistributionChart) costDistributionChart.update();
-            }, 100);
-          });
         }
         
         // Helper function to update production chart
@@ -3133,8 +3248,7 @@
                 ]
               },
               options: {
-                responsive: false,
-                maintainAspectRatio: false,
+                responsive: true,
                 plugins: {
                   title: { display: false },
                   tooltip: {
@@ -3176,8 +3290,7 @@
                 }]
               },
               options: {
-                responsive: false,
-                maintainAspectRatio: false,
+                responsive: true,
                 plugins: {
                   tooltip: { enabled: false },
                   legend: {
@@ -3309,7 +3422,7 @@
         }
 
         // Tambahkan observer untuk memantau perubahan tab
-         const observer = new MutationObserver(function(mutations) {
+        const observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             if (mutation.attributeName === 'class') {
               const analysisTab = document.getElementById('analysisTab');
@@ -3328,6 +3441,11 @@
           attributes: true,
           attributeFilter: ['class']
         });
+
+      // Tambahkan event listener untuk tombol back
+      document.getElementById('backButton').addEventListener('click', function() {
+        window.history.back();
+      });
   </script>
 </body>
 </html>
