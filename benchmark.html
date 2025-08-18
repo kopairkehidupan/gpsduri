@@ -577,22 +577,6 @@
         <div class="map-legend" id="mapLegend"></div>
       </div>
     </div>
-
-    <!-- Setelah card mapContainer dan sebelum card dataDetails -->
-    <div class="card legend-toggle-container">
-      <div class="toggle-card-content">
-        <h4 class="toggle-title">Pengaturan Legenda</h4>
-        <div class="toggle-wrapper">
-          <div class="toggle-switch">
-          <input type="checkbox" id="legendToggle" class="toggle-checkbox" checked>
-          <label for="legendToggle" class="toggle-label">
-            <span class="toggle-state on">TAMPILKAN</span>
-            <span class="toggle-state off">SEMBUNYIKAN</span>
-          </label>
-        </div>
-        </div>
-      </div>
-    </div>
       
     <div id="dataDetails" class="card" style="display: none;">
     <div class="data-tabs">
@@ -1161,37 +1145,6 @@
             }
             return el;
           }
-        });
-
-        // Hanya jalankan toggle functionality jika di mobile
-        function setupLegendToggle() {
-          if (window.innerWidth <= 600) {
-              const toggle = document.getElementById('legendToggle');
-              if (toggle) {
-                toggle.addEventListener('change', function() {
-                  const legend = document.querySelector('.map-legend');
-                  if (this.checked) {
-                    legend.style.display = 'block';
-                  } else {
-                    legend.style.display = 'none';
-                  }
-                });
-              }
-            } else {
-            // Di desktop, pastikan legend selalu tampil
-            const legend = document.querySelector('.map-legend');
-            if (legend) {
-              legend.style.display = 'block';
-            }
-          }
-        }
-        
-        // Panggil fungsi setup saat DOM siap dan saat resize
-        document.addEventListener('DOMContentLoaded', function() {
-          setupLegendToggle();
-          
-          // Juga setup saat window di-resize
-          window.addEventListener('resize', setupLegendToggle);
         });
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
