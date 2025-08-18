@@ -611,6 +611,7 @@
   border-radius: 8px;
   box-shadow: var(--shadow);
   font-size: 0.8rem;
+  max-width: 180px; /* Lebar maksimum untuk desktop */
 }
 
 .legend-item {
@@ -652,5 +653,55 @@
   
   .chart-description {
     font-size: 0.9rem;
+  }
+
+  .map-legend {
+    right: auto; /* Hapus posisi kanan */
+    left: 10px; /* Posisi kiri */
+    bottom: 10px; /* Lebih dekat ke bawah */
+    max-width: 150px; /* Lebih sempit */
+    padding: 0.5rem; /* Padding lebih kecil */
+    font-size: 0.7rem; /* Ukuran font lebih kecil */
+    transition: all 0.3s ease;
+  }
+  
+  .map-legend h4 {
+    font-size: 0.8rem; /* Ukuran judul lebih kecil */
+    margin: 0.2rem 0; /* Margin lebih kecil */
+  }
+  
+  .legend-item {
+    margin-bottom: 0.2rem; /* Spasi lebih kecil antar item */
+  }
+  
+  .legend-color {
+    width: 12px; /* Kotak warna lebih kecil */
+    height: 12px;
+    margin-right: 0.3rem;
+  }
+
+  .map-legend.collapsed {
+    transform: translateX(-160px);
+  }
+  
+  .legend-toggle {
+    display: none; /* Sembunyikan di desktop */
+  }
+  
+  @media (max-width: 600px) {
+    .legend-toggle {
+      display: block;
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      z-index: 1001;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
   }
 }
