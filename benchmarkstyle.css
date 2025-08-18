@@ -656,28 +656,27 @@
   }
 
   .map-legend {
-    right: auto; /* Hapus posisi kanan */
-    left: 10px; /* Posisi kiri */
-    bottom: 15px; /* Lebih dekat ke bawah */
-    max-width: 150px; /* Lebih sempit */
-    padding: 0.5rem; /* Padding lebih kecil */
-    font-size: 0.7rem; /* Ukuran font lebih kecil */
-    transition: all 0.3s ease;
+    right: auto;
+    left: 8px;
+    bottom: 20px;
+    max-width: 120px; /* Lebih sempit lagi */
+    padding: 0.4rem; /* Padding lebih kecil */
+    font-size: 0.65rem; /* Ukuran font lebih kecil */
   }
   
   .map-legend h4 {
-    font-size: 0.8rem; /* Ukuran judul lebih kecil */
-    margin: 0.2rem 0; /* Margin lebih kecil */
+    font-size: 0.7rem; /* Judul lebih kecil */
+    margin: 0.15rem 0; /* Margin lebih ketat */
   }
   
   .legend-item {
-    margin-bottom: 0.2rem; /* Spasi lebih kecil antar item */
+    margin-bottom: 0.15rem; /* Spasi lebih rapat */
   }
   
   .legend-color {
-    width: 12px; /* Kotak warna lebih kecil */
-    height: 12px;
-    margin-right: 0.3rem;
+    width: 10px; /* Kotak warna lebih kecil */
+    height: 10px;
+    margin-right: 0.25rem;
   }
 
   .map-legend.collapsed {
