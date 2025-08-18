@@ -628,63 +628,95 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* Toggle Switch Styles */
-.toggle-switch {
+/* Legend Toggle Card Styles */
+.legend-toggle-container {
+  padding: 1rem !important;
+  margin-bottom: 1.5rem;
+  background-color: var(--light-gray);
+}
+
+.toggle-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toggle-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--dark-gray);
+  font-weight: 500;
+}
+
+.toggle-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+}
+
+/* New Toggle Switch Design */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 180px;
+  height: 34px;
 }
 
 .toggle-checkbox {
-  display: none;
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
 .toggle-label {
-  position: relative;
-  display: inline-block;
-  width: 60px;
-  height: 30px;
-  background-color: #ccc;
-  border-radius: 15px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.toggle-inner {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 15px;
-  transition: all 0.3s;
-}
-
-.toggle-switch {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 26px;
-  height: 26px;
-  background-color: white;
-  border-radius: 50%;
-  transition: all 0.3s;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
-.toggle-checkbox:checked + .toggle-label .toggle-inner {
+.toggle-state {
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 500;
+  z-index: 1;
+  transition: all 0.3s;
+  width: 100%;
+  text-align: center;
+}
+
+.toggle-slider {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.toggle-checkbox:checked + .toggle-label {
   background-color: var(--primary);
 }
 
-.toggle-checkbox:checked + .toggle-label .toggle-switch {
-  transform: translateX(30px);
+.toggle-checkbox:checked + .toggle-label .toggle-slider {
+  transform: translateX(146px);
 }
 
-.toggle-text {
-  font-size: 0.9rem;
-  color: var(--dark-gray);
-}
-
-/* Sembunyikan tombol toggle di mapContainer */
-#mapContainer .legend-toggle {
-  display: none;
+.toggle-checkbox:checked + .toggle-label .toggle-state {
+  transform: translateX(-20px);
 }
 
 @media (max-width: 600px) {
@@ -742,7 +774,7 @@
     transform: translateX(-160px);
   }
 
-  legend-toggle-container {
+  .legend-toggle-container {
     display: none;
   }
   
@@ -751,28 +783,32 @@
     left: 10px;
     bottom: 10px;
     z-index: 1001;
-    background: rgba(255,255,255,0.9);
-    padding: 5px;
-    border-radius: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    width: 120px;
+    height: 28px;
   }
   
   #mapContainer .toggle-label {
-    width: 50px;
-    height: 25px;
+    height: 28px;
+    border-radius: 28px;
   }
   
-  #mapContainer .toggle-switch {
-    width: 21px;
-    height: 21px;
+  #mapContainer .toggle-slider {
+    height: 20px;
+    width: 20px;
+    bottom: 4px;
+    left: 4px;
   }
   
-  #mapContainer .toggle-checkbox:checked + .toggle-label .toggle-switch {
-    transform: translateX(25px);
+  #mapContainer .toggle-state {
+    font-size: 0.7rem;
   }
   
-  #mapContainer .toggle-text {
-    display: none;
+  #mapContainer .toggle-checkbox:checked + .toggle-label .toggle-slider {
+    transform: translateX(92px);
+  }
+  
+  #mapContainer .toggle-checkbox:checked + .toggle-label .toggle-state {
+    transform: translateX(-15px);
   }
   
 }
