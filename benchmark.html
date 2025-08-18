@@ -563,6 +563,9 @@
       
       <div id="mapContainer">
         <div id="map"></div>
+        <button class="legend-toggle" id="legendToggle">
+          <i class="material-icons">info</i>
+        </button>
         <div class="map-controls">
           <button class="map-control-btn" id="zoomInBtn" title="Zoom In">
             <i class="material-icons">add</i>
@@ -1145,6 +1148,10 @@
             }
             return el;
           }
+        });
+
+        document.getElementById('legendToggle').addEventListener('click', function() {
+          document.querySelector('.map-legend').classList.toggle('collapsed');
         });
         
         // ---------------- END POINT untuk mengambil data dari server-------------//
