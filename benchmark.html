@@ -563,9 +563,6 @@
       
       <div id="mapContainer">
         <div id="map"></div>
-        <button class="legend-toggle" id="legendToggle">
-          <i class="material-icons">info</i>
-        </button>
         <div class="map-controls">
           <button class="map-control-btn" id="zoomInBtn" title="Zoom In">
             <i class="material-icons">add</i>
@@ -580,105 +577,113 @@
         <div class="map-legend" id="mapLegend"></div>
       </div>
     </div>
-      
-      <div id="dataDetails" class="card" style="display: none;">
-      <div class="data-tabs">
-        <button class="tab-btn active" data-tab="production">Produksi</button>
-        <button class="tab-btn" data-tab="cost">Biaya</button>
-        <button class="tab-btn" data-tab="chart">Grafik</button>
-        <button class="tab-btn" data-tab="analysis">Analisa</button>
-      </div>
-      
-      <div id="productionTab" class="tab-content active">
-        <h3>Data Produksi</h3>
-        <div class="data-grid">
-          <div class="data-card">
-            <h4>Budget</h4>
-            <div id="prodBudgetData"></div>
-          </div>
-          <div class="data-card">
-            <h4>Aktual</h4>
-            <div id="prodActualData"></div>
-          </div>
-          <div class="data-card">
-            <h4>Perbandingan</h4>
-            <div id="prodComparison"></div>
-          </div>
-        </div>
-      </div>
-      
-      <div id="costTab" class="tab-content">
-        <!-- Content will be dynamically generated -->
-      </div>
 
-      <div id="chartTab" class="tab-content">
-        <h3>Grafik Data</h3>
-        
-        <!-- Chart 1: Production Line Chart -->
-        <div class="chart-container">
-          <h4>Grafik Produksi (Tonase)</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget dan actual tonase per bulan</p>
-          </div>
-          <canvas id="productionChart"></canvas>
+    <!-- Setelah card mapContainer dan sebelum card dataDetails -->
+    <div class="card legend-toggle-container">
+      <button id="legendToggle" class="btn">
+        <i class="material-icons">info</i>
+        <span>Toggle Legend</span>
+      </button>
+    </div>
+      
+    <div id="dataDetails" class="card" style="display: none;">
+    <div class="data-tabs">
+      <button class="tab-btn active" data-tab="production">Produksi</button>
+      <button class="tab-btn" data-tab="cost">Biaya</button>
+      <button class="tab-btn" data-tab="chart">Grafik</button>
+      <button class="tab-btn" data-tab="analysis">Analisa</button>
+    </div>
+    
+    <div id="productionTab" class="tab-content active">
+      <h3>Data Produksi</h3>
+      <div class="data-grid">
+        <div class="data-card">
+          <h4>Budget</h4>
+          <div id="prodBudgetData"></div>
         </div>
-        
-        <!-- Chart 2: Cost Bar Chart -->
-        <div class="chart-container">
-          <h4>Grafik Biaya</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget dan actual biaya per bulan</p>
-            <div class="chart-filter">
-              <label for="costWorkObject">Pilih Objek Kerja:</label>
-              <select id="costWorkObject">
-                <option value="">Semua Objek Kerja</option>
-              </select>
-            </div>
-          </div>
-          <canvas id="costChart"></canvas>
+        <div class="data-card">
+          <h4>Aktual</h4>
+          <div id="prodActualData"></div>
         </div>
-        
-        <!-- Chart 3: Area Line Chart -->
-        <div class="chart-container">
-          <h4>Grafik Luas/Hasil</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget luas dan actual hasil per bulan</p>
-            <div class="chart-filter">
-              <label for="areaWorkObject">Pilih Objek Kerja:</label>
-              <select id="areaWorkObject">
-                <option value="">Semua Objek Kerja</option>
-              </select>
-            </div>
-          </div>
-          <canvas id="areaChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 4. Tambahkan tab baru di HTML-->
-      <div id="analysisTab" class="tab-content">
-        <h3>Analisis Mendalam</h3>
-        
-        <div class="analysis-section">
-          <h4>Ringkasan Kinerja</h4>
-          <div id="performanceSummary"></div>
-        </div>
-        
-        <div class="analysis-section">
-          <h4>Efisiensi Biaya</h4>
-          <div id="costEfficiency"></div>
-        </div>
-        
-        <div class="analysis-section">
-          <h4>Trend Produktivitas</h4>
-          <canvas id="productivityTrendChart"></canvas>
-        </div>
-        
-        <div class="analysis-section">
-          <h4>Distribusi Biaya</h4>
-          <canvas id="costDistributionChart"></canvas>
+        <div class="data-card">
+          <h4>Perbandingan</h4>
+          <div id="prodComparison"></div>
         </div>
       </div>
     </div>
+    
+    <div id="costTab" class="tab-content">
+      <!-- Content will be dynamically generated -->
+    </div>
+
+    <div id="chartTab" class="tab-content">
+      <h3>Grafik Data</h3>
+      
+      <!-- Chart 1: Production Line Chart -->
+      <div class="chart-container">
+        <h4>Grafik Produksi (Tonase)</h4>
+        <div class="chart-description">
+          <p>Perbandingan antara budget dan actual tonase per bulan</p>
+        </div>
+        <canvas id="productionChart"></canvas>
+      </div>
+      
+      <!-- Chart 2: Cost Bar Chart -->
+      <div class="chart-container">
+        <h4>Grafik Biaya</h4>
+        <div class="chart-description">
+          <p>Perbandingan antara budget dan actual biaya per bulan</p>
+          <div class="chart-filter">
+            <label for="costWorkObject">Pilih Objek Kerja:</label>
+            <select id="costWorkObject">
+              <option value="">Semua Objek Kerja</option>
+            </select>
+          </div>
+        </div>
+        <canvas id="costChart"></canvas>
+      </div>
+      
+      <!-- Chart 3: Area Line Chart -->
+      <div class="chart-container">
+        <h4>Grafik Luas/Hasil</h4>
+        <div class="chart-description">
+          <p>Perbandingan antara budget luas dan actual hasil per bulan</p>
+          <div class="chart-filter">
+            <label for="areaWorkObject">Pilih Objek Kerja:</label>
+            <select id="areaWorkObject">
+              <option value="">Semua Objek Kerja</option>
+            </select>
+          </div>
+        </div>
+        <canvas id="areaChart"></canvas>
+      </div>
+    </div>
+
+    <!-- 4. Tambahkan tab baru di HTML-->
+    <div id="analysisTab" class="tab-content">
+      <h3>Analisis Mendalam</h3>
+      
+      <div class="analysis-section">
+        <h4>Ringkasan Kinerja</h4>
+        <div id="performanceSummary"></div>
+      </div>
+      
+      <div class="analysis-section">
+        <h4>Efisiensi Biaya</h4>
+        <div id="costEfficiency"></div>
+      </div>
+      
+      <div class="analysis-section">
+        <h4>Trend Produktivitas</h4>
+        <canvas id="productivityTrendChart"></canvas>
+      </div>
+      
+      <div class="analysis-section">
+        <h4>Distribusi Biaya</h4>
+        <canvas id="costDistributionChart"></canvas>
+      </div>
+    </div>
+  </div>
   </div>
 
   <!-- Progress Modal -->
