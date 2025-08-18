@@ -638,7 +638,7 @@
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 100px; /* Lebar disesuaikan */
+  width: 100%;
   height: 34px;
 }
 
@@ -655,60 +655,56 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #e0e0e0;
+  background-color: #ccc;
   transition: .4s;
-  border-radius: 34px;
-}
-
-.toggle-label:before {
-  position: absolute;
-  content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-  z-index: 2;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  box-sizing: border-box;
+  overflow: hidden; /* Tambahkan ini untuk memastikan teks tidak keluar */
 }
 
 .toggle-state {
-  position: absolute;
-  color: #555;
+  color: blue;
   font-size: 0.8rem;
   font-weight: 500;
-  line-height: 34px;
-  transition: all 0.3s;
+  z-index: 1;
+  transition: all 0.3s ease;
+  position: absolute;
+  width: calc(100% - 40px); /* Sesuaikan dengan lebar slider */
+  text-align: center;
 }
 
 .toggle-state.on {
   left: 10px;
-  opacity: 0;
+  text-align: left;
 }
 
 .toggle-state.off {
   right: 10px;
-  opacity: 1;
-}
-
-.toggle-checkbox:checked + .toggle-label {
-  background-color: var(--primary);
-}
-
-.toggle-checkbox:checked + .toggle-label:before {
-  transform: translateX(66px);
+  text-align: right;
 }
 
 .toggle-checkbox:checked + .toggle-label .toggle-state.on {
   opacity: 1;
-  left: 10px;
+  transform: translateX(0);
 }
 
 .toggle-checkbox:checked + .toggle-label .toggle-state.off {
   opacity: 0;
-  right: 10px;
+  transform: translateX(20px);
+}
+
+.toggle-checkbox:not(:checked) + .toggle-label .toggle-state.on {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.toggle-checkbox:not(:checked) + .toggle-label .toggle-state.off {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 @media (max-width: 600px) {
@@ -777,22 +773,37 @@
   
   /* Style khusus untuk toggle di mobile */
   .toggle-switch {
-    width: 90px;
+    width: 100%;
     height: 28px;
   }
   
-  .toggle-label:before {
+  .toggle-label {
+    height: 28px;
+    border-radius: 5px;
+  }
+  
+  .toggle-slider {
     height: 20px;
     width: 20px;
     bottom: 4px;
+    left: 4px;
   }
   
   .toggle-state {
+    color: blue;
     font-size: 0.7rem;
-    line-height: 28px;
+    width: calc(100% - 30px); /* Lebih sempit untuk mobile */
   }
   
-  .toggle-checkbox:checked + .toggle-label:before {
-    transform: translateX(62px);
+  .toggle-checkbox:checked + .toggle-label .toggle-slider {
+    transform: translateX(calc(100% - 28px)); /* Sesuaikan dengan lebar */
+  }
+  
+  .toggle-state.on {
+    left: 8px;
+  }
+  
+  .toggle-state.off {
+    right: 8px;
   }
 }
