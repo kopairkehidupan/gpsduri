@@ -667,7 +667,7 @@
 }
 
 .toggle-state {
-  color: white;
+  color: blue;
   font-size: 0.8rem;
   font-weight: 500;
   z-index: 1;
@@ -790,6 +790,7 @@
   }
   
   .toggle-state {
+    color: blue;
     font-size: 0.7rem;
     width: calc(100% - 30px); /* Lebih sempit untuk mobile */
   }
