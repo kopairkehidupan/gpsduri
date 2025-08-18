@@ -612,6 +612,7 @@
   box-shadow: var(--shadow);
   font-size: 0.8rem;
   max-width: 180px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .legend-item {
@@ -741,6 +742,7 @@
     padding: 0.4rem;
     font-size: 0.65rem;
     display: block; /* Default visible */
+    transition: opacity 0.3s ease, transform 0.3s ease;
   }
   
   .map-legend h4 {
