@@ -662,6 +662,7 @@
   justify-content: space-between;
   padding: 0 10px;
   box-sizing: border-box;
+  overflow: hidden; /* Tambahkan ini untuk memastikan teks tidak keluar */
 }
 
 .toggle-state {
@@ -669,42 +670,20 @@
   font-size: 0.8rem;
   font-weight: 500;
   z-index: 1;
-  transition: all 0.3s;
-  width: 100%;
-  text-align: center;
+  transition: all 0.3s ease;
   position: absolute;
-  left: 0;
+  width: calc(100% - 40px); /* Sesuaikan dengan lebar slider */
+  text-align: center;
 }
 
 .toggle-state.on {
-  transform: translateX(20px);
+  left: 10px;
   text-align: left;
 }
 
 .toggle-state.off {
-  transform: translateX(-20px);
+  right: 10px;
   text-align: right;
-}
-
-.toggle-slider {
-  position: absolute;
-  content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-  z-index: 2;
-}
-
-.toggle-checkbox:checked + .toggle-label {
-  background-color: var(--primary);
-}
-
-.toggle-checkbox:checked + .toggle-label .toggle-slider {
-  transform: translateX(86px);
 }
 
 .toggle-checkbox:checked + .toggle-label .toggle-state.on {
@@ -714,12 +693,12 @@
 
 .toggle-checkbox:checked + .toggle-label .toggle-state.off {
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(20px);
 }
 
 .toggle-checkbox:not(:checked) + .toggle-label .toggle-state.on {
   opacity: 0;
-  transform: translateX(40px);
+  transform: translateX(-20px);
 }
 
 .toggle-checkbox:not(:checked) + .toggle-label .toggle-state.off {
@@ -810,17 +789,18 @@
   
   .toggle-state {
     font-size: 0.7rem;
+    width: calc(100% - 30px); /* Lebih sempit untuk mobile */
   }
   
   .toggle-checkbox:checked + .toggle-label .toggle-slider {
-    transform: translateX(72px);
+    transform: translateX(calc(100% - 28px)); /* Sesuaikan dengan lebar */
   }
   
   .toggle-state.on {
-    transform: translateX(15px);
+    left: 8px;
   }
   
   .toggle-state.off {
-    transform: translateX(-15px);
+    right: 8px;
   }
 }
