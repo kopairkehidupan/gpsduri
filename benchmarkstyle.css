@@ -628,15 +628,58 @@
   border: 1px solid rgba(0,0,0,0.1);
 }
 
-.legend-toggle-container {
-  text-align: center;
-  padding: 0.5rem !important;
-  margin-bottom: 1rem;
+/* Toggle Switch Styles */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.legend-toggle-container .btn {
+.toggle-checkbox {
+  display: none;
+}
+
+.toggle-label {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 30px;
+  background-color: #ccc;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.toggle-inner {
+  display: block;
   width: 100%;
-  justify-content: center;
+  height: 100%;
+  border-radius: 15px;
+  transition: all 0.3s;
+}
+
+.toggle-switch {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 26px;
+  height: 26px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-inner {
+  background-color: var(--primary);
+}
+
+.toggle-checkbox:checked + .toggle-label .toggle-switch {
+  transform: translateX(30px);
+}
+
+.toggle-text {
+  font-size: 0.9rem;
+  color: var(--dark-gray);
 }
 
 /* Sembunyikan tombol toggle di mapContainer */
@@ -698,48 +741,38 @@
   .map-legend.collapsed {
     transform: translateX(-160px);
   }
-  
-  .legend-toggle {
-    display: none; /* Sembunyikan di desktop */
-  }
 
-  .legend-toggle-container {
-    display: none; /* Sembunyikan card toggle di mobile */
+  legend-toggle-container {
+    display: none;
   }
   
-  #mapContainer .legend-toggle {
-    display: block; /* Tampilkan tombol toggle di mapContainer untuk mobile */
+  #mapContainer .toggle-switch {
     position: absolute;
     left: 10px;
     bottom: 10px;
     z-index: 1001;
     background: rgba(255,255,255,0.9);
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    padding: 5px;
+    border-radius: 20px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    cursor: pointer;
   }
   
-  .legend-toggle i {
-    font-size: 18px;
+  #mapContainer .toggle-label {
+    width: 50px;
+    height: 25px;
   }
   
-  @media (max-width: 600px) {
-    .legend-toggle {
-      display: block;
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      z-index: 1001;
-      background: rgba(255,255,255,0.9);
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      cursor: pointer;
-    }
+  #mapContainer .toggle-switch {
+    width: 21px;
+    height: 21px;
   }
+  
+  #mapContainer .toggle-checkbox:checked + .toggle-label .toggle-switch {
+    transform: translateX(25px);
+  }
+  
+  #mapContainer .toggle-text {
+    display: none;
+  }
+  
 }
