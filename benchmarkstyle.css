@@ -658,7 +658,7 @@
   .map-legend {
     right: auto; /* Hapus posisi kanan */
     left: 10px; /* Posisi kiri */
-    bottom: 10px; /* Lebih dekat ke bawah */
+    bottom: 15px; /* Lebih dekat ke bawah */
     max-width: 150px; /* Lebih sempit */
     padding: 0.5rem; /* Padding lebih kecil */
     font-size: 0.7rem; /* Ukuran font lebih kecil */
