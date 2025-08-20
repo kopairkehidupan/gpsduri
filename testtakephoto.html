@@ -1,116 +1,452 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Kondisi Lapangan</title>
+    <title>Aplikasi WebView dengan Kamera</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
-        /* CSS yang sudah ada */
-        body {
-            font-family: 'Poppins', sans-serif;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
             padding: 20px;
-            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .container {
-            max-width: 100%;
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+            margin-top: 20px;
         }
         
-        /* Tambahan untuk memastikan tampilan sesuai mobile */
-        .camera-modal {
+        header {
+            background: #4a6bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 25px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            font-size: 22px;
+            color: #4a6bff;
+            margin: 20px 0 10px;
+            border-bottom: 2px solid #f0f4ff;
+            padding-bottom: 8px;
+        }
+        
+        p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background-color: #4a6bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .btn:hover {
+            background-color: #3a5be0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-camera {
+            background-color: #ff4b4b;
+        }
+        
+        .btn-camera:hover {
+            background-color: #e03a3a;
+        }
+        
+        .camera-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        #cameraPreview {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .photo-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .photo-item {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .delete-photo {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .modal {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: black;
+            background-color: rgba(0, 0, 0, 0.8);
             z-index: 1000;
-            display: none;
+            align-items: center;
+            justify-content: center;
         }
         
-        .camera-preview {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            text-align: center;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9ff;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .step-box {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #4a6bff;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #4a6bff;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Konten form Anda yang sudah ada -->
+        <header>
+            <h1>Aplikasi WebView dengan Kamera</h1>
+            <p>Contoh implementasi fitur kamera untuk Kodular</p>
+        </header>
         
-        <button id="openCamera" class="btn">
-            <i class="material-icons">photo_camera</i>
-            <span>Ambil Foto</span>
-        </button>
-        
-        <!-- Modal Kamera -->
-        <div id="cameraModal" class="camera-modal">
-            <video id="cameraPreview" class="camera-preview" autoplay playsinline></video>
-            <button id="captureBtn" style="position:absolute; bottom:20px; left:50%; transform:translateX(-50%);">
-                Ambil Foto
+        <div class="content">
+            <h2>Cara Menggunakan di Kodular</h2>
+            
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <span>Buat project baru di Kodular</span>
+            </div>
+            
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <span>Tambahkan komponen WebView</span>
+            </div>
+            
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <span>Atur properti WebViewString dengan kode HTML ini</span>
+            </div>
+            
+            <div class="step-box">
+                <span class="step-number">4</span>
+                <span>Aktifkan izin kamera di pengaturan aplikasi</span>
+            </div>
+            
+            <div class="step-box">
+                <span class="step-number">5</span>
+                <span>Build aplikasi dan uji coba</span>
+            </div>
+            
+            <h2>Demo Fitur Kamera</h2>
+            <p>Tekan tombol di bawah untuk mencoba fitur kamera:</p>
+            
+            <button id="openCamera" class="btn btn-camera">
+                <i class="material-icons">photo_camera</i>
+                <span>Buka Kamera</span>
             </button>
-            <button id="closeCamera" style="position:absolute; top:20px; right:20px;">
-                X
+            
+            <div class="camera-container" id="cameraContainer" style="display: none;">
+                <video id="cameraPreview" autoplay playsinline></video>
+                <button id="capturePhoto" class="btn">
+                    <i class="material-icons">camera</i>
+                    <span>Ambil Foto</span>
+                </button>
+            </div>
+            
+            <h2>Foto yang Diambil</h2>
+            <div class="photo-container" id="photoContainer">
+                <p id="noPhotos">Belum ada foto yang diambil</p>
+            </div>
+            
+            <button id="savePhotos" class="btn" style="display: none;">
+                <i class="material-icons">save</i>
+                <span>Simpan Foto</span>
+            </button>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2023 Aplikasi WebView dengan Kamera | Dibuat untuk Kodular</p>
+        </div>
+    </div>
+
+    <!-- Modal untuk Preview Foto -->
+    <div id="previewModal" class="modal">
+        <span class="close-modal">&times;</span>
+        <div class="modal-content">
+            <h2>Preview Foto</h2>
+            <img id="previewImage" style="max-width: 100%; border-radius: 8px; margin: 15px 0;">
+            <button id="confirmPhoto" class="btn">
+                <i class="material-icons">check</i>
+                <span>Gunakan Foto Ini</span>
             </button>
         </div>
     </div>
 
     <script>
-    // Kode JavaScript yang sudah ada dengan penyesuaian
-    document.getElementById('openCamera').addEventListener('click', function() {
-        // Meminta izin kamera
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then(function(stream) {
-                var cameraModal = document.getElementById('cameraModal');
-                var cameraPreview = document.getElementById('cameraPreview');
+        // Variabel global
+        let cameraStream = null;
+        const capturedPhotos = [];
+        
+        // Elemen DOM
+        const openCameraBtn = document.getElementById('openCamera');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const cameraPreview = document.getElementById('cameraPreview');
+        const capturePhotoBtn = document.getElementById('capturePhoto');
+        const photoContainer = document.getElementById('photoContainer');
+        const noPhotos = document.getElementById('noPhotos');
+        const savePhotosBtn = document.getElementById('savePhotos');
+        const previewModal = document.getElementById('previewModal');
+        const previewImage = document.getElementById('previewImage');
+        const confirmPhotoBtn = document.getElementById('confirmPhoto');
+        const closeModal = document.querySelector('.close-modal');
+        
+        // Buka kamera
+        openCameraBtn.addEventListener('click', async () => {
+            try {
+                // Hentikan kamera jika sudah aktif
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
                 
-                cameraPreview.srcObject = stream;
-                cameraModal.style.display = 'block';
-                
-                // Handler untuk tombol close
-                document.getElementById('closeCamera').addEventListener('click', function() {
-                    stream.getTracks().forEach(track => track.stop());
-                    cameraModal.style.display = 'none';
+                // Akses kamera belakang
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
                 });
                 
-                // Handler untuk tombol capture
-                document.getElementById('captureBtn').addEventListener('click', function() {
-                    // Kode untuk mengambil foto
-                    var canvas = document.createElement('canvas');
-                    canvas.width = cameraPreview.videoWidth;
-                    canvas.height = cameraPreview.videoHeight;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-                    
-                    // Konversi ke blob dan simpan
-                    canvas.toBlob(function(blob) {
-                        // Simpan ke IndexedDB atau tampilkan preview
-                        console.log('Foto diambil:', blob);
-                        
-                        // Tutup kamera
-                        stream.getTracks().forEach(track => track.stop());
-                        cameraModal.style.display = 'none';
-                        
-                        // Tampilkan notifikasi berhasil
-                        alert('Foto berhasil diambil!');
-                    }, 'image/jpeg', 0.8);
-                });
-            })
-            .catch(function(error) {
+                // Tampilkan preview kamera
+                cameraPreview.srcObject = cameraStream;
+                cameraContainer.style.display = 'flex';
+                openCameraBtn.style.display = 'none';
+                
+            } catch (error) {
                 console.error('Error mengakses kamera:', error);
-                alert('Tidak dapat mengakses kamera: ' + error.message);
-            });
-        } else {
-            alert('Browser tidak mendukung akses kamera');
+                alert('Tidak dapat mengakses kamera. Pastikan Anda memberikan izin kamera dan menggunakan HTTPS.');
+            }
+        });
+        
+        // Ambil foto
+        capturePhotoBtn.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Set ukuran canvas sesuai dengan video
+            canvas.width = cameraPreview.videoWidth;
+            canvas.height = cameraPreview.videoHeight;
+            
+            // Gambar frame video ke canvas
+            context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+            
+            // Konversi canvas ke data URL
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+            
+            // Tampilkan preview di modal
+            previewImage.src = imageDataUrl;
+            previewModal.style.display = 'flex';
+        });
+        
+        // Konfirmasi penggunaan foto
+        confirmPhotoBtn.addEventListener('click', () => {
+            // Simpan foto ke array
+            capturedPhotos.push(previewImage.src);
+            
+            // Perbarui tampilan
+            updatePhotoDisplay();
+            
+            // Sembunyikan modal
+            previewModal.style.display = 'none';
+            
+            // Tampilkan kembali tombol kamera
+            openCameraBtn.style.display = 'flex';
+            cameraContainer.style.display = 'none';
+            
+            // Hentikan kamera
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+        });
+        
+        // Tutup modal
+        closeModal.addEventListener('click', () => {
+            previewModal.style.display = 'none';
+        });
+        
+        // Fungsi untuk memperbarui tampilan foto
+        function updatePhotoDisplay() {
+            if (capturedPhotos.length > 0) {
+                noPhotos.style.display = 'none';
+                savePhotosBtn.style.display = 'block';
+                
+                // Kosongkan container
+                photoContainer.innerHTML = '';
+                
+                // Tambahkan setiap foto
+                capturedPhotos.forEach((photoDataUrl, index) => {
+                    const photoItem = document.createElement('div');
+                    photoItem.className = 'photo-item';
+                    
+                    const photoImg = document.createElement('img');
+                    photoImg.src = photoDataUrl;
+                    photoImg.alt = `Foto ${index + 1}`;
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-photo';
+                    deleteBtn.innerHTML = '×';
+                    deleteBtn.addEventListener('click', () => {
+                        capturedPhotos.splice(index, 1);
+                        updatePhotoDisplay();
+                    });
+                    
+                    photoItem.appendChild(photoImg);
+                    photoItem.appendChild(deleteBtn);
+                    photoContainer.appendChild(photoItem);
+                });
+            } else {
+                noPhotos.style.display = 'block';
+                savePhotosBtn.style.display = 'none';
+                photoContainer.innerHTML = '<p id="noPhotos">Belum ada foto yang diambil</p>';
+            }
         }
-    });
+        
+        // Simpan foto (simulasi)
+        savePhotosBtn.addEventListener('click', () => {
+            alert(`Berhasil menyimpan ${capturedPhotos.length} foto!`);
+            
+            // Di aplikasi nyata, di sini Anda akan mengirim foto ke server
+            // atau menyimpannya di penyimpanan lokal
+            
+            // Reset state
+            capturedPhotos.length = 0;
+            updatePhotoDisplay();
+        });
+        
+        // Deteksi jika kamera tidak tersedia (untuk desktop)
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            openCameraBtn.disabled = true;
+            openCameraBtn.innerHTML = '<i class="material-icons">photo_camera</i><span>Kamera tidak didukung</span>';
+        }
     </script>
 </body>
 </html>
