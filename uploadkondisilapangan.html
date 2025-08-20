@@ -941,43 +941,16 @@
       });
     }
 
-    // Fungsi baru yang lebih kompatibel
-    async function startCameraWithFallback() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        });
-        
-        document.getElementById('cameraPreview').srcObject = stream;
-        
-      } catch (error) {
-        console.error("Camera Error:", error);
-        
-        // Fallback 1: Coba kamera depan
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({
-            video: true // Gunakan kamera depan sebagai fallback
-          });
-          document.getElementById('cameraPreview').srcObject = fallbackStream;
-          
-        } catch (fallbackError) {
-          console.error("Fallback Camera Error:", fallbackError);
-          alert("Tidak dapat mengakses kamera. Pastikan izin sudah diberikan.");
-          
-          // Fallback 2: Buka intent kamera native
-          if (window.AndroidWebView) {
-            window.AndroidWebView.openNativeCamera();
-          }
-        }
+    <script>
+    document.getElementById("openCamera").addEventListener("click", function() {
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString("OPEN_CAMERA");
+      } else {
+        alert("AppInventor bridge tidak tersedia");
       }
-    }
-    
-    // Panggil fungsi ini saat tombol diklik
-    document.getElementById('openCamera').addEventListener('click', startCameraWithFallback);
+    });
+  </script>
+
 
     //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
     // Variabel untuk menyimpan foto yang baru diambil
