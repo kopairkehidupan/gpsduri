@@ -1,743 +1,841 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Kondisi Lapangan</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #4285f4;
-            --primary-hover: #3367d6;
-            --success: #4caf50;
-            --error: #f44336;
-            --light-gray: #f5f5f5;
-            --medium-gray: #e0e0e0;
-            --dark-gray: #757575;
-            --white: #ffffff;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --transition: all 0.3s ease;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            padding-top: 60px;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-            flex: 1;
-            width: 100%;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Kondisi Lapangan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --primary: #4285f4;
+      --primary-hover: #3367d6;
+      --success: #4caf50;
+      --error: #f44336;
+      --light-gray: #f5f5f5;
+      --medium-gray: #e0e0e0;
+      --dark-gray: #757575;
+      --white: #ffffff;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s ease;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      padding-top: 60px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+    }
 
-        .header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            padding: 0 1rem;
-        }
-        
-        h1 {
-            color: var(--primary);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 1.8rem;
-        }
-        
-        .subtitle {
-            color: var(--dark-gray);
-            font-weight: 400;
-            font-size: 1rem;
-        }
-        
-        .card {
-            background-color: var(--white);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 1.5rem;
-            transition: var(--transition);
-            margin-bottom: 1.5rem;
-        }
-        
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-        
-        label {
-            font-weight: 500;
-            color: #555;
-            font-size: 0.9rem;
-        }
-        
-        select, input[type="text"], input[type="file"] {
-            padding: 0.8rem 1rem;
-            border: 1px solid var(--medium-gray);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            transition: var(--transition);
-            background-color: var(--white);
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        select:focus, input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-        }
-        
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 1rem center;
-            background-size: 1rem;
-        }
-        
-        .file-input-container {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
-        }
-        
-        .file-input-label {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem 1rem;
-            border: 2px dashed var(--medium-gray);
-            border-radius: 8px;
-            background-color: var(--light-gray);
-            color: var(--dark-gray);
-            text-align: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        
-        .file-input-label:hover {
-            border-color: var(--primary);
-            background-color: rgba(66, 133, 244, 0.05);
-        }
-        
-        .file-input-label i {
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-            color: var(--primary);
-        }
-        
-        .file-input-label span {
-            font-size: 0.9rem;
-            margin-bottom: 0.3rem;
-        }
-        
-        input[type="file"] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-        
-        .file-list {
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            color: var(--dark-gray);
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--medium-gray);
-        }
-        
-        .file-item:last-child {
-            border-bottom: none;
-        }
-        
-        .btn {
-            background-color: var(--primary);
-            color: var(--white);
-            border: none;
-            padding: 0.9rem;
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            width: 100%;
-            margin-top: 0.5rem;
-        }
-        
-        .btn:hover {
-            background-color: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .btn:disabled {
-            background-color: var(--medium-gray);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        #loading {
-            display: none;
-            text-align: center;
-            margin-top: 1rem;
-            color: var(--dark-gray);
-            font-size: 0.9rem;
-        }
-        
-        .spinner {
-            border: 2px solid rgba(66, 133, 244, 0.2);
-            border-top: 2px solid var(--primary);
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-            margin-right: 0.5rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .status {
-            margin-top: 1rem;
-            padding: 0.8rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-        
-        .success {
-            background-color: rgba(76, 175, 80, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-        }
-        
-        .error {
-            background-color: rgba(244, 67, 54, 0.1);
-            color: var(--error);
-            border: 1px solid rgba(244, 67, 54, 0.3);
-        }
-        
-        .error-input {
-            border-color: var(--error) !important;
-        }
-        
-        small {
-            font-size: 0.75rem;
-            color: var(--dark-gray);
-        }
-        
-        .material-icons {
-            font-family: 'Material Icons';
-            font-weight: normal;
-            font-style: normal;
-            font-size: 20px;
-            line-height: 1;
-            letter-spacing: normal;
-            text-transform: none;
-            display: inline-block;
-            white-space: nowrap;
-            word-wrap: normal;
-            direction: ltr;
-            -webkit-font-feature-settings: 'liga';
-            -webkit-font-smoothing: antialiased;
-        }
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      padding: 0 1rem;
+    }
+    
+    h1 {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 1.8rem;
+    }
+    
+    .subtitle {
+      color: var(--dark-gray);
+      font-weight: 400;
+      font-size: 1rem;
+    }
+    
+    .card {
+      background-color: var(--white);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      transition: var(--transition);
+      margin-bottom: 1.5rem;
+    }
+    
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    
+    label {
+      font-weight: 500;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    
+    select, input[type="text"], input[type="file"] {
+      padding: 0.8rem 1rem;
+      border: 1px solid var(--medium-gray);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      background-color: var(--white);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1rem;
+    }
+    
+    .file-input-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      border: 2px dashed var(--medium-gray);
+      border-radius: 8px;
+      background-color: var(--light-gray);
+      color: var(--dark-gray);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .file-input-label:hover {
+      border-color: var(--primary);
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .file-input-label i {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    
+    .file-input-label span {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .file-list {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .file-item:last-child {
+      border-bottom: none;
+    }
+    
+    .btn {
+      background-color: var(--primary);
+      color: var(--white);
+      border: none;
+      padding: 0.9rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+    
+    .btn:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn:disabled {
+      background-color: var(--medium-gray);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--dark-gray);
+      font-size: 0.9rem;
+    }
+    
+    .spinner {
+      border: 2px solid rgba(66, 133, 244, 0.2);
+      border-top: 2px solid var(--primary);
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .status {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    
+    .error-input {
+      border-color: var(--error) !important;
+    }
+    
+    small {
+      font-size: 0.75rem;
+      color: var(--dark-gray);
+    }
+    
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
 
-        .fixed-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background-color: var(--primary);
-            color: white;
-            padding: 10px 15px;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .header-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .sync-btn {
-            position: relative;
-        }
-        
-        .sync-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background-color: var(--error);
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    /* Map container styles */
+    #map {
+      height: 500px;
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
 
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1001;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-        }
-        
-        .modal-content {
-            background-color: var(--white);
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        
-        .camera-container, .preview-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .preview-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            background-color: var(--medium-gray);
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        
-        .progress {
-            height: 10px;
-            background-color: var(--primary);
-            border-radius: 5px;
-            width: 0%;
-            transition: width 0.3s;
-        }
-    </style>
+    .map-container {
+      z-index: 999;
+      position: relative;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-content {
+      background-color: var(--white);
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      position: relative;
+    }
+
+    .close-modal, .close-preview-modal, .close-sync-modal {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      right: 15px;
+      top: 10px;
+    }
+
+    .close-modal:hover, .close-preview-modal:hover, .close-sync-modal:hover {
+      color: black;
+    }
+
+    .preview-actions {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Fixed header */
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: var(--white);
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      padding: 10px 0;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    .header-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      color: var(--primary);
+      font-size: 1rem;
+    }
+
+    .sync-btn {
+      position: relative;
+    }
+
+    .sync-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: var(--error);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      width: 100%;
+      background-color: var(--light-gray);
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+
+    .progress {
+      height: 10px;
+      background-color: var(--primary);
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+  </style>
 </head>
 <body>
-    <header class="fixed-header">
-        <div class="header-content">
-            <button id="backButton" class="header-btn">
-                <i class="material-icons">arrow_back</i>
-            </button>
-            <div class="header-actions">
-                <button id="openSyncModal" class="header-btn sync-btn">
-                    <i class="material-icons">sync</i>
-                    <span id="syncBadge" class="sync-badge">0</span>
-                </button>
-            </div>
-        </div>
-    </header>
+  <header class="fixed-header">
+    <div class="header-content">
+      <button id="backButton" class="header-btn">
+        <i class="material-icons">arrow_back</i>
+      </button>
+      <div class="header-actions">
+        <button id="openSyncModal" class="header-btn sync-btn">
+          <i class="material-icons">sync</i>
+          <span id="syncBadge" class="sync-badge">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-    <div class="container">
-        <div class="header">
-            <h1>Upload Kondisi Lapangan</h1>
-            <p class="subtitle">Pilih lokasi blok dan unggah foto kondisi lapangan</p>
+  <div class="container">
+    <div class="header">
+      <h1>Upload Kondisi Lapangan</h1>
+      <p class="subtitle">Pilih lokasi blok dan unggah foto kondisi lapangan</p>
+    </div>
+    
+    <div class="card">
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="kebun">Kebun</label>
+          <select id="kebun" required>
+            <option value="">-- Pilih Kebun --</option>
+            <option value="SAMSAM">Samsam</option>
+            <option value="DURI">Duri</option>
+          </select>
         </div>
         
-        <div class="card">
-            <form id="uploadForm">
-                <div class="form-group">
-                    <label for="kebun">Kebun</label>
-                    <select id="kebun" required>
-                        <option value="">-- Pilih Kebun --</option>
-                        <option value="SAMSAM">Samsam</option>
-                        <option value="DURI">Duri</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="divisi">Divisi</label>
-                    <select id="divisi" required disabled>
-                        <option value="">-- Pilih Kebun terlebih dahulu --</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="kategori">Kategori</label>
-                    <select id="kategori" required>
-                        <option value="">-- Pilih Kategori --</option>
-                        <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
-                        <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
-                        <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
-                        <option value="LAND CLEARING">LAND CLEARING</option>
-                        <option value="TANAM">TANAM</option>
-                        <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
-                        <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
-                        <option value="PANEN">PANEN</option>
-                        <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="blok">Blok</label>
-                    <input type="text" id="blok" required placeholder="Masukkan kode blok">
-                </div>
-                
-                <div class="form-group">
-                    <label>Foto Kondisi Lapangan</label>
-                    <button id="openCamera" class="btn" type="button">
-                        <i class="material-icons">photo_camera</i>
-                        <span>Ambil Foto</span>
-                    </button>
-                    <div class="file-list" id="fileList"></div>
-                </div>
-                
-                <button type="submit" class="btn">
-                    <i class="material-icons">file_upload</i>
-                    <span>Upload Data</span>
-                </button>
-                <div id="loading">
-                    <div class="spinner"></div>
-                    <span>Mengunggah... Harap tunggu</span>
-                </div>
-                <div id="status" class="status"></div>
-            </form>
+        <div class="form-group">
+          <label for="divisi">Divisi</label>
+          <select id="divisi" required disabled>
+            <option value="">-- Pilih Kebun terlebih dahulu --</option>
+          </select>
         </div>
-    </div>
-
-    <!-- Modal untuk Preview Foto -->
-    <div id="previewModal" class="modal">
-        <div class="modal-content">
-            <span class="close-preview-modal">&times;</span>
-            <div class="preview-container">
-                <img id="previewImage" style="width:100%; border-radius:8px; margin-bottom:10px;">
-                <div class="preview-actions">
-                    <button id="deletePhoto" class="btn" style="background-color:var(--error);">
-                        <i class="material-icons">delete</i>
-                        <span>Hapus</span>
-                    </button>
-                    <button id="savePhoto" class="btn" style="margin-left:10px;">
-                        <i class="material-icons">save</i>
-                        <span>Simpan</span>
-                    </button>
-                </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="kategori">Kategori</label>
+            <select id="kategori" required>
+              <option value="">-- Pilih Kategori --</option>
+              <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
+              <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
+              <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
+              <option value="LAND CLEARING">LAND CLEARING</option>
+              <option value="TANAM">TANAM</option>
+              <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
+              <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
+              <option value="PANEN">PANEN</option>
+              <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="objekKerja">Objek Kerja</label>
+            <div class="dropdown-container">
+              <div class="search-container">
+                <input type="text" id="objekKerjaSearch" class="search-input" placeholder="Cari objek kerja..." disabled>
+              </div>
+              <select id="objekKerja" required disabled style="display: none;">
+                <option value="">-- Pilih Kategori terlebih dahulu --</option>
+              </select>
+              <div id="objekKerjaDropdown" class="dropdown-list"></div>
             </div>
+          </div>
         </div>
-    </div>
 
-    <!-- Modal untuk sinkronisasi -->
-    <div id="syncModal" class="modal">
-        <div class="modal-content">
-            <span class="close-sync-modal">&times;</span>
-            <h3>Sinkronisasi Data</h3>
-            <div id="syncStatus">
-                <p>Menemukan <span id="pendingCount">0</span> data yang belum disinkronisasi</p>
-                <div id="syncProgress" style="display:none;">
-                    <div class="progress-bar">
-                        <div class="progress" id="progressBar" style="width:0%"></div>
-                    </div>
-                    <p id="syncMessage">Menyinkronkan data...</p>
-                </div>
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
+
+        <div class="selected-info" id="selectedInfo">
+          <h3>Blok Terpilih</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Kode Tahun Tanam:</span>
+              <span class="info-value" id="infoKode">-</span>
             </div>
-            <button id="startSync" class="btn" style="margin-top:10px;">
-                <i class="material-icons">sync</i>
-                <span>Mulai Sinkronisasi</span>
-            </button>
-            <div id="syncResult" style="margin-top:10px;"></div>
+            <div class="info-item">
+              <span class="info-label">Blok:</span>
+              <span class="info-value" id="infoBlok">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tahun Tanam:</span>
+              <span class="info-value" id="infoTahun">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Luas (Ha):</span>
+              <span class="info-value" id="infoLuas">-</span>
+            </div>
+          </div>
+          <input type="hidden" id="kode" name="kode">
+          <input type="hidden" id="blok" name="blok">
+          <input type="hidden" id="tahun" name="tahun">
         </div>
+        
+        <div class="form-group">
+          <label>Foto Kondisi Lapangan</label>
+          <button id="openCamera" class="btn" type="button">
+            <i class="material-icons">photo_camera</i>
+            <span>Ambil Foto</span>
+          </button>
+          <div class="file-list" id="fileList"></div>
+        </div>
+        
+        <button type="submit" class="btn">
+          <i class="material-icons">file_upload</i>
+          <span>Upload Data</span>
+        </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          <span>Mengunggah... Harap tunggu</span>
+        </div>
+        <div id="status" class="status"></div>
+      </form>
     </div>
+  </div>
 
-    <script>
-    // Variabel untuk menyimpan foto yang diambil
+  <!-- Modal untuk Kamera -->
+  <div id="cameraModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div class="camera-container">
+        <video id="cameraPreview" autoplay playsinline style="width:100%; border-radius:8px;"></video>
+        <canvas id="photoCanvas" style="display:none;"></canvas>
+        <button id="capturePhoto" class="btn" style="margin-top:10px;">
+          <i class="material-icons">camera</i>
+          <span>Ambil Foto</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal untuk Preview Foto -->
+  <div id="previewModal" class="modal">
+    <div class="modal-content">
+      <span class="close-preview-modal">&times;</span>
+      <div class="preview-container">
+        <img id="previewImage" style="width:100%; border-radius:8px; margin-bottom:10px;">
+        <div class="preview-actions">
+          <button id="deletePhoto" class="btn" style="background-color:var(--error);">
+            <i class="material-icons">delete</i>
+            <span>Hapus</span>
+          </button>
+          <button id="savePhoto" class="btn" style="margin-left:10px;">
+            <i class="material-icons">save</i>
+            <span>Simpan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal untuk sinkronisasi -->
+  <div id="syncModal" class="modal">
+    <div class="modal-content">
+      <span class="close-sync-modal">&times;</span>
+      <h3>Sinkronisasi Data</h3>
+      <div id="syncStatus">
+        <p>Menemukan <span id="pendingCount">0</span> data yang belum disinkronisasi</p>
+        <div id="syncProgress" style="display:none;">
+          <div class="progress-bar">
+            <div class="progress" id="progressBar" style="width:0%"></div>
+          </div>
+          <p id="syncMessage">Menyinkronkan data...</p>
+        </div>
+      </div>
+      <button id="startSync" class="btn" style="margin-top:10px;">
+        <i class="material-icons">sync</i>
+        <span>Mulai Sinkronisasi</span>
+      </button>
+      <div id="syncResult" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Variabel untuk menyimpan stream kamera dan foto yang diambil
+    let cameraStream = null;
     const capturedPhotos = [];
-    let currentPhotoIndex = -1;
     
     // Elemen DOM
+    const cameraModalElement = document.getElementById('cameraModal');
+    const previewModalElement = document.getElementById('previewModal');
+    const syncModalElement = document.getElementById('syncModal');
     const openCameraBtn = document.getElementById('openCamera');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const capturePhotoBtn = document.getElementById('capturePhoto');
     const fileList = document.getElementById('fileList');
-    const previewModal = document.getElementById('previewModal');
-    const previewImage = document.getElementById('previewImage');
-    const deletePhotoBtn = document.getElementById('deletePhoto');
-    const savePhotoBtn = document.getElementById('savePhoto');
-    const closePreviewModal = document.querySelector('.close-preview-modal');
+    const closeModalBtn = document.querySelector(".close-modal");
+    const closePreviewModalBtn = document.querySelector(".close-preview-modal");
+    const closeSyncModalBtn = document.querySelector(".close-sync-modal");
+    const deletePhotoBtn = document.getElementById("deletePhoto");
+    const savePhotoBtn = document.getElementById("savePhoto");
+    const previewImage = document.getElementById("previewImage");
     
-    // Buka kamera menggunakan fungsi native Kodular
+    // Konteks untuk canvas
+    const ctx = photoCanvas.getContext('2d');
+    let currentPhotoData = null;
+
+    // Buka modal kamera
     openCameraBtn.addEventListener('click', () => {
-        // Memanggil fungsi native Kodular untuk membuka kamera
-        if (typeof Android !== 'undefined' && Android !== null) {
-            // Jika di Android WebView
-            Android.openCamera();
-        } else {
-            // Fallback untuk browser (hanya untuk testing)
-            alert('Fitur kamera hanya tersedia di aplikasi Android');
-            // Simulasi mengambil foto (untuk testing)
-            simulateCameraCapture();
-        }
+      cameraModalElement.style.display = "block";
+      startCamera();
     });
     
-    // Fungsi yang dipanggil dari Kodular ketika foto telah diambil
-    function onPhotoTaken(imageData) {
-        // imageData adalah base64 encoded string dari gambar
-        addPhotoToCollection(imageData);
+    // Tutup modal kamera
+    closeModalBtn.addEventListener('click', () => {
+      stopCamera();
+      cameraModalElement.style.display = "none";
+    });
+    
+    // Tutup modal preview
+    closePreviewModalBtn.addEventListener('click', () => {
+      previewModalElement.style.display = "none";
+    });
+    
+    // Tutup modal sinkronisasi
+    closeSyncModalBtn.addEventListener('click', () => {
+      syncModalElement.style.display = "none";
+    });
+    
+    // Fungsi untuk memulai kamera
+    async function startCamera() {
+      try {
+        // Hentikan kamera jika sudah aktif
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+        }
+    
+        // Akses kamera belakang
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+    
+        // Tampilkan preview kamera
+        cameraPreview.srcObject = cameraStream;
+        
+        // Atur ukuran canvas sesuai dengan video
+        cameraPreview.addEventListener('loadedmetadata', () => {
+          photoCanvas.width = cameraPreview.videoWidth;
+          photoCanvas.height = cameraPreview.videoHeight;
+        });
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Tidak dapat mengakses kamera. Pastikan aplikasi memiliki izin kamera: ' + error.message);
+        cameraModalElement.style.display = "none";
+      }
     }
     
-    // Fungsi untuk menambahkan foto ke koleksi
-    function addPhotoToCollection(imageData) {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `foto-${timestamp}.jpg`;
-        
-        // Simpan data foto
-        capturedPhotos.push({
-            filename: filename,
-            data: imageData,
-            timestamp: new Date()
+    // Fungsi untuk menghentikan kamera
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+    }
+    
+    // Tangkap foto dari kamera
+    capturePhotoBtn.addEventListener('click', () => {
+      // Gambar frame video ke canvas
+      ctx.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+      
+      // Dapatkan data gambar dari canvas
+      photoCanvas.toBlob(blob => {
+        // Buat file dari blob
+        const file = new File([blob], `foto-${new Date().getTime()}.jpg`, {
+          type: 'image/jpeg',
+          lastModified: Date.now()
         });
         
-        // Update tampilan daftar file
+        // Simpan file untuk pratinjau
+        currentPhotoData = file;
+        
+        // Tampilkan pratinjau
+        const url = URL.createObjectURL(blob);
+        previewImage.src = url;
+        
+        // Tutup modal kamera dan buka modal pratinjau
+        cameraModalElement.style.display = "none";
+        previewModalElement.style.display = "block";
+        
+        // Hentikan kamera
+        stopCamera();
+      }, 'image/jpeg', 0.8);
+    });
+    
+    // Simpan foto
+    savePhotoBtn.addEventListener('click', () => {
+      if (currentPhotoData) {
+        capturedPhotos.push(currentPhotoData);
         updateFileList();
-        
-        // Tampilkan preview
-        showPreview(capturedPhotos.length - 1);
-    }
+        previewModalElement.style.display = "none";
+        currentPhotoData = null;
+      }
+    });
     
-    // Tampilkan preview foto
-    function showPreview(index) {
-        currentPhotoIndex = index;
-        previewImage.src = 'data:image/jpeg;base64,' + capturedPhotos[index].data;
-        previewModal.style.display = 'block';
-    }
-    
-    // Simulasi pengambilan foto (hanya untuk testing di browser)
-    function simulateCameraCapture() {
-        // Membuat gambar placeholder untuk simulasi
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 300;
-        const ctx = canvas.getContext('2d');
-        
-        // Menggambar latar belakang
-        ctx.fillStyle = '#4285f4';
-        ctx.fillRect(0, 0, 400, 300);
-        
-        // Menggambar teks
-        ctx.fillStyle = 'white';
-        ctx.font = '20px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Simulasi Foto', 200, 150);
-        ctx.font = '16px Arial';
-        ctx.fillText('Ini adalah foto contoh', 200, 180);
-        
-        // Konversi ke base64
-        const imageData = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-        addPhotoToCollection(imageData);
-    }
+    // Hapus foto
+    deletePhotoBtn.addEventListener('click', () => {
+      currentPhotoData = null;
+      previewModalElement.style.display = "none";
+    });
     
     // Update tampilan daftar file
     function updateFileList() {
-        fileList.innerHTML = '';
-        
-        if (capturedPhotos.length === 0) {
-            fileList.innerHTML = '<div class="file-item">Belum ada foto yang diambil</div>';
-            return;
-        }
-        
-        capturedPhotos.forEach((photo, index) => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.innerHTML = `
-                <i class="material-icons">image</i>
-                <span>${photo.filename}</span>
-                <span style="margin-left:auto; font-size:12px;">
-                    ${photo.timestamp.toLocaleTimeString()}
-                </span>
-                <button class="view-photo" data-index="${index}" style="margin-left:10px; background:none; border:none; color:var(--primary); cursor:pointer;">
-                    <i class="material-icons">visibility</i>
-                </button>
-                <button class="delete-photo" data-index="${index}" style="margin-left:5px; background:none; border:none; color:var(--error); cursor:pointer;">
-                    <i class="material-icons">delete</i>
-                </button>
-            `;
-            fileList.appendChild(fileItem);
-        });
+      fileList.innerHTML = '';
+      
+      if (capturedPhotos.length === 0) {
+        fileList.innerHTML = '<div class="file-item">Belum ada foto yang diambil</div>';
+        return;
+      }
+      
+      capturedPhotos.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+          <i class="material-icons">image</i>
+          <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red; cursor:pointer;">
+            <i class="material-icons">delete</i>
+          </button>
+        `;
+        fileList.appendChild(fileItem);
+      });
     
-        // Tambahkan event listener untuk tombol lihat dan hapus
-        document.querySelectorAll('.view-photo').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.closest('button').dataset.index);
-                showPreview(index);
-            });
+      // Tambahkan event listener untuk tombol hapus
+      document.querySelectorAll('.delete-photo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.currentTarget.dataset.index);
+          capturedPhotos.splice(index, 1);
+          updateFileList();
         });
-        
-        document.querySelectorAll('.delete-photo').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.closest('button').dataset.index);
-                capturedPhotos.splice(index, 1);
-                updateFileList();
-            });
-        });
+      });
     }
     
-    // Event listener untuk modal preview
-    savePhotoBtn.addEventListener('click', () => {
-        previewModal.style.display = 'none';
-    });
-    
-    deletePhotoBtn.addEventListener('click', () => {
-        if (currentPhotoIndex >= 0) {
-            capturedPhotos.splice(currentPhotoIndex, 1);
-            updateFileList();
-            previewModal.style.display = 'none';
-        }
-    });
-    
-    closePreviewModal.addEventListener('click', () => {
-        previewModal.style.display = 'none';
-    });
-    
-    // Inisialisasi
+    // Inisialisasi daftar file
     updateFileList();
     
-    // Event listener untuk form submission
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+    // Fallback untuk desktop (tidak ada kamera)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const formGroup = document.querySelector('.form-group:has(#openCamera)');
+      formGroup.innerHTML = `
+        <label>Foto Kondisi Lapangan</label>
+        <div class="file-input-container">
+          <label class="file-input-label" for="photoFiles">
+            <i class="material-icons">photo_camera</i>
+            <span>Klik untuk memilih foto</span>
+            <small>Format yang didukung: .jpg, .jpeg, .png</small>
+          </label>
+          <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      `;
+      
+      // Tambahkan event listener untuk input file fallback
+      document.getElementById("photoFiles").addEventListener("change", function() {
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = '';
         
-        if (capturedPhotos.length === 0) {
-            showStatus('Harap mengambil minimal satu foto', 'error');
-            return;
+        if (this.files.length > 0) {
+          Array.from(this.files).forEach(file => {
+            capturedPhotos.push(file);
+          });
+          updateFileList();
+        } else {
+          fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
         }
+      });
+    }
+
+    // Event listener untuk form submit
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // Validasi form
+      if (capturedPhotos.length === 0) {
+        alert('Harap mengambil atau memilih setidaknya satu foto');
+        return;
+      }
+      
+      // Tampilkan loading
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('status').className = 'status';
+      document.getElementById('status').textContent = '';
+      
+      // Simulasi upload (ganti dengan kode upload sebenarnya)
+      setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('status').className = 'status success';
+        document.getElementById('status').textContent = 'Upload berhasil!';
         
-        const formData = {
-            kebun: document.getElementById('kebun').value,
-            divisi: document.getElementById('divisi').value,
-            kategori: document.getElementById('kategori').value,
-            blok: document.getElementById('blok').value,
-            photos: capturedPhotos
-        };
-        
-        // Simulasi pengiriman data
-        showLoading(true);
+        // Reset form setelah beberapa detik
         setTimeout(() => {
-            showLoading(false);
-            showStatus('Data berhasil disimpan! Akan disinkronisasi ketika online.', 'success');
-            
-            // Simpan ke localStorage (simulasi IndexedDB)
-            saveToLocalStorage(formData);
-            
-            // Reset form
-            document.getElementById('uploadForm').reset();
-            capturedPhotos.length = 0;
-            updateFileList();
-            
-            // Update badge sinkronisasi
-            updateSyncBadge();
-        }, 2000);
+          document.getElementById('uploadForm').reset();
+          capturedPhotos.length = 0;
+          updateFileList();
+          document.getElementById('status').textContent = '';
+        }, 3000);
+      }, 2000);
     });
-    
-    function showLoading(show) {
-        document.getElementById('loading').style.display = show ? 'block' : 'none';
+
+    // Inisialisasi peta Leaflet (contoh sederhana)
+    function initMap() {
+      const map = L.map('map').setView([-0.7893, 113.9213], 5); // Posisi tengah Indonesia
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      
+      // Contoh marker
+      L.marker([-0.7893, 113.9213]).addTo(map)
+        .bindPopup('Lokasi contoh kebun')
+        .openPopup();
     }
     
-    function showStatus(message, type) {
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = message;
-        statusEl.className = 'status ' + type;
-        statusEl.style.display = 'block';
-        
-        setTimeout(() => {
-            statusEl.style.display = 'none';
-        }, 5000);
-    }
-    
-    function saveToLocalStorage(data) {
-        // Simulasi penyimpanan data lokal
-        const pendingData = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-        pendingData.push({
-            ...data,
-            id: Date.now(),
-            timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('pendingUploads', JSON.stringify(pendingData));
-    }
-    
-    function updateSyncBadge() {
-        const pendingData = JSON.parse(localStorage.getItem('pendingUploads') || '[]');
-        document.getElementById('syncBadge').textContent = pendingData.length;
-    }
-    
-    // Inisialisasi badge sinkronisasi
-    updateSyncBadge();
-    </script>
+    // Panggil inisialisasi peta setelah halaman dimuat
+    window.addEventListener('load', initMap);
+  </script>
 </body>
 </html>
