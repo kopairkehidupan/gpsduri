@@ -31,7 +31,7 @@
       line-height: 1.6;
       margin: 0;
       padding: 0;
-      padding-top: 60px; /* Tambahkan ini */
+      padding-top: 60px;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -40,7 +40,7 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem; /* Ini sudah cukup */
+      padding: 1rem;
       flex: 1;
       width: 100%;
       box-sizing: border-box;
@@ -288,7 +288,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* Map container styles */
     #map {
       height: 500px;
       width: 100%;
@@ -300,6 +299,116 @@
     .map-container {
       z-index: 999;
       position: relative;
+    }
+    
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 15px;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    
+    .header-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      font-size: 1.2rem;
+    }
+    
+    .sync-badge {
+      background-color: var(--error);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      margin-left: 5px;
+    }
+    
+    .blok-label {
+      position: absolute;
+      text-align: center;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+    
+    .blok-label div {
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 0.15em 0.4em;
+      border-radius: 0.3em;
+      font-weight: bold;
+      font-size: 0.7em;
+      text-shadow: 0 0 2px white;
+      white-space: nowrap;
+      border: 1px solid rgba(0,0,0,0.1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+    }
+    
+    .modal-content {
+      background-color: var(--white);
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      position: relative;
+    }
+    
+    .close-modal {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .close-modal:hover {
+      color: black;
+    }
+    
+    .permission-error {
+      background-color: rgba(244, 67, 54, 0.1);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      text-align: center;
+    }
+    
+    .permission-error h3 {
+      color: var(--error);
+      margin-top: 0;
     }
   </style>
 </head>
@@ -343,54 +452,32 @@
           </select>
         </div>
         
-        <!-- Add these new form groups for Kategori and Objek Kerja -->
-        <div class="form-row">
-          <div class="form-group">
-            <label for="kategori">Kategori</label>
-            <select id="kategori" required>
-              <option value="">-- Pilih Kategori --</option>
-              <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
-              <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
-              <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
-              <option value="LAND CLEARING">LAND CLEARING</option>
-              <option value="TANAM">TANAM</option>
-              <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
-              <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
-              <option value="PANEN">PANEN</option>
-              <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="objekKerja">Objek Kerja</label>
-            <div class="dropdown-container">
-              <div class="search-container">
-                <input type="text" id="objekKerjaSearch" class="search-input" placeholder="Cari objek kerja..." disabled>
-              </div>
-              <select id="objekKerja" required disabled style="display: none;">
-                <option value="">-- Pilih Kategori terlebih dahulu --</option>
-              </select>
-              <div id="objekKerjaDropdown" class="dropdown-list"></div>
-            </div>
-          </div>
+        <div class="form-group">
+          <label for="kategori">Kategori</label>
+          <select id="kategori" required>
+            <option value="">-- Pilih Kategori --</option>
+            <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
+            <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
+            <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
+            <option value="LAND CLEARING">LAND CLEARING</option>
+            <option value="TANAM">TANAM</option>
+            <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
+            <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
+            <option value="PANEN">PANEN</option>
+            <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="objekKerja">Objek Kerja</label>
+          <input type="text" id="objekKerja" placeholder="Masukkan objek kerja" required>
         </div>
 
         <div class="map-container">
           <div id="map"></div>
-          <div class="legend">
-            <h4>Keterangan:</h4>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #1f78b4;"></div>
-              <span>SAMSAM</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #33a02c;"></div>
-              <span>DURI</span>
-            </div>
-          </div>
         </div>
 
-        <div class="selected-info" id="selectedInfo">
+        <div class="selected-info" id="selectedInfo" style="display: none;">
           <h3>Blok Terpilih</h3>
           <div class="info-grid">
             <div class="info-item">
@@ -421,7 +508,15 @@
             <i class="material-icons">photo_camera</i>
             <span>Ambil Foto</span>
           </button>
-          <div class="file-list" id="fileList"></div>
+          <div id="permissionError" class="permission-error" style="display: none;">
+            <h3>Izin Kamera Ditolak</h3>
+            <p>Aplikasi tidak memiliki izin untuk mengakses kamera. Silakan berikan izin kamera melalui pengaturan aplikasi.</p>
+            <button id="requestPermission" class="btn" style="margin-top: 10px;">
+              <i class="material-icons">settings</i>
+              <span>Buka Pengaturan</span>
+            </button>
+          </div>
+          <div class="file-list" id="fileList">Belum ada foto yang diambil</div>
         </div>
         
         <button type="submit" class="btn">
@@ -762,7 +857,6 @@
       statusEl.className = isError ? 'status error' : 'status success';
       statusEl.style.display = 'block';
       
-      // Sembunyikan status setelah 5 detik
       setTimeout(() => {
         statusEl.style.display = 'none';
       }, 5000);
@@ -926,40 +1020,53 @@
       }
     });
 
+    // Event listener untuk tombol permintaan izin
+    document.getElementById("requestPermission").addEventListener("click", function() {
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString("REQUEST_PERMISSION");
+      } else {
+        alert("Membuka pengaturan izin aplikasi");
+      }
+    });
+
+    // Fungsi untuk menangani error izin kamera
+    function handleCameraPermissionError() {
+      document.getElementById("permissionError").style.display = "block";
+    }
+
+    // Fungsi untuk mensimulasikan pengambilan foto (hanya untuk testing di browser)
     // Fungsi untuk mensimulasikan pengambilan foto (hanya untuk testing di browser)
     function simulateCameraCapture() {
-      // Buat gambar placeholder untuk simulasi
       const canvas = document.createElement('canvas');
       canvas.width = 400;
       canvas.height = 300;
       const ctx = canvas.getContext('2d');
       
-      // Gambar latar belakang
       ctx.fillStyle = '#4285f4';
       ctx.fillRect(0, 0, 400, 300);
       
-      // Gambar teks simulasi
       ctx.fillStyle = 'white';
       ctx.font = '20px Arial';
       ctx.fillText('Foto Simulasi', 150, 150);
       ctx.font = '14px Arial';
       ctx.fillText(new Date().toLocaleString(), 150, 180);
       
-      // Konversi canvas ke blob
       canvas.toBlob(function(blob) {
         const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
         const file = new File([blob], fileName, { type: 'image/jpeg' });
         
-        // Simpan foto ke daftar
         capturedPhotos.push(file);
         updateFileList();
       }, 'image/jpeg', 0.9);
     }
 
     
-    // Fungsi untuk menerima hasil foto dari App Inventor
+     // Fungsi untuk menerima hasil foto dari App Inventor
     function receivePhotoFromAppInventor(imageData) {
       try {
+        // Sembunyikan pesan error jika sebelumnya muncul
+        document.getElementById("permissionError").style.display = "none";
+        
         // Konversi base64 ke blob
         const byteString = atob(imageData.split(',')[1]);
         const mimeString = imageData.split(',')[0].split(':')[1].split(';')[0];
@@ -974,11 +1081,9 @@
         const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
         const file = new File([blob], fileName, { type: mimeString });
         
-        // Simpan foto ke daftar
         capturedPhotos.push(file);
         updateFileList();
         
-        // Tampilkan status sukses
         showStatus('Foto berhasil ditambahkan', false);
       } catch (error) {
         console.error('Error processing photo:', error);
@@ -986,7 +1091,7 @@
       }
     }
 
-     // Fungsi untuk memperbarui daftar file
+    // Fungsi untuk memperbarui daftar file
     function updateFileList() {
       const fileList = document.getElementById('fileList');
       fileList.innerHTML = '';
@@ -1009,7 +1114,6 @@
         fileList.appendChild(fileItem);
       });
     
-      // Tambahkan event listener untuk tombol hapus
       document.querySelectorAll('.delete-photo').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const index = parseInt(e.target.closest('button').dataset.index);
@@ -1291,7 +1395,6 @@
     document.getElementById("uploadForm").addEventListener("submit", function(e) {
       e.preventDefault();
       
-      // Validasi form
       const kebun = document.getElementById("kebun").value;
       const divisi = document.getElementById("divisi").value;
       const kategori = document.getElementById("kategori").value;
@@ -1310,15 +1413,12 @@
         return;
       }
       
-      // Tampilkan loading
       document.getElementById("loading").style.display = "block";
       
-      // Simulasi upload (dalam implementasi nyata, ini akan mengirim data ke server)
       setTimeout(() => {
         document.getElementById("loading").style.display = "none";
         showStatus('Data berhasil diupload!', false);
         
-        // Reset form
         this.reset();
         capturedPhotos.length = 0;
         updateFileList();
@@ -1328,7 +1428,6 @@
 
     // Event listener untuk tombol back
     document.getElementById("backButton").addEventListener("click", function() {
-      // Kirim perintah kembali ke App Inventor
       if (window.AppInventor) {
         window.AppInventor.setWebViewString("GO_BACK");
       } else {
@@ -1338,12 +1437,12 @@
 
     // Fungsi untuk menerima data dari App Inventor
     if (window.AppInventor) {
-      // Listen for messages from App Inventor
       window.AppInventor.getWebViewString = function(data) {
         if (data && data.startsWith("PHOTO_DATA:")) {
-          // Terima data foto dari App Inventor
           const imageData = data.substring(11);
           receivePhotoFromAppInventor(imageData);
+        } else if (data && data === "PERMISSION_DENIED") {
+          handleCameraPermissionError();
         }
       };
     }
