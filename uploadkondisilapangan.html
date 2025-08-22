@@ -8,6 +8,8 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="uploadkondisilapanganstyle.css" />
+  <script src="kodekerja.js"></script>
   <style>
     :root {
       --primary: #4285f4;
@@ -29,7 +31,7 @@
       line-height: 1.6;
       margin: 0;
       padding: 0;
-      padding-top: 60px;
+      padding-top: 60px; /* Tambahkan ini */
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -38,7 +40,7 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 1rem; /* Ini sudah cukup */
       flex: 1;
       width: 100%;
       box-sizing: border-box;
@@ -299,113 +301,10 @@
       z-index: 999;
       position: relative;
     }
-    
-    /* Modal styles */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.7);
-    }
-    
-    .modal-content {
-      background-color: var(--white);
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 500px;
-      position: relative;
-    }
-    
-    .close-modal {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    
-    .close-modal:hover {
-      color: black;
-    }
-    
-    .fixed-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      background-color: var(--primary);
-      color: white;
-      padding: 10px 15px;
-      z-index: 1000;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    
-    .header-btn {
-      background: none;
-      border: none;
-      color: white;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      font-size: 1.2rem;
-    }
-    
-    .sync-badge {
-      background-color: var(--error);
-      color: white;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      margin-left: 5px;
-    }
-    
-    .blok-label {
-      position: absolute;
-      text-align: center;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-    }
-    
-    .blok-label div {
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 0.15em 0.4em;
-      border-radius: 0.3em;
-      font-weight: bold;
-      font-size: 0.7em;
-      text-shadow: 0 0 2px white;
-      white-space: nowrap;
-      border: 1px solid rgba(0,0,0,0.1);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    }
-    
-    @media (max-width: 600px) {
-      .blok-label div {
-        font-size: 0.6em;
-        padding: 0.1em 0.3em;
-      }
-    }
   </style>
 </head>
 <body>
+  <!-- Tambahkan di bagian atas body, sebelum container utama -->
   <header class="fixed-header">
     <div class="header-content">
       <button id="backButton" class="header-btn">
@@ -444,32 +343,54 @@
           </select>
         </div>
         
-        <div class="form-group">
-          <label for="kategori">Kategori</label>
-          <select id="kategori" required>
-            <option value="">-- Pilih Kategori --</option>
-            <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
-            <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
-            <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
-            <option value="LAND CLEARING">LAND CLEARING</option>
-            <option value="TANAM">TANAM</option>
-            <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
-            <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
-            <option value="PANEN">PANEN</option>
-            <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="objekKerja">Objek Kerja</label>
-          <input type="text" id="objekKerja" placeholder="Masukkan objek kerja" required>
+        <!-- Add these new form groups for Kategori and Objek Kerja -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="kategori">Kategori</label>
+            <select id="kategori" required>
+              <option value="">-- Pilih Kategori --</option>
+              <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
+              <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
+              <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
+              <option value="LAND CLEARING">LAND CLEARING</option>
+              <option value="TANAM">TANAM</option>
+              <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
+              <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
+              <option value="PANEN">PANEN</option>
+              <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="objekKerja">Objek Kerja</label>
+            <div class="dropdown-container">
+              <div class="search-container">
+                <input type="text" id="objekKerjaSearch" class="search-input" placeholder="Cari objek kerja..." disabled>
+              </div>
+              <select id="objekKerja" required disabled style="display: none;">
+                <option value="">-- Pilih Kategori terlebih dahulu --</option>
+              </select>
+              <div id="objekKerjaDropdown" class="dropdown-list"></div>
+            </div>
+          </div>
         </div>
 
         <div class="map-container">
           <div id="map"></div>
+          <div class="legend">
+            <h4>Keterangan:</h4>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #1f78b4;"></div>
+              <span>SAMSAM</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #33a02c;"></div>
+              <span>DURI</span>
+            </div>
+          </div>
         </div>
 
-        <div class="selected-info" id="selectedInfo" style="display: none;">
+        <div class="selected-info" id="selectedInfo">
           <h3>Blok Terpilih</h3>
           <div class="info-grid">
             <div class="info-item">
@@ -500,7 +421,7 @@
             <i class="material-icons">photo_camera</i>
             <span>Ambil Foto</span>
           </button>
-          <div class="file-list" id="fileList">Belum ada foto yang diambil</div>
+          <div class="file-list" id="fileList"></div>
         </div>
         
         <button type="submit" class="btn">
@@ -516,8 +437,23 @@
     </div>
   </div>
 
+  <!-- Modal untuk Kamera -->
+  <div id="cameraModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div class="camera-container">
+        <video id="cameraPreview" autoplay playsinline style="width:100%; border-radius:8px;"></video>
+        <canvas id="photoCanvas" style="display:none;"></canvas>
+        <button id="capturePhoto" class="btn" style="margin-top:10px;">
+          <i class="material-icons">camera</i>
+          <span>Ambil Foto</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal untuk Preview Foto -->
-  <div id="previewModal" class="modal">
+  <div id="previewModal" class="modal" style="display:none;">
     <div class="modal-content">
       <span class="close-preview-modal">&times;</span>
       <div class="preview-container">
@@ -536,9 +472,32 @@
     </div>
   </div>
 
+  <!-- Tambahkan modal untuk sinkronisasi -->
+  <div id="syncModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-sync-modal">&times;</span>
+      <h3>Sinkronisasi Data</h3>
+      <div id="syncStatus">
+        <p>Menemukan <span id="pendingCount">0</span> data yang belum disinkronisasi</p>
+        <div id="syncProgress" style="display:none;">
+          <div class="progress-bar">
+            <div class="progress" id="progressBar" style="width:0%"></div>
+          </div>
+          <p id="syncMessage">Menyinkronkan data...</p>
+        </div>
+      </div>
+      <button id="startSync" class="btn" style="margin-top:10px;">
+        <i class="material-icons">sync</i>
+        <span>Mulai Sinkronisasi</span>
+      </button>
+      <div id="syncResult" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    //-------------------END POINT UNTUK TAMPILAN PETA PER DIVISI-----------------------//
     // Data divisi berdasarkan kebun
     const divisiData = {
       "SAMSAM": ["DIVISI I", "DIVISI II", "DIVISI III", "DIVISI IV", "DIVISI V", "DIVISI VI", "DIVISI VII"],
@@ -580,13 +539,380 @@
       }
     });
 
-    // Inisialisasi peta Leaflet
-    const map = L.map('map').setView([1.0, 101.0], 12);
+    document.getElementById("divisi").addEventListener("change", function() {
+      const divisi = this.value;
+      if (divisi && geoJsonLayer) {
+        filterBlokByDivisi(divisi);
+      }
+    });
+
+    // Modifikasi fungsi filterBlokByDivisi untuk mengelola label:
+    function filterBlokByDivisi(divisi) {
+      // Reset semua layer ke style default
+      geoJsonLayer.resetStyle();
+      
+      // Sembunyikan semua blok dan label terlebih dahulu
+      geoJsonLayer.eachLayer(function(layer) {
+        map.removeLayer(layer);
+        if (layer.label) {
+          map.removeLayer(layer.label);
+        }
+      });
+      
+      // Tampilkan hanya blok dari divisi yang dipilih
+      geoJsonLayer.eachLayer(function(layer) {
+        if (layer.feature.properties.divisi === divisi) {
+          layer.addTo(map);
+          layer.setStyle(styleByKebun(layer.feature));
+          
+          // Tambahkan label jika belum ada
+          if (!layer.label) {
+            addBlokLabels(layer.feature, layer);
+          } else {
+            layer.label.addTo(map);
+          }
+        }
+      });
+      
+      // Reset selected feature
+      selectedFeature = null;
+      document.getElementById("selectedInfo").style.display = "none";
+      
+      // Sesuaikan view peta
+      const visibleBounds = getVisibleLayersBounds();
+      if (!visibleBounds.isValid()) {
+        map.fitBounds(geoJsonLayer.getBounds());
+      } else {
+        map.flyToBounds(visibleBounds, {
+          padding: [50, 50],
+          maxZoom: 16,
+          duration: 1
+        });
+      }
+    }
     
-    // Tambahkan tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'KPAK Smart System'
+    // Tambahkan CSS untuk label blok:
+    const style = document.createElement('style');
+    style.textContent = `
+      .blok-label {
+        position: absolute;
+        text-align: center;
+        pointer-events: none;
+        transform: translate(-50%, -50%); /* Pusatkan tepat di tengah */
+      }
+      .blok-label div {
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 0.15em 0.4em;
+        border-radius: 0.3em;
+        font-weight: bold;
+        font-size: 0.7em;
+        text-shadow: 0 0 2px white;
+        white-space: nowrap;
+        border: 1px solid rgba(0,0,0,0.1); /* Tambahkan border halus */
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Tambahkan shadow untuk kontras */
+      }
+      
+      @media (max-width: 600px) {
+        .blok-label div {
+          font-size: 0.6em;
+          padding: 0.1em 0.3em;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Inisialisasi peta Leaflet
+    
+    // Definisikan base layers
+    const baseLayers = {
+      "Satelite": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: 'KPAK Smart System',
+        maxZoom: 20
+      }),
+      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'KPAK Smart System'
+      }),
+      "Topografi": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'KPAK Smart System',
+        maxZoom: 17
+      })
+    };
+    
+    // Inisialisasi peta Leaflet dengan layer default OpenStreetMap
+    const map = L.map('map', {
+      layers: [baseLayers["Satelite"]] // Set layer default
+    }).setView([1.0, 101.0], 12);
+    
+    // Tambahkan kontrol layer ke peta
+    L.control.layers(baseLayers, null, {
+      position: 'bottomleft', // Posisi kontrol di pojok kanan atas
+      collapsed: false // Tampilkan dalam keadaan terbuka
     }).addTo(map);
+
+    // Variabel untuk menyimpan data GeoJSON dan layer yang aktif
+    let geoJsonData;
+    let geoJsonLayer;
+    let selectedFeature = null;
+
+    // Warna untuk kebun yang berbeda
+    const kebunColors = {
+      "SAMSAM": "#1f78b4",
+      "DURI": "#33a02c"
+    };
+
+    // Fungsi untuk menandai blok yang dipilih
+    function highlightFeature(e) {
+      const layer = e.target;
+
+      // Reset style sebelumnya jika ada yang dipilih
+      if (selectedFeature) {
+        geoJsonLayer.resetStyle(selectedFeature);
+      }
+
+      // Set style untuk layer yang dipilih
+      layer.setStyle({
+        weight: 3,
+        color: '#ff0000',
+        dashArray: '',
+        fillOpacity: 0.7
+      });
+
+      // Buka popup
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
+
+      // Simpan feature yang dipilih
+      selectedFeature = layer;
+      
+      // Tampilkan informasi blok yang dipilih
+      const props = layer.feature.properties;
+      document.getElementById("selectedInfo").style.display = "block";
+      document.getElementById("infoKode").textContent = props.kode;
+      document.getElementById("infoBlok").textContent = props.blok;
+      document.getElementById("infoTahun").textContent = props.tahun;
+      document.getElementById("infoLuas").textContent = props.luas;
+      
+      // Isi nilai form
+      document.getElementById("kode").value = props.kode;
+      document.getElementById("blok").value = props.blok;
+      document.getElementById("tahun").value = props.tahun;
+    }
+
+    // Fungsi untuk reset highlight
+    function resetHighlight(e) {
+      if (e.target !== selectedFeature) {
+        geoJsonLayer.resetStyle(e.target);
+      }
+    }
+
+    // Fungsi untuk zoom ke blok yang dipilih
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // Fungsi untuk menambahkan event listeners ke setiap feature
+    // Modifikasi fungsi onEachFeature:
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: highlightFeature,
+        mouseout: resetHighlight,
+        click: zoomToFeature
+      });
+      
+      addBlokLabels(feature, layer); // Ganti showFeatureInfo dengan addBlokLabels
+      map.removeLayer(layer); // Sembunyikan layer awalnya
+    }
+
+    // Fungsi untuk menentukan style berdasarkan kebun
+    function styleByKebun(feature) {
+      return {
+        fillColor: kebunColors[feature.properties.kebun] || "#cccccc",
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+      };
+    }
+
+    // Load GeoJSON data
+    fetch('koordinatkebundivisiblok.geojson')
+      .then(response => response.json())
+      .then(data => {
+        geoJsonData = data;
+        
+        // Tambahkan GeoJSON ke peta
+        geoJsonLayer = L.geoJSON(data, {
+          style: styleByKebun,
+          onEachFeature: onEachFeature
+        }).addTo(map);
+        
+        // Fit bounds ke seluruh data
+        map.fitBounds(geoJsonLayer.getBounds());
+      })
+      .catch(error => {
+        console.error('Error loading GeoJSON:', error);
+      });
+
+    // Fungsi untuk menampilkan status
+    function showStatus(message, isError = false) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'status error' : 'status success';
+      statusEl.style.display = 'block';
+      
+      // Sembunyikan status setelah 5 detik
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 5000);
+    }
+
+    function showAllBloks() {
+      geoJsonLayer.eachLayer(function(layer) {
+        layer.addTo(map);
+        layer.setStyle(styleByKebun(layer.feature));
+      });
+    }
+
+    function getVisibleLayersBounds() {
+      let bounds = new L.LatLngBounds();
+      
+      geoJsonLayer.eachLayer(function(layer) {
+        if (map.hasLayer(layer)) {
+          bounds.extend(layer.getBounds());
+        }
+      });
+      
+      return bounds;
+    }
+
+    // Hapus fungsi showFeatureInfo dan ganti dengan fungsi berikut:
+    function addBlokLabels(feature, layer) {
+      if (feature.properties && feature.properties.blok) {
+        // Hitung centroid (titik pusat) dari poligon
+        const centroid = layer.getBounds().getCenter();
+        
+        const label = L.marker(centroid, {
+          icon: L.divIcon({
+            className: 'blok-label',
+            html: `<div>${feature.properties.blok}</div>`,
+            iconSize: null, // Ukuran akan diatur oleh CSS
+            iconAnchor: [0, 0] // Anchor di tengah div
+          }),
+          zIndexOffset: 1000,
+          interactive: false // Nonaktifkan interaksi
+        });
+        
+        layer.label = label;
+        label.addTo(map);
+      }
+    }
+
+    //-------------------END POINT UNTUK TAKE FOTO-----------------------//
+
+    // Variabel untuk menyimpan stream kamera dan foto yang diambil
+    let cameraStream = null;
+    const capturedPhotos = [];
+    
+    // Elemen DOM
+    const startCameraBtn = document.getElementById('startCamera');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const capturePhotoBtn = document.getElementById('capturePhoto');
+    const fileList = document.getElementById('fileList');
+
+    // Variabel modal
+    const cameraModal = document.getElementById("cameraModal");
+    const openCameraBtn = document.getElementById("openCamera");
+    const closeModalBtn = document.querySelector(".close-modal");
+    
+    // Buka modal kamera
+    openCameraBtn.addEventListener('click', () => {
+      cameraModal.style.display = "block";
+      startCamera();
+    });
+    
+    // Tutup modal
+    closeModalBtn.addEventListener('click', () => {
+      stopCamera();
+      cameraModal.style.display = "none";
+    });
+    
+    // Fungsi untuk memulai kamera
+    async function startCamera() {
+      try {
+        // Hentikan kamera jika sudah aktif
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+        }
+    
+        // Akses kamera belakang
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+    
+        // Tampilkan preview kamera
+        cameraPreview.srcObject = cameraStream;
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Tidak dapat mengakses kamera: ' + error.message);
+        cameraModal.style.display = "none";
+      }
+    }
+    
+    // Fungsi untuk menghentikan kamera
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+    }
+    
+    // Fallback untuk desktop (tidak ada kamera)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const formGroup = document.querySelector('.form-group:has(#openCamera)');
+      formGroup.innerHTML = `
+        <label>Foto Kondisi Lapangan</label>
+        <div class="file-input-container">
+          <label class="file-input-label" for="photoFiles">
+            <i class="material-icons">photo_camera</i>
+            <span>Klik untuk memilih foto</span>
+            <small>Format yang didukung: .jpg, .jpeg, .png</small>
+          </label>
+          <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      `;
+      
+      // Tambahkan event listener untuk input file fallback
+      document.getElementById("photoFiles").addEventListener("change", function() {
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = '';
+        
+        if (this.files.length > 0) {
+          Array.from(this.files).forEach(file => {
+            const fileItem = document.createElement("div");
+            fileItem.className = "file-item";
+            fileItem.innerHTML = `
+              <i class="material-icons">image</i>
+              <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+            `;
+            fileList.appendChild(fileItem);
+          });
+        } else {
+          fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
+        }
+      });
+    } else {
+      // Kode untuk kamera mobile
+      openCameraBtn.style.display = 'block';
+    }
 
     // Variabel untuk menyimpan foto yang diambil
     const capturedPhotos = [];
@@ -633,6 +959,7 @@
       }, 'image/jpeg', 0.9);
     }
 
+    
     // Fungsi untuk menerima hasil foto dari App Inventor
     function receivePhotoFromAppInventor(imageData) {
       try {
@@ -662,7 +989,7 @@
       }
     }
 
-    // Fungsi untuk memperbarui daftar file
+     // Fungsi untuk memperbarui daftar file
     function updateFileList() {
       const fileList = document.getElementById('fileList');
       fileList.innerHTML = '';
@@ -694,21 +1021,276 @@
         });
       });
     }
+    
 
-    // Fungsi untuk menampilkan status
-    function showStatus(message, isError = false) {
-      const statusEl = document.getElementById('status');
-      statusEl.textContent = message;
-      statusEl.className = isError ? 'status error' : 'status success';
-      statusEl.style.display = 'block';
+
+    //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
+    // Variabel untuk menyimpan foto yang baru diambil
+    let currentPhoto = null;
+    const previewModal = document.getElementById("previewModal");
+    
+    // Ambil foto dari kamera
+    capturePhotoBtn.addEventListener('click', () => {
+      if (!cameraStream) return;
+    
+      // Siapkan canvas untuk menangkap gambar
+      const context = photoCanvas.getContext('2d');
+      photoCanvas.width = cameraPreview.videoWidth;
+      photoCanvas.height = cameraPreview.videoHeight;
+      context.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+    
+      // Konversi canvas ke data URL untuk preview
+      const imageDataUrl = photoCanvas.toDataURL('image/jpeg', 0.9);
       
-      // Sembunyikan status setelah 5 detik
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-      }, 5000);
+      // Tampilkan preview modal
+      document.getElementById('previewImage').src = imageDataUrl;
+      
+      // Simpan foto sementara
+      currentPhoto = {
+        dataUrl: imageDataUrl,
+        blob: null
+      };
+      
+      // Konversi juga ke blob untuk disimpan nanti jika dipilih simpan
+      photoCanvas.toBlob(blob => {
+        currentPhoto.blob = blob;
+        // Tutup modal kamera dan buka modal preview
+        stopCamera();
+        cameraModal.style.display = "none";
+        previewModal.style.display = "block";
+      }, 'image/jpeg', 0.9);
+    });
+    
+    // Tombol hapus di modal preview
+    document.getElementById('deletePhoto').addEventListener('click', () => {
+      // Hanya tutup modal, foto tidak disimpan
+      currentPhoto = null;
+      previewModal.style.display = "none";
+    });
+    
+    // Tombol simpan di modal preview
+    document.getElementById('savePhoto').addEventListener('click', () => {
+      if (currentPhoto && currentPhoto.blob) {
+        const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        const file = new File([currentPhoto.blob], fileName, { type: 'image/jpeg' });
+        
+        // Simpan foto ke daftar
+        capturedPhotos.push(file);
+        updateFileList();
+        
+        // Reset dan tutup modal
+        currentPhoto = null;
+        previewModal.style.display = "none";
+      }
+    });
+    
+    // Tutup modal preview
+    document.querySelector(".close-preview-modal").addEventListener('click', () => {
+      currentPhoto = null;
+      previewModal.style.display = "none";
+    });
+
+    //-------------------END POINT UNTUK UPLOAD FOTO-----------------------//
+
+    // Inisialisasi IndexDB
+    let db;
+    const DB_NAME = "KondisiLapanganDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "pendingSubmissions";
+
+    // Buka atau buat database
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        request.onerror = (event) => {
+          console.error("Database error:", event.target.error);
+          reject("Gagal membuka database");
+        };
+        
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log("Database berhasil dibuka");
+          resolve(db);
+          updatePendingCount(); // Update counter saat database siap
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { 
+              keyPath: "id",
+              autoIncrement: true 
+            });
+            
+            // Buat index untuk pencarian
+            store.createIndex("timestamp", "timestamp", { unique: false });
+            store.createIndex("kebun", "kebun", { unique: false });
+            store.createIndex("divisi", "divisi", { unique: false });
+            store.createIndex("blok", "blok", { unique: false });
+          }
+        };
+      });
     }
 
-    // Event listener untuk form submit
+    // Tambahkan data ke IndexDB
+    function addToPendingSubmissions(data) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const request = store.add(data);
+        
+        request.onsuccess = () => {
+          console.log("Data berhasil disimpan di IndexDB");
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error("Gagal menyimpan di IndexDB:", event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Ambil semua data yang belum disinkronkan
+    function getAllPendingSubmissions() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Hapus data yang sudah disinkronkan
+    function deleteSubmission(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Update counter data yang belum disinkronkan
+    async function updatePendingCount() {
+      try {
+        const submissions = await getAllPendingSubmissions();
+        const count = submissions.length;
+        document.getElementById("syncBadge").textContent = count;
+        document.getElementById("pendingCount").textContent = count;
+      } catch (error) {
+        console.error("Gagal update pending count:", error);
+      }
+    }
+
+    // Handle kategori change
+    document.getElementById("kategori").addEventListener("change", function() {
+      const kategori = this.value;
+      const objekKerjaSearch = document.getElementById("objekKerjaSearch");
+      const objekKerjaSelect = document.getElementById("objekKerja");
+      const objekKerjaDropdown = document.getElementById("objekKerjaDropdown");
+      
+      // Kosongkan dropdown dan search
+      objekKerjaSelect.innerHTML = '';
+      objekKerjaDropdown.innerHTML = '';
+      
+      if (kategori) {
+        // Aktifkan search input
+        objekKerjaSearch.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Objek Kerja --";
+        objekKerjaSelect.appendChild(defaultOption);
+        
+        // Tambahkan semua opsi ke select dan dropdown
+        kerjaData[kategori].forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.kode;
+          option.textContent = `${item.kode} - ${item.kerja}`;
+          objekKerjaSelect.appendChild(option);
+          
+          const dropdownItem = document.createElement("div");
+          dropdownItem.className = "dropdown-item";
+          dropdownItem.textContent = `${item.kode} - ${item.kerja}`;
+          dropdownItem.dataset.value = item.kode;
+          dropdownItem.addEventListener("click", function() {
+            objekKerjaSelect.value = this.dataset.value;
+            objekKerjaSearch.value = this.textContent;
+            objekKerjaDropdown.style.display = "none";
+          });
+          objekKerjaDropdown.appendChild(dropdownItem);
+        });
+      } else {
+        // Nonaktifkan search input
+        objekKerjaSearch.disabled = true;
+        objekKerjaSearch.value = "";
+        objekKerjaDropdown.style.display = "none";
+        
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kategori terlebih dahulu --";
+        objekKerjaSelect.appendChild(defaultOption);
+      }
+    });
+    
+    // Handle search input
+    document.getElementById("objekKerjaSearch").addEventListener("input", function() {
+      const searchTerm = this.value.toLowerCase();
+      const dropdownItems = document.querySelectorAll("#objekKerjaDropdown .dropdown-item");
+      let hasMatches = false;
+      
+      dropdownItems.forEach(item => {
+        if (item.textContent.toLowerCase().includes(searchTerm)) {
+          item.style.display = "block";
+          hasMatches = true;
+        } else {
+          item.style.display = "none";
+        }
+      });
+      
+      if (hasMatches && searchTerm.length > 0) {
+        document.getElementById("objekKerjaDropdown").style.display = "block";
+      } else {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
+      }
+    });
+    
+    // Tampilkan dropdown ketika search input diklik
+    document.getElementById("objekKerjaSearch").addEventListener("click", function() {
+      if (this.value === "") {
+        const dropdown = document.getElementById("objekKerjaDropdown");
+        dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+      }
+    });
+    
+    // Sembunyikan dropdown ketika klik di luar
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".dropdown-container")) {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
+      }
+    });
+    
+    // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", function(e) {
       e.preventDefault();
       
@@ -769,13 +1351,132 @@
       };
     }
 
-    // Sederhanakan inisialisasi peta untuk contoh
-    // (Dalam implementasi nyata, Anda akan memuat GeoJSON dan menambahkan interaksi)
-    
     // Tambahkan contoh marker ke peta
     const marker = L.marker([1.0, 101.0]).addTo(map)
       .bindPopup('Contoh lokasi kebun')
       .openPopup();
+  
+
+    // Fungsi untuk sinkronisasi data
+    async function syncData() {
+      try {
+        const syncProgress = document.getElementById("syncProgress");
+        const progressBar = document.getElementById("progressBar");
+        const syncMessage = document.getElementById("syncMessage");
+        const syncResult = document.getElementById("syncResult");
+        const startSyncBtn = document.getElementById("startSync");
+        
+        // Ambil semua data yang belum disinkronkan
+        const pendingData = await getAllPendingSubmissions();
+        const totalData = pendingData.length;
+        
+        if (totalData === 0) {
+          syncResult.innerHTML = '<div class="status success">Tidak ada data yang perlu disinkronkan</div>';
+          return;
+        }
+        
+        // Tampilkan progress
+        syncProgress.style.display = "block";
+        startSyncBtn.disabled = true;
+        syncResult.innerHTML = "";
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Proses sinkronisasi satu per satu
+        for (let i = 0; i < totalData; i++) {
+          const data = pendingData[i];
+          const progress = Math.round(((i + 1) / totalData) * 100);
+          
+          progressBar.style.width = `${progress}%`;
+          syncMessage.textContent = `Menyinkronkan data ${i + 1} dari ${totalData}...`;
+          
+          try {
+            // Kirim ke Google Apps Script
+            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+              method: 'POST',
+              body: JSON.stringify(data),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              mode: 'no-cors'
+            });
+            
+            // Jika berhasil, hapus dari IndexDB
+            await deleteSubmission(data.id);
+            successCount++;
+            
+          } catch (error) {
+            console.error(`Gagal sinkronisasi data ${data.id}:`, error);
+            errorCount++;
+          }
+        }
+        
+        // Tampilkan hasil
+        syncMessage.textContent = "Sinkronisasi selesai!";
+        syncResult.innerHTML = `
+          <div class="status success">
+            ${successCount} data berhasil disinkronkan
+            ${errorCount > 0 ? `<br><span class="error">${errorCount} data gagal disinkronkan</span>` : ''}
+          </div>
+        `;
+        
+        // Update counter
+        updatePendingCount();
+        
+      } catch (error) {
+        console.error("Error dalam proses sinkronisasi:", error);
+        document.getElementById("syncResult").innerHTML = `
+          <div class="status error">Gagal sinkronisasi: ${error.message}</div>
+        `;
+      } finally {
+        document.getElementById("startSync").disabled = false;
+      }
+    }
+
+    // Event listener untuk tombol sinkronisasi
+    document.getElementById("openSyncModal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "block";
+      updatePendingCount();
+    });
+    
+    document.querySelector(".close-sync-modal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "none";
+    });
+    
+    document.getElementById("startSync").addEventListener("click", syncData);
+
+    // Inisialisasi database saat halaman dimuat
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        await initDB();
+        
+        // Cek koneksi internet
+        window.addEventListener("online", updatePendingCount);
+        window.addEventListener("offline", () => {
+          showStatus("Anda sedang offline. Data akan disimpan secara lokal.", false);
+        });
+        
+      } catch (error) {
+        console.error("Gagal inisialisasi database:", error);
+        showStatus("Gagal mengakses penyimpanan lokal. Fitur offline tidak tersedia.", true);
+      }
+    });
+
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Tambahkan event listener untuk tombol back
+    document.getElementById('backButton').addEventListener('click', function() {
+      window.history.back();
+    });
   </script>
 </body>
 </html>
