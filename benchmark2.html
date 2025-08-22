@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Benchmark Kebun</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Kondisi Lapangan</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="benchmarkstyle.css" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="uploadkondisilapanganstyle.css" />
+  <script src="kodekerja.js"></script>
   <style>
     :root {
       --primary: #4285f4;
       --primary-hover: #3367d6;
-      --secondary: #34a853;
+      --success: #4caf50;
+      --error: #f44336;
       --light-gray: #f5f5f5;
       --medium-gray: #e0e0e0;
       --dark-gray: #757575;
       --white: #ffffff;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       --transition: all 0.3s ease;
     }
     
@@ -29,6 +31,7 @@
       line-height: 1.6;
       margin: 0;
       padding: 0;
+      padding-top: 60px; /* Tambahkan ini */
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -37,12 +40,12 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 1rem; /* Ini sudah cukup */
       flex: 1;
       width: 100%;
       box-sizing: border-box;
     }
-    
+
     .header {
       text-align: center;
       margin-bottom: 1.5rem;
@@ -66,130 +69,173 @@
       background-color: var(--white);
       border-radius: 12px;
       box-shadow: var(--shadow);
-      overflow: hidden;
+      padding: 1.5rem;
       transition: var(--transition);
       margin-bottom: 1.5rem;
     }
     
-    .filter-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      align-items: end;
-    }
-    
-    .filter-group {
+    form {
       display: flex;
       flex-direction: column;
+      gap: 1rem;
     }
-
-    .filter-group label {
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: var(--dark-gray);
-      font-size: 0.9rem;
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
     }
     
     label {
-      display: block;
-      margin-bottom: 0.5rem;
       font-weight: 500;
-      color: var(--dark-gray);
+      color: #555;
       font-size: 0.9rem;
     }
     
-    /* Enhanced Select Styles */
-    .select-wrapper {
-      position: relative;
-    }
-    
-    .select-wrapper::after {
-      content: "▼";
-      font-size: 0.8rem;
-      color: var(--dark-gray);
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-    }
-    
-    select {
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      width: 100%;
-      padding: 0.75rem 1rem;
+    select, input[type="text"], input[type="file"] {
+      padding: 0.8rem 1rem;
       border: 1px solid var(--medium-gray);
       border-radius: 8px;
       font-family: inherit;
       font-size: 0.9rem;
+      transition: var(--transition);
       background-color: var(--white);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 1rem;
+    }
+    
+    .file-input-container {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 1rem;
+      border: 2px dashed var(--medium-gray);
+      border-radius: 8px;
+      background-color: var(--light-gray);
       color: var(--dark-gray);
+      text-align: center;
       cursor: pointer;
       transition: var(--transition);
     }
     
-    select:focus {
-      outline: none;
+    .file-input-label:hover {
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+      background-color: rgba(66, 133, 244, 0.05);
+    }
+    
+    .file-input-label i {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+    
+    .file-input-label span {
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
+    }
+    
+    input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .file-list {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--dark-gray);
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--medium-gray);
+    }
+    
+    .file-item:last-child {
+      border-bottom: none;
     }
     
     .btn {
       background-color: var(--primary);
       color: var(--white);
       border: none;
-      padding: 0.6rem 1rem;
-      border-radius: 6px;
+      padding: 0.9rem;
+      border-radius: 8px;
       font-family: inherit;
       font-weight: 500;
+      font-size: 1rem;
       cursor: pointer;
       transition: var(--transition);
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 0.3rem;
-      text-decoration: none;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      height: 40px;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-top: 0.5rem;
     }
     
     .btn:hover {
       background-color: var(--primary-hover);
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
     }
     
-    #mapContainer {
-      position: relative;
-      margin-bottom: 1.5rem;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
+    .btn:disabled {
+      background-color: var(--medium-gray);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
     
-    #map {
-      height: 500px;
-      width: 100%;
-      transition: height 0.3s ease;
-    }
-    
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 1.5rem;
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--dark-gray);
+      font-size: 0.9rem;
     }
     
     .spinner {
-      border: 3px solid rgba(66, 133, 244, 0.2);
-      border-top: 3px solid var(--primary);
+      border: 2px solid rgba(66, 133, 244, 0.2);
+      border-top: 2px solid var(--primary);
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.5rem;
     }
     
     @keyframes spin {
@@ -197,269 +243,64 @@
       100% { transform: rotate(360deg); }
     }
     
-    /* Mobile (up to 600px) */
-    @media (max-width: 600px) {
-      h1 {
-        font-size: 1.5rem;
-      }
-      
-      .subtitle {
-        font-size: 0.9rem;
-      }
-      
-      .filter-container {
-        flex-direction: column;
-      }
-      
-      .filter-group {
-        width: 100%;
-      }
-      
-      #map {
-        height: 400px;
-      }
-    }
-    
-    /* Tablet (601px - 992px) */
-    @media (min-width: 601px) and (max-width: 992px) {
-      .container {
-        padding: 1.5rem;
-      }
-      
-      h1 {
-        font-size: 1.7rem;
-      }
-    }
-    
-    /* Desktop (993px and up) */
-    @media (min-width: 993px) {
-      .container {
-        padding: 2rem;
-      }
-    }
-
-    .btn .spinner {
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top: 2px solid var(--white);
-      border-radius: 50%;
-      width: 16px;
-      height: 16px;
-      animation: spin 1s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
-      margin-right: 5px;
-    }
-
-    /* Data Display Styles */
-    .data-tabs {
-      display: flex;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; /* Firefox */
-    }
-
-    .data-tabs::-webkit-scrollbar {
-      display: none; /* Chrome/Safari */
-    }
-    
-    .tab-btn {
-      padding: 0.75rem 1.5rem;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      font-family: inherit;
-      font-weight: 500;
-      color: var(--dark-gray);
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    @media (max-width: 600px) {
-      .tab-btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-      }
-      
-      .tab-content {
-        padding: 0.75rem;
-      }
-    }
-    
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-    
-    .tab-content {
-      display: none;
-      padding: 1rem;
-    }
-    
-    .tab-content.active {
-      display: block;
-    }
-    
-    .data-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    .data-card {
-      background: var(--light-gray);
+    .status {
+      margin-top: 1rem;
+      padding: 0.8rem;
       border-radius: 8px;
-      padding: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .data-card h4 {
-      margin-top: 0;
-      color: var(--primary);
-      font-size: 1rem;
-      border-bottom: 1px solid var(--medium-gray);
-      padding-bottom: 0.5rem;
-    }
-    
-    .data-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
       font-size: 0.9rem;
+      text-align: center;
     }
     
-    .data-item .label {
-      font-weight: 500;
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .error {
+      background-color: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+    }
+    
+    .error-input {
+      border-color: var(--error) !important;
+    }
+    
+    small {
+      font-size: 0.75rem;
       color: var(--dark-gray);
     }
     
-    .data-item .value {
-      font-weight: 600;
-    }
-    
-    .comparison-positive {
-      color: var(--secondary);
-    }
-    
-    .comparison-negative {
-      color: #ea4335;
-    }
-    
-    .summary-card {
-      background: var(--primary);
-      color: white;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-    }
-    
-    .summary-card h4 {
-      margin-top: 0;
-      color: white;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.5rem;
-    }
-    
-    /* Cost Table Styles */
-    .cost-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    
-    .cost-table th, .cost-table td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--medium-gray);
-    }
-    
-    .cost-table th {
-      background-color: var(--light-gray);
-      font-weight: 600;
-    }
-    
-    .cost-table tr:hover {
-      background-color: rgba(66, 133, 244, 0.05);
-    }
-    
-    .cost-table .positive {
-      color: var(--secondary);
-    }
-    
-    .cost-table .negative {
-      color: #ea4335;
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .data-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .cost-table {
-        display: block;
-        overflow-x: auto;
-      }
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* CSS untuk fixed header */
-  .fixed-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background-color: var(--primary);
-    color: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    padding: 0 15px;
-  }
-  
-  .header-content {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .header-title {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin: 0;
-    color: white;
-    text-align: center;
-    flex-grow: 1;
-    padding: 0 10px;
-  }
-  
-  .header-btn {
-    background: none;
-    border: none;
-    color: white;
-    padding: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-  }
-  
-  .header-btn:hover {
-    background-color: rgba(255,255,255,0.2);
-  }
-  
-  .header-btn i {
-    font-size: 24px;
-  }
+    /* Map container styles */
+    #map {
+      height: 500px;
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .map-container {
+      z-index: 999;
+      position: relative;
+    }
   </style>
 </head>
 <body>
@@ -469,2983 +310,1109 @@
       <button id="backButton" class="header-btn">
         <i class="material-icons">arrow_back</i>
       </button>
+      <div class="header-actions">
+        <button id="openSyncModal" class="header-btn sync-btn">
+          <i class="material-icons">sync</i>
+          <span id="syncBadge" class="sync-badge">0</span>
+        </button>
+      </div>
     </div>
   </header>
-  
-  <div class="container" style="padding-top: 70px;">
+
+  <div class="container">
     <div class="header">
-      <h1>Benchmark Kebun</h1>
-      <p class="subtitle">Filter dan tampilkan data kebun berdasarkan divisi</p>
+      <h1>Upload Kondisi Lapangan</h1>
+      <p class="subtitle">Pilih lokasi blok dan unggah foto kondisi lapangan</p>
     </div>
     
     <div class="card">
-      <div class="filter-container">
-        <div class="filter-group">
-          <label for="kebunSelect">Kebun</label>
-          <div class="select-wrapper">
-            <select id="kebunSelect">
-              <option value="">Pilih Kebun</option>
-              <option value="SAMSAM">Samsam</option>
-              <!-- Tambahkan kebun lain jika ada -->
+      <form id="uploadForm">
+        <div class="form-group">
+          <label for="kebun">Kebun</label>
+          <select id="kebun" required>
+            <option value="">-- Pilih Kebun --</option>
+            <option value="SAMSAM">Samsam</option>
+            <option value="DURI">Duri</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="divisi">Divisi</label>
+          <select id="divisi" required disabled>
+            <option value="">-- Pilih Kebun terlebih dahulu --</option>
+          </select>
+        </div>
+        
+        <!-- Add these new form groups for Kategori and Objek Kerja -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="kategori">Kategori</label>
+            <select id="kategori" required>
+              <option value="">-- Pilih Kategori --</option>
+              <option value="BIBITAN INFRASTRUKTUR">BIBITAN INFRASTRUKTUR</option>
+              <option value="BIBITAN PRE-NURSERY">BIBITAN PRE-NURSERY</option>
+              <option value="BIBITAN MAIN-NURSERY">BIBITAN MAIN-NURSERY</option>
+              <option value="LAND CLEARING">LAND CLEARING</option>
+              <option value="TANAM">TANAM</option>
+              <option value="TANAMAN BELUM MENGHASILKAN">TANAMAN BELUM MENGHASILKAN</option>
+              <option value="TANAMAN MENGHASILKAN">TANAMAN MENGHASILKAN</option>
+              <option value="PANEN">PANEN</option>
+              <option value="PANEN TRANSPORT">PANEN TRANSPORT</option>
             </select>
           </div>
-        </div>
-        
-        <div class="filter-group">
-          <label for="divisiSelect">Divisi</label>
-          <div class="select-wrapper">
-            <select id="divisiSelect" disabled>
-              <option value="">Pilih Divisi</option>
-              <option value="">Divisi I</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="filter-group load-data-container">
-          <button id="loadDataBtn" class="btn">
-            <i class="material-icons">refresh</i>
-            <span>Muat Data</span>
-          </button>
-        </div>
-      </div>
-      
-      <div id="mapContainer">
-        <div id="map"></div>
-        <div class="map-controls">
-          <button class="map-control-btn" id="zoomInBtn" title="Zoom In">
-            <i class="material-icons">add</i>
-          </button>
-          <button class="map-control-btn" id="zoomOutBtn" title="Zoom Out">
-            <i class="material-icons">remove</i>
-          </button>
-          <button class="map-control-btn" id="resetViewBtn" title="Reset View">
-            <i class="material-icons">home</i>
-          </button>
-        </div>
-        <div class="map-legend" id="mapLegend"></div>
-      </div>
-      
-      <div id="dataDetails" class="card" style="display: none;">
-      <div class="data-tabs">
-        <button class="tab-btn active" data-tab="production">Produksi</button>
-        <button class="tab-btn" data-tab="cost">Biaya</button>
-        <button class="tab-btn" data-tab="chart">Grafik</button>
-        <button class="tab-btn" data-tab="analysis">Analisa</button>
-      </div>
-      
-      <div id="productionTab" class="tab-content active">
-        <h3>Data Produksi</h3>
-        <div class="data-grid">
-          <div class="data-card">
-            <h4>Budget</h4>
-            <div id="prodBudgetData"></div>
-          </div>
-          <div class="data-card">
-            <h4>Aktual</h4>
-            <div id="prodActualData"></div>
-          </div>
-          <div class="data-card">
-            <h4>Perbandingan</h4>
-            <div id="prodComparison"></div>
-          </div>
-        </div>
-      </div>
-      
-      <div id="costTab" class="tab-content">
-        <!-- Content will be dynamically generated -->
-      </div>
-
-      <div id="chartTab" class="tab-content">
-        <h3>Grafik Data</h3>
-        
-        <!-- Chart 1: Production Line Chart -->
-        <div class="chart-container">
-          <h4>Grafik Produksi (Tonase)</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget dan actual tonase per bulan</p>
-          </div>
-          <canvas id="productionChart"></canvas>
-        </div>
-        
-        <!-- Chart 2: Cost Bar Chart -->
-        <div class="chart-container">
-          <h4>Grafik Biaya</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget dan actual biaya per bulan</p>
-            <div class="chart-filter">
-              <label for="costWorkObject">Pilih Objek Kerja:</label>
-              <select id="costWorkObject">
-                <option value="">Semua Objek Kerja</option>
+          
+          <div class="form-group">
+            <label for="objekKerja">Objek Kerja</label>
+            <div class="dropdown-container">
+              <div class="search-container">
+                <input type="text" id="objekKerjaSearch" class="search-input" placeholder="Cari objek kerja..." disabled>
+              </div>
+              <select id="objekKerja" required disabled style="display: none;">
+                <option value="">-- Pilih Kategori terlebih dahulu --</option>
               </select>
+              <div id="objekKerjaDropdown" class="dropdown-list"></div>
             </div>
           </div>
-          <canvas id="costChart"></canvas>
         </div>
-        
-        <!-- Chart 3: Area Line Chart -->
-        <div class="chart-container">
-          <h4>Grafik Luas/Hasil</h4>
-          <div class="chart-description">
-            <p>Perbandingan antara budget luas dan actual hasil per bulan</p>
-            <div class="chart-filter">
-              <label for="areaWorkObject">Pilih Objek Kerja:</label>
-              <select id="areaWorkObject">
-                <option value="">Semua Objek Kerja</option>
-              </select>
+
+        <div class="map-container">
+          <div id="map"></div>
+          <div class="legend">
+            <h4>Keterangan:</h4>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #1f78b4;"></div>
+              <span>SAMSAM</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background-color: #33a02c;"></div>
+              <span>DURI</span>
             </div>
           </div>
-          <canvas id="areaChart"></canvas>
         </div>
-      </div>
 
-      <!-- 4. Tambahkan tab baru di HTML-->
-      <div id="analysisTab" class="tab-content">
-        <h3>Analisis Mendalam</h3>
-        
-        <div class="analysis-section">
-          <h4>Ringkasan Kinerja</h4>
-          <div id="performanceSummary"></div>
+        <div class="selected-info" id="selectedInfo">
+          <h3>Blok Terpilih</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Kode Tahun Tanam:</span>
+              <span class="info-value" id="infoKode">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Blok:</span>
+              <span class="info-value" id="infoBlok">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tahun Tanam:</span>
+              <span class="info-value" id="infoTahun">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Luas (Ha):</span>
+              <span class="info-value" id="infoLuas">-</span>
+            </div>
+          </div>
+          <input type="hidden" id="kode" name="kode">
+          <input type="hidden" id="blok" name="blok">
+          <input type="hidden" id="tahun" name="tahun">
         </div>
         
-        <div class="analysis-section">
-          <h4>Efisiensi Biaya</h4>
-          <div id="costEfficiency"></div>
+        <div class="form-group">
+          <label>Foto Kondisi Lapangan</label>
+          <button id="openCamera" class="btn" type="button">
+            <i class="material-icons">photo_camera</i>
+            <span>Ambil Foto</span>
+          </button>
+          <div class="file-list" id="fileList"></div>
         </div>
         
-        <div class="analysis-section">
-          <h4>Trend Produktivitas</h4>
-          <canvas id="productivityTrendChart"></canvas>
+        <button type="submit" class="btn">
+          <i class="material-icons">file_upload</i>
+          <span>Upload Data</span>
+        </button>
+        <div id="loading">
+          <div class="spinner"></div>
+          <span>Mengunggah... Harap tunggu</span>
         </div>
-        
-        <div class="analysis-section">
-          <h4>Distribusi Biaya</h4>
-          <canvas id="costDistributionChart"></canvas>
-        </div>
-      </div>
-    </div>
-      
+        <div id="status" class="status"></div>
+      </form>
     </div>
   </div>
 
-  <!-- Progress Modal -->
-  <div id="progressModal" class="modal" style="display: none;">
+  <!-- Modal untuk Kamera -->
+  <div id="cameraModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h3>Memuat Data...</h3>
-      <div class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <div class="progress-text" id="progressText">0%</div>
+      <span class="close-modal">&times;</span>
+      <div class="camera-container">
+        <video id="cameraPreview" autoplay playsinline style="width:100%; border-radius:8px;"></video>
+        <canvas id="photoCanvas" style="display:none;"></canvas>
+        <button id="capturePhoto" class="btn" style="margin-top:10px;">
+          <i class="material-icons">camera</i>
+          <span>Ambil Foto</span>
+        </button>
       </div>
-      <div class="progress-steps" id="progressSteps">
-        <div class="step" data-step="prodActual">
-          <div class="step-header">1. Memuat Data Produksi Aktual</div>
-          <div class="step-details" id="prodActualDetails"></div>
-        </div>
-        <div class="step" data-step="prodBudget">
-          <div class="step-header">2. Memuat Data Produksi Budget</div>
-          <div class="step-details" id="prodBudgetDetails"></div>
-        </div>
-        <div class="step" data-step="budget">
-          <div class="step-header">3. Memuat Data Budget</div>
-          <div class="step-details" id="budgetDetails"></div>
-        </div>
-        <div class="step" data-step="actual">
-          <div class="step-header">4. Memuat Data Aktual</div>
-          <div class="step-details" id="actualDetails"></div>
-        </div>
-      </div>
-      <!-- Tambahkan ini untuk notifikasi -->
-      <div id="progressNotification" class="notification" style="display: none;"></div>
     </div>
   </div>
-  
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script>
-    let map;
-    let geoJsonLayer = null; // Initialize as null
-    let geoJsonData;
-    let blokLabels = []; // Untuk menyimpan label blok
-    
-    // Initialize map
-    function initMap() {
-      // Default center (will be updated when data loads)
-      map = L.map('map', {
-        zoomControl: false, // We'll add custom zoom control
-        attributionControl: false // We'll add custom attribution
-      }).setView([1.0, 101.05], 15);
-      
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
-      
-      // Add custom controls
-      L.control.attribution({
-        position: 'bottomleft'
-      }).addTo(map);
-      
-      // Initialize geoJsonLayer
-      geoJsonLayer = L.layerGroup().addTo(map);
-      
-      // Add map controls functionality
-      document.getElementById('zoomInBtn').addEventListener('click', function() {
-        map.zoomIn();
-      });
-      
-      document.getElementById('zoomOutBtn').addEventListener('click', function() {
-        map.zoomOut();
-      });
-      
-      document.getElementById('resetViewBtn').addEventListener('click', function() {
-        map.setView([1.0, 101.05], 15);
-      });
-    }
 
-    async function calculateBlockColor(divisi, blockCode, kebun) {
-      try {
-        const [prodActualData, prodBudgetData] = await Promise.all([
-          getDataFromDB(STORES.PROD_ACTUAL),
-          getDataFromDB(STORES.PROD_BUDGET)
-        ]);
-    
-        const normalizedDivisi = divisi.replace(' ', '_');
-        const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
-        const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
-    
-        const monthlyPercentages = [];
-        const monthlyData = {};
-    
-        // Proses data aktual
-        filteredProdActual.forEach(item => {
-          const month = new Date(item.Bulan).getMonth();
-          if (!monthlyData[month]) monthlyData[month] = {};
-          monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
-        });
-    
-        // Proses data budget
-        filteredProdBudget.forEach(item => {
-          const month = new Date(item.Bulan).getMonth();
-          if (!monthlyData[month]) monthlyData[month] = {};
-          monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
-        });
-    
-        // Hitung persentase
-        Object.values(monthlyData).forEach(data => {
-          if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
-            const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
-            monthlyPercentages.push(percentage);
-          }
-        });
-    
-        // Hitung rata-rata
-        let averagePercentage = 0;
-        if (monthlyPercentages.length > 0) {
-          averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
-        }
-    
-        // Tentukan warna
-        if (averagePercentage >= 95) return '#34A853'; // Hijau
-        if (averagePercentage >= 90) return '#FBBC05'; // Orange
-        if (averagePercentage >= 75) return '#EA4335'; // Merah
-        return '#000000'; // Hitam
+  <!-- Modal untuk Preview Foto -->
+  <div id="previewModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-preview-modal">&times;</span>
+      <div class="preview-container">
+        <img id="previewImage" style="width:100%; border-radius:8px; margin-bottom:10px;">
+        <div class="preview-actions">
+          <button id="deletePhoto" class="btn" style="background-color:var(--error);">
+            <i class="material-icons">delete</i>
+            <span>Hapus</span>
+          </button>
+          <button id="savePhoto" class="btn" style="margin-left:10px;">
+            <i class="material-icons">save</i>
+            <span>Simpan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tambahkan modal untuk sinkronisasi -->
+  <div id="syncModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-sync-modal">&times;</span>
+      <h3>Sinkronisasi Data</h3>
+      <div id="syncStatus">
+        <p>Menemukan <span id="pendingCount">0</span> data yang belum disinkronisasi</p>
+        <div id="syncProgress" style="display:none;">
+          <div class="progress-bar">
+            <div class="progress" id="progressBar" style="width:0%"></div>
+          </div>
+          <p id="syncMessage">Menyinkronkan data...</p>
+        </div>
+      </div>
+      <button id="startSync" class="btn" style="margin-top:10px;">
+        <i class="material-icons">sync</i>
+        <span>Mulai Sinkronisasi</span>
+      </button>
+      <div id="syncResult" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    //-------------------END POINT UNTUK TAMPILAN PETA PER DIVISI-----------------------//
+    // Data divisi berdasarkan kebun
+    const divisiData = {
+      "SAMSAM": ["DIVISI I", "DIVISI II", "DIVISI III", "DIVISI IV", "DIVISI V", "DIVISI VI", "DIVISI VII"],
+      "DURI": ["DIVISI I TEGAR", "DIVISI II TEGAR", "DIVISI III CUCUT", "DIVISI III MEKARSARI", "DIVISI IV RANGAU", "DIVISI V RANGAU", "DIVISI VI RANGAU"]
+    };
+
+    // Inisialisasi dropdown divisi berdasarkan kebun yang dipilih
+    document.getElementById("kebun").addEventListener("change", function() {
+      const kebun = this.value;
+      const divisiSelect = document.getElementById("divisi");
+      
+      // Kosongkan dropdown divisi
+      divisiSelect.innerHTML = '';
+      
+      if (kebun) {
+        // Aktifkan dropdown divisi
+        divisiSelect.disabled = false;
         
-      } catch (error) {
-        console.error('Error calculating block color:', error);
-        return '#888888'; // Default jika error
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Divisi --";
+        divisiSelect.appendChild(defaultOption);
+        
+        // Tambahkan opsi divisi berdasarkan kebun
+        divisiData[kebun].forEach(divisi => {
+          const option = document.createElement("option");
+          option.value = divisi;
+          option.textContent = divisi;
+          divisiSelect.appendChild(option);
+        });
+      } else {
+        // Nonaktifkan dropdown divisi jika kebun tidak dipilih
+        divisiSelect.disabled = true;
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kebun terlebih dahulu --";
+        divisiSelect.appendChild(defaultOption);
+      }
+    });
+
+    document.getElementById("divisi").addEventListener("change", function() {
+      const divisi = this.value;
+      if (divisi && geoJsonLayer) {
+        filterBlokByDivisi(divisi);
+      }
+    });
+
+    // Modifikasi fungsi filterBlokByDivisi untuk mengelola label:
+    function filterBlokByDivisi(divisi) {
+      // Reset semua layer ke style default
+      geoJsonLayer.resetStyle();
+      
+      // Sembunyikan semua blok dan label terlebih dahulu
+      geoJsonLayer.eachLayer(function(layer) {
+        map.removeLayer(layer);
+        if (layer.label) {
+          map.removeLayer(layer.label);
+        }
+      });
+      
+      // Tampilkan hanya blok dari divisi yang dipilih
+      geoJsonLayer.eachLayer(function(layer) {
+        if (layer.feature.properties.divisi === divisi) {
+          layer.addTo(map);
+          layer.setStyle(styleByKebun(layer.feature));
+          
+          // Tambahkan label jika belum ada
+          if (!layer.label) {
+            addBlokLabels(layer.feature, layer);
+          } else {
+            layer.label.addTo(map);
+          }
+        }
+      });
+      
+      // Reset selected feature
+      selectedFeature = null;
+      document.getElementById("selectedInfo").style.display = "none";
+      
+      // Sesuaikan view peta
+      const visibleBounds = getVisibleLayersBounds();
+      if (!visibleBounds.isValid()) {
+        map.fitBounds(geoJsonLayer.getBounds());
+      } else {
+        map.flyToBounds(visibleBounds, {
+          padding: [50, 50],
+          maxZoom: 16,
+          duration: 1
+        });
       }
     }
     
-    // Fungsi untuk menambahkan label blok di tengah poligon
-    async function addBlokLabels(data) {
-          // Hapus label yang sudah ada
-          removeBlokLabels();
-          
-          // Pastikan geoJsonLayer ada
-          if (!geoJsonLayer) {
-            geoJsonLayer = L.layerGroup().addTo(map);
-          }
-          
-          // Buat array untuk menyimpan bounds
-          const boundsArray = [];
-          
-          // Buat array untuk menyimpan semua promise
-          const colorPromises = [];
-          
-          // Pertama, hitung semua warna untuk setiap blok
-          data.features.forEach(feature => {
-            const blokName = feature.properties.blok;
-            const kebunName = feature.properties.kebun;
-            const divisiName = feature.properties.divisi;
-            
-            colorPromises.push(
-              calculateBlockColor(divisiName, blokName, kebunName)
-                .then(color => {
-                  feature.properties._color = color; // Simpan warna di properti feature
-                })
-            );
-          });
-          
-          // Tunggu semua warna selesai dihitung
-          await Promise.all(colorPromises);
-          
-          // Kemudian buat layer dengan warna yang sudah dihitung
-          data.features.forEach(feature => {
-            const blokName = feature.properties.blok;
-            const color = feature.properties._color || '#888888';
-            
-            const layer = L.geoJSON(feature, {
-              style: {
-                fillColor: color,
-                weight: 2,
-                opacity: 1,
-                color: 'white',
-                dashArray: '3',
-                fillOpacity: 0.7
-              },
-              onEachFeature: function(feature, layer) {
-                const bounds = layer.getBounds();
-                boundsArray.push(bounds);
-                
-                const center = bounds.getCenter();
-                const tooltip = L.tooltip({
-                  permanent: true,
-                  direction: 'center',
-                  className: 'blok-label',
-                  offset: [0, 0]
-                }).setContent(blokName);
-                
-                layer.bindTooltip(tooltip);
-                layer.setTooltipContent(blokName);
-                
-                blokLabels.push({layer: layer, tooltip: tooltip});
-                
-                layer.on('click', function() {
-                  const props = feature.properties;
-                  const divisiForQuery = props.divisi.replace(' ', '_');
-                  showBlockDetails(props.blok, props.kebun, divisiForQuery);
-                });
-              }
-            });
-            
-            geoJsonLayer.addLayer(layer);
-          });
-          
-          // Fit bounds jika ada features
-          if (boundsArray.length > 0) {
-            const bounds = new L.LatLngBounds(boundsArray);
-            map.fitBounds(bounds);
-          }
-        
-          // Update legend
-          updateLegend(data);
-        }
-
-        function updateLegend(data) {
-          const legend = document.getElementById('mapLegend');
-          if (!legend) return;
-          
-          legend.innerHTML = `
-            <h4>Legenda Performa Blok</h4>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #34A853;"></div>
-              <span>≥ 95% (Sangat Baik)</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #FBBC05;"></div>
-              <span>90% - 95% (Baik)</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #EA4335;"></div>
-              <span>75% - 90% (Perlu Perbaikan)</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color" style="background-color: #000000;"></div>
-              <span>&lt; 75% (Kritis)</span>
-            </div>
-          `;
-        }
-        
-        // Fungsi untuk menghapus semua label blok
-        function removeBlokLabels() {
-          blokLabels.forEach(item => {
-            if (item.layer && geoJsonLayer && map.hasLayer(item.layer)) {
-              item.layer.unbindTooltip();
-              geoJsonLayer.removeLayer(item.layer);
-            }
-          });
-          blokLabels = [];
-        }
-    
-        function onEachFeature(feature, layer) {
-          layer.on('click', function() {
-            const props = feature.properties;
-            const divisiForQuery = props.divisi.replace(' ', '_');
-            showBlockDetails(props.blok, props.kebun, divisiForQuery);
-          });
-        }
-        
-        function showGeoJsonOnMap(data) {
-          // Clear existing layers
-          if (geoJsonLayer) {
-            geoJsonLayer.clearLayers();
-          } else {
-            // Initialize if not already done
-            geoJsonLayer = L.layerGroup().addTo(map);
-          }
-          
-          // Tambahkan blok dengan label
-          addBlokLabels(data);
-        }
-        
-        // Load GeoJSON data from GitHub
-        async function loadGeoJsonData() {
-          try {
-            const response = await fetch('koordinatkebundivisiblok.geojson');
-            if (!response.ok) throw new Error('Network response was not ok');
-            return await response.json();
-          } catch (error) {
-            console.error('Error loading GeoJSON:', error);
-            return null;
-          }
-        }
-        
-        function getColorByDivisi(divisi, blockCode, kebun) {
-          // Jika tidak ada parameter blockCode dan kebun, kembalikan warna default berdasarkan divisi
-          if (!blockCode || !kebun) {
-            const divisiColors = {
-              'DIVISI I': '#FF5733',
-              'DIVISI II': '#33FF57',
-              'DIVISI III': '#3357FF',
-              'DIVISI IV': '#F3FF33',
-              'DIVISI V': '#FF33F3',
-              'DIVISI VI': '#33FFF3',
-              'DIVISI VII': '#8A2BE2'
-            };
-            return divisiColors[divisi] || '#888888';
-          }
-        
-          // Ambil data produksi dari IndexedDB
-          Promise.all([
-            getDataFromDB(STORES.PROD_ACTUAL),
-            getDataFromDB(STORES.PROD_BUDGET)
-          ]).then(([prodActualData, prodBudgetData]) => {
-            // Filter data untuk blok dan kebun yang dipilih
-            const normalizedDivisi = divisi.replace(' ', '_');
-            const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
-            const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
-        
-            // Hitung persentase ton/ha per bulan
-            const monthlyPercentages = [];
-            
-            // Buat objek untuk mengelompokkan data per bulan
-            const monthlyData = {};
-            
-            // Proses data aktual
-            filteredProdActual.forEach(item => {
-              const month = new Date(item.Bulan).getMonth(); // 0-11
-              if (!monthlyData[month]) monthlyData[month] = {};
-              monthlyData[month].actualTonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
-            });
-            
-            // Proses data budget
-            filteredProdBudget.forEach(item => {
-              const month = new Date(item.Bulan).getMonth(); // 0-11
-              if (!monthlyData[month]) monthlyData[month] = {};
-              monthlyData[month].budgetTonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
-            });
-            
-            // Hitung persentase untuk setiap bulan yang memiliki data lengkap
-            Object.values(monthlyData).forEach(data => {
-              if (data.actualTonPerHa !== undefined && data.budgetTonPerHa !== undefined && data.budgetTonPerHa > 0) {
-                const percentage = (data.actualTonPerHa / data.budgetTonPerHa) * 100;
-                monthlyPercentages.push(percentage);
-              }
-            });
-            
-            // Hitung rata-rata persentase
-            let averagePercentage = 0;
-            if (monthlyPercentages.length > 0) {
-              averagePercentage = monthlyPercentages.reduce((sum, val) => sum + val, 0) / monthlyPercentages.length;
-            }
-        
-            // Tentukan warna berdasarkan rata-rata persentase
-            if (averagePercentage >= 95) {
-              return '#34A853'; // Hijau
-            } else if (averagePercentage >= 90) {
-              return '#FBBC05'; // Orange
-            } else if (averagePercentage >= 75) {
-              return '#EA4335'; // Merah
-            } else {
-              return '#000000'; // Hitam
-            }
-          }).catch(error => {
-            console.error('Error calculating block color:', error);
-            return '#888888'; // Warna default jika terjadi error
-          });
-        }
-        
-        function loadDivisiOptions(kebun) {
-          const divisiSelect = document.getElementById('divisiSelect');
-          divisiSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-          divisiSelect.disabled = true;
-          
-          if (!kebun) return;
-          
-          const divisiList = [...new Set(
-            geoJsonData.features
-              .filter(f => f.properties.kebun === kebun)
-              .map(f => f.properties.divisi)
-          )].sort();
-          
-          divisiList.forEach(divisi => {
-            const option = document.createElement('option');
-            option.value = divisi;
-            option.textContent = divisi.replace('DIVISI ', '');
-            divisiSelect.appendChild(option);
-          });
-          
-          divisiSelect.disabled = false;
-        }
-        
-        function filterGeoJson(kebun, divisi) {
-          return {
-            ...geoJsonData,
-            features: geoJsonData.features.filter(feature => {
-              const props = feature.properties;
-              return (!kebun || props.kebun === kebun) && 
-                     (!divisi || props.divisi === divisi);
-            })
-          };
-        }
-        
-        document.addEventListener('DOMContentLoaded', async function() {
-          initMap();
-          initializeCharts(); // Initialize all charts
-          
-          // Load GeoJSON data
-          geoJsonData = await loadGeoJsonData();
-          if (geoJsonData) {
-            showGeoJsonOnMap(geoJsonData);
-            
-            // Event listener untuk dropdown kebun
-            document.getElementById('kebunSelect').addEventListener('change', function() {
-              loadDivisiOptions(this.value);
-              
-              // Jika kebun dipilih, tapi divisi belum dipilih, tampilkan semua divisi kebun tersebut
-              if (this.value) {
-                const filteredData = filterGeoJson(this.value, '');
-                showGeoJsonOnMap(filteredData);
-              } else {
-                // Jika kebun direset, tampilkan semua data
-                showGeoJsonOnMap(geoJsonData);
-              }
-            });
-            
-            // Event listener untuk dropdown divisi
-            document.getElementById('divisiSelect').addEventListener('change', async function() {
-              const kebun = document.getElementById('kebunSelect').value;
-              const divisi = this.value;
-              const filteredData = filterGeoJson(kebun, divisi);
-              
-              // Tampilkan loading state
-              const loadingIndicator = L.divIcon({html: '<div class="spinner"></div>', className: 'loading-indicator'});
-              const loadingLayer = L.marker(map.getCenter(), {icon: loadingIndicator}).addTo(map);
-              
-              try {
-                await showGeoJsonOnMap(filteredData);
-              } catch (error) {
-                console.error('Error showing geoJSON:', error);
-              } finally {
-                map.removeLayer(loadingLayer);
-              }
-            });
-          }
-    
-          // Event listener untuk tab (tetap sama seperti sebelumnya)
-          document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-              const tabId = this.getAttribute('data-tab');
-              
-              document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-                tab.style.display = 'none';
-              });
-              
-              const activeTab = document.getElementById(`${tabId}Tab`);
-              if (activeTab) {
-                activeTab.classList.add('active');
-                activeTab.style.display = 'block';
-              }
-              
-              document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-              this.classList.add('active');
-            });
-          });
-    
-          function getElementSafe(id) {
-            const el = document.getElementById(id);
-            if (!el) {
-              console.error(`Element with ID ${id} not found`);
-              const fallback = document.createElement('div');
-              fallback.id = id;
-              document.body.appendChild(fallback);
-              return fallback;
-            }
-            return el;
-          }
-        });
-        
-        // ---------------- END POINT untuk mengambil data dari server-------------//
-        // Database setup for IndexedDB
-        const DB_NAME = 'KebunDatabase';
-          const DB_VERSION = 2; // Versi dinaikkan untuk tambahan store
-          const STORES = {
-            PROD_ACTUAL: 'prodActual',
-            PROD_BUDGET: 'prodBudget',
-            BUDGET: 'budget',
-            ACTUAL: 'actual',
-            SYNC_META: 'syncMeta' // Tambahan store untuk metadata
-          };
-        
-        let db;
-        
-        function openDatabase() {
-          return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            
-            request.onerror = (event) => {
-              console.error('Database error:', event.target.error);
-              reject(event.target.error);
-            };
-            
-            request.onsuccess = (event) => {
-              db = event.target.result;
-              
-              // Tambahkan handler untuk error yang mungkin terjadi setelah open
-              db.onerror = (event) => {
-                console.error('Database error after open:', event.target.error);
-                // Tidak reject di sini, hanya log karena mungkin recoverable
-              };
-              
-              // Tambahkan handler untuk version change
-              db.onversionchange = (event) => {
-                db.close();
-                console.log('Database closed due to version change');
-              };
-              
-              console.log('Database opened successfully');
-              resolve(db);
-            };
-            
-            request.onupgradeneeded = (event) => {
-              const db = event.target.result;
-              
-              // Create object stores
-              if (!db.objectStoreNames.contains(STORES.PROD_ACTUAL)) {
-                const store = db.createObjectStore(STORES.PROD_ACTUAL, { keyPath: 'id' });
-                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-              }
-              
-              if (!db.objectStoreNames.contains(STORES.PROD_BUDGET)) {
-                const store = db.createObjectStore(STORES.PROD_BUDGET, { keyPath: 'id' });
-                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-              }
-              
-              if (!db.objectStoreNames.contains(STORES.BUDGET)) {
-                const store = db.createObjectStore(STORES.BUDGET, { keyPath: 'id' });
-                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-              }
-              
-              if (!db.objectStoreNames.contains(STORES.ACTUAL)) {
-                const store = db.createObjectStore(STORES.ACTUAL, { keyPath: 'id' });
-                store.createIndex('by_timestamp', 'Timestamp', { unique: false });
-              }
-              
-              if (!db.objectStoreNames.contains(STORES.SYNC_META)) {
-                db.createObjectStore(STORES.SYNC_META, { keyPath: 'storeName' });
-              }
-              
-              console.log('Database upgrade complete');
-            };
-    
-            // Tambahkan handler untuk blocked event
-            request.onblocked = (event) => {
-              console.error('Database blocked, closing all connections');
-              if (db) db.close();
-              event.target.source.close();
-              window.location.reload(); // Force refresh jika diperlukan
-            };
-          });
-        }
-    
-        // Fungsi untuk mendapatkan timestamp sync terakhir
-        async function getLastSyncTime(storeName) {
-          return new Promise((resolve, reject) => {
-            // Tambahkan pengecekan db
-            if (!db) {
-              reject(new Error('Database not initialized'));
-              return;
-            }
-            
-            const transaction = db.transaction(STORES.SYNC_META, 'readonly');
-            const store = transaction.objectStore(STORES.SYNC_META);
-            const request = store.get(storeName);
-            
-            request.onsuccess = () => resolve(request.result?.lastSync || null);
-            request.onerror = () => reject(new Error('Failed to get sync time'));
-          });
-        }
-        
-        // Fungsi untuk menyimpan timestamp sync
-        async function setLastSyncTime(storeName) {
-          return new Promise((resolve, reject) => {
-            const transaction = db.transaction(STORES.SYNC_META, 'readwrite');
-            const store = transaction.objectStore(STORES.SYNC_META);
-            const request = store.put({ 
-              storeName, 
-              lastSync: new Date().toISOString() 
-            });
-            
-            request.onsuccess = resolve;
-            request.onerror = reject;
-          });
-        }
-        
-        // Fungsi untuk sync data dengan chunk processing
-        async function syncStoreData(endpoint) {
-          const CHUNK_SIZE = 2000;
-          try {
-            if (!db || db.version !== DB_VERSION) {
-              db = await openDatabase();
-            }
-        
-            // [1] Ambil semua data terbaru dari sheet
-            const [countData, allSheetData] = await Promise.all([
-              fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`),
-              fetchDataFromSheets(endpoint.url, endpoint.action)
-            ]);
-            
-            const totalRecords = countData.count || 0;
-            const sheetData = Array.isArray(allSheetData) ? allSheetData : (allSheetData?.data || []);
-            
-            // [2] Ambil semua ID dari IndexedDB dan Sheet dengan format yang konsisten
-            const [dbIds, sheetIds] = await Promise.all([
-              getAllIdsFromIndexedDB(endpoint.store),
-              Promise.resolve(sheetData.map(item => String(item.id))) // Pastikan string untuk konsistensi
-            ]);
-            
-            console.log(`Sync ${endpoint.store}: DB IDs: ${dbIds.length}, Sheet IDs: ${sheetIds.length}`);
-        
-            // [3] Cari ID yang perlu dihapus (ada di DB tapi tidak ada di Sheet)
-            const idsToDelete = dbIds.filter(dbId => !sheetIds.includes(String(dbId)));
-            console.log(`IDs to delete: ${idsToDelete.length}`, idsToDelete);
-        
-            // [4] Proses penghapusan dalam batch
-            let deletedCount = 0;
-            if (idsToDelete.length > 0) {
-              // Hapus dalam batch untuk menghindari timeout
-              const BATCH_SIZE = 500;
-              for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
-                const batch = idsToDelete.slice(i, i + BATCH_SIZE);
-                deletedCount += await deleteRecordsFromIndexedDB(endpoint.store, batch);
-                console.log(`Deleted batch ${i} to ${i + batch.length}`);
-              }
-            }
-        
-            // [5] Proses tambah/update data
-            let added = 0, updated = 0;
-            if (sheetData.length > 0) {
-              for (let i = 0; i < sheetData.length; i += CHUNK_SIZE) {
-                const chunk = sheetData.slice(i, i + CHUNK_SIZE);
-                const result = await processDataChunkWithRetry(endpoint.store, chunk);
-                added += result.added;
-                updated += result.updated;
-                
-                updateProgress(
-                  (i / sheetData.length) * 100,
-                  endpoint.name,
-                  'active',
-                  i,
-                  totalRecords
-                );
-                
-                await new Promise(resolve => setTimeout(resolve, 0));
-              }
-            }
-        
-            console.log(`Sync result: ${added} added, ${updated} updated, ${deletedCount} deleted`);
-            await setLastSyncTime(endpoint.store);
-            return { added, updated, deleted: deletedCount };
-            
-          } catch (error) {
-            console.error(`Sync failed for ${endpoint.name}:`, error);
-            throw error;
-          }
-        }
-    
-        // Fungsi untuk mendapatkan semua ID dengan konsisten
-        async function getAllIdsFromIndexedDB(storeName) {
-          return new Promise((resolve, reject) => {
-            const transaction = db.transaction(storeName, 'readonly');
-            const store = transaction.objectStore(storeName);
-            const request = store.getAllKeys();
-            
-            request.onsuccess = () => {
-              // Konversi semua ID ke string untuk konsistensi
-              const ids = request.result.map(id => 
-                typeof id === 'number' ? String(id) : id
-              );
-              resolve(ids);
-            };
-            request.onerror = () => reject(new Error('Failed to get IDs from IndexedDB'));
-          });
-        }
-        
-        // Fungsi penghapusan yang lebih robust
-        async function deleteRecordsFromIndexedDB(storeName, ids) {
-          return new Promise((resolve, reject) => {
-            const transaction = db.transaction(storeName, 'readwrite');
-            const store = transaction.objectStore(storeName);
-            let deletedCount = 0;
-            let errorCount = 0;
-        
-            // Handle transaction completion
-            transaction.oncomplete = () => {
-              console.log(`Deleted ${deletedCount} records successfully`);
-              resolve(deletedCount);
-            };
-            
-            transaction.onerror = (event) => {
-              console.error('Transaction error:', event.target.error);
-              reject(event.target.error);
-            };
-        
-            // Proses penghapusan per ID
-            ids.forEach(id => {
-              // Handle baik ID string maupun number
-              const idToDelete = isNaN(id) ? id : Number(id);
-              const request = store.delete(idToDelete);
-              
-              request.onsuccess = () => {
-                deletedCount++;
-              };
-              
-              request.onerror = (event) => {
-                errorCount++;
-                console.error(`Failed to delete ID ${id}:`, event.target.error);
-              };
-            });
-          });
-        }
-        
-        // Fungsi baru dengan retry mechanism
-        async function processDataChunkWithRetry(storeName, chunk, retries = 3) {
-          for (let attempt = 1; attempt <= retries; attempt++) {
-            try {
-              return await processDataChunk(storeName, chunk);
-            } catch (error) {
-              console.warn(`Attempt ${attempt} failed for chunk:`, error);
-              if (attempt === retries) throw error;
-              
-              // Tunggu sebelum retry
-              await new Promise(resolve => setTimeout(resolve, 200 * attempt));
-              
-              // Coba buka kembali database
-              if (db) db.close();
-              db = await openDatabase();
-            }
-          }
-        }
-    
-        // Fungsi untuk memproses chunk data
-        async function processDataChunk(storeName, chunk) {
-          return new Promise((resolve, reject) => {
-            const transaction = db.transaction(storeName, 'readwrite');
-            const store = transaction.objectStore(storeName);
-            
-            let added = 0;
-            let updated = 0;
-            
-            const processNext = (index) => {
-              if (index >= chunk.length) {
-                resolve({ added, updated });
-                return;
-              }
-              
-              const item = chunk[index];
-              const getRequest = store.get(item.id);
-              
-              getRequest.onsuccess = () => {
-                const existing = getRequest.result;
-                
-                if (existing) {
-                  // Update existing
-                  const putRequest = store.put(item);
-                  putRequest.onsuccess = () => {
-                    updated++;
-                    processNext(index + 1);
-                  };
-                  putRequest.onerror = () => processNext(index + 1);
-                } else {
-                  // Add new
-                  const addRequest = store.add(item);
-                  addRequest.onsuccess = () => {
-                    added++;
-                    processNext(index + 1);
-                  };
-                  addRequest.onerror = () => processNext(index + 1);
-                }
-              };
-              
-              getRequest.onerror = () => processNext(index + 1);
-            };
-            
-            processNext(0);
-          });
-        }
-        
-        // Function to save data to IndexedDB
-        function saveToIndexedDB(storeName, data) {
-          return new Promise((resolve, reject) => {
-            if (!db) {
-              reject(new Error('Database not initialized'));
-              return;
-            }
-            
-            const transaction = db.transaction(storeName, 'readwrite');
-            const store = transaction.objectStore(storeName);
-            
-            // Clear existing data first
-            const clearRequest = store.clear();
-            
-            clearRequest.onsuccess = () => {
-              console.log(`Cleared existing data in ${storeName}`);
-              
-              // Add all new data
-              const requests = data.map(item => {
-                return new Promise((innerResolve, innerReject) => {
-                  const request = store.add(item);
-                  request.onsuccess = () => innerResolve();
-                  request.onerror = (event) => innerReject(event.target.error);
-                });
-              });
-              
-              Promise.all(requests)
-                .then(() => {
-                  console.log(`Saved ${data.length} items to ${storeName}`);
-                  resolve();
-                })
-                .catch(error => {
-                  console.error(`Error saving to ${storeName}:`, error);
-                  reject(error);
-                });
-            };
-            
-            clearRequest.onerror = (event) => {
-              console.error(`Error clearing ${storeName}:`, event.target.error);
-              reject(event.target.error);
-            };
-          });
-        }
-        
-        // Function to fetch data from Google Sheets
-        async function fetchDataFromSheets(url, action) {
-          try {
-            console.log(`Fetching ${url}?action=${action}`);
-            const response = await fetch(`${url}?action=${action}`);
-            
-            if (!response.ok) {
-              const text = await response.text();
-              console.error('Response not OK:', text);
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const text = await response.text();
-            console.log('Raw response:', text); // Log raw response
-            
-            try {
-              const data = JSON.parse(text);
-              console.log('Parsed data:', data);
-              
-              // Handle inconsistent response formats
-              if (action.includes('Count')) {
-                return data.count ? data : { count: 0 };
-              } else {
-                return data.data || data || [];
-              }
-            } catch (jsonError) {
-              console.error('JSON parse error:', jsonError);
-              throw new Error('Invalid JSON response: ' + text);
-            }
-          } catch (error) {
-            console.error('Fetch error:', error);
-            throw error;
-          }
-        }
-    
-        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-          const controller = new AbortController();
-          const id = setTimeout(() => controller.abort(), timeout);
-          
-          try {
-            const response = await fetch(url, {
-              ...options,
-              signal: controller.signal 
-            });
-            clearTimeout(id);
-            return response;
-          } catch (error) {
-            clearTimeout(id);
-            throw error;
-          }
-        }
-        
-        // Fungsi JSONP fallback
-        function fetchWithJsonp(url, action) {
-          return new Promise((resolve, reject) => {
-            const callbackName = `jsonp_${Date.now()}`;
-            const script = document.createElement('script');
-            
-            window[callbackName] = (data) => {
-              resolve(data);
-              delete window[callbackName];
-              document.body.removeChild(script);
-            };
-            
-            script.src = `${url}?action=${action}&callback=${callbackName}`;
-            script.onerror = () => {
-              reject(new Error('JSONP request failed'));
-              delete window[callbackName];
-              document.body.removeChild(script);
-            };
-            
-            document.body.appendChild(script);
-          });
-        }
-    
-        // Function to update progress
-        function updateProgress(progress, currentStep, status = 'active', loaded = 0, total = 0) {
-          const progressFill = document.getElementById('progressFill');
-          const progressText = document.getElementById('progressText');
-          const stepElements = document.querySelectorAll('.step');
-          
-          // Update progress bar
-          progressFill.style.width = `${progress}%`;
-          progressText.textContent = `${Math.round(progress)}%`;
-          
-          // Update step status
-          stepElements.forEach(step => {
-            const stepName = step.dataset.step;
-            if (stepName === currentStep) {
-              step.className = 'step ' + status;
-              const detailsEl = step.querySelector('.step-details');
-              if (total > 0) {
-                detailsEl.textContent = `${loaded}/${total} data masuk`;
-              } else if (status === 'completed') {
-                detailsEl.textContent = `${loaded} data masuk`;
-              } else if (status === 'failed') {
-                detailsEl.textContent = 'Gagal mengambil data';
-              } else {
-                detailsEl.textContent = 'Menyambungkan...';
-              }
-            } else if (getStepOrder(stepName) < getStepOrder(currentStep)) {
-              step.className = 'step completed';
-            }
-          });
-        }
-    
-        // Helper function untuk menentukan urutan step
-        function getStepOrder(stepName) {
-          const order = {
-            'prodActual': 1,
-            'prodBudget': 2,
-            'budget': 3,
-            'actual': 4
-          };
-          return order[stepName] || 0;
-        }
-    
-        // Fungsi untuk menampilkan notifikasi di progress bar
-        function showProgressNotification(message, isSuccess) {
-          const notification = document.getElementById('progressNotification');
-          notification.innerHTML = `
-            <i class="material-icons">${isSuccess ? 'check_circle' : 'error'}</i>
-            ${message}
-          `;
-          notification.className = `notification ${isSuccess ? 'success' : 'error'}`;
-          notification.style.display = 'block';
-          
-          // Sembunyikan otomatis setelah 3 detik
-          if (isSuccess) {
-            setTimeout(() => {
-              notification.style.display = 'none';
-              showProgressModal(false);
-            }, 3000);
-          }
-        }
-        
-        // Show/hide modal
-        function showProgressModal(show) {
-          document.getElementById('progressModal').style.display = show ? 'flex' : 'none';
-        }
-        
-        // Modified loadAllData function with data count tracking
-        async function loadAllData() {
-          showProgressModal(true);
-          updateProgress(0, 'prodActual');
-          
-            // Force close and reopen
-            if (db) {
-              try {
-                db.close();
-              } catch (e) {
-                console.log('Error closing db:', e);
-              }
-            }
-            
-            // Add delay to ensure clean state
-            await new Promise(resolve => setTimeout(resolve, 500));
-          
-            try {
-            // Tunggu sampai database benar-benar terbuka
-            db = await openDatabase();
-            console.log('Database opened:', db);
-            if (!db) throw new Error('Failed to open database');
-            
-            const endpoints = [
-              { 
-                name: 'prodActual',
-                url: 'https://script.google.com/macros/s/AKfycbyqGIhP5Cqo6u84CiIMnzgJtcouL2PXSkS3Weq6k2emvncurac6WJViqBCAcPyLF-n7ZQ/exec',
-                action: 'getAllProdActual',
-                store: STORES.PROD_ACTUAL
-              },
-              { 
-                name: 'prodBudget',
-                url: 'https://script.google.com/macros/s/AKfycbx6U6vZZu8YalBysJerAxRzwMYc5XPqs-CY7W1yVvHFIpIbaf5LAhvXM2hI01LLc2_K/exec',
-                action: 'getAllProdBudget',
-                store: STORES.PROD_BUDGET
-              },
-              { 
-                name: 'budget',
-                url: 'https://script.google.com/macros/s/AKfycbzUvxwJT3VCAZRSJ1cHZ7Q0dlzcr1eopAscKo-wgAmgQBkYnYXl3psMZ6oZUg41Lc09/exec',
-                action: 'getAllBudget',
-                store: STORES.BUDGET
-              },
-              { 
-                name: 'actual',
-                url: 'https://script.google.com/macros/s/AKfycbyDxiaYGwHV202um7tr7LLhGvEWnAvDGiBid4vD8yMfGbNu3AJab9XcJgORkIl_BRwJbw/exec',
-                action: 'getAllActual',
-                store: STORES.ACTUAL
-              }
-            ];
-            
-            // Lakukan full sync pertama kali atau periodic
-            const lastFullSync = await getLastSyncTime('lastFullSync');
-            const daysSinceFullSync = lastFullSync ? 
-              (new Date() - new Date(lastFullSync)) / (1000 * 60 * 60 * 24) : Infinity;
-            
-            const needFullSync = !lastFullSync || daysSinceFullSync > 7;
-            
-            for (let i = 0; i < endpoints.length; i++) {
-              const endpoint = endpoints[i];
-              const progress = (i / endpoints.length) * 100;
-              updateProgress(progress, endpoint.name, 'active');
-              
-              try {
-                if (needFullSync) {
-                  const countData = await fetchDataFromSheets(endpoint.url, `${endpoint.action}Count`);
-                  const totalRecords = countData.count || 0;
-                  
-                  updateProgress(progress, endpoint.name, 'active', 0, totalRecords);
-                  
-                  const fullData = await fetchDataFromSheets(endpoint.url, endpoint.action);
-                  
-                  await saveLargeData(endpoint.store, fullData, 2000, (processed) => {
-                    updateProgress(
-                      progress + (10 * (processed / fullData.length)),
-                      endpoint.name,
-                      'active',
-                      processed,
-                      totalRecords
-                    );
-                  });
-                  
-                  await setLastSyncTime(endpoint.store);
-                  updateProgress(((i + 1) / endpoints.length) * 100, endpoint.name, 'completed', fullData.length, totalRecords);
-                } else {
-                  const result = await syncStoreData(endpoint);
-                  updateProgress(
-                    ((i + 1) / endpoints.length) * 100,
-                    endpoint.name,
-                    'completed',
-                    result.added + result.updated,
-                    result.added + result.updated + result.deleted
-                  );
-                }
-                
-                // Beri waktu untuk UI update
-                await new Promise(resolve => setTimeout(resolve, 50));
-              } catch (error) {
-                console.error(`Error loading ${endpoint.name}:`, error);
-                updateProgress(progress, endpoint.name, 'failed');
-                
-                // Coba refresh database sebelum melanjutkan ke endpoint berikutnya
-                if (db) db.close();
-                db = await openDatabase();
-                
-                throw error;
-              }
-            }
-            
-            if (needFullSync) {
-              await setLastSyncTime('lastFullSync');
-            }
-            
-            showProgressNotification('Data berhasil disinkronisasi', true);
-            return true;
-          } catch (error) {
-            showProgressNotification(`Gagal sinkronisasi data: ${error.message}`, false);
-            console.error('Database open error:', error);
-            throw error;
-          } finally {
-            setTimeout(() => showProgressModal(false), 1000);
-          }
-        }
-        
-        // Fungsi bantu untuk save data besar per chunk
-        async function saveLargeData(storeName, data, chunkSize, progressCallback) {
-          return new Promise((resolve, reject) => {
-            // Tambahkan timeout untuk mencegah hanging
-            const timeout = setTimeout(() => {
-              reject(new Error('Database operation timed out'));
-            }, 30000); // 30 detik timeout
-            
-            const transaction = db.transaction(storeName, 'readwrite');
-            transaction.oncomplete = () => {
-              clearTimeout(timeout);
-              resolve();
-            };
-            transaction.onerror = (event) => {
-              clearTimeout(timeout);
-              reject(event.target.error);
-            };
-            
-            const store = transaction.objectStore(storeName);
-            
-            // Clear existing data first dengan timeout terpisah
-            const clearRequest = store.clear();
-            clearRequest.onsuccess = () => {
-              let processed = 0;
-              
-              const processNextChunk = (startIdx) => {
-                if (startIdx >= data.length) return;
-                
-                const endIdx = Math.min(startIdx + chunkSize, data.length);
-                const chunk = data.slice(startIdx, endIdx);
-                
-                chunk.forEach(item => {
-                  const request = store.add(item);
-                  request.onerror = () => {
-                    console.error('Error adding item:', item.id, request.error);
-                  };
-                });
-                
-                processed += chunk.length;
-                progressCallback(processed);
-                
-                // Gunakan setTimeout untuk memberi jeda antara chunk
-                setTimeout(() => processNextChunk(endIdx), 50);
-              };
-              
-              processNextChunk(0);
-            };
-            
-            clearRequest.onerror = (event) => {
-              clearTimeout(timeout);
-              reject(event.target.error);
-            };
-          });
-        }
-        
-        document.getElementById('loadDataBtn').addEventListener('click', async function() {
-          // Tambahkan ini di awal event handler
-          if (db) {
-            db.close();
-            db = null;
-          }
-          const btn = this;
-          const icon = btn.querySelector('.material-icons');
-          
-          // Add loading state
-          btn.disabled = true;
-          btn.innerHTML = '<span class="spinner"></span> Memuat...';
-          
-          try {
-            // Pastikan tidak ada instance database yang menggantung
-            if (db) {
-              try {
-                db.close();
-              } catch (e) {
-                console.log('Error closing database:', e);
-              }
-              db = null;
-            }
-            
-            await loadAllData();
-
-            // Success state
-            btn.innerHTML = '<i class="material-icons">check</i> Data Dimuat';
-            btn.style.backgroundColor = 'var(--secondary)';
-            
-            // Reset after 2 seconds
-            setTimeout(() => {
-              btn.innerHTML = '<i class="material-icons">refresh</i> Muat Data';
-              btn.style.backgroundColor = 'var(--primary)';
-              btn.disabled = false;
-            }, 2000);
-          } catch (error) {
-            console.error('Error:', error);
-            
-            // Coba reset database state
-            try {
-              if (db) db.close();
-              db = null;
-              db = await openDatabase();
-            } catch (e) {
-              console.error('Error resetting database:', e);
-            }
-            
-            showProgressNotification('Gagal memuat data. Silakan coba lagi.', false);
-            btn.innerHTML = '<i class="material-icons">error</i> Gagal';
-            btn.style.backgroundColor = '#ea4335';
-            
-              // Reset after 2 seconds
-              setTimeout(() => {
-                btn.innerHTML = '<i class="material-icons">refresh</i> Muat Data';
-                btn.style.backgroundColor = 'var(--primary)';
-                btn.disabled = false;
-              }, 2000);
-          } finally {
-            this.disabled = false;
-            this.innerHTML = '<i class="material-icons" style="font-size: 16px;">refresh</i><span>Muat Data</span>';
-          }
-        });
-    
-        // ---------------- END POINT untuk mengambil menampilkan data dari indexDB-------------//
-        // Fungsi untuk mendapatkan data dari IndexedDB
-        async function getDataFromDB(storeName, key) {
-          try {
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-              const transaction = db.transaction([storeName], 'readonly');
-              const store = transaction.objectStore(storeName);
-              const request = store.getAll();
-              
-              request.onsuccess = () => {
-                resolve(request.result);
-              };
-              
-              request.onerror = (event) => {
-                reject(event.target.error);
-              };
-            });
-          } catch (error) {
-            console.error(`Error getting data from ${storeName}:`, error);
-            return [];
-          }
-        }
-        
-        // Enhanced showBlockDetails function
-        async function showBlockDetails(blockCode, kebun, divisi) {
-          console.log('Showing details for:', { blockCode, kebun, divisi });
-        
-          // Dapatkan properti blok dari geoJsonData
-          const blockFeature = geoJsonData.features.find(f => 
-            f.properties.blok === blockCode && 
-            f.properties.kebun === kebun && 
-            f.properties.divisi === divisi.replace('_', ' ')
-          );
-          
-          const blockProps = blockFeature ? blockFeature.properties : {
-            kebun, 
-            divisi: divisi.replace('_', ' '), 
-            blok: blockCode,
-            kode: '',
-            luas: '',
-            tahun: '',
-            umur: ''
-          };
-        
-          // Buat header info blok
-          const blockInfoHeader = createBlockInfoHeader(blockProps);
-        
-          // Show the container and activate production tab first
-          const dataDetails = document.getElementById('dataDetails');
-          dataDetails.style.display = 'block';
-        
-          // Initialize charts if not already done
-          if (!productionChart) {
-            initializeCharts();
-          }
-
-          // Di fungsi showBlockDetails, setelah mengaktifkan tab:
-          setTimeout(() => {
-            if (productionChart) productionChart.resize();
-            if (costChart) costChart.resize();
-            if (areaChart) areaChart.resize();
-          }, 100);
-          
-          // Activate production tab
-          document.querySelector('.tab-btn[data-tab="production"]').classList.add('active');
-          document.getElementById('productionTab').classList.add('active');
-          document.getElementById('productionTab').style.display = 'block';
-
-          // Hide other tabs
-          document.querySelectorAll('.tab-content').forEach(tab => {
-            if (tab.id !== 'productionTab') {
-              tab.classList.remove('active');
-              tab.style.display = 'none';
-            }
-          });
-        
-          // Get elements fresh each time
-          const prodBudgetDiv = document.getElementById('prodBudgetData');
-          const prodActualDiv = document.getElementById('prodActualData');
-          const comparisonDiv = document.getElementById('prodComparison');
-          const costTab = document.getElementById('costTab');
-        
-          // Show loading state
-          const loadingHTML = '<div class="loading"><div class="spinner"></div> Memuat data...</div>';
-          prodBudgetDiv.innerHTML = loadingHTML;
-          prodActualDiv.innerHTML = loadingHTML;
-          comparisonDiv.innerHTML = loadingHTML;
-          costTab.innerHTML = loadingHTML;
-        
-          try {
-            // Load all data in parallel
-            const [prodActualData, prodBudgetData, budgetData, actualData] = await Promise.all([
-              getDataFromDB(STORES.PROD_ACTUAL).catch(() => []),
-              getDataFromDB(STORES.PROD_BUDGET).catch(() => []),
-              getDataFromDB(STORES.BUDGET).catch(() => []),
-              getDataFromDB(STORES.ACTUAL).catch(() => [])
-            ]);
-        
-            // Normalize divisi format for filtering
-            const normalizedDivisi = divisi.replace('_', ' '); // Convert "Divisi_I" to "Divisi I"
-        
-            // Filter data
-            const filteredProdActual = filterProductionData(prodActualData, blockCode, kebun, normalizedDivisi);
-            const filteredProdBudget = filterProductionData(prodBudgetData, blockCode, kebun, normalizedDivisi);
-            
-            // Process cost data
-            const { aggregatedCostData: filteredBudget, totalCostData: totalBudget } = 
-              aggregateCostData(budgetData, blockCode, kebun, normalizedDivisi);
-            const { aggregatedCostData: filteredActual, totalCostData: totalActual } = 
-              aggregateCostData(actualData, blockCode, kebun, normalizedDivisi);
-        
-            // Display data
-            displayProductionData(filteredProdBudget, filteredProdActual);
-            
-            // Tambahkan header info blok ke tab produksi, grafik, dan analisa
-            ['productionTab', 'chartTab', 'analysisTab'].forEach(tabId => {
-              const tab = document.getElementById(tabId);
-              const existingHeader = tab.querySelector('.block-info-header');
-              if (existingHeader) {
-                existingHeader.replaceWith(blockInfoHeader.cloneNode(true));
-              } else {
-                tab.insertBefore(blockInfoHeader.cloneNode(true), tab.firstChild);
-              }
-            });
-        
-            // Display cost data (ini akan meng-generate konten tab biaya)
-            displayCostData(filteredBudget, filteredActual, totalBudget, totalActual);
-            
-            // Setelah konten biaya di-generate, baru tambahkan header info blok
-            const costTab = document.getElementById('costTab');
-            const existingCostHeader = costTab.querySelector('.block-info-header');
-            if (existingCostHeader) {
-              existingCostHeader.replaceWith(blockInfoHeader.cloneNode(true));
-            } else {
-              costTab.insertBefore(blockInfoHeader.cloneNode(true), costTab.firstChild);
-            }
-        
-            // Lakukan analisis
-            const prodAnalysis = analyzeBlockProductivity(filteredProdActual, filteredProdBudget);
-            const costAnalysis = analyzeCostEfficiency(filteredActual, filteredBudget);
-            
-            // Simpan dalam currentBlockData untuk analisis lebih lanjut
-            currentBlockData.prodAnalysis = prodAnalysis;
-            currentBlockData.costAnalysis = costAnalysis;
-            
-            // Tampilkan analisis
-            displayAnalysis(currentBlockData);
-        
-            // Update charts with all data
-            updateCharts({
-              kebun,
-              divisi: normalizedDivisi,
-              blok: blockCode,
-              prodBudget: filteredProdBudget,
-              prodActual: filteredProdActual,
-              budget: filteredBudget,
-              actual: filteredActual
-            });
-        
-          } catch (error) {
-            console.error('Error:', error);
-            const errorHTML = '<p class="error">Gagal memuat data</p>';
-            prodBudgetDiv.innerHTML = errorHTML;
-            prodActualDiv.innerHTML = errorHTML;
-            comparisonDiv.innerHTML = errorHTML;
-            costTab.innerHTML = errorHTML;
-          }
-        }
-    
-        //membuat header informasi blok
-        function createBlockInfoHeader(props) {
-          const header = document.createElement('div');
-          header.className = 'block-info-header';
-          header.innerHTML = `
-            <div class="block-info-grid">
-              <div class="block-info-item">
-                <span class="block-info-label">Kebun:</span>
-                <span class="block-info-value">${props.kebun || '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Divisi:</span>
-                <span class="block-info-value">${props.divisi || '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Blok:</span>
-                <span class="block-info-value">${props.blok || '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Kode:</span>
-                <span class="block-info-value">${props.kode || '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Luas:</span>
-                <span class="block-info-value">${props.luas ? props.luas + ' Ha' : '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Tahun Tanam:</span>
-                <span class="block-info-value">${props.tahun || '-'}</span>
-              </div>
-              <div class="block-info-item">
-                <span class="block-info-label">Umur:</span>
-                <span class="block-info-value">${props.umur ? props.umur + ' tahun' : '-'}</span>
-              </div>
-            </div>
-          `;
-          return header;
-        }
-        
-        // Helper function to safely access nested properties
-        function getSafe(fn, defaultVal) {
-          try {
-            return fn();
-          } catch (e) {
-            return defaultVal;
-          }
-        }
-        
-        // Enhanced filterProductionData function
-        function filterProductionData(data, blockCode, kebun, divisi) {
-          if (!Array.isArray(data)) return [];
-          
-          // Normalize divisi format from "DIVISI_I" to "Divisi_I"
-          const normalizedDivisi = divisi.replace(' ', '_');
-          
-          return data.filter(item => {
-            // Normalize kebun name (case insensitive)
-            const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
-            const targetKebun = kebun ? kebun.toUpperCase() : '';
-            
-            // Normalize divisi format (case insensitive and handle both formats)
-            const itemDivisi = getSafe(() => item.Divisi, '').toUpperCase().replace(/ /g, '_');
-            const targetDivisi = normalizedDivisi.toUpperCase();
-            
-            // Exact match for block code
-            const itemBlok = getSafe(() => item.Blok, '');
-            
-            return itemBlok === blockCode && 
-                   itemKebun === targetKebun && 
-                   itemDivisi === targetDivisi;
-          });
-        }
-        
-        // Enhanced aggregateCostData function
-        function aggregateCostData(data, blockCode, kebun, divisi) {
-          if (!Array.isArray(data)) {
-            return {
-              aggregatedCostData: [],
-              totalCostData: {
-                HK: 0,
-                'Luas/Hasil': 0,
-                'Biaya (Rp)': 0
-              }
-            };
-          }
-        
-          const filteredData = data.filter(item => {
-            // Normalize kebun name
-            const itemKebun = getSafe(() => item.Kebun, '').toUpperCase();
-            const targetKebun = kebun ? kebun.toUpperCase() : '';
-            
-            // Normalize divisi format
-            const itemDivisi = getSafe(() => item.Divisi, '').replace('Divisi_', 'DIVISI ');
-            const targetDivisi = divisi ? divisi.replace('_', ' ') : '';
-            
-            // Exact match for block code
-            const itemBlok = getSafe(() => item.Blok, '');
-            
-            return itemBlok === blockCode && 
-                   itemKebun === targetKebun && 
-                   itemDivisi === targetDivisi;
-          });
-    
-          const aggregated = {};
-          let totalHK = 0;
-          let totalArea = 0;
-          let totalCost = 0;
-        
-          filteredData.forEach(item => {
-            const kodeKerja = getSafe(() => item['Kode Kerja'], '');
-            const objekKerja = getSafe(() => item['Objek Kerja'], '');
-            const key = `${kodeKerja}_${objekKerja}`;
-            
-            if (!aggregated[key]) {
-              aggregated[key] = {
-                'Kode Kerja': kodeKerja,
-                'Objek Kerja': objekKerja,
-                HK: 0,
-                'Luas/Hasil': 0,
-                'Biaya (Rp)': 0
-              };
-            }
-            
-            // Handle property names with parentheses
-            const hk = parseFloat(getSafe(() => item.HK, 0)) || 0;
-            const luas = parseFloat(getSafe(() => item['Luas (Ha)'] || item['Hasil (Ha)'], 0)) || 0;
-            const biaya = parseFloat(getSafe(() => item['Biaya (Rp)'], 0)) || 0;
-            
-            aggregated[key].HK += hk;
-            aggregated[key]['Luas/Hasil'] += luas;
-            aggregated[key]['Biaya (Rp)'] += biaya;
-        
-            totalHK += hk;
-            totalArea += luas;
-            totalCost += biaya;
-          });
-        
-          return {
-            aggregatedCostData: Object.values(aggregated),
-            totalCostData: {
-              HK: totalHK,
-              'Luas/Hasil': totalArea,
-              'Biaya (Rp)': totalCost
-            }
-          };
-        }
-        
-        // Enhanced displayProductionData function
-        function displayProductionData(budgetData = [], actualData = []) {
-          // Get fresh references each time
-          const prodBudgetDiv = document.getElementById('prodBudgetData');
-          const prodActualDiv = document.getElementById('prodActualData');
-          const comparisonDiv = document.getElementById('prodComparison');
-        
-          if (!prodBudgetDiv || !prodActualDiv || !comparisonDiv) {
-            console.error('Display elements not found');
-            return;
-          }
-        
-          // Clear previous content safely
-          [prodBudgetDiv, prodActualDiv, comparisonDiv].forEach(el => {
-            el.innerHTML = '';
-          });
-    
-          // Calculate totals with safe property access
-          const budgetTotals = calculateProductionTotals(budgetData);
-          const actualTotals = calculateProductionTotals(actualData);
-        
-          // Helper function to create data item
-          const createDataItem = (label, value) => {
-            const div = document.createElement('div');
-            div.className = 'data-item';
-            div.innerHTML = `
-              <span class="label">${label}:</span>
-              <span class="value">${value}</span>
-            `;
-            return div;
-          };
-        
-          // Display budget data
-          if (budgetData.length > 0) {
-            prodBudgetDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(budgetTotals.luas)));
-            prodBudgetDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(budgetTotals.produksi)));
-            prodBudgetDiv.appendChild(createDataItem('Ton/Ha', formatNumber(budgetTotals.tonPerHa)));
-            prodBudgetDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(budgetTotals.tonase)));
-          } else {
-            prodBudgetDiv.innerHTML = '<p>Tidak ada data budget produksi</p>';
-          }
-          
-          // Display actual data
-          if (actualData.length > 0) {
-            prodActualDiv.appendChild(createDataItem('Luas (Ha)', formatNumber(actualTotals.luas)));
-            prodActualDiv.appendChild(createDataItem('Produksi (Kg)', formatNumber(actualTotals.produksi)));
-            prodActualDiv.appendChild(createDataItem('Ton/Ha', formatNumber(actualTotals.tonPerHa)));
-            prodActualDiv.appendChild(createDataItem('Tonase (Ton)', formatNumber(actualTotals.tonase)));
-          } else {
-            prodActualDiv.innerHTML = '<p>Tidak ada data aktual produksi</p>';
-          }
-          
-          // Display comparison if both exist
-          if (budgetData.length > 0 && actualData.length > 0) {
-            const diffTonPerHa = actualTotals.tonPerHa - budgetTotals.tonPerHa;
-            const percentageTonPerHa = budgetTotals.tonPerHa !== 0 ? 
-              (diffTonPerHa / budgetTotals.tonPerHa * 100) : 0;
-            
-            const diffTonase = actualTotals.tonase - budgetTotals.tonase;
-            const percentageTonase = budgetTotals.tonase !== 0 ? 
-              (diffTonase / budgetTotals.tonase * 100) : 0;
-            
-            // Create comparison elements
-            const diffTonPerHaEl = createDataItem(
-              'Selisih Ton/Ha',
-              `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-                ${formatNumber(diffTonPerHa)} (${percentageTonPerHa.toFixed(2)}%)
-              </span>`
-            );
-            
-            const diffTonaseEl = createDataItem(
-              'Selisih Tonase',
-              `<span class="${diffTonase >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-                ${formatNumber(diffTonase)} (${percentageTonase.toFixed(2)}%)
-              </span>`
-            );
-            
-            const statusEl = createDataItem(
-              'Status',
-              `<span class="${diffTonPerHa >= 0 ? 'comparison-positive' : 'comparison-negative'}">
-                ${diffTonPerHa >= 0 ? 'Melebihi Target' : 'Di Bawah Target'}
-              </span>`
-            );
-            
-            comparisonDiv.appendChild(diffTonPerHaEl);
-            comparisonDiv.appendChild(diffTonaseEl);
-            comparisonDiv.appendChild(statusEl);
-          } else {
-            comparisonDiv.innerHTML = '<p>Tidak dapat membandingkan data</p>';
-          }
-          
-          console.log('Production data displayed successfully');
-        }
-        
-        // Enhanced calculateProductionTotals function
-        function calculateProductionTotals(data = []) {
-          // Use a Set to track processed IDs to avoid duplicates
-          const processedIds = new Set();
-          
-          return data.reduce((totals, item) => {
-            // Skip duplicates
-            if (processedIds.has(item.id)) {
-              return totals;
-            }
-            processedIds.add(item.id);
-            
-            const luas = parseFloat(getSafe(() => item['Luas (Ha)'], 0)) || 0;
-            
-            // Handle both actual and budget data
-            const produksi = parseFloat(
-              getSafe(() => item['Actual Produksi (Kg)'], 0) || 
-              getSafe(() => item['Budget Produksi (Kg)'], 0)
-            ) || 0;
-            
-            const tonase = parseFloat(
-              getSafe(() => item['Actual Tonase (Ton)'], 0) || 
-              getSafe(() => item['Budget Tonase (Ton)'], 0)
-            ) || 0;
-            
-            let tonPerHa = 0;
-            if (item['Actual Ton/Ha'] !== undefined) {
-              tonPerHa = parseFloat(item['Actual Ton/Ha']) || 0;
-            } else if (item['Budget Ton/Ha'] !== undefined) {
-              tonPerHa = parseFloat(item['Budget Ton/Ha']) || 0;
-            } else if (luas > 0) {
-              tonPerHa = tonase / luas;
-            }
-            
-            totals.luas += luas;
-            totals.produksi += produksi;
-            totals.tonase += tonase;
-            totals.tonPerHa = tonPerHa; // Will be averaged correctly
-            
-            return totals;
-          }, { luas: 0, produksi: 0, tonase: 0, tonPerHa: 0 });
-        }
-        
-        // Enhanced displayCostData function
-        function displayCostData(budgetData = [], actualData = [], totalBudget = {}, totalActual = {}) {
-          const costTab = document.getElementById('costTab');
-          if (!costTab) return;
-        
-          // Initialize totals with default values
-          totalBudget = {
-            HK: getSafe(() => totalBudget.HK, 0),
-            'Luas/Hasil': getSafe(() => totalBudget['Luas/Hasil'], 0),
-            'Biaya (Rp)': getSafe(() => totalBudget['Biaya (Rp)'], 0)
-          };
-        
-          totalActual = {
-            HK: getSafe(() => totalActual.HK, 0),
-            'Luas/Hasil': getSafe(() => totalActual['Luas/Hasil'], 0),
-            'Biaya (Rp)': getSafe(() => totalActual['Biaya (Rp)'], 0)
-          };
-        
-          let tableHTML = `
-            <table class="cost-table">
-              <thead>
-                <tr>
-                  <th>Kode Kerja</th>
-                  <th>Objek Kerja</th>
-                  <th>HK (Budget)</th>
-                  <th>HK (Actual)</th>
-                  <th>Luas/Hasil (Budget)</th>
-                  <th>Luas/Hasil (Actual)</th>
-                  <th>Biaya (Budget)</th>
-                  <th>Biaya (Actual)</th>
-                  <th>Selisih Biaya</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-        
-          if (budgetData.length === 0 && actualData.length === 0) {
-            tableHTML += `
-              <tr>
-                <td colspan="9" style="text-align: center;">Tidak ada data biaya untuk blok ini</td>
-              </tr>
-            `;
-          } else {
-            // Get unique work codes from both datasets
-            const allWorkCodes = new Set([
-              ...budgetData.map(item => getSafe(() => item['Kode Kerja'], '')),
-              ...actualData.map(item => getSafe(() => item['Kode Kerja'], ''))
-            ]);
-        
-            // Process each work code
-            Array.from(allWorkCodes).forEach(kodeKerja => {
-              if (!kodeKerja) return;
-        
-              const budgetItems = budgetData.filter(item => 
-                getSafe(() => item['Kode Kerja'], '') === kodeKerja
-              );
-              const actualItems = actualData.filter(item => 
-                getSafe(() => item['Kode Kerja'], '') === kodeKerja
-              );
-        
-              // Get unique work objects
-              const allObjekKerja = new Set([
-                ...budgetItems.map(item => getSafe(() => item['Objek Kerja'], '')),
-                ...actualItems.map(item => getSafe(() => item['Objek Kerja'], ''))
-              ]);
-        
-              // Process each work object
-              Array.from(allObjekKerja).forEach(objekKerja => {
-                if (!objekKerja) return;
-        
-                const budgetItem = budgetItems.find(item => 
-                  getSafe(() => item['Objek Kerja'], '') === objekKerja
-                ) || {};
-                const actualItem = actualItems.find(item => 
-                  getSafe(() => item['Objek Kerja'], '') === objekKerja
-                ) || {};
-        
-                const costDiff = (getSafe(() => actualItem['Biaya (Rp)'], 0) || 0) - 
-                                (getSafe(() => budgetItem['Biaya (Rp)'], 0) || 0);
-                const costDiffClass = costDiff <= 0 ? 'positive' : 'negative';
-                
-                tableHTML += `
-                  <tr>
-                    <td>${kodeKerja || '-'}</td>
-                    <td>${objekKerja || '-'}</td>
-                    <td>${formatNumber(getSafe(() => budgetItem.HK, 0))}</td>
-                    <td>${formatNumber(getSafe(() => actualItem.HK, 0))}</td>
-                    <td>${formatNumber(getSafe(() => budgetItem['Luas/Hasil'], 0))}</td>
-                    <td>${formatNumber(getSafe(() => actualItem['Luas/Hasil'], 0))}</td>
-                    <td>${formatCurrency(getSafe(() => budgetItem['Biaya (Rp)'], 0))}</td>
-                    <td>${formatCurrency(getSafe(() => actualItem['Biaya (Rp)'], 0))}</td>
-                    <td class="${costDiffClass}">${formatCurrency(costDiff)}</td>
-                  </tr>
-                `;
-              });
-            });
-          }
-        
-          tableHTML += `</tbody></table>`;
-        
-          // Calculate summary data
-          const totalCostDiff = (totalActual['Biaya (Rp)'] || 0) - (totalBudget['Biaya (Rp)'] || 0);
-          const totalCostDiffClass = totalCostDiff <= 0 ? 'comparison-positive' : 'comparison-negative';
-          const totalBudgetCost = totalBudget['Biaya (Rp)'] || 0;
-          const totalCostDiffPercent = totalBudgetCost > 0 ? 
-            (totalCostDiff / totalBudgetCost * 100) : 0;
-        
-          // Add summary cards
-          tableHTML += `
-            <div class="data-grid">
-              <div class="summary-card">
-                <h4>Total Budget</h4>
-                <div class="summary-item">
-                  <span>Total HK:</span>
-                  <span>${formatNumber(totalBudget.HK || 0)}</span>
-                </div>
-                <div class="summary-item">
-                  <span>Total Luas:</span>
-                  <span>${formatNumber(totalBudget['Luas/Hasil'] || 0)} Ha</span>
-                </div>
-                <div class="summary-item">
-                  <span>Total Biaya:</span>
-                  <span>${formatCurrency(totalBudget['Biaya (Rp)'] || 0)}</span>
-                </div>
-              </div>
-              
-              <div class="summary-card">
-                <h4>Total Actual</h4>
-                <div class="summary-item">
-                  <span>Total HK:</span>
-                  <span>${formatNumber(totalActual.HK || 0)}</span>
-                </div>
-                <div class="summary-item">
-                  <span>Total Hasil:</span>
-                  <span>${formatNumber(totalActual['Luas/Hasil'] || 0)} Ha</span>
-                </div>
-                <div class="summary-item">
-                  <span>Total Biaya:</span>
-                  <span>${formatCurrency(totalActual['Biaya (Rp)'] || 0)}</span>
-                </div>
-              </div>
-              
-              <div class="summary-card">
-                <h4>Perbandingan</h4>
-                <div class="summary-item">
-                  <span>Selisih HK:</span>
-                  <span>${formatNumber((totalActual.HK || 0) - (totalBudget.HK || 0))}</span>
-                </div>
-                <div class="summary-item">
-                  <span>Selisih Luas:</span>
-                  <span>${formatNumber((totalActual['Luas/Hasil'] || 0) - (totalBudget['Luas/Hasil'] || 0))} Ha</span>
-                </div>
-                <div class="summary-item">
-                  <span>Selisih Biaya:</span>
-                  <span class="${totalCostDiffClass}">
-                    ${formatCurrency(totalCostDiff)} (${Math.abs(totalCostDiffPercent).toFixed(2)}%)
-                  </span>
-                </div>
-              </div>
-            </div>
-          `;
-        
-          costTab.innerHTML = tableHTML;
-        }
-        
-        // Helper function to format numbers
-        function formatNumber(value) {
-          if (isNaN(value) || value === undefined || value === null) return '-';
-          return new Intl.NumberFormat('id-ID').format(value);
-        }
-        
-        // Enhanced currency formatting
-        function formatCurrency(amount) {
-          if (amount === undefined || amount === null || isNaN(amount)) return '-';
-          return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-          }).format(amount);
-        }
-    
-        // ---------------- END POINT untuk menampilkan tab grafik-------------//
-        // Add these variables at the top of your script section
-        let productionChart, costChart, areaChart, productivityTrendChart, costDistributionChart;
-        let currentBlockData = {
-          kebun: '',
-          divisi: '',
-          blok: '',
-          prodBudget: [],
-          prodActual: [],
-          budget: [],
-          actual: []
-        }
-        
-        // Add this function to initialize charts
-        function initializeCharts() {
-          // Destroy existing charts if they exist
-          if (productionChart && typeof productionChart.destroy === 'function') {
-            productionChart.destroy();
-          }
-          if (costChart && typeof costChart.destroy === 'function') {
-            costChart.destroy();
-          }
-          if (areaChart && typeof areaChart.destroy === 'function') {
-            areaChart.destroy();
-          }
-          if (productivityTrendChart && typeof productivityTrendChart.destroy === 'function') {
-            productivityTrendChart.destroy();
-          }
-          if (costDistributionChart && typeof costDistributionChart.destroy === 'function') {
-            costDistributionChart.destroy();
-          }
-          
-          // Production Chart (Tonase)
-          const commonChartOptions = {
-            responsive: true,
-            maintainAspectRatio: false, // Penting untuk responsif
-            plugins: {
-              title: { display: false },
-              legend: {
-                position: 'top',
-                labels: {
-                  boxWidth: 12,
-                  padding: 20,
-                  font: {
-                    size: 12
-                  }
-                }
-              }
-            },
-            animation: {
-              duration: 1000,
-              easing: 'easeInOutQuad'
-            }
-          };
-
-          const commonTooltipOptions = {
-            enabled: true,
-            mode: 'index',
-            intersect: false,
-            position: 'nearest',
-            bodyFont: {
-              size: window.innerWidth < 600 ? 10 : 12
-            },
-            titleFont: {
-              size: window.innerWidth < 600 ? 10 : 12
-            },
-            padding: window.innerWidth < 600 ? 8 : 12,
-            caretSize: window.innerWidth < 600 ? 6 : 8,
-            displayColors: true
-          };
-        
-          const productionCtx = document.getElementById('productionChart').getContext('2d');
-          productionChart = new Chart(productionCtx, {
-            type: 'line',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Tonase',
-                  data: [],
-                  borderColor: '#4285f4',
-                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                },
-                {
-                  label: 'Actual Tonase',
-                  data: [],
-                  borderColor: '#34a853',
-                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                }
-              ]
-            },
-            options: {
-              ...commonChartOptions,
-              plugins: {
-                tooltip: commonTooltipOptions
-              },
-              responsive: true,
-              plugins: {
-                tooltip: {
-                  enabled: true,
-                  mode: 'index',
-                  intersect: false,
-                  position: 'average',
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  callbacks: {
-                    label: function(context) {
-                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Tonase (Ton)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
-                    }
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
-              }
-            }
-          });
-        
-          // Cost Chart (Biaya)
-          const costCtx = document.getElementById('costChart').getContext('2d');
-          costChart = new Chart(costCtx, {
-            type: 'bar',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Biaya',
-                  data: [],
-                  backgroundColor: 'rgba(66, 133, 244, 0.7)',
-                  borderColor: '#4285f4',
-                  borderWidth: 1
-                },
-                {
-                  label: 'Actual Biaya',
-                  data: [],
-                  backgroundColor: 'rgba(52, 168, 83, 0.7)',
-                  borderColor: '#34a853',
-                  borderWidth: 1
-                }
-              ]
-            },
-            options: {
-              ...commonChartOptions,
-              plugins: {
-                tooltip: commonTooltipOptions
-              },
-              responsive: true,
-              plugins: {
-                tooltip: {
-                  enabled: true,
-                  mode: 'index',
-                  intersect: false,
-                  position: 'average',
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  callbacks: {
-                    label: function(context) {
-                      return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Biaya (Rp)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatCurrency(value);
-                    }
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
-              }
-            }
-          });
-        
-          // Area Chart (Luas/Hasil)
-          const areaCtx = document.getElementById('areaChart').getContext('2d');
-          areaChart = new Chart(areaCtx, {
-            type: 'line',
-            data: {
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
-              datasets: [
-                {
-                  label: 'Budget Luas',
-                  data: [],
-                  borderColor: '#4285f4',
-                  backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                },
-                {
-                  label: 'Actual Hasil',
-                  data: [],
-                  borderColor: '#34a853',
-                  backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                  borderWidth: 2,
-                  tension: 0.1,
-                  fill: true
-                }
-              ]
-            },
-            options: {
-              ...commonChartOptions,
-              plugins: {
-                tooltip: commonTooltipOptions
-              },
-              responsive: true,
-              plugins: {
-                tooltip: {
-                  enabled: true,
-                  mode: 'index',
-                  intersect: false,
-                  position: 'average',
-                  backgroundColor: 'rgba(0,0,0,0.7)',
-                  callbacks: {
-                    label: function(context) {
-                      return `${context.dataset.label}: ${formatNumber(context.raw)} Ha`;
-                    }
-                  }
-                }
-              },
-              scales: {
-                y: {
-                  beginAtZero: true,
-                  title: {
-                    display: true,
-                    text: 'Luas/Hasil (Ha)'
-                  },
-                  ticks: {
-                    callback: function(value) {
-                      return formatNumber(value);
-                    }
-                  }
-                },
-                x: {
-                  title: {
-                    display: true,
-                    text: 'Bulan'
-                  }
-                }
-              }
-            }
-          });
-        
-          // Add event listeners for work object filters
-          document.getElementById('costWorkObject').addEventListener('change', function() {
-            updateCostChart(currentBlockData.budget, currentBlockData.actual, this.value);
-          });
-        
-          document.getElementById('areaWorkObject').addEventListener('change', function() {
-            updateAreaChart(currentBlockData.budget, currentBlockData.actual, this.value);
-          });
-    
-          // Initialize analysis charts
-          initializeAnalysisCharts();
-
-          // Tambahkan event listener untuk resize
-          window.addEventListener('resize', function() {
-            productionChart.resize();
-            costChart.resize();
-            areaChart.resize();
-          });
-        }
-
-        function forceTooltips(chart) {
-          try {
-            // Check if chart exists and is in a valid state
-            if (!chart || 
-                chart._destroyed || 
-                !chart.tooltip || 
-                !chart.tooltip._active || 
-                !chart.data || 
-                !chart.data.datasets) {
-              return;
-            }
-            
-            // Create fake active elements for each dataset
-            const activeElements = chart.data.datasets.map((_, datasetIndex) => ({
-              datasetIndex,
-              element: {
-                _model: {}
-              }
-            }));
-            
-            // Update tooltip with these active elements
-            chart.tooltip._active = activeElements;
-            
-            // Only update if chart is not destroyed
-            if (!chart._destroyed) {
-              chart.tooltip.update();
-              chart.draw();
-            }
-          } catch (error) {
-            console.error('Error forcing tooltips:', error);
-          }
-        }
-
-        function handleChartResize() {
-          const charts = [productionChart, costChart, areaChart];
-          charts.forEach(chart => {
-            if (chart) {
-              chart.resize();
-            }
-          });
-        }
-        
-        // Panggil saat tab diubah
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-          btn.addEventListener('click', function() {
-            setTimeout(handleChartResize, 300); // Beri sedikit delay
-          });
-        });
-        
-        // Panggil saat window di-resize
-        let resizeTimer;
-        window.addEventListener('resize', function() {
-          clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(handleChartResize, 200);
-        });    
-        
-        // Add this function to update charts when data is loaded
-        function updateCharts(blockData) {
-          console.log('Data untuk grafik:', blockData);
-          
-          try {
-            currentBlockData = blockData;
-            
-            // Update production chart (tonase)
-            if (productionChart && !productionChart._destroyed) {
-              updateProductionChart(blockData.prodBudget, blockData.prodActual);
-            }
-            
-            // Update work object filters
-            updateWorkObjectFilters(blockData.budget, blockData.actual);
-            
-            // Update cost chart with default selection (all)
-            if (costChart && !costChart._destroyed) {
-              updateCostChart(blockData.budget, blockData.actual, '');
-            }
-            
-            // Update area chart with default selection (all)
-            if (areaChart && !areaChart._destroyed) {
-              updateAreaChart(blockData.budget, blockData.actual, '');
-            }
-        
-            // Update analysis charts
-            if (productivityTrendChart && !productivityTrendChart._destroyed) {
-              updateProductivityTrendChart(blockData.prodAnalysis?.productivityByMonth);
-            }
-            if (costDistributionChart && !costDistributionChart._destroyed) {
-              updateCostDistributionChart(blockData.costAnalysis?.costByCategory);
-            }
-            
-            // Force tooltips after a small delay to ensure charts are rendered
-            setTimeout(() => {
-              if (productionChart && !productionChart._destroyed) forceTooltips(productionChart);
-              if (costChart && !costChart._destroyed) forceTooltips(costChart);
-              if (areaChart && !areaChart._destroyed) forceTooltips(areaChart);
-            }, 500); // Increased delay to 500ms
-          } catch (error) {
-            console.error('Error updating charts:', error);
-          }
-        }
-        
-        // Helper function to update production chart
-        function updateProductionChart(budgetData, actualData) {
-          if (!budgetData || !actualData) return;
+    // Tambahkan CSS untuk label blok:
+    const style = document.createElement('style');
+    style.textContent = `
+      .blok-label {
+        position: absolute;
+        text-align: center;
+        pointer-events: none;
+        transform: translate(-50%, -50%); /* Pusatkan tepat di tengah */
+      }
+      .blok-label div {
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 0.15em 0.4em;
+        border-radius: 0.3em;
+        font-weight: bold;
+        font-size: 0.7em;
+        text-shadow: 0 0 2px white;
+        white-space: nowrap;
+        border: 1px solid rgba(0,0,0,0.1); /* Tambahkan border halus */
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Tambahkan shadow untuk kontras */
+      }
       
-          const monthlyBudget = aggregateMonthlyData(budgetData, 'Budget Tonase (Ton)');
-          const monthlyActual = aggregateMonthlyData(actualData, 'Actual Tonase (Ton)');
-          
-          // Jika tidak ada data, gunakan array kosong
-          productionChart.data.datasets[0].data = monthlyBudget || Array(12).fill(0);
-          productionChart.data.datasets[1].data = monthlyActual || Array(12).fill(0);
-          productionChart.update();
+      @media (max-width: 600px) {
+        .blok-label div {
+          font-size: 0.6em;
+          padding: 0.1em 0.3em;
         }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Inisialisasi peta Leaflet
+    
+    // Definisikan base layers
+    const baseLayers = {
+      "Satelite": L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        attribution: 'KPAK Smart System',
+        maxZoom: 20
+      }),
+      "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'KPAK Smart System'
+      }),
+      "Topografi": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'KPAK Smart System',
+        maxZoom: 17
+      })
+    };
+    
+    // Inisialisasi peta Leaflet dengan layer default OpenStreetMap
+    const map = L.map('map', {
+      layers: [baseLayers["Satelite"]] // Set layer default
+    }).setView([1.0, 101.0], 12);
+    
+    // Tambahkan kontrol layer ke peta
+    L.control.layers(baseLayers, null, {
+      position: 'bottomleft', // Posisi kontrol di pojok kanan atas
+      collapsed: false // Tampilkan dalam keadaan terbuka
+    }).addTo(map);
+
+    // Variabel untuk menyimpan data GeoJSON dan layer yang aktif
+    let geoJsonData;
+    let geoJsonLayer;
+    let selectedFeature = null;
+
+    // Warna untuk kebun yang berbeda
+    const kebunColors = {
+      "SAMSAM": "#1f78b4",
+      "DURI": "#33a02c"
+    };
+
+    // Fungsi untuk menandai blok yang dipilih
+    function highlightFeature(e) {
+      const layer = e.target;
+
+      // Reset style sebelumnya jika ada yang dipilih
+      if (selectedFeature) {
+        geoJsonLayer.resetStyle(selectedFeature);
+      }
+
+      // Set style untuk layer yang dipilih
+      layer.setStyle({
+        weight: 3,
+        color: '#ff0000',
+        dashArray: '',
+        fillOpacity: 0.7
+      });
+
+      // Buka popup
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+      }
+
+      // Simpan feature yang dipilih
+      selectedFeature = layer;
+      
+      // Tampilkan informasi blok yang dipilih
+      const props = layer.feature.properties;
+      document.getElementById("selectedInfo").style.display = "block";
+      document.getElementById("infoKode").textContent = props.kode;
+      document.getElementById("infoBlok").textContent = props.blok;
+      document.getElementById("infoTahun").textContent = props.tahun;
+      document.getElementById("infoLuas").textContent = props.luas;
+      
+      // Isi nilai form
+      document.getElementById("kode").value = props.kode;
+      document.getElementById("blok").value = props.blok;
+      document.getElementById("tahun").value = props.tahun;
+    }
+
+    // Fungsi untuk reset highlight
+    function resetHighlight(e) {
+      if (e.target !== selectedFeature) {
+        geoJsonLayer.resetStyle(e.target);
+      }
+    }
+
+    // Fungsi untuk zoom ke blok yang dipilih
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // Fungsi untuk menambahkan event listeners ke setiap feature
+    // Modifikasi fungsi onEachFeature:
+    function onEachFeature(feature, layer) {
+      layer.on({
+        mouseover: highlightFeature,
+        mouseout: resetHighlight,
+        click: zoomToFeature
+      });
+      
+      addBlokLabels(feature, layer); // Ganti showFeatureInfo dengan addBlokLabels
+      map.removeLayer(layer); // Sembunyikan layer awalnya
+    }
+
+    // Fungsi untuk menentukan style berdasarkan kebun
+    function styleByKebun(feature) {
+      return {
+        fillColor: kebunColors[feature.properties.kebun] || "#cccccc",
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+      };
+    }
+
+    // Load GeoJSON data
+    fetch('koordinatkebundivisiblok.geojson')
+      .then(response => response.json())
+      .then(data => {
+        geoJsonData = data;
         
-        // Helper function to update cost chart
-        function updateCostChart(budgetData, actualData, workObjectFilter) {
-          const monthlyBudget = aggregateMonthlyCostData(budgetData, workObjectFilter);
-          const monthlyActual = aggregateMonthlyCostData(actualData, workObjectFilter);
-          
-          costChart.data.datasets[0].data = monthlyBudget;
-          costChart.data.datasets[1].data = monthlyActual;
-          costChart.update();
+        // Tambahkan GeoJSON ke peta
+        geoJsonLayer = L.geoJSON(data, {
+          style: styleByKebun,
+          onEachFeature: onEachFeature
+        }).addTo(map);
+        
+        // Fit bounds ke seluruh data
+        map.fitBounds(geoJsonLayer.getBounds());
+      })
+      .catch(error => {
+        console.error('Error loading GeoJSON:', error);
+      });
+
+    // Helper function untuk menampilkan status
+    function showStatus(message, isError = false) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'status error' : 'status success';
+      statusEl.style.display = 'block';
+    }
+
+    function showAllBloks() {
+      geoJsonLayer.eachLayer(function(layer) {
+        layer.addTo(map);
+        layer.setStyle(styleByKebun(layer.feature));
+      });
+    }
+
+    function getVisibleLayersBounds() {
+      let bounds = new L.LatLngBounds();
+      
+      geoJsonLayer.eachLayer(function(layer) {
+        if (map.hasLayer(layer)) {
+          bounds.extend(layer.getBounds());
         }
+      });
+      
+      return bounds;
+    }
+
+    // Hapus fungsi showFeatureInfo dan ganti dengan fungsi berikut:
+    function addBlokLabels(feature, layer) {
+      if (feature.properties && feature.properties.blok) {
+        // Hitung centroid (titik pusat) dari poligon
+        const centroid = layer.getBounds().getCenter();
         
-        // Helper function to update area chart
-        function updateAreaChart(budgetData, actualData, workObjectFilter) {
-          const monthlyBudget = aggregateMonthlyAreaData(budgetData, workObjectFilter);
-          const monthlyActual = aggregateMonthlyAreaData(actualData, workObjectFilter);
-          
-          areaChart.data.datasets[0].data = monthlyBudget;
-          areaChart.data.datasets[1].data = monthlyActual;
-          areaChart.update();
+        const label = L.marker(centroid, {
+          icon: L.divIcon({
+            className: 'blok-label',
+            html: `<div>${feature.properties.blok}</div>`,
+            iconSize: null, // Ukuran akan diatur oleh CSS
+            iconAnchor: [0, 0] // Anchor di tengah div
+          }),
+          zIndexOffset: 1000,
+          interactive: false // Nonaktifkan interaksi
+        });
+        
+        layer.label = label;
+        label.addTo(map);
+      }
+    }
+
+    //-------------------END POINT UNTUK TAKE FOTO-----------------------//
+
+    // Variabel untuk menyimpan stream kamera dan foto yang diambil
+    let cameraStream = null;
+    const capturedPhotos = [];
+    
+    // Elemen DOM
+    const startCameraBtn = document.getElementById('startCamera');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const capturePhotoBtn = document.getElementById('capturePhoto');
+    const fileList = document.getElementById('fileList');
+
+    // Variabel modal
+    const cameraModal = document.getElementById("cameraModal");
+    const openCameraBtn = document.getElementById("openCamera");
+    const closeModalBtn = document.querySelector(".close-modal");
+    
+    // Buka modal kamera
+    openCameraBtn.addEventListener('click', () => {
+      cameraModal.style.display = "block";
+      startCamera();
+    });
+    
+    // Tutup modal
+    closeModalBtn.addEventListener('click', () => {
+      stopCamera();
+      cameraModal.style.display = "none";
+    });
+    
+    // Fungsi untuk memulai kamera
+    async function startCamera() {
+      try {
+        // Hentikan kamera jika sudah aktif
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
         }
+    
+        // Akses kamera belakang
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+    
+        // Tampilkan preview kamera
+        cameraPreview.srcObject = cameraStream;
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Tidak dapat mengakses kamera: ' + error.message);
+        cameraModal.style.display = "none";
+      }
+    }
+    
+    // Fungsi untuk menghentikan kamera
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+      }
+    }
+    
+    // Fallback untuk desktop (tidak ada kamera)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const formGroup = document.querySelector('.form-group:has(#openCamera)');
+      formGroup.innerHTML = `
+        <label>Foto Kondisi Lapangan</label>
+        <div class="file-input-container">
+          <label class="file-input-label" for="photoFiles">
+            <i class="material-icons">photo_camera</i>
+            <span>Klik untuk memilih foto</span>
+            <small>Format yang didukung: .jpg, .jpeg, .png</small>
+          </label>
+          <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png" multiple required>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      `;
+      
+      // Tambahkan event listener untuk input file fallback
+      document.getElementById("photoFiles").addEventListener("change", function() {
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = '';
         
-        // Helper function to aggregate monthly production data
-        function aggregateMonthlyData(data, fieldName) {
-          const monthlyData = Array(12).fill(0);
-          
-          data.forEach(item => {
-            const month = getMonthFromDate(item.Bulan);
-            if (month >= 0 && month < 12) {
-              monthlyData[month] += parseFloat(item[fieldName]) || 0;
-            }
+        if (this.files.length > 0) {
+          Array.from(this.files).forEach(file => {
+            const fileItem = document.createElement("div");
+            fileItem.className = "file-item";
+            fileItem.innerHTML = `
+              <i class="material-icons">image</i>
+              <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+            `;
+            fileList.appendChild(fileItem);
           });
-          
-          return monthlyData;
+        } else {
+          fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
         }
+      });
+    } else {
+      // Kode untuk kamera mobile
+      openCameraBtn.style.display = 'block';
+    }
+    
+    // Update tampilan daftar file
+    function updateFileList() {
+      fileList.innerHTML = '';
+      
+      if (capturedPhotos.length === 0) {
+        fileList.innerHTML = '<div class="file-item">Belum ada foto yang diambil</div>';
+        return;
+      }
+      
+      capturedPhotos.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+          <i class="material-icons">image</i>
+          <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red;">
+            <i class="material-icons">delete</i>
+          </button>
+        `;
+        fileList.appendChild(fileItem);
+      });
+    
+      // Tambahkan event listener untuk tombol hapus
+      document.querySelectorAll('.delete-photo').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.target.closest('button').dataset.index);
+          capturedPhotos.splice(index, 1);
+          updateFileList();
+        });
+      });
+    }
+
+    document.getElementById("openCamera").addEventListener("click", function() {
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString("OPEN_CAMERA");
+      } else {
+        alert("AppInventor bridge tidak tersedia");
+      }
+    });
+
+
+    //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
+    // Variabel untuk menyimpan foto yang baru diambil
+    let currentPhoto = null;
+    const previewModal = document.getElementById("previewModal");
+    
+    // Ambil foto dari kamera
+    capturePhotoBtn.addEventListener('click', () => {
+      if (!cameraStream) return;
+    
+      // Siapkan canvas untuk menangkap gambar
+      const context = photoCanvas.getContext('2d');
+      photoCanvas.width = cameraPreview.videoWidth;
+      photoCanvas.height = cameraPreview.videoHeight;
+      context.drawImage(cameraPreview, 0, 0, photoCanvas.width, photoCanvas.height);
+    
+      // Konversi canvas ke data URL untuk preview
+      const imageDataUrl = photoCanvas.toDataURL('image/jpeg', 0.9);
+      
+      // Tampilkan preview modal
+      document.getElementById('previewImage').src = imageDataUrl;
+      
+      // Simpan foto sementara
+      currentPhoto = {
+        dataUrl: imageDataUrl,
+        blob: null
+      };
+      
+      // Konversi juga ke blob untuk disimpan nanti jika dipilih simpan
+      photoCanvas.toBlob(blob => {
+        currentPhoto.blob = blob;
+        // Tutup modal kamera dan buka modal preview
+        stopCamera();
+        cameraModal.style.display = "none";
+        previewModal.style.display = "block";
+      }, 'image/jpeg', 0.9);
+    });
+    
+    // Tombol hapus di modal preview
+    document.getElementById('deletePhoto').addEventListener('click', () => {
+      // Hanya tutup modal, foto tidak disimpan
+      currentPhoto = null;
+      previewModal.style.display = "none";
+    });
+    
+    // Tombol simpan di modal preview
+    document.getElementById('savePhoto').addEventListener('click', () => {
+      if (currentPhoto && currentPhoto.blob) {
+        const fileName = `photo_${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+        const file = new File([currentPhoto.blob], fileName, { type: 'image/jpeg' });
         
-        // Helper function to aggregate monthly cost data
-        function aggregateMonthlyCostData(data, workObjectFilter) {
-          const monthlyData = Array(12).fill(0);
-          
-          if (!Array.isArray(data)) return monthlyData;
-          
-          data.forEach(item => {
-            // Handle filter - sesuaikan dengan format dropdown
-            const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
-            if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
-              return;
-            }
+        // Simpan foto ke daftar
+        capturedPhotos.push(file);
+        updateFileList();
+        
+        // Reset dan tutup modal
+        currentPhoto = null;
+        previewModal.style.display = "none";
+      }
+    });
+    
+    // Tutup modal preview
+    document.querySelector(".close-preview-modal").addEventListener('click', () => {
+      currentPhoto = null;
+      previewModal.style.display = "none";
+    });
+
+    //-------------------END POINT UNTUK UPLOAD FOTO-----------------------//
+
+    // Inisialisasi IndexDB
+    let db;
+    const DB_NAME = "KondisiLapanganDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "pendingSubmissions";
+
+    // Buka atau buat database
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        
+        request.onerror = (event) => {
+          console.error("Database error:", event.target.error);
+          reject("Gagal membuka database");
+        };
+        
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          console.log("Database berhasil dibuka");
+          resolve(db);
+          updatePendingCount(); // Update counter saat database siap
+        };
+        
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const store = db.createObjectStore(STORE_NAME, { 
+              keyPath: "id",
+              autoIncrement: true 
+            });
             
-            // Default ke bulan 0 jika tidak ada data bulan
-            const month = 0; // Sementara di-set ke Januari (index 0)
-            
-            if (month >= 0 && month < 12) {
-              const biaya = parseFloat(item['Biaya (Rp)']) || 0;
-              monthlyData[month] += biaya;
-            }
+            // Buat index untuk pencarian
+            store.createIndex("timestamp", "timestamp", { unique: false });
+            store.createIndex("kebun", "kebun", { unique: false });
+            store.createIndex("divisi", "divisi", { unique: false });
+            store.createIndex("blok", "blok", { unique: false });
+          }
+        };
+      });
+    }
+
+    // Tambahkan data ke IndexDB
+    function addToPendingSubmissions(data) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        
+        const request = store.add(data);
+        
+        request.onsuccess = () => {
+          console.log("Data berhasil disimpan di IndexDB");
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          console.error("Gagal menyimpan di IndexDB:", event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Ambil semua data yang belum disinkronkan
+    function getAllPendingSubmissions() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readonly");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Hapus data yang sudah disinkronkan
+    function deleteSubmission(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete(id);
+        
+        request.onsuccess = () => {
+          updatePendingCount();
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          reject(event.target.error);
+        };
+      });
+    }
+
+    // Update counter data yang belum disinkronkan
+    async function updatePendingCount() {
+      try {
+        const submissions = await getAllPendingSubmissions();
+        const count = submissions.length;
+        document.getElementById("syncBadge").textContent = count;
+        document.getElementById("pendingCount").textContent = count;
+      } catch (error) {
+        console.error("Gagal update pending count:", error);
+      }
+    }
+
+    // Handle kategori change
+    document.getElementById("kategori").addEventListener("change", function() {
+      const kategori = this.value;
+      const objekKerjaSearch = document.getElementById("objekKerjaSearch");
+      const objekKerjaSelect = document.getElementById("objekKerja");
+      const objekKerjaDropdown = document.getElementById("objekKerjaDropdown");
+      
+      // Kosongkan dropdown dan search
+      objekKerjaSelect.innerHTML = '';
+      objekKerjaDropdown.innerHTML = '';
+      
+      if (kategori) {
+        // Aktifkan search input
+        objekKerjaSearch.disabled = false;
+        
+        // Tambahkan opsi default
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Objek Kerja --";
+        objekKerjaSelect.appendChild(defaultOption);
+        
+        // Tambahkan semua opsi ke select dan dropdown
+        kerjaData[kategori].forEach(item => {
+          const option = document.createElement("option");
+          option.value = item.kode;
+          option.textContent = `${item.kode} - ${item.kerja}`;
+          objekKerjaSelect.appendChild(option);
+          
+          const dropdownItem = document.createElement("div");
+          dropdownItem.className = "dropdown-item";
+          dropdownItem.textContent = `${item.kode} - ${item.kerja}`;
+          dropdownItem.dataset.value = item.kode;
+          dropdownItem.addEventListener("click", function() {
+            objekKerjaSelect.value = this.dataset.value;
+            objekKerjaSearch.value = this.textContent;
+            objekKerjaDropdown.style.display = "none";
           });
-          
-          return monthlyData;
-        }
+          objekKerjaDropdown.appendChild(dropdownItem);
+        });
+      } else {
+        // Nonaktifkan search input
+        objekKerjaSearch.disabled = true;
+        objekKerjaSearch.value = "";
+        objekKerjaDropdown.style.display = "none";
         
-        // Helper function to aggregate monthly area data
-        function aggregateMonthlyAreaData(data, workObjectFilter) {
-          const monthlyData = Array(12).fill(0);
-          
-          if (!Array.isArray(data)) return monthlyData;
-          
-          data.forEach(item => {
-            // Handle filter - sesuaikan dengan format dropdown
-            const currentKey = `${item['Kode Kerja']}-${item['Objek Kerja']}`;
-            if (workObjectFilter && workObjectFilter !== '' && currentKey !== workObjectFilter) {
-              return;
-            }
-            
-            // Default ke bulan 0 jika tidak ada data bulan
-            const month = 0; // Sementara di-set ke Januari (index 0)
-            
-            if (month >= 0 && month < 12) {
-              // Gunakan Luas/Hasil dari data yang sudah di-agregasi
-              const value = parseFloat(item['Luas/Hasil']) || 0;
-              monthlyData[month] += value;
-            }
+        const defaultOption = document.createElement("option");
+        defaultOption.value = "";
+        defaultOption.textContent = "-- Pilih Kategori terlebih dahulu --";
+        objekKerjaSelect.appendChild(defaultOption);
+      }
+    });
+    
+    // Handle search input
+    document.getElementById("objekKerjaSearch").addEventListener("input", function() {
+      const searchTerm = this.value.toLowerCase();
+      const dropdownItems = document.querySelectorAll("#objekKerjaDropdown .dropdown-item");
+      let hasMatches = false;
+      
+      dropdownItems.forEach(item => {
+        if (item.textContent.toLowerCase().includes(searchTerm)) {
+          item.style.display = "block";
+          hasMatches = true;
+        } else {
+          item.style.display = "none";
+        }
+      });
+      
+      if (hasMatches && searchTerm.length > 0) {
+        document.getElementById("objekKerjaDropdown").style.display = "block";
+      } else {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
+      }
+    });
+    
+    // Tampilkan dropdown ketika search input diklik
+    document.getElementById("objekKerjaSearch").addEventListener("click", function() {
+      if (this.value === "") {
+        const dropdown = document.getElementById("objekKerjaDropdown");
+        dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+      }
+    });
+    
+    // Sembunyikan dropdown ketika klik di luar
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".dropdown-container")) {
+        document.getElementById("objekKerjaDropdown").style.display = "none";
+      }
+    });
+    
+    // Update the form submission handler
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const loading = document.getElementById("loading");
+      const statusEl = document.getElementById("status");
+      
+      try {
+        submitBtn.disabled = true;
+        loading.style.display = 'flex';
+        statusEl.style.display = 'none';
+        
+        const kebun = document.getElementById("kebun").value;
+        const divisi = document.getElementById("divisi").value;
+        const kode = document.getElementById("kode").value;
+        const blok = document.getElementById("blok").value;
+        const tahun = document.getElementById("tahun").value;
+        const kategori = document.getElementById("kategori").value;
+        const objekKerja = document.getElementById("objekKerja").value;
+        
+        // Get the selected objek kerja text (kode - kerja)
+        const objekKerjaText = document.getElementById("objekKerja").options[document.getElementById("objekKerja").selectedIndex].text;
+        
+        // Validate inputs
+        if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
+        if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
+        if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
+        if (!kategori) throw new Error('Pilih kategori terlebih dahulu');
+        if (!objekKerja) throw new Error('Pilih objek kerja terlebih dahulu');
+    
+        // Convert photos to base64
+        const photosData = [];
+        for (let i = 0; i < capturedPhotos.length; i++) {
+          const file = capturedPhotos[i];
+          const base64Data = await fileToBase64(file);
+          photosData.push({
+            name: file.name,
+            data: base64Data
           });
-          
-          return monthlyData;
+        }
+    
+        // Prepare payload with new fields
+        const payload = {
+          timestamp: new Date().toISOString(),
+          kebun,
+          divisi,
+          kode,
+          blok,
+          tahun,
+          kategori,
+          objekKerja: objekKerjaText,
+          photos: photosData,
+          isSynced: false
+        };
+        
+        // Simpan ke IndexDB
+        await addToPendingSubmissions(payload);
+        
+        showStatus('Data berhasil disimpan secara offline!');
+        form.reset();
+        document.getElementById("selectedInfo").style.display = "none";
+        document.getElementById("fileList").innerHTML = '';
+        
+        // Reset captured photos
+        capturedPhotos.length = 0;
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('Error: ' + error.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
+      }
+    });
+
+    // Fungsi untuk sinkronisasi data
+    async function syncData() {
+      try {
+        const syncProgress = document.getElementById("syncProgress");
+        const progressBar = document.getElementById("progressBar");
+        const syncMessage = document.getElementById("syncMessage");
+        const syncResult = document.getElementById("syncResult");
+        const startSyncBtn = document.getElementById("startSync");
+        
+        // Ambil semua data yang belum disinkronkan
+        const pendingData = await getAllPendingSubmissions();
+        const totalData = pendingData.length;
+        
+        if (totalData === 0) {
+          syncResult.innerHTML = '<div class="status success">Tidak ada data yang perlu disinkronkan</div>';
+          return;
         }
         
-        // Helper function to get month index (0-11) from date string
-        function getMonthFromDate(dateStr) {
-          if (!dateStr) return -1;
+        // Tampilkan progress
+        syncProgress.style.display = "block";
+        startSyncBtn.disabled = true;
+        syncResult.innerHTML = "";
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Proses sinkronisasi satu per satu
+        for (let i = 0; i < totalData; i++) {
+          const data = pendingData[i];
+          const progress = Math.round(((i + 1) / totalData) * 100);
+          
+          progressBar.style.width = `${progress}%`;
+          syncMessage.textContent = `Menyinkronkan data ${i + 1} dari ${totalData}...`;
           
           try {
-            // Handle both Date objects and ISO strings
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) throw new Error('Invalid date');
-            return date.getMonth(); // Returns 0-11
-          } catch (e) {
-            console.warn('Failed to parse date:', dateStr, e);
-            return -1;
-          }
-        }
-        
-        // Helper function to update work object filters
-        function updateWorkObjectFilters(budgetData, actualData) {
-          const workObjects = new Map();
-          
-          const addWorkObjects = (data) => {
-            data.forEach(item => {
-              const kodeKerja = item['Kode Kerja'] || '';
-              const objekKerja = item['Objek Kerja'] || '';
-              
-              if (kodeKerja && objekKerja) {
-                // Gunakan format yang konsisten dengan dropdown (dengan dash)
-                const key = `${kodeKerja}-${objekKerja}`;
-                if (!workObjects.has(key)) {
-                  workObjects.set(key, {
-                    key,
-                    kodeKerja,
-                    objekKerja,
-                    displayText: `${kodeKerja} - ${objekKerja}`
-                  });
-                }
-              }
-            });
-          };
-          
-          addWorkObjects(budgetData);
-          addWorkObjects(actualData);
-          
-          const costDropdown = document.getElementById('costWorkObject');
-          const areaDropdown = document.getElementById('areaWorkObject');
-          
-          // Clear existing options except the first one
-          while (costDropdown.options.length > 1) costDropdown.remove(1);
-          while (areaDropdown.options.length > 1) areaDropdown.remove(1);
-          
-          // Sort work objects
-          const sortedWorkObjects = Array.from(workObjects.values()).sort((a, b) => 
-            a.displayText.localeCompare(b.displayText));
-          
-          // Add new options
-          sortedWorkObjects.forEach(workObject => {
-            const option = document.createElement('option');
-            option.value = workObject.key; // Gunakan key yang sudah diformat
-            option.textContent = workObject.displayText;
-            
-            costDropdown.appendChild(option.cloneNode(true));
-            areaDropdown.appendChild(option.cloneNode(true));
-          });
-        }
-    
-        // ---------------- END POINT untuk analisa mendalam-------------//
-        //1. Analisa prodktifitas blok
-        function analyzeBlockProductivity(prodActual, prodBudget) {
-          const analysis = {
-            totalActualTonase: 0,
-            totalBudgetTonase: 0,
-            totalActualLuas: 0,
-            totalBudgetLuas: 0,
-            productivityByMonth: {},
-            performanceStatus: 'normal'
-          };
-        
-          // Hitung total tonase dan luas
-          prodActual.forEach(item => {
-            analysis.totalActualTonase += parseFloat(item['Actual Tonase (Ton)']) || 0;
-            analysis.totalActualLuas += parseFloat(item['Luas (Ha)']) || 0;
-          });
-        
-          prodBudget.forEach(item => {
-            analysis.totalBudgetTonase += parseFloat(item['Budget Tonase (Ton)']) || 0;
-            analysis.totalBudgetLuas += parseFloat(item['Luas (Ha)']) || 0;
-          });
-        
-          // Hitung produktivitas per bulan
-          for (let month = 0; month < 12; month++) {
-            const monthName = new Date(0, month).toLocaleString('id-ID', { month: 'short' });
-            const actual = prodActual.filter(item => new Date(item.Bulan).getMonth() === month);
-            const budget = prodBudget.filter(item => new Date(item.Bulan).getMonth() === month);
-            
-            const actualTonase = actual.reduce((sum, item) => sum + (parseFloat(item['Actual Tonase (Ton)']) || 0), 0);
-            const budgetTonase = budget.reduce((sum, item) => sum + (parseFloat(item['Budget Tonase (Ton)']) || 0), 0);
-            
-            analysis.productivityByMonth[monthName] = {
-              actual: actualTonase,
-              budget: budgetTonase,
-              difference: actualTonase - budgetTonase,
-              percentage: budgetTonase > 0 ? ((actualTonase - budgetTonase) / budgetTonase * 100) : 0
-            };
-          }
-        
-          // Tentukan status performa
-          const overallPercentage = analysis.totalBudgetTonase > 0 ? 
-            ((analysis.totalActualTonase - analysis.totalBudgetTonase) / analysis.totalBudgetTonase * 100) : 0;
-          
-          if (overallPercentage > 20) {
-            analysis.performanceStatus = 'excellent';
-          } else if (overallPercentage > 0) {
-            analysis.performanceStatus = 'good';
-          } else if (overallPercentage > -10) {
-            analysis.performanceStatus = 'normal';
-          } else {
-            analysis.performanceStatus = 'poor';
-          }
-        
-          return analysis;
-        }
-    
-        // 2. Analisis Biaya dan Efisiensi
-        function analyzeCostEfficiency(actualCosts, budgetCosts) {
-          const analysis = {
-            totalActualCost: 0,
-            totalBudgetCost: 0,
-            costByCategory: {},
-            efficiencyScore: 0,
-            costOverruns: []
-          };
-        
-          // Hitung total biaya
-          actualCosts.forEach(item => {
-            analysis.totalActualCost += parseFloat(item['Biaya (Rp)']) || 0;
-          });
-        
-          budgetCosts.forEach(item => {
-            analysis.totalBudgetCost += parseFloat(item['Biaya (Rp)']) || 0;
-          });
-        
-          // Analisis per kategori
-          const categories = [...new Set([
-            ...actualCosts.map(item => item['Objek Kerja']),
-            ...budgetCosts.map(item => item['Objek Kerja'])
-          ])];
-        
-          categories.forEach(category => {
-            const actual = actualCosts.filter(item => item['Objek Kerja'] === category)
-              .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
-            
-            const budget = budgetCosts.filter(item => item['Objek Kerja'] === category)
-              .reduce((sum, item) => sum + (parseFloat(item['Biaya (Rp)']) || 0), 0);
-            
-            if (budget > 0) {
-              const variance = actual - budget;
-              const percentage = (variance / budget) * 100;
-              
-              analysis.costByCategory[category] = {
-                actual,
-                budget,
-                variance,
-                percentage
-              };
-        
-              if (percentage > 15) {
-                analysis.costOverruns.push({
-                  category,
-                  actual,
-                  budget,
-                  variance,
-                  percentage
-                });
-              }
-            }
-          });
-        
-          // Hitung skor efisiensi (0-100)
-          if (analysis.totalBudgetCost > 0) {
-            const costRatio = Math.min(analysis.totalActualCost / analysis.totalBudgetCost, 2); // Maksimal 2x budget
-            analysis.efficiencyScore = Math.max(0, 100 - (costRatio * 50)); // Skor 100 jika actual <= budget
-          }
-        
-          return analysis;
-        }
-    
-        // Fungsi untuk menampilkan analisis
-        function displayAnalysis(blockData) {
-          const performanceAnalysis = analyzeBlockProductivity(blockData.prodActual, blockData.prodBudget);
-          const costAnalysis = analyzeCostEfficiency(blockData.actual, blockData.budget);
-          
-          // Tampilkan ringkasan kinerja
-          const performanceHTML = `
-            <div class="performance-card ${performanceAnalysis.performanceStatus}">
-              <div class="performance-metric">
-                <span class="metric-label">Total Produksi:</span>
-                <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase)} Ton</span>
-                <span class="metric-comparison ${performanceAnalysis.totalActualTonase >= performanceAnalysis.totalBudgetTonase ? 'positive' : 'negative'}">
-                  (${formatNumber(performanceAnalysis.totalActualTonase - performanceAnalysis.totalBudgetTonase)} Ton)
-                </span>
-              </div>
-              <div class="performance-metric">
-                <span class="metric-label">Produktivitas:</span>
-                <span class="metric-value">${formatNumber(performanceAnalysis.totalActualTonase / performanceAnalysis.totalActualLuas)} Ton/Ha</span>
-              </div>
-              <div class="performance-status">
-                Status: <span class="status-badge">${getPerformanceStatusText(performanceAnalysis.performanceStatus)}</span>
-              </div>
-            </div>
-          `;
-          
-          document.getElementById('performanceSummary').innerHTML = performanceHTML;
-          
-          // Tampilkan efisiensi biaya
-          const efficiencyHTML = `
-            <div class="efficiency-card">
-              <div class="efficiency-metric">
-                <span class="metric-label">Total Biaya:</span>
-                <span class="metric-value">${formatCurrency(costAnalysis.totalActualCost)}</span>
-                <span class="metric-comparison ${costAnalysis.totalActualCost <= costAnalysis.totalBudgetCost ? 'positive' : 'negative'}">
-                  (${formatCurrency(costAnalysis.totalActualCost - costAnalysis.totalBudgetCost)})
-                </span>
-              </div>
-              <div class="efficiency-metric">
-                <span class="metric-label">Skor Efisiensi:</span>
-                <div class="efficiency-score">
-                  <div class="score-bar" style="width: ${costAnalysis.efficiencyScore}%"></div>
-                  <span class="score-text">${Math.round(costAnalysis.efficiencyScore)}/100</span>
-                </div>
-              </div>
-              ${costAnalysis.costOverruns.length > 0 ? `
-                <div class="cost-overruns">
-                  <h5>Biaya Melebihi Budget:</h5>
-                  <ul>
-                    ${costAnalysis.costOverruns.map(item => `
-                      <li>
-                        <span class="category">${item.category}</span>
-                        <span class="overrun-amount negative">+${formatCurrency(item.variance)} (${item.percentage.toFixed(1)}%)</span>
-                      </li>
-                    `).join('')}
-                  </ul>
-                </div>
-              ` : ''}
-            </div>
-          `;
-          
-          document.getElementById('costEfficiency').innerHTML = efficiencyHTML;
-          
-          // Update chart trend produktivitas
-          updateProductivityTrendChart(performanceAnalysis.productivityByMonth);
-          
-          // Update chart distribusi biaya
-          updateCostDistributionChart(costAnalysis.costByCategory);
-        }
-    
-        // 4.  Chart Analisis Tambahan
-        function initializeAnalysisCharts() {
-          // Chart Trend Produktivitas
-          const trendCtx = document.getElementById('productivityTrendChart')?.getContext('2d');
-          if (trendCtx) {
-            productivityTrendChart = new Chart(trendCtx, {
-              type: 'line',
-              data: {
-                labels: [],
-                datasets: [
-                  {
-                    label: 'Actual Produksi',
-                    data: [],
-                    borderColor: '#34a853',
-                    backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true
-                  },
-                  {
-                    label: 'Target Produksi',
-                    data: [],
-                    borderColor: '#4285f4',
-                    backgroundColor: 'rgba(66, 133, 244, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true,
-                    borderDash: [5, 5]
-                  }
-                ]
+            // Kirim ke Google Apps Script
+            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+              method: 'POST',
+              body: JSON.stringify(data),
+              headers: {
+                'Content-Type': 'application/json'
               },
-              options: {
-                responsive: true,
-                plugins: {
-                  title: { display: false },
-                  tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false,
-                    position: 'average',
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    callbacks: {
-                      label: function(context) {
-                        return `${context.dataset.label}: ${formatNumber(context.raw)} Ton`;
-                      }
-                    }
-                  }
-                },
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Tonase (Ton)' },
-                    ticks: { callback: formatNumber }
-                  },
-                  x: { title: { display: true, text: 'Bulan' } }
-                }
-              }
+              mode: 'no-cors'
             });
-          }
-    
-          // Chart Distribusi Biaya
-          const distCtx = document.getElementById('costDistributionChart')?.getContext('2d');
-          if (distCtx) {
-            costDistributionChart = new Chart(distCtx, {
-              type: 'doughnut',
-              data: {
-                labels: [],
-                datasets: [{
-                  data: [],
-                  backgroundColor: [],
-                  borderWidth: 1
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  tooltip: { enabled: false },
-                  legend: {
-                    position: 'right',
-                    labels: {
-                      generateLabels: function(chart) {
-                        const data = chart.data;
-                        if (data.labels.length && data.datasets.length) {
-                          const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                          return data.labels.map((label, i) => {
-                            const value = data.datasets[0].data[i];
-                            const percentage = Math.round((value / total) * 100);
-                            
-                            return {
-                              text: `${label}: ${formatCurrency(value)} (${percentage}%)`,
-                              fillStyle: data.datasets[0].backgroundColor[i],
-                              hidden: false,
-                              lineCap: 'butt',
-                              lineDash: [],
-                              lineDashOffset: 0,
-                              lineJoin: 'miter',
-                              lineWidth: 1,
-                              strokeStyle: data.datasets[0].backgroundColor[i],
-                              pointStyle: 'circle'
-                            };
-                          });
-                        }
-                        return [];
-                      },
-                      font: { size: window.innerWidth < 600 ? 10 : 12 },
-                      padding: 20
-                    }
-                  }
-                }
-              }
-            });
+            
+            // Jika berhasil, hapus dari IndexDB
+            await deleteSubmission(data.id);
+            successCount++;
+            
+          } catch (error) {
+            console.error(`Gagal sinkronisasi data ${data.id}:`, error);
+            errorCount++;
           }
         }
         
-        function updateProductivityTrendChart(monthlyData) {
-          if (!productivityTrendChart || !monthlyData) return;
-          
-          const months = Object.keys(monthlyData);
-          productivityTrendChart.data.labels = months;
-          productivityTrendChart.data.datasets[0].data = months.map(m => monthlyData[m].actual);
-          productivityTrendChart.data.datasets[1].data = months.map(m => monthlyData[m].budget);
-          productivityTrendChart.update();
-        }
+        // Tampilkan hasil
+        syncMessage.textContent = "Sinkronisasi selesai!";
+        syncResult.innerHTML = `
+          <div class="status success">
+            ${successCount} data berhasil disinkronkan
+            ${errorCount > 0 ? `<br><span class="error">${errorCount} data gagal disinkronkan</span>` : ''}
+          </div>
+        `;
         
-        function updateCostDistributionChart(costByCategory) {
-          if (!costDistributionChart || !costByCategory) return;
-          
-          const categories = Object.keys(costByCategory);
-          const colors = generateColors(categories.length);
-          
-          costDistributionChart.data.labels = categories;
-          costDistributionChart.data.datasets[0].data = categories.map(c => costByCategory[c].actual);
-          costDistributionChart.data.datasets[0].backgroundColor = colors;
-          costDistributionChart.update();
-        }
+        // Update counter
+        updatePendingCount();
         
-        function generateColors(count) {
-          const colors = [];
-          const hueStep = 360 / count;
-          
-          for (let i = 0; i < count; i++) {
-            const hue = i * hueStep;
-            colors.push(`hsl(${hue}, 70%, 60%)`);
-          }
-          
-          return colors;
-        }
-    
-        // 5. Fungsi Tambahan untuk Mendukung Analisis
-        function getPerformanceStatusText(status) {
-          const statusText = {
-            'excellent': 'Sangat Baik (Melebihi Target >20%)',
-            'good': 'Baik (Melebihi Target 0-20%)',
-            'normal': 'Normal (Di Bawah Target <10%)',
-            'poor': 'Perlu Perhatian (Di Bawah Target >10%)'
-          };
-          return statusText[status] || status;
-        }
-        
-        function compareBlocks(blocksData) {
-          const comparison = {
-            mostProductive: null,
-            mostEfficient: null,
-            highestCost: null,
-            bestROI: null,
-            blocks: []
-          };
-        
-          blocksData.forEach(block => {
-            const productivity = block.prodAnalysis.totalActualTonase / block.prodAnalysis.totalActualLuas;
-            const costEfficiency = block.costAnalysis.totalActualCost / block.prodAnalysis.totalActualTonase; // Cost per ton
-            const roi = (block.prodAnalysis.totalActualTonase * 1000) / block.costAnalysis.totalActualCost; // ROI sederhana
-            
-            const blockStats = {
-              blok: block.blok,
-              productivity,
-              costEfficiency,
-              roi,
-              actualTonase: block.prodAnalysis.totalActualTonase,
-              actualCost: block.costAnalysis.totalActualCost
-            };
-            
-            comparison.blocks.push(blockStats);
-            
-            // Update yang terbaik
-            if (!comparison.mostProductive || productivity > comparison.mostProductive.productivity) {
-              comparison.mostProductive = blockStats;
-            }
-            
-            if (!comparison.mostEfficient || costEfficiency < comparison.mostEfficient.costEfficiency) {
-              comparison.mostEfficient = blockStats;
-            }
-            
-            if (!comparison.highestCost || blockStats.actualCost > comparison.highestCost.actualCost) {
-              comparison.highestCost = blockStats;
-            }
-            
-            if (!comparison.bestROI || roi > comparison.bestROI.roi) {
-              comparison.bestROI = blockStats;
-            }
-          });
-        
-          return comparison;
-        }
+      } catch (error) {
+        console.error("Error dalam proses sinkronisasi:", error);
+        document.getElementById("syncResult").innerHTML = `
+          <div class="status error">Gagal sinkronisasi: ${error.message}</div>
+        `;
+      } finally {
+        document.getElementById("startSync").disabled = false;
+      }
+    }
 
-        // Tambahkan observer untuk memantau perubahan tab
-        const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            if (mutation.attributeName === 'class') {
-              const analysisTab = document.getElementById('analysisTab');
-              if (analysisTab.classList.contains('active') && currentBlockData.blok) {
-                // Jika tab analisis aktif dan ada data blok yang dipilih
-                displayAnalysis(currentBlockData);
-                updateProductivityTrendChart(currentBlockData.prodAnalysis?.productivityByMonth);
-                updateCostDistributionChart(currentBlockData.costAnalysis?.costByCategory);
-              }
-            }
-          });
+    // Event listener untuk tombol sinkronisasi
+    document.getElementById("openSyncModal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "block";
+      updatePendingCount();
+    });
+    
+    document.querySelector(".close-sync-modal").addEventListener("click", () => {
+      document.getElementById("syncModal").style.display = "none";
+    });
+    
+    document.getElementById("startSync").addEventListener("click", syncData);
+
+    // Inisialisasi database saat halaman dimuat
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        await initDB();
+        
+        // Cek koneksi internet
+        window.addEventListener("online", updatePendingCount);
+        window.addEventListener("offline", () => {
+          showStatus("Anda sedang offline. Data akan disimpan secara lokal.", false);
         });
         
-        // Mulai mengamati tab analisis
-        observer.observe(document.getElementById('analysisTab'), {
-          attributes: true,
-          attributeFilter: ['class']
-        });
+      } catch (error) {
+        console.error("Gagal inisialisasi database:", error);
+        showStatus("Gagal mengakses penyimpanan lokal. Fitur offline tidak tersedia.", true);
+      }
+    });
 
-      // Tambahkan event listener untuk tombol back
-      document.getElementById('backButton').addEventListener('click', function() {
-        window.history.back();
+    // Helper function to convert file to base64
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
+    }
+
+    // Tambahkan event listener untuk tombol back
+    document.getElementById('backButton').addEventListener('click', function() {
+      window.history.back();
+    });
   </script>
 </body>
 </html>
