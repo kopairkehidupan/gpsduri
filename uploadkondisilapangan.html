@@ -960,65 +960,108 @@
 
     // Fungsi untuk menerima foto dari Kodular
     window.receivePhoto = function(photoPath) {
-      console.log("Foto diterima dari Kodular:", photoPath);
-      
-      // Konversi path file ke blob (simulasi)
-      // Di aplikasi nyata, Anda perlu mengonversi path file ke data yang bisa digunakan web
-      simulateFileFromPath(photoPath);
+        console.log("Foto diterima dari Kodular:", photoPath);
+        document.getElementById('kodularIndicator').style.display = 'none';
+        
+        // Simulasi file dari path (dalam implementasi nyata, Anda perlu mengonversi path ke file)
+        simulateFileFromPath(photoPath);
     };
     
     // Fungsi simulasi untuk membuat file dari path (di aplikasi nyata, gunakan API yang sesuai)
     function simulateFileFromPath(filePath) {
-      // Ini adalah simulasi - di aplikasi nyata Anda perlu menggunakan API Kodular
-      // atau mekanisme lain untuk mengakses file dari path yang diberikan
-      const fileName = filePath.split('/').pop() || 'photo.jpg';
-      
-      // Buat file dummy untuk simulasi
-      const blob = new Blob([new ArrayBuffer(1024)], { type: 'image/jpeg' });
-      const file = new File([blob], fileName, { 
-        type: 'image/jpeg',
-        lastModified: new Date().getTime()
-      });
-      
-      // Tambahkan ke daftar foto
-      capturedPhotos.push(file);
-      updateFileList();
-      
-      // Tutup modal kamera jika terbuka
-      if (cameraModal.style.display === "block") {
-        cameraModal.style.display = "none";
-      }
+        const fileName = filePath.split('/').pop() || 'photo_' + Date.now() + '.jpg';
+        
+        // Buat file dummy (dalam implementasi nyata, gunakan API File atau Blob)
+        const blob = new Blob([new ArrayBuffer(1024)], { type: 'image/jpeg' });
+        const file = new File([blob], fileName, { 
+            type: 'image/jpeg',
+            lastModified: new Date().getTime()
+        });
+        
+        // Tambahkan ke daftar foto
+        capturedPhotos.push(file);
+        updateFileList();
     }
+
     
     // Fungsi untuk membuka kamera melalui Kodular
     function openKodularCamera() {
-      if (window.AppInventor && window.AppInventor.setWebViewString) {
-        window.AppInventor.setWebViewString("OPEN_CAMERA");
-      } else if (window.android && window.android.openCamera) {
-        window.android.openCamera();
-      } else {
-        // Fallback untuk desktop atau lingkungan tanpa dukungan Kodular
-        alert("Membuka kamera melalui Kodular...");
-        // Simulasi untuk testing di browser
-        setTimeout(() => {
-          simulateFileFromPath("/storage/emulated/0/DCIM/Camera/photo.jpg");
-        }, 1000);
-      }
+        document.getElementById('kodularIndicator').style.display = 'block';
+        
+        if (window.AppInventor && window.AppInventor.setWebViewString) {
+            window.AppInventor.setWebViewString("OPEN_CAMERA");
+        } else if (window.android && window.android.openCamera) {
+            window.android.openCamera();
+        } else {
+            // Fallback untuk testing di browser
+            setTimeout(() => {
+                simulateFileFromPath("/storage/emulated/0/DCIM/Camera/photo_" + Date.now() + ".jpg");
+            }, 1000);
+        }
+    }
+
+    // Deteksi lingkungan dan gunakan kamera yang sesuai
+    function checkEnvironmentAndOpenCamera() {
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isKodularWebView = navigator.userAgent.includes('Kodular') || typeof android !== 'undefined';
+        
+        if (isKodularWebView && isMobileDevice) {
+            // Gunakan kamera Kodular
+            openKodularCamera();
+        } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            // Gunakan kamera browser (untuk desktop)
+            cameraModal.style.display = "block";
+            startCamera();
+        } else {
+            // Fallback ke input file
+            alert("Kamera tidak tersedia. Silakan gunakan input file untuk mengunggah foto.");
+            // Anda mungkin perlu membuat fallback input file di sini
+        }
     }
 
     // Ganti event listener untuk tombol kamera
-      document.getElementById("openCamera").addEventListener("click", function() {
-        // Coba deteksi jika di dalam WebView Kodular
-        if (navigator.userAgent.includes('Kodular') || 
-            navigator.userAgent.includes('WebView') ||
-            typeof android !== 'undefined') {
-          openKodularCamera();
-        } else {
-          // Fallback ke kamera browser untuk desktop
-          cameraModal.style.display = "block";
-          startCamera();
+    document.getElementById("openCamera").addEventListener("click", checkEnvironmentAndOpenCamera);
+
+    // Fungsi untuk menampilkan status kamera
+    function showCameraStatus(message, isError = false) {
+        console.log(isError ? "Error Kamera:" : "Info Kamera:", message);
+        
+        // Hapus status sebelumnya jika ada
+        const existingStatus = document.getElementById('cameraStatus');
+        if (existingStatus) {
+            existingStatus.remove();
         }
-      });
+        
+        // Buat elemen status baru
+        const statusEl = document.createElement('div');
+        statusEl.id = 'cameraStatus';
+        statusEl.style.marginTop = '10px';
+        statusEl.style.padding = '8px';
+        statusEl.style.borderRadius = '4px';
+        statusEl.style.fontSize = '14px';
+        statusEl.textContent = message;
+        
+        if (isError) {
+            statusEl.style.backgroundColor = '#ffebee';
+            statusEl.style.color = '#c62828';
+            statusEl.style.border = '1px solid #ef9a9a';
+        } else {
+            statusEl.style.backgroundColor = '#e8f5e8';
+            statusEl.style.color = '#2e7d32';
+            statusEl.style.border = '1px solid #a5d6a7';
+        }
+        
+        // Tambahkan setelah tombol kamera
+        const cameraButton = document.getElementById('openCamera');
+        cameraButton.parentNode.insertBefore(statusEl, cameraButton.nextSibling);
+        
+        // Hapus status setelah 5 detik
+        setTimeout(() => {
+            if (document.getElementById('cameraStatus')) {
+                document.getElementById('cameraStatus').remove();
+            }
+        }, 5000);
+    }
 
     // Variabel untuk melacak sumber kamera
     let usingKodularCamera = false;
