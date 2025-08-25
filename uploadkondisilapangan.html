@@ -960,10 +960,19 @@
 
     // Fungsi untuk menerima foto dari Kodular
     window.receivePhoto = function(photoPath) {
-        console.log("Foto diterima dari Kodular:", photoPath);
+        console.log("Menerima dari Kodular:", photoPath);
+        
+        if (photoPath.startsWith('ERROR:')) {
+            // Menangani error
+            const errorMessage = photoPath.replace('ERROR:', '');
+            showCameraStatus("Error: " + errorMessage, true);
+            document.getElementById('kodularIndicator').style.display = 'none';
+            return;
+        }
+        
         document.getElementById('kodularIndicator').style.display = 'none';
         
-        // Simulasi file dari path (dalam implementasi nyata, Anda perlu mengonversi path ke file)
+        // Simulasi file dari path
         simulateFileFromPath(photoPath);
     };
     
@@ -986,33 +995,25 @@
     
     // Fungsi untuk membuka kamera melalui Kodular
     // Fungsi untuk membuka kamera melalui Kodular dengan error handling
-    function openKodularCamera() {
-        document.getElementById('kodularIndicator').style.display = 'block';
-        
-        if (window.AppInventor && window.AppInventor.setWebViewString) {
-            try {
-                window.AppInventor.setWebViewString("OPEN_CAMERA");
-                // Set timeout untuk menangani case jika kamera tidak terbuka
-                setTimeout(() => {
-                    if (document.getElementById('kodularIndicator').style.display !== 'none') {
-                        showCameraStatus("Kamera tidak dapat dibuka. Pastikan ada aplikasi kamera di perangkat.", true);
-                        document.getElementById('kodularIndicator').style.display = 'none';
-                        
-                        // Fallback ke input file
-                        showFileInputFallback();
-                    }
-                }, 3000);
-            } catch (error) {
-                console.error("Error accessing camera:", error);
-                showCameraStatus("Error: " + error.message, true);
-                document.getElementById('kodularIndicator').style.display = 'none';
-                showFileInputFallback();
-            }
-        } else {
-            // Fallback untuk environment lain
-            openFallbackCamera();
-        }
-    }
+    // Di JavaScript, tambahkan fallback
+      function openKodularCamera() {
+          document.getElementById('kodularIndicator').style.display = 'block';
+          
+          if (window.AppInventor && window.AppInventor.setWebViewString) {
+              window.AppInventor.setWebViewString("OPEN_CAMERA");
+              
+              // Set timeout untuk detect jika kamera gagal
+              setTimeout(function() {
+                  if (document.getElementById('kodularIndicator').style.display !== 'none') {
+                      // Camera mungkin gagal, offer fallback
+                      if (confirm('Kamera tidak merespon. Gunakan galeri?')) {
+                          showFileInputFallback();
+                      }
+                      document.getElementById('kodularIndicator').style.display = 'none';
+                  }
+              }, 5000);
+          }
+      }
 
     // Fallback ke input file
     function showFileInputFallback() {
@@ -1068,42 +1069,27 @@
 
     // Fungsi untuk menampilkan status kamera
     function showCameraStatus(message, isError = false) {
-        console.log(isError ? "Error Kamera:" : "Info Kamera:", message);
+        console.log(isError ? "Error:" : "Info:", message);
         
-        // Hapus status sebelumnya jika ada
-        const existingStatus = document.getElementById('cameraStatus');
-        if (existingStatus) {
-            existingStatus.remove();
-        }
+        const statusEl = document.getElementById('cameraStatus') || (function() {
+            const el = document.createElement('div');
+            el.id = 'cameraStatus';
+            el.style.marginTop = '10px';
+            el.style.padding = '8px';
+            el.style.borderRadius = '4px';
+            document.querySelector('.form-group:has(#openCamera)').appendChild(el);
+            return el;
+        })();
         
-        // Buat elemen status baru
-        const statusEl = document.createElement('div');
-        statusEl.id = 'cameraStatus';
-        statusEl.style.marginTop = '10px';
-        statusEl.style.padding = '8px';
-        statusEl.style.borderRadius = '4px';
-        statusEl.style.fontSize = '14px';
         statusEl.textContent = message;
+        statusEl.style.backgroundColor = isError ? '#ffebee' : '#e8f5e8';
+        statusEl.style.color = isError ? '#c62828' : '#2e7d32';
+        statusEl.style.border = `1px solid ${isError ? '#ef9a9a' : '#a5d6a7'}`;
         
-        if (isError) {
-            statusEl.style.backgroundColor = '#ffebee';
-            statusEl.style.color = '#c62828';
-            statusEl.style.border = '1px solid #ef9a9a';
-        } else {
-            statusEl.style.backgroundColor = '#e8f5e8';
-            statusEl.style.color = '#2e7d32';
-            statusEl.style.border = '1px solid #a5d6a7';
-        }
-        
-        // Tambahkan setelah tombol kamera
-        const cameraButton = document.getElementById('openCamera');
-        cameraButton.parentNode.insertBefore(statusEl, cameraButton.nextSibling);
-        
-        // Hapus status setelah 5 detik
         setTimeout(() => {
-            if (document.getElementById('cameraStatus')) {
-                document.getElementById('cameraStatus').remove();
-            }
+            statusEl.textContent = '';
+            statusEl.style.backgroundColor = 'transparent';
+            statusEl.style.border = 'none';
         }, 5000);
     }
 
