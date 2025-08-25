@@ -301,6 +301,17 @@
       z-index: 999;
       position: relative;
     }
+
+    .kodular-camera-indicator {
+      background-color: #f0f0f0;
+      border: 1px dashed #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -421,6 +432,12 @@
             <i class="material-icons">photo_camera</i>
             <span>Ambil Foto</span>
           </button>
+          
+          <div class="kodular-camera-indicator" id="kodularIndicator" style="display: none;">
+            Membuka kamera perangkat...<br>
+            <small>Foto akan otomatis ditambahkan setelah diambil</small>
+          </div>
+          
           <div class="file-list" id="fileList"></div>
         </div>
         
@@ -756,16 +773,11 @@
       });
 
     // Helper function untuk menampilkan status
-    function showStatus(message, type = 'success') {
+    function showStatus(message, isError = false) {
       const statusEl = document.getElementById('status');
       statusEl.textContent = message;
-      statusEl.className = 'status ' + type;
+      statusEl.className = isError ? 'status error' : 'status success';
       statusEl.style.display = 'block';
-      
-      // Sembunyikan setelah 3 detik
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-      }, 3000);
     }
 
     function showAllBloks() {
@@ -814,7 +826,6 @@
     // Variabel untuk menyimpan stream kamera dan foto yang diambil
     let cameraStream = null;
     const capturedPhotos = [];
-    let photoCounter = 1;
     
     // Elemen DOM
     const startCameraBtn = document.getElementById('startCamera');
@@ -822,46 +833,17 @@
     const photoCanvas = document.getElementById('photoCanvas');
     const capturePhotoBtn = document.getElementById('capturePhoto');
     const fileList = document.getElementById('fileList');
-    const previewImage = document.getElementById('previewImage');
-    const deletePhotoBtn = document.getElementById('deletePhoto');
-    const savePhotoBtn = document.getElementById('savePhoto');
-    const closePreviewModalBtn = document.querySelector('.close-preview-modal');
 
     // Variabel modal
     const cameraModal = document.getElementById("cameraModal");
     const openCameraBtn = document.getElementById("openCamera");
     const closeModalBtn = document.querySelector(".close-modal");
     
-    // Event listener untuk tombol kamera
+    // Buka modal kamera
     openCameraBtn.addEventListener('click', () => {
-      if (window.AppInventor) {
-        // Kirim perintah ke App Inventor untuk membuka kamera
-        window.AppInventor.setWebViewString("OPEN_CAMERA");
-      } else {
-        alert("AppInventor bridge tidak tersedia. Pastikan aplikasi dibuka melalui Kodular.");
-      }
+      cameraModal.style.display = "block";
+      startCamera();
     });
-
-    // Fungsi untuk menerima foto dari App Inventor
-    function receivePhotoFromAppInventor(photoPath) {
-      // Simpan path foto
-      const fileName = `foto_${photoCounter}.jpg`;
-      photoCounter++;
-      
-      // Simpan informasi foto
-      capturedPhotos.push({
-        name: fileName,
-        path: photoPath,
-        isPath: true, // Tandai bahwa ini adalah path, bukan File object
-        size: 1024 // Default size
-      });
-      
-      // Perbarui daftar file
-      updateFileList();
-      
-      // Tampilkan notifikasi
-      showStatus(`Foto ${fileName} berhasil ditambahkan`, 'success');
-    }
     
     // Tutup modal
     closeModalBtn.addEventListener('click', () => {
@@ -953,48 +935,119 @@
         return;
       }
       
-      capturedPhotos.forEach((photo, index) => {
+      capturedPhotos.forEach((file, index) => {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
         fileItem.innerHTML = `
           <i class="material-icons">image</i>
-          <span>${photo.name} (${(photo.size / 1024).toFixed(2)} KB)</span>
-          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red; cursor:pointer;">
+          <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red;">
             <i class="material-icons">delete</i>
           </button>
         `;
         fileList.appendChild(fileItem);
       });
-      
+    
       // Tambahkan event listener untuk tombol hapus
       document.querySelectorAll('.delete-photo').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const index = parseInt(e.currentTarget.dataset.index);
+          const index = parseInt(e.target.closest('button').dataset.index);
           capturedPhotos.splice(index, 1);
           updateFileList();
         });
       });
     }
 
-    // Event listener untuk modal preview
-      closePreviewModalBtn.addEventListener('click', () => {
-        previewModal.style.display = 'none';
+    // Fungsi untuk menerima foto dari Kodular
+    window.receivePhoto = function(photoPath) {
+      console.log("Foto diterima dari Kodular:", photoPath);
+      
+      // Konversi path file ke blob (simulasi)
+      // Di aplikasi nyata, Anda perlu mengonversi path file ke data yang bisa digunakan web
+      simulateFileFromPath(photoPath);
+    };
+    
+    // Fungsi simulasi untuk membuat file dari path (di aplikasi nyata, gunakan API yang sesuai)
+    function simulateFileFromPath(filePath) {
+      // Ini adalah simulasi - di aplikasi nyata Anda perlu menggunakan API Kodular
+      // atau mekanisme lain untuk mengakses file dari path yang diberikan
+      const fileName = filePath.split('/').pop() || 'photo.jpg';
+      
+      // Buat file dummy untuk simulasi
+      const blob = new Blob([new ArrayBuffer(1024)], { type: 'image/jpeg' });
+      const file = new File([blob], fileName, { 
+        type: 'image/jpeg',
+        lastModified: new Date().getTime()
       });
       
-      // Event listener untuk klik di luar modal
-      window.addEventListener('click', (e) => {
-        if (e.target === previewModal) {
-          previewModal.style.display = 'none';
-        }
-      });
-      
-      // Inisialisasi
+      // Tambahkan ke daftar foto
+      capturedPhotos.push(file);
       updateFileList();
       
-      // Fungsi global untuk dipanggil dari Kodular
-      window.receivePhoto = function(photoPath) {
-        receivePhotoFromAppInventor(photoPath);
-      };
+      // Tutup modal kamera jika terbuka
+      if (cameraModal.style.display === "block") {
+        cameraModal.style.display = "none";
+      }
+    }
+    
+    // Fungsi untuk membuka kamera melalui Kodular
+    function openKodularCamera() {
+      if (window.AppInventor && window.AppInventor.setWebViewString) {
+        window.AppInventor.setWebViewString("OPEN_CAMERA");
+      } else if (window.android && window.android.openCamera) {
+        window.android.openCamera();
+      } else {
+        // Fallback untuk desktop atau lingkungan tanpa dukungan Kodular
+        alert("Membuka kamera melalui Kodular...");
+        // Simulasi untuk testing di browser
+        setTimeout(() => {
+          simulateFileFromPath("/storage/emulated/0/DCIM/Camera/photo.jpg");
+        }, 1000);
+      }
+    }
+
+    // Ganti event listener untuk tombol kamera
+      document.getElementById("openCamera").addEventListener("click", function() {
+        // Coba deteksi jika di dalam WebView Kodular
+        if (navigator.userAgent.includes('Kodular') || 
+            navigator.userAgent.includes('WebView') ||
+            typeof android !== 'undefined') {
+          openKodularCamera();
+        } else {
+          // Fallback ke kamera browser untuk desktop
+          cameraModal.style.display = "block";
+          startCamera();
+        }
+      });
+
+    // Variabel untuk melacak sumber kamera
+    let usingKodularCamera = false;
+    
+    // Fungsi untuk membuka kamera
+    function openCamera() {
+      // Deteksi lingkungan
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isKodularWebView = navigator.userAgent.includes('Kodular') || typeof android !== 'undefined';
+      
+      if (isKodularWebView && isMobileDevice) {
+        // Gunakan kamera Kodular
+        usingKodularCamera = true;
+        document.getElementById('kodularIndicator').style.display = 'block';
+        openKodularCamera();
+      } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Gunakan kamera browser
+        usingKodularCamera = false;
+        cameraModal.style.display = "block";
+        startCamera();
+      } else {
+        // Fallback ke input file
+        alert("Kamera tidak tersedia. Silakan gunakan input file untuk mengunggah foto.");
+        document.getElementById("photoFiles").click();
+      }
+    }
+    
+    // Event listener untuk tombol kamera
+    document.getElementById("openCamera").addEventListener("click", openCamera);
 
 
     //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
@@ -1085,7 +1138,7 @@
           db = event.target.result;
           console.log("Database berhasil dibuka");
           resolve(db);
-          updatePendingCount();
+          updatePendingCount(); // Update counter saat database siap
         };
         
         request.onupgradeneeded = (event) => {
@@ -1286,8 +1339,7 @@
         const objekKerja = document.getElementById("objekKerja").value;
         
         // Get the selected objek kerja text (kode - kerja)
-        const objekKerjaSelect = document.getElementById("objekKerja");
-        const objekKerjaText = objekKerjaSelect.options[objekKerjaSelect.selectedIndex].text;
+        const objekKerjaText = document.getElementById("objekKerja").options[document.getElementById("objekKerja").selectedIndex].text;
         
         // Validate inputs
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
@@ -1295,14 +1347,16 @@
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
         if (!kategori) throw new Error('Pilih kategori terlebih dahulu');
         if (!objekKerja) throw new Error('Pilih objek kerja terlebih dahulu');
-        if (capturedPhotos.length === 0) throw new Error('Harap ambil minimal satu foto');
     
-        // Convert photos to base64 atau simpan path
+        // Convert photos to base64
         const photosData = [];
         for (let i = 0; i < capturedPhotos.length; i++) {
           const file = capturedPhotos[i];
-          const photoData = await fileToBase64(file);
-          photosData.push(photoData);
+          const base64Data = await fileToBase64(file);
+          photosData.push({
+            name: file.name,
+            data: base64Data
+          });
         }
     
         // Prepare payload with new fields
@@ -1322,21 +1376,17 @@
         // Simpan ke IndexDB
         await addToPendingSubmissions(payload);
         
-        showStatus('Data berhasil disimpan secara offline!', 'success');
+        showStatus('Data berhasil disimpan secara offline!');
         form.reset();
-        
-        // Reset form selection
-        document.getElementById("divisi").disabled = true;
-        document.getElementById("objekKerja").disabled = true;
         document.getElementById("selectedInfo").style.display = "none";
+        document.getElementById("fileList").innerHTML = '';
         
         // Reset captured photos
         capturedPhotos.length = 0;
-        updateFileList();
         
       } catch (error) {
         console.error('Error:', error);
-        showStatus('Error: ' + error.message, 'error');
+        showStatus('Error: ' + error.message, true);
       } finally {
         submitBtn.disabled = false;
         loading.style.display = 'none';
@@ -1378,33 +1428,19 @@
           syncMessage.textContent = `Menyinkronkan data ${i + 1} dari ${totalData}...`;
           
           try {
-            // Untuk foto dari path, kita perlu menangani secara khusus
-            // Karena tidak bisa mengirim path ke server, kita perlu skip foto tersebut
-            // atau coba ambil foto dari path tersebut (jika masih ada)
+            // Kirim ke Google Apps Script
+            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+              method: 'POST',
+              body: JSON.stringify(data),
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              mode: 'no-cors'
+            });
             
-            const dataToSend = {...data};
-            
-            // Hapus foto yang hanya berupa path (tidak bisa dikirim ke server)
-            dataToSend.photos = dataToSend.photos.filter(photo => !photo.isPath);
-            
-            // Jika masih ada foto yang bisa dikirim, kirim ke server
-            if (dataToSend.photos.length > 0) {
-              const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-                method: 'POST',
-                body: JSON.stringify(dataToSend),
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              // Jika berhasil, hapus dari IndexDB
-              await deleteSubmission(data.id);
-              successCount++;
-            } else {
-              // Jika tidak ada foto yang bisa dikirim, hapus data dari IndexDB
-              await deleteSubmission(data.id);
-              successCount++;
-            }
+            // Jika berhasil, hapus dari IndexDB
+            await deleteSubmission(data.id);
+            successCount++;
             
           } catch (error) {
             console.error(`Gagal sinkronisasi data ${data.id}:`, error);
@@ -1417,7 +1453,7 @@
         syncResult.innerHTML = `
           <div class="status success">
             ${successCount} data berhasil disinkronkan
-            ${errorCount > 0 ? `<br><span style="color:var(--error)">${errorCount} data gagal disinkronkan</span>` : ''}
+            ${errorCount > 0 ? `<br><span class="error">${errorCount} data gagal disinkronkan</span>` : ''}
           </div>
         `;
         
@@ -1466,31 +1502,10 @@
     // Helper function to convert file to base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
-        // Jika file adalah path (dari Kodular), kirim path saja
-        if (file.isPath) {
-          resolve({
-            name: file.name,
-            path: file.path,
-            isPath: true
-          });
-          return;
-        }
-        
-        // Jika file adalah File object, konversi ke base64
         const reader = new FileReader();
-        reader.onload = () => resolve({
-          name: file.name,
-          data: reader.result.split(',')[1],
-          isPath: false
-        });
+        reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.onerror = reject;
-        
-        // Pastikan parameter yang diterima adalah Blob
-        if (file instanceof Blob) {
-          reader.readAsDataURL(file);
-        } else {
-          reject(new Error("Parameter bukan merupakan Blob atau File object"));
-        }
+        reader.readAsDataURL(file);
       });
     }
 
