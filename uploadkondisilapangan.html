@@ -301,17 +301,6 @@
       z-index: 999;
       position: relative;
     }
-
-    .kodular-camera-indicator {
-      background-color: #f0f0f0;
-      border: 1px dashed #ccc;
-      padding: 10px;
-      border-radius: 5px;
-      margin-top: 10px;
-      text-align: center;
-      font-size: 14px;
-      color: #666;
-    }
   </style>
 </head>
 <body>
@@ -432,12 +421,6 @@
             <i class="material-icons">photo_camera</i>
             <span>Ambil Foto</span>
           </button>
-          
-          <div class="kodular-camera-indicator" id="kodularIndicator" style="display: none;">
-            Membuka kamera perangkat...<br>
-            <small>Foto akan otomatis ditambahkan setelah diambil</small>
-          </div>
-          
           <div class="file-list" id="fileList"></div>
         </div>
         
@@ -958,169 +941,13 @@
       });
     }
 
-    // Fungsi untuk menerima foto dari Kodular
-    window.receivePhoto = function(photoPath) {
-        console.log("Menerima dari Kodular:", photoPath);
-        
-        if (photoPath.startsWith('ERROR:')) {
-            // Menangani error
-            const errorMessage = photoPath.replace('ERROR:', '');
-            showCameraStatus("Error: " + errorMessage, true);
-            document.getElementById('kodularIndicator').style.display = 'none';
-            return;
-        }
-        
-        document.getElementById('kodularIndicator').style.display = 'none';
-        
-        // Simulasi file dari path
-        simulateFileFromPath(photoPath);
-    };
-    
-    // Fungsi simulasi untuk membuat file dari path (di aplikasi nyata, gunakan API yang sesuai)
-    function simulateFileFromPath(filePath) {
-        const fileName = filePath.split('/').pop() || 'photo_' + Date.now() + '.jpg';
-        
-        // Buat file dummy (dalam implementasi nyata, gunakan API File atau Blob)
-        const blob = new Blob([new ArrayBuffer(1024)], { type: 'image/jpeg' });
-        const file = new File([blob], fileName, { 
-            type: 'image/jpeg',
-            lastModified: new Date().getTime()
-        });
-        
-        // Tambahkan ke daftar foto
-        capturedPhotos.push(file);
-        updateFileList();
-    }
-
-    
-    // Fungsi untuk membuka kamera melalui Kodular
-    // Fungsi untuk membuka kamera melalui Kodular dengan error handling
-    // Di JavaScript, tambahkan fallback
-      function openKodularCamera() {
-          document.getElementById('kodularIndicator').style.display = 'block';
-          
-          if (window.AppInventor && window.AppInventor.setWebViewString) {
-              window.AppInventor.setWebViewString("OPEN_CAMERA");
-              
-              // Set timeout untuk detect jika kamera gagal
-              setTimeout(function() {
-                  if (document.getElementById('kodularIndicator').style.display !== 'none') {
-                      // Camera mungkin gagal, offer fallback
-                      if (confirm('Kamera tidak merespon. Gunakan galeri?')) {
-                          showFileInputFallback();
-                      }
-                      document.getElementById('kodularIndicator').style.display = 'none';
-                  }
-              }, 5000);
-          }
-      }
-
-    // Fallback ke input file
-    function showFileInputFallback() {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = 'image/*';
-        fileInput.capture = 'environment';
-        fileInput.style.display = 'none';
-        
-        fileInput.addEventListener('change', function(event) {
-            if (event.target.files.length > 0) {
-                const file = event.target.files[0];
-                capturedPhotos.push(file);
-                updateFileList();
-            }
-        });
-        
-        document.body.appendChild(fileInput);
-        fileInput.click();
-    }
-    
-    // Fallback camera options
-    function openFallbackCamera() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            cameraModal.style.display = "block";
-            startCamera();
-        } else {
-            showFileInputFallback();
-        }
-    }
-
-    // Deteksi lingkungan dan gunakan kamera yang sesuai
-    function checkEnvironmentAndOpenCamera() {
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isKodularWebView = navigator.userAgent.includes('Kodular') || typeof android !== 'undefined';
-        
-        if (isKodularWebView && isMobileDevice) {
-            // Gunakan kamera Kodular
-            openKodularCamera();
-        } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            // Gunakan kamera browser (untuk desktop)
-            cameraModal.style.display = "block";
-            startCamera();
-        } else {
-            // Fallback ke input file
-            alert("Kamera tidak tersedia. Silakan gunakan input file untuk mengunggah foto.");
-            // Anda mungkin perlu membuat fallback input file di sini
-        }
-    }
-
-    // Ganti event listener untuk tombol kamera
-    document.getElementById("openCamera").addEventListener("click", checkEnvironmentAndOpenCamera);
-
-    // Fungsi untuk menampilkan status kamera
-    function showCameraStatus(message, isError = false) {
-        console.log(isError ? "Error:" : "Info:", message);
-        
-        const statusEl = document.getElementById('cameraStatus') || (function() {
-            const el = document.createElement('div');
-            el.id = 'cameraStatus';
-            el.style.marginTop = '10px';
-            el.style.padding = '8px';
-            el.style.borderRadius = '4px';
-            document.querySelector('.form-group:has(#openCamera)').appendChild(el);
-            return el;
-        })();
-        
-        statusEl.textContent = message;
-        statusEl.style.backgroundColor = isError ? '#ffebee' : '#e8f5e8';
-        statusEl.style.color = isError ? '#c62828' : '#2e7d32';
-        statusEl.style.border = `1px solid ${isError ? '#ef9a9a' : '#a5d6a7'}`;
-        
-        setTimeout(() => {
-            statusEl.textContent = '';
-            statusEl.style.backgroundColor = 'transparent';
-            statusEl.style.border = 'none';
-        }, 5000);
-    }
-
-    // Variabel untuk melacak sumber kamera
-    let usingKodularCamera = false;
-    
-    // Fungsi untuk membuka kamera
-    function openCamera() {
-      // Deteksi lingkungan
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isKodularWebView = navigator.userAgent.includes('Kodular') || typeof android !== 'undefined';
-      
-      if (isKodularWebView && isMobileDevice) {
-        // Gunakan kamera Kodular
-        usingKodularCamera = true;
-        document.getElementById('kodularIndicator').style.display = 'block';
-        openKodularCamera();
-      } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Gunakan kamera browser
-        usingKodularCamera = false;
-        cameraModal.style.display = "block";
-        startCamera();
+    document.getElementById("openCamera").addEventListener("click", function() {
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString("OPEN_CAMERA");
       } else {
-        // Fallback ke input file
-        alert("Kamera tidak tersedia. Silakan gunakan input file untuk mengunggah foto.");
-        document.getElementById("photoFiles").click();
+        alert("AppInventor bridge tidak tersedia");
       }
-    }
-    
-    // Event listener untuk tombol kamera
-    document.getElementById("openCamera").addEventListener("click", openCamera);
+    });
 
 
     //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
