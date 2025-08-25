@@ -1266,27 +1266,85 @@
     });
     
     // Update the form submission handler
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
-      
+
       if (capturedPhotos.length === 0) {
         showStatus('Harap ambil minimal satu foto', 'error');
         return;
       }
       
-      // Tampilkan loading
-      document.getElementById('loading').style.display = 'block';
+      const form = e.target;
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const loading = document.getElementById("loading");
+      const statusEl = document.getElementById("status");
       
-      // Simulasi proses upload
-      setTimeout(() => {
-        document.getElementById('loading').style.display = 'none';
-        showStatus('Data berhasil diunggah', 'success');
+      try {
+        submitBtn.disabled = true;
+        loading.style.display = 'flex';
+        statusEl.style.display = 'none';
         
-        // Reset form
+        const kebun = document.getElementById("kebun").value;
+        const divisi = document.getElementById("divisi").value;
+        const kode = document.getElementById("kode").value;
+        const blok = document.getElementById("blok").value;
+        const tahun = document.getElementById("tahun").value;
+        const kategori = document.getElementById("kategori").value;
+        const objekKerja = document.getElementById("objekKerja").value;
+        
+        // Get the selected objek kerja text (kode - kerja)
+        const objekKerjaText = document.getElementById("objekKerja").options[document.getElementById("objekKerja").selectedIndex].text;
+        
+        // Validate inputs
+        if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
+        if (!divisi) throw new Error('Pilih divisi terlebih dahulu');
+        if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
+        if (!kategori) throw new Error('Pilih kategori terlebih dahulu');
+        if (!objekKerja) throw new Error('Pilih objek kerja terlebih dahulu');
+    
+        // Convert photos to base64
+        const photosData = [];
+        for (let i = 0; i < capturedPhotos.length; i++) {
+          const file = capturedPhotos[i];
+          const base64Data = await fileToBase64(file);
+          photosData.push({
+            name: file.name,
+            data: base64Data
+          });
+        }
+    
+        // Prepare payload with new fields
+        const payload = {
+          timestamp: new Date().toISOString(),
+          kebun,
+          divisi,
+          kode,
+          blok,
+          tahun,
+          kategori,
+          objekKerja: objekKerjaText,
+          photos: photosData,
+          isSynced: false
+        };
+        
+        // Simpan ke IndexDB
+        await addToPendingSubmissions(payload);
+        
+        showStatus('Data berhasil disimpan secara offline!');
+        form.reset();
+        document.getElementById("selectedInfo").style.display = "none";
+        document.getElementById("fileList").innerHTML = '';
+        
+        // Reset captured photos
         capturedPhotos.length = 0;
-        updateFileList();
-        this.reset();
-      }, 2000);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus('Error: ' + error.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
+      }
     });
 
     // Fungsi untuk sinkronisasi data
