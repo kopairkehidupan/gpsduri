@@ -756,11 +756,16 @@
       });
 
     // Helper function untuk menampilkan status
-    function showStatus(message, isError = false) {
+    function showStatus(message, type = 'success') {
       const statusEl = document.getElementById('status');
       statusEl.textContent = message;
-      statusEl.className = isError ? 'status error' : 'status success';
+      statusEl.className = 'status ' + type;
       statusEl.style.display = 'block';
+      
+      // Sembunyikan setelah 3 detik
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 3000);
     }
 
     function showAllBloks() {
@@ -827,7 +832,6 @@
     const openCameraBtn = document.getElementById("openCamera");
     const closeModalBtn = document.querySelector(".close-modal");
     
-    // Buka modal kamera
     // Event listener untuk tombol kamera
     openCameraBtn.addEventListener('click', () => {
       if (window.AppInventor) {
@@ -848,8 +852,8 @@
       capturedPhotos.push({
         name: fileName,
         path: photoPath,
-        // Simpan sebagai placeholder untuk ukuran file
-        size: 1024 // Default size, bisa disesuaikan
+        isPath: true, // Tandai bahwa ini adalah path, bukan File object
+        size: 1024 // Default size
       });
       
       // Perbarui daftar file
@@ -1081,7 +1085,7 @@
           db = event.target.result;
           console.log("Database berhasil dibuka");
           resolve(db);
-          updatePendingCount(); // Update counter saat database siap
+          updatePendingCount();
         };
         
         request.onupgradeneeded = (event) => {
@@ -1282,7 +1286,8 @@
         const objekKerja = document.getElementById("objekKerja").value;
         
         // Get the selected objek kerja text (kode - kerja)
-        const objekKerjaText = document.getElementById("objekKerja").options[document.getElementById("objekKerja").selectedIndex].text;
+        const objekKerjaSelect = document.getElementById("objekKerja");
+        const objekKerjaText = objekKerjaSelect.options[objekKerjaSelect.selectedIndex].text;
         
         // Validate inputs
         if (!kebun) throw new Error('Pilih kebun terlebih dahulu');
@@ -1290,16 +1295,14 @@
         if (!kode || !blok || !tahun) throw new Error('Pilih blok dari peta terlebih dahulu');
         if (!kategori) throw new Error('Pilih kategori terlebih dahulu');
         if (!objekKerja) throw new Error('Pilih objek kerja terlebih dahulu');
+        if (capturedPhotos.length === 0) throw new Error('Harap ambil minimal satu foto');
     
-        // Convert photos to base64
+        // Convert photos to base64 atau simpan path
         const photosData = [];
         for (let i = 0; i < capturedPhotos.length; i++) {
           const file = capturedPhotos[i];
-          const base64Data = await fileToBase64(file);
-          photosData.push({
-            name: file.name,
-            data: base64Data
-          });
+          const photoData = await fileToBase64(file);
+          photosData.push(photoData);
         }
     
         // Prepare payload with new fields
@@ -1319,17 +1322,21 @@
         // Simpan ke IndexDB
         await addToPendingSubmissions(payload);
         
-        showStatus('Data berhasil disimpan secara offline!');
+        showStatus('Data berhasil disimpan secara offline!', 'success');
         form.reset();
+        
+        // Reset form selection
+        document.getElementById("divisi").disabled = true;
+        document.getElementById("objekKerja").disabled = true;
         document.getElementById("selectedInfo").style.display = "none";
-        document.getElementById("fileList").innerHTML = '';
         
         // Reset captured photos
         capturedPhotos.length = 0;
+        updateFileList();
         
       } catch (error) {
         console.error('Error:', error);
-        showStatus('Error: ' + error.message, true);
+        showStatus('Error: ' + error.message, 'error');
       } finally {
         submitBtn.disabled = false;
         loading.style.display = 'none';
@@ -1371,19 +1378,33 @@
           syncMessage.textContent = `Menyinkronkan data ${i + 1} dari ${totalData}...`;
           
           try {
-            // Kirim ke Google Apps Script
-            const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
-              method: 'POST',
-              body: JSON.stringify(data),
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              mode: 'no-cors'
-            });
+            // Untuk foto dari path, kita perlu menangani secara khusus
+            // Karena tidak bisa mengirim path ke server, kita perlu skip foto tersebut
+            // atau coba ambil foto dari path tersebut (jika masih ada)
             
-            // Jika berhasil, hapus dari IndexDB
-            await deleteSubmission(data.id);
-            successCount++;
+            const dataToSend = {...data};
+            
+            // Hapus foto yang hanya berupa path (tidak bisa dikirim ke server)
+            dataToSend.photos = dataToSend.photos.filter(photo => !photo.isPath);
+            
+            // Jika masih ada foto yang bisa dikirim, kirim ke server
+            if (dataToSend.photos.length > 0) {
+              const response = await fetch('https://script.google.com/macros/s/AKfycbztCs-lUS9NlHxRH2zlVEtBLb3cPjngMdXhraFD_gIHuwIy-QqGdbFCbVRsqiUH1ax6/exec', {
+                method: 'POST',
+                body: JSON.stringify(dataToSend),
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              // Jika berhasil, hapus dari IndexDB
+              await deleteSubmission(data.id);
+              successCount++;
+            } else {
+              // Jika tidak ada foto yang bisa dikirim, hapus data dari IndexDB
+              await deleteSubmission(data.id);
+              successCount++;
+            }
             
           } catch (error) {
             console.error(`Gagal sinkronisasi data ${data.id}:`, error);
@@ -1396,7 +1417,7 @@
         syncResult.innerHTML = `
           <div class="status success">
             ${successCount} data berhasil disinkronkan
-            ${errorCount > 0 ? `<br><span class="error">${errorCount} data gagal disinkronkan</span>` : ''}
+            ${errorCount > 0 ? `<br><span style="color:var(--error)">${errorCount} data gagal disinkronkan</span>` : ''}
           </div>
         `;
         
@@ -1445,10 +1466,31 @@
     // Helper function to convert file to base64
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
+        // Jika file adalah path (dari Kodular), kirim path saja
+        if (file.isPath) {
+          resolve({
+            name: file.name,
+            path: file.path,
+            isPath: true
+          });
+          return;
+        }
+        
+        // Jika file adalah File object, konversi ke base64
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onload = () => resolve({
+          name: file.name,
+          data: reader.result.split(',')[1],
+          isPath: false
+        });
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        
+        // Pastikan parameter yang diterima adalah Blob
+        if (file instanceof Blob) {
+          reader.readAsDataURL(file);
+        } else {
+          reject(new Error("Parameter bukan merupakan Blob atau File object"));
+        }
       });
     }
 
