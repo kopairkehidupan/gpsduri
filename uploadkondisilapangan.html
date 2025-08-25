@@ -837,27 +837,32 @@
     // Fungsi untuk memulai kamera
     async function startCamera() {
       try {
-        // Hentikan kamera jika sudah aktif
         if (cameraStream) {
           cameraStream.getTracks().forEach(track => track.stop());
         }
     
-        // Akses kamera belakang
-        cameraStream = await navigator.mediaDevices.getUserMedia({
+        // Coba akses kamera dengan constraints yang lebih sederhana
+        const constraints = {
           video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            facingMode: 'environment'
           },
           audio: false
-        });
+        };
     
-        // Tampilkan preview kamera
+        cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
         cameraPreview.srcObject = cameraStream;
       } catch (error) {
         console.error('Error accessing camera:', error);
-        alert('Tidak dapat mengakses kamera: ' + error.message);
-        cameraModal.style.display = "none";
+        
+        // Fallback: Gunakan intent camera native melalui App Inventor
+        if (window.AppInventor) {
+          alert('Menggunakan camera native...');
+          window.AppInventor.setWebViewString("OPEN_CAMERA");
+          cameraModal.style.display = "none";
+        } else {
+          alert('Tidak dapat mengakses kamera: ' + error.message);
+          cameraModal.style.display = "none";
+        }
       }
     }
     
@@ -868,11 +873,59 @@
         cameraStream = null;
       }
     }
+
+    // Tambahkan event listener untuk menerima foto dari Kodular
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'photo_taken') {
+        const photoData = event.data.photo;
+        // Proses foto yang dikembalikan dari Kodular
+        addPhotoToFileList(photoData);
+      }
+    });
+
+    // Fungsi untuk menambahkan foto ke daftar
+      function addPhotoToFileList(photoData) {
+        // Konversi base64 ke blob
+        const blob = base64ToBlob(photoData, 'image/jpeg');
+        const fileName = 'photo_' + new Date().getTime() + '.jpg';
+        
+        // Buat file object
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        
+        // Tambahkan ke array
+        capturedPhotos.push(file);
+        
+        // Perbarui tampilan
+        updateFileList();
+      }
+
+    // Fungsi konversi base64 ke blob
+      function base64ToBlob(base64, mimeType) {
+        const byteCharacters = atob(base64.split(',')[1]);
+        const byteArrays = [];
+        
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+          const slice = byteCharacters.slice(offset, offset + 512);
+          const byteNumbers = new Array(slice.length);
+          
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        
+        return new Blob(byteArrays, { type: mimeType });
+      }
     
     // Fallback untuk desktop (tidak ada kamera)
+    // Sembunyikan tombol kamera jika di perangkat mobile
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const formGroup = document.querySelector('.form-group:has(#openCamera)');
-      formGroup.innerHTML = `
+      document.getElementById('openCamera').style.display = 'none';
+      
+      // Tampilkan input file fallback
+      const fallbackHTML = `
         <label>Foto Kondisi Lapangan</label>
         <div class="file-input-container">
           <label class="file-input-label" for="photoFiles">
@@ -885,28 +938,20 @@
         <div class="file-list" id="fileList"></div>
       `;
       
-      // Tambahkan event listener untuk input file fallback
+      document.querySelector('.form-group:has(#openCamera)').innerHTML = fallbackHTML;
+      
+      // Tambahkan event listener untuk input file
       document.getElementById("photoFiles").addEventListener("change", function() {
         const fileList = document.getElementById("fileList");
         fileList.innerHTML = '';
         
         if (this.files.length > 0) {
           Array.from(this.files).forEach(file => {
-            const fileItem = document.createElement("div");
-            fileItem.className = "file-item";
-            fileItem.innerHTML = `
-              <i class="material-icons">image</i>
-              <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
-            `;
-            fileList.appendChild(fileItem);
+            capturedPhotos.push(file);
           });
-        } else {
-          fileList.innerHTML = '<div class="file-item">Tidak ada file dipilih</div>';
+          updateFileList();
         }
       });
-    } else {
-      // Kode untuk kamera mobile
-      openCameraBtn.style.display = 'block';
     }
     
     // Update tampilan daftar file
