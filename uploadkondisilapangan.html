@@ -756,16 +756,11 @@
       });
 
     // Helper function untuk menampilkan status
-    function showStatus(message, type) {
+    function showStatus(message, isError = false) {
       const statusEl = document.getElementById('status');
       statusEl.textContent = message;
-      statusEl.className = 'status ' + type;
+      statusEl.className = isError ? 'status error' : 'status success';
       statusEl.style.display = 'block';
-      
-      // Sembunyikan setelah 3 detik
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-      }, 3000);
     }
 
     function showAllBloks() {
@@ -817,23 +812,21 @@
     let photoCounter = 1;
     
     // Elemen DOM
-    const fileList = document.getElementById('fileList');
-    const openCameraBtn = document.getElementById('openCamera');
-    const previewImage = document.getElementById('previewImage');
-    const deletePhotoBtn = document.getElementById('deletePhoto');
-    const savePhotoBtn = document.getElementById('savePhoto');
-    const closePreviewModalBtn = document.querySelector('.close-preview-modal');
-    const closeModalBtn = document.querySelector(".close-modal");
+    const startCameraBtn = document.getElementById('startCamera');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoCanvas = document.getElementById('photoCanvas');
     const capturePhotoBtn = document.getElementById('capturePhoto');
+    const fileList = document.getElementById('fileList');
+
+    // Variabel modal
+    const cameraModal = document.getElementById("cameraModal");
+    const openCameraBtn = document.getElementById("openCamera");
+    const closeModalBtn = document.querySelector(".close-modal");
     
     // Buka modal kamera
     openCameraBtn.addEventListener('click', () => {
-      if (window.AppInventor) {
-        // Kirim perintah ke App Inventor untuk membuka kamera
-        window.AppInventor.setWebViewString("OPEN_CAMERA");
-      } else {
-        alert("AppInventor bridge tidak tersedia. Pastikan aplikasi dibuka melalui Kodular.");
-      }
+      cameraModal.style.display = "block";
+      startCamera();
     });
     
     // Tutup modal
@@ -841,27 +834,6 @@
       stopCamera();
       cameraModal.style.display = "none";
     });
-
-    // Fungsi untuk menerima foto dari App Inventor
-    function receivePhotoFromAppInventor(photoPath) {
-      // Simpan path foto
-      const fileName = `foto_${photoCounter}.jpg`;
-      photoCounter++;
-      
-      // Simpan informasi foto
-      capturedPhotos.push({
-        name: fileName,
-        path: photoPath,
-        // Simpan sebagai placeholder untuk ukuran file
-        size: 1024 // Default size, bisa disesuaikan
-      });
-      
-      // Perbarui daftar file
-      updateFileList();
-      
-      // Tampilkan notifikasi
-      showStatus(`Foto ${fileName} berhasil ditambahkan`, 'success');
-    }
     
     // Fungsi untuk memulai kamera
     async function startCamera() {
@@ -947,23 +919,23 @@
         return;
       }
       
-      capturedPhotos.forEach((photo, index) => {
+      capturedPhotos.forEach((file, index) => {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
         fileItem.innerHTML = `
           <i class="material-icons">image</i>
-          <span>${photo.name} (${(photo.size / 1024).toFixed(2)} KB)</span>
-          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red; cursor:pointer;">
+          <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+          <button class="delete-photo" data-index="${index}" style="margin-left:auto; background:none; border:none; color:red;">
             <i class="material-icons">delete</i>
           </button>
         `;
         fileList.appendChild(fileItem);
       });
-      
+    
       // Tambahkan event listener untuk tombol hapus
       document.querySelectorAll('.delete-photo').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const index = parseInt(e.currentTarget.dataset.index);
+          const index = parseInt(e.target.closest('button').dataset.index);
           capturedPhotos.splice(index, 1);
           updateFileList();
         });
@@ -977,26 +949,6 @@
         alert("AppInventor bridge tidak tersedia");
       }
     });
-
-    // Event listener untuk modal preview
-    closePreviewModalBtn.addEventListener('click', () => {
-      previewModal.style.display = 'none';
-    });
-    
-    // Event listener untuk klik di luar modal
-    window.addEventListener('click', (e) => {
-      if (e.target === previewModal) {
-        previewModal.style.display = 'none';
-      }
-    });
-    
-    // Inisialisasi
-    updateFileList();
-    
-    // Fungsi global untuk dipanggil dari Kodular
-    window.receivePhoto = function(photoPath) {
-      receivePhotoFromAppInventor(photoPath);
-    };
 
 
     //-------------------END POINT UNTUK REVIEW FOTO-----------------------//
@@ -1268,11 +1220,6 @@
     // Update the form submission handler
     document.getElementById("uploadForm").addEventListener("submit", async function (e) {
       e.preventDefault();
-
-      if (capturedPhotos.length === 0) {
-        showStatus('Harap ambil minimal satu foto', 'error');
-        return;
-      }
       
       const form = e.target;
       const submitBtn = form.querySelector('button[type="submit"]');
