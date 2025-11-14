@@ -535,7 +535,8 @@
     // Urutan kebun yang diinginkan (Samsam pertama, Duri kedua)
     const KEBUN_ORDER = {
       'Samsam': 1,
-      'Duri': 2
+      'Duri': 2,
+      'Kotapinang': 3
     };
 
     // Urutan prioritas divisi untuk Samsam
@@ -557,6 +558,14 @@
       "Divisi IV Rangau": 5,
       "Divisi V Rangau": 6,
       "Divisi VI Rangau": 7
+    };
+
+    // Urutan prioritas divisi untuk Kotapinang
+    const DIVISI_KOTAPINANG_ORDER = {
+      "Langkimat": 1,
+      "Langgapayung": 2,
+      "Barumun Tengah": 3,
+      "Bagan Batu": 4
     };
     
     // Fungsi untuk memisahkan huruf dan angka dari blok
@@ -674,6 +683,9 @@
         } else if (a.kebun === 'Duri') {
           divisiOrderA = DIVISI_DURI_ORDER[a.divisi] || 99;
           divisiOrderB = DIVISI_DURI_ORDER[b.divisi] || 99;
+        } } else if (a.kebun === 'Kotapinang') {
+          divisiOrderA = DIVISI_KOTAPINANG_ORDER[a.divisi] || 99;
+          divisiOrderB = DIVISI_KOTAPINANG_ORDER[b.divisi] || 99;
         } else {
           // Untuk kebun lain, urutkan berdasarkan nama divisi
           divisiOrderA = a.divisi.localeCompare(b.divisi);
