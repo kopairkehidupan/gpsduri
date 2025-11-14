@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sensus Pokok Kebun - Versi Final</title>
+  <title>Sensus Pokok Kebun - Versi Final Fixed</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -281,6 +281,15 @@
     track: { area: 0 }
   };
 
+  // Update legend counts helper
+  function updateLegendCounts(sym) {
+    const s = (sym || '').toLowerCase();
+    if (s.includes('green') || s.includes('city (small)')) legendStats.green.count++;
+    else if (s.includes('black')) legendStats.black.count++;
+    else if (s.includes('orange')) legendStats.orange.count++;
+    else legendStats.blue.count++;
+  }
+
   // Menghitung luas dari satu track (open polyline -> polygon via titik pertama terakhir)
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) {
@@ -317,6 +326,7 @@
           if (parserError.length > 0) {
               throw new Error('Format GPX tidak valid');
           }
+
           // Waypoints
           const waypoints = xml.getElementsByTagName('wpt');
           if (waypoints.length > 0) {
@@ -325,22 +335,13 @@
               for (let wpt of waypoints) {
                   const lat = parseFloat(wpt.getAttribute('lat'));
                   const lon = parseFloat(wpt.getAttribute('lon'));
-                  if (isNaN(lat)) throw new Error('Latitude tidak valid');
-                  if (isNaN(lon)) throw new Error('Longitude tidak valid');
+                  if (isNaN(lat)) continue;
+                  if (isNaN(lon)) continue;
                   const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
                   const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-                  // Hitung waypoint berdasarkan warna
-                  if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
-                      legendStats.green.count++;
-                  } else if (sym.toLowerCase().includes('black')) {
-                      legendStats.black.count++;
-                  } else if (sym.toLowerCase().includes('orange')) {
-                      legendStats.orange.count++;
-                  } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
-                      legendStats.blue.count++;
-                  } else {
-                      legendStats.blue.count++;
-                  }
+
+                  updateLegendCounts(sym);
+
                   // Tambahkan marker ke waypointLayer (tidak langsung ke map)
                   const marker = L.marker([lat, lon], {
                       icon: getWaypointIcon(sym)
@@ -353,10 +354,12 @@
                   bounds.push([lat, lon]);
               }
               if (bounds.length > 0) {
-                  map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
+                  // don't fit bounds for each file here — will fit later in processFiles once all files are processed
+                  console.log('Waypoints processed for', fileName);
               }
           }
-          // Tracks
+
+          // Tracks (multi-track support)
           const tracks = xml.getElementsByTagName('trk');
           if (tracks.length > 0) {
               console.log(`Menemukan ${tracks.length} tracks di ${fileName}`);
@@ -367,25 +370,31 @@
                       const trkpt = trkpts[i];
                       const lat = parseFloat(trkpt.getAttribute('lat'));
                       const lon = parseFloat(trkpt.getAttribute('lon'));
-                      latLngs.push(L.latLng(lat, lon));
+                      if (!isNaN(lat) && !isNaN(lon)) latLngs.push(L.latLng(lat, lon));
                   }
-                  // Simpan polygon points
-                  if (latLngs.length >= 3) trackPolygons.push(latLngs);
-                  // Add polyline ke trackLayer
+
+                  // Skip short tracks
+                  if (latLngs.length < 3) {
+                      console.warn(`Skipped track in ${fileName} because points < 3 (found ${latLngs.length})`);
+                      continue;
+                  }
+
+                  // Store polygon points for area calculation
+                  trackPolygons.push(latLngs);
+
+                  // Draw polyline to trackLayer
                   const polyline = L.polyline(latLngs, {
                       color: 'red',
                       weight: 4,
                       opacity: 0.75,
                       lineCap: 'round'
                   }).addTo(trackLayer);
+
                   allTrackPolylines.push(polyline);
-                  // Fit bounds untuk track
-                  if (polyline.getBounds && polyline.getBounds().isValid()) {
-                      map.fitBounds(polyline.getBounds());
-                  }
               }
           }
-          // Update legend
+
+          // Update legend after processing this file
           updateLegend();
       } catch (error) {
           console.error(`Gagal memproses file ${fileName}:`, error);
@@ -454,29 +463,27 @@
       }
 
       // Setelah semua file diproses, pastikan semua track terlihat
-      if (allTrackPolylines.length > 0) {
-          // trackLayer sudah berisi polylines; kita pastikan overlay ada pada control (sudah ditambahkan sebelumnya)
+      // FIT BOUNDS sekali di akhir (gabungkan markers dan tracks)
+      const allBounds = [];
+      map.eachLayer(layer => {
+          if (layer instanceof L.Marker) {
+              allBounds.push(layer.getLatLng());
+          }
+      });
+      trackPolygons.forEach(polygon => {
+          polygon.forEach(pt => allBounds.push(pt));
+      });
+      if (allBounds.length > 0) {
+          map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
       }
-      
+
       // Hitung luas total setelah semua file diproses
       if (trackPolygons.length > 0) {
           const totalArea = calculateTotalAreaFromPolygons();
           legendStats.track.area = totalArea;
           updateLegend();
-          // Fit bounds untuk semua waypoint dan track
-          const allWaypoints = [];
-          map.eachLayer(layer => {
-              if (layer instanceof L.Marker) allWaypoints.push(layer.getLatLng());
-          });
-          const allBounds = [...allWaypoints, ...trackPolygons.flat()];
-          if (allBounds.length > 0) map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
       } else if (hasData) {
-          // Jika tidak ada track tapi ada waypoint, fit ke waypoint saja
-          const waypointBounds = [];
-          map.eachLayer(layer => {
-              if (layer instanceof L.Marker) waypointBounds.push(layer.getLatLng());
-          });
-          if (waypointBounds.length > 0) map.fitBounds(L.latLngBounds(waypointBounds), { padding: [50, 50] });
+          // nothing to do; at least waypoints were shown
       }
       
       if (!hasData) {
