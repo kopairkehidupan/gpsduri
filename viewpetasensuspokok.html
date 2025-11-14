@@ -303,9 +303,12 @@
   const allTrackPolylines = [];
 
   // Tambah GPX ke peta (waypoints → waypointLayer, track → trackLayer)
+  // Tambah GPX ke peta (waypoints → waypointLayer, track → trackLayer)
   function addGpxToMap(gpxContent, fileName) {
       // Hapus BOM jika ada
       gpxContent = gpxContent.replace(/^\uFEFF/, '');
+      // Hapus karakter non-printable yang mungkin ada
+      gpxContent = gpxContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
     
       if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
           throw new Error('File tidak valid - Terdeteksi halaman HTML');
@@ -318,8 +321,12 @@
           const xml = parser.parseFromString(gpxContent, "application/xml");
           const parserError = xml.getElementsByTagName('parsererror');
           if (parserError.length > 0) {
+              console.error('Parser error:', parserError[0].textContent);
               throw new Error('Format GPX tidak valid');
           }
+          
+          console.log(`Processing file: ${fileName}`);
+          
           // Waypoints
           const waypoints = xml.getElementsByTagName('wpt');
           if (waypoints.length > 0) {
@@ -328,8 +335,10 @@
               for (let wpt of waypoints) {
                   const lat = parseFloat(wpt.getAttribute('lat'));
                   const lon = parseFloat(wpt.getAttribute('lon'));
-                  if (isNaN(lat)) throw new Error('Latitude tidak valid');
-                  if (isNaN(lon)) throw new Error('Longitude tidak valid');
+                  if (isNaN(lat) || isNaN(lon)) {
+                      console.warn(`Invalid coordinates for waypoint: lat=${lat}, lon=${lon}`);
+                      continue;
+                  }
                   const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
                   const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
                   // Hitung waypoint berdasarkan warna
@@ -359,35 +368,78 @@
                   map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
               }
           }
-          // Tracks
+          
+          // Tracks - dengan handling yang lebih robust
           const tracks = xml.getElementsByTagName('trk');
           if (tracks.length > 0) {
               console.log(`Menemukan ${tracks.length} tracks di ${fileName}`);
-              for (let trk of tracks) {
-                  const trkpts = trk.getElementsByTagName('trkpt');
+              let totalPoints = 0;
+              for (let trkIndex = 0; trkIndex < tracks.length; trkIndex++) {
+                  const trk = tracks[trkIndex];
+                  const trackName = trk.getElementsByTagName('name')[0]?.textContent || `Track ${trkIndex + 1}`;
+                  console.log(`Processing track: ${trackName}`);
+                  
+                  // Ambil semua trkpt dari semua trkseg dalam track ini
+                  const trksegs = trk.getElementsByTagName('trkseg');
                   const latLngs = [];
-                  for (let i = 0; i < trkpts.length; i++) {
-                      const trkpt = trkpts[i];
-                      const lat = parseFloat(trkpt.getAttribute('lat'));
-                      const lon = parseFloat(trkpt.getAttribute('lon'));
-                      latLngs.push(L.latLng(lat, lon));
+                  
+                  for (let segIndex = 0; segIndex < trksegs.length; segIndex++) {
+                      const trkseg = trksegs[segIndex];
+                      const trkpts = trkseg.getElementsByTagName('trkpt');
+                      
+                      console.log(`  Segment ${segIndex + 1}: ${trkpts.length} points`);
+                      
+                      for (let i = 0; i < trkpts.length; i++) {
+                          const trkpt = trkpts[i];
+                          const lat = parseFloat(trkpt.getAttribute('lat'));
+                          const lon = parseFloat(trkpt.getAttribute('lon'));
+                          
+                          if (!isNaN(lat) && !isNaN(lon)) {
+                              latLngs.push(L.latLng(lat, lon));
+                              totalPoints++;
+                          } else {
+                              console.warn(`Invalid track point: lat=${lat}, lon=${lon}`);
+                          }
+                      }
                   }
-                  // Simpan polygon points
-                  if (latLngs.length >= 3) trackPolygons.push(latLngs);
-                  // Add polyline ke trackLayer
-                  const polyline = L.polyline(latLngs, {
-                      color: 'red',
-                      weight: 4,
-                      opacity: 0.75,
-                      lineCap: 'round'
-                  }).addTo(trackLayer);
-                  allTrackPolylines.push(polyline);
-                  // Fit bounds untuk track
-                  if (polyline.getBounds && polyline.getBounds().isValid()) {
-                      map.fitBounds(polyline.getBounds());
+                  
+                  if (latLngs.length >= 2) {
+                      console.log(`  Created polyline with ${latLngs.length} points`);
+                      
+                      // Simpan polygon points jika cukup untuk membuat area
+                      if (latLngs.length >= 3) {
+                          trackPolygons.push(latLngs);
+                      }
+                      
+                      // Add polyline ke trackLayer
+                      const polyline = L.polyline(latLngs, {
+                          color: 'red',
+                          weight: 4,
+                          opacity: 0.75,
+                          lineCap: 'round'
+                      }).addTo(trackLayer);
+                      
+                      // Bind popup dengan informasi track
+                      polyline.bindPopup(`
+                          <b>Track:</b> ${trackName}<br>
+                          <b>Jumlah Titik:</b> ${latLngs.length}
+                      `);
+                      
+                      allTrackPolylines.push(polyline);
+                      
+                      // Fit bounds untuk track
+                      if (polyline.getBounds && polyline.getBounds().isValid()) {
+                          map.fitBounds(polyline.getBounds());
+                      }
+                  } else {
+                      console.warn(`Track "${trackName}" tidak memiliki cukup titik (${latLngs.length})`);
                   }
               }
+              console.log(`Total track points processed: ${totalPoints}`);
+          } else {
+              console.log(`Tidak ada tracks ditemukan di ${fileName}`);
           }
+          
           // Update legend
           updateLegend();
       } catch (error) {
