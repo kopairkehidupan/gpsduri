@@ -421,6 +421,7 @@
   }
 
   // Proses file (gabungkan waypoint dan track url)
+  // Proses file (gabungkan waypoint dan track url)
   async function processFiles() {
       console.log('Daftar file waypoints:', waypointUrls);
       console.log('Daftar file tracks:', trackUrls);
@@ -434,27 +435,43 @@
       // Gabungkan semua URL file (waypoints dan tracks)
       const allFileUrls = [...new Set([...waypointUrls, ...trackUrls])];
       
-      // Proses semua file
-      for (const url of allFileUrls) {
+      // Proses semua file secara paralel untuk kecepatan
+      const filePromises = allFileUrls.map(async (url) => {
           const li = document.createElement('li');
           const fileName = getFileName(url);
           try {
-              document.getElementById('progress').textContent = `Memuat ${fileName}...`;
               li.textContent = `🔄 Memuat ${fileName}...`;
               loadedFilesList.appendChild(li);
               
               const gpxContent = await fetchFile(url);
-              await addGpxToMap(gpxContent, fileName);
               
               li.textContent = `✅ ${fileName}`;
               li.className = 'success';
-              hasData = true;
+              return { gpxContent, fileName, success: true };
           } catch (error) {
               li.textContent = `❌ ${fileName} (${error.message})`;
               li.className = 'error';
+              return { fileName, success: false, error };
           }
-          updateControlsView();
+      });
+      
+      // Tunggu semua file selesai diunduh
+      document.getElementById('progress').textContent = `Memuat ${allFileUrls.length} file...`;
+      const results = await Promise.all(filePromises);
+      
+      // Proses semua file yang berhasil diunduh
+      document.getElementById('progress').textContent = `Memproses data...`;
+      for (const result of results) {
+          if (result.success) {
+              try {
+                  await addGpxToMap(result.gpxContent, result.fileName);
+                  hasData = true;
+              } catch (error) {
+                  console.error(`Error processing ${result.fileName}:`, error);
+              }
+          }
       }
+      updateControlsView();
 
       // Setelah semua file diproses, pastikan semua track terlihat
       if (allTrackPolylines.length > 0) {
