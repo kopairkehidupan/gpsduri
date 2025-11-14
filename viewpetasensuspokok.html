@@ -310,89 +310,87 @@
       if (!gpxContent.trim().startsWith('<') || !gpxContent.includes('<gpx')) {
           throw new Error('Format GPX tidak valid');
       }
-  
       try {
           const parser = new DOMParser();
           const xml = parser.parseFromString(gpxContent, "application/xml");
-  
           const parserError = xml.getElementsByTagName('parsererror');
-          if (parserError.length > 0) throw new Error('Format GPX tidak valid');
-  
-          // ==========================
-          // 1. PROSES WAYPOINTS
-          // ==========================
-          const waypoints = xml.getElementsByTagName('wpt');
-          for (let wpt of waypoints) {
-              const lat = parseFloat(wpt.getAttribute('lat'));
-              const lon = parseFloat(wpt.getAttribute('lon'));
-              if (isNaN(lat) || isNaN(lon)) continue;
-  
-              const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
-              const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-  
-              updateLegendCounts(sym);
-  
-              L.marker([lat, lon], { icon: getWaypointIcon(sym) })
-                  .addTo(waypointLayer)
-                  .bindPopup(`<b>Waypoint:</b> ${name}<br><b>Kategori:</b> ${getCategoryName(sym)}`);
+          if (parserError.length > 0) {
+              throw new Error('Format GPX tidak valid');
           }
-  
-          // ==========================
-          // 2. PROSES MULTI-TRACK
-          // ==========================
+          // Waypoints
+          const waypoints = xml.getElementsByTagName('wpt');
+          if (waypoints.length > 0) {
+              console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
+              const bounds = [];
+              for (let wpt of waypoints) {
+                  const lat = parseFloat(wpt.getAttribute('lat'));
+                  const lon = parseFloat(wpt.getAttribute('lon'));
+                  if (isNaN(lat)) throw new Error('Latitude tidak valid');
+                  if (isNaN(lon)) throw new Error('Longitude tidak valid');
+                  const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
+                  const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
+                  // Hitung waypoint berdasarkan warna
+                  if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
+                      legendStats.green.count++;
+                  } else if (sym.toLowerCase().includes('black')) {
+                      legendStats.black.count++;
+                  } else if (sym.toLowerCase().includes('orange')) {
+                      legendStats.orange.count++;
+                  } else if (sym.toLowerCase().includes('red') || sym.toLowerCase().includes('custom 7')) {
+                      legendStats.blue.count++;
+                  } else {
+                      legendStats.blue.count++;
+                  }
+                  // Tambahkan marker ke waypointLayer (tidak langsung ke map)
+                  const marker = L.marker([lat, lon], {
+                      icon: getWaypointIcon(sym)
+                  }).addTo(waypointLayer);
+                  marker.bindPopup(`
+                      <b>Waypoint:</b> ${name}<br>
+                      <b>Kategori:</b> ${getCategoryName(sym)}<br>
+                      <b>Koordinat:</b> ${lat.toFixed(6)}, ${lon.toFixed(6)}
+                  `);
+                  bounds.push([lat, lon]);
+              }
+              if (bounds.length > 0) {
+                  map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
+              }
+          }
+          // Tracks
           const tracks = xml.getElementsByTagName('trk');
-          for (let trk of tracks) {
-  
-              const trkpts = trk.getElementsByTagName('trkpt');
-              const latLngs = [];
-  
-              for (let t of trkpts) {
-                  const lat = parseFloat(t.getAttribute('lat'));
-                  const lon = parseFloat(t.getAttribute('lon'));
-                  if (!isNaN(lat) && !isNaN(lon)) {
+          if (tracks.length > 0) {
+              console.log(`Menemukan ${tracks.length} tracks di ${fileName}`);
+              for (let trk of tracks) {
+                  const trkpts = trk.getElementsByTagName('trkpt');
+                  const latLngs = [];
+                  for (let i = 0; i < trkpts.length; i++) {
+                      const trkpt = trkpts[i];
+                      const lat = parseFloat(trkpt.getAttribute('lat'));
+                      const lon = parseFloat(trkpt.getAttribute('lon'));
                       latLngs.push(L.latLng(lat, lon));
                   }
+                  // Simpan polygon points
+                  if (latLngs.length >= 3) trackPolygons.push(latLngs);
+                  // Add polyline ke trackLayer
+                  const polyline = L.polyline(latLngs, {
+                      color: 'red',
+                      weight: 4,
+                      opacity: 0.75,
+                      lineCap: 'round'
+                  }).addTo(trackLayer);
+                  allTrackPolylines.push(polyline);
+                  // Fit bounds untuk track
+                  if (polyline.getBounds && polyline.getBounds().isValid()) {
+                      map.fitBounds(polyline.getBounds());
+                  }
               }
-  
-              // ❗ Skip track pendek
-              if (latLngs.length < 3) {
-                  console.warn(`Track di ${fileName} di-skip (titik < 3):`, latLngs.length);
-                  continue;
-              }
-  
-              // Simpan polygon untuk hitung luas
-              trackPolygons.push(latLngs);
-  
-              // Gambar track
-              const polyline = L.polyline(latLngs, {
-                  color: 'red',
-                  weight: 4,
-                  opacity: 0.75,
-                  lineCap: 'round'
-              }).addTo(trackLayer);
-  
-              allTrackPolylines.push(polyline);
           }
-  
+          // Update legend
           updateLegend();
-      }
-      catch (error) {
+      } catch (error) {
           console.error(`Gagal memproses file ${fileName}:`, error);
           throw error;
       }
-  }
-
-  function updateLegendCounts(sym) {
-      const s = sym.toLowerCase();
-  
-      if (s.includes('green') || s.includes('city (small)'))
-          legendStats.green.count++;
-      else if (s.includes('black'))
-          legendStats.black.count++;
-      else if (s.includes('orange'))
-          legendStats.orange.count++;
-      else
-          legendStats.blue.count++; // TM default
   }
 
   function updateLegend() {
