@@ -384,10 +384,6 @@
   // Variabel global untuk menyimpan semua track sebagai polygon terpisah
   const trackPolygons = [];
 
-  // Layer group global
-  const waypointLayer = L.layerGroup().addTo(map);
-  const trackLayer = L.layerGroup().addTo(map);
-
   // Fungsi untuk mendapatkan nama file
   function getFileName(url) {
     try {
@@ -435,9 +431,6 @@
       position: 'bottomright',
       collapsed: true
   }).addTo(map);
-
-  layerControl.addOverlay(waypointLayer, "Waypoints");
-  layerControl.addOverlay(trackLayer, "Tracks");
 
   // Adjust controls for mobile
   function adjustForMobile() {
@@ -591,7 +584,7 @@
       
                   const marker = L.marker([lat, lon], {
                       icon: getWaypointIcon(sym)
-                  }).addTo(waypointLayer);
+                  }).addTo(map);
       
                   marker.bindPopup(`
                       <b>Waypoint:</b> ${name}<br>
@@ -629,10 +622,11 @@
                   
                   // Add to map dan simpan referensinya
                   const polyline = L.polyline(latLngs, {
-                    color: 'red',
-                    weight: 4,
-                    opacity: 0.75
-                  }).addTo(trackLayer);
+                      color: 'red',
+                      weight: 4,
+                      opacity: 0.75,
+                      lineCap: 'round'
+                  }).addTo(map);
                   
                   // Simpan polyline ke array global
                   allTrackPolylines.push(polyline);
@@ -892,4 +886,3 @@
 </script>
 </body>
 </html>
-3. Bisa menampilkan dua-duanya, waypoint + polygon
