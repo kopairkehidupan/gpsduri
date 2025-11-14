@@ -304,6 +304,9 @@
 
   // Tambah GPX ke peta (waypoints → waypointLayer, track → trackLayer)
   function addGpxToMap(gpxContent, fileName) {
+      // Hapus BOM jika ada
+      gpxContent = gpxContent.replace(/^\uFEFF/, '');
+    
       if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
           throw new Error('File tidak valid - Terdeteksi halaman HTML');
       }
