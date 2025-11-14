@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sensus Pokok Kebun</title>
+  <title>Sensus Pokok Kebun - Versi Final</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,12 +12,8 @@
       font-family: Arial, sans-serif;
       overflow: hidden;
     }
-    
-    #map {
-      height: 100%;
-      width: 100%;
-    }
-    
+    #map { height: 100%; width: 100%; }
+
     /* Kontrol Peta Responsif */
     .map-controls {
       position: absolute;
@@ -28,13 +24,12 @@
       padding: 8px;
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      max-width: 280px;
+      max-width: 320px;
       width: 90%;
       height: auto;
       overflow: visible;
       transition: all 0.3s ease;
     }
-    
     .loading {
       position: absolute;
       top: 50%;
@@ -49,277 +44,53 @@
       width: 80%;
       max-width: 300px;
     }
-    
-    .file-list {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: 8px;
-    }
-    
-    .file-list ul {
-      list-style-type: none;
-      padding: 0;
-      margin: 0;
-    }
-    
-    .file-list li {
-      padding: 4px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 12px;
-    }
-    
-    .file-list li.success {
-      color: green;
-    }
-    
-    .file-list li.error {
-      color: red;
-    }
-    
-    .legend {
-      background: white;
-      padding: 8px;
-      border-radius: 5px;
-      margin-top: 8px;
-      font-size: 12px;
-    }
-    
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin: 4px 0;
-    }
-    
-    .legend-color {
-      width: 14px;
-      height: 14px;
-      margin-right: 6px;
-      border: 1px solid #333;
-      border-radius: 2px;
-    }
-    
-    .legend-item span {
-      font-size: 12px;
-      font-weight: normal;
-    }
-    
-    .file-list.collapsed {
-      max-height: 0;
-      overflow: hidden;
-      margin: 0;
-      padding: 0;
-      opacity: 0;
-    }
-    
-    /* Judul Sensus */
-    .sensus-title {
-      text-align: center;
-      margin-bottom: 0;
-      padding: 6px;
-      background: linear-gradient(135deg, #27ae60, #2ecc71);
-      border-radius: 5px;
-      color: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-    }
-    
-    .sensus-title h2 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      line-height: 1.2;
-    }
-    
-    .sensus-title .subtitle {
-      display: none; /* Initially hidden */
-      font-size: 10px;
-      margin-top: 2px;
-      font-weight: normal;
-      opacity: 0.8;
-    }
-    
-    /* Show subtitle only when collapsed */
-    .map-controls.collapsed .sensus-title .subtitle {
-      display: block;
-    }
-    
-    /* Layer Control */
-    .leaflet-control-layers {
-      border-radius: 5px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
-      background: white;
-      font-size: 12px;
-    }
-    
-    .leaflet-control-layers-toggle {
-      background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png');
-      width: 30px;
-      height: 30px;
-    }
-    
-    .leaflet-control-layers-expanded {
-      padding: 5px 8px 5px 5px;
-      color: #333;
-      background: white;
-    }
-    
-    .leaflet-control-layers label {
-      display: block;
-      font-size: 12px;
-      margin: 2px 0;
-    }
-    
-    /* Responsive untuk perangkat mobile */
+    .file-list { max-height: 200px; overflow-y: auto; margin-top: 8px; }
+    .file-list ul { list-style-type: none; padding: 0; margin: 0; }
+    .file-list li { padding: 4px 0; border-bottom: 1px solid #eee; font-size: 12px; }
+    .file-list li.success { color: green; }
+    .file-list li.error { color: red; }
+    .legend { background: white; padding: 8px; border-radius: 5px; margin-top: 8px; font-size: 12px; }
+    .legend-item { display: flex; align-items: center; margin: 4px 0; }
+    .legend-color { width: 14px; height: 14px; margin-right: 6px; border: 1px solid #333; border-radius: 2px; }
+    .legend-item span { font-size: 12px; font-weight: normal; }
+    .file-list.collapsed { max-height: 0; overflow: hidden; margin: 0; padding: 0; opacity: 0; }
+    .sensus-title { text-align: center; margin-bottom: 0; padding: 6px; background: linear-gradient(135deg, #27ae60, #2ecc71); border-radius: 5px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; user-select: none; position: relative; }
+    .sensus-title h2 { margin: 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2; }
+    .sensus-title .subtitle { display: none; font-size: 10px; margin-top: 2px; font-weight: normal; opacity: 0.8; }
+    .map-controls.collapsed .sensus-title .subtitle { display: block; }
+    .leaflet-control-layers { border-radius: 5px; box-shadow: 0 1px 5px rgba(0,0,0,0.2); background: white; font-size: 12px; }
+    .leaflet-control-layers-toggle { background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/layers.png'); width: 30px; height: 30px; }
+    .leaflet-control-layers-expanded { padding: 5px 8px 5px 5px; color: #333; background: white; }
+    .leaflet-control-layers label { display: block; font-size: 12px; margin: 2px 0; }
     @media (max-width: 768px) {
-      .map-controls {
-        max-width: 220px;
-        padding: 6px;
-        right: 5px;
-        top: 5px;
-      }
-      
-      .sensus-title {
-        padding: 5px;
-      }
-      
-      .sensus-title h2 {
-        font-size: 12px;
-      }
-      
-      .sensus-title .subtitle {
-        font-size: 9px;
-      }
-      
-      #blok-title, #location-info p {
-        font-size: 11px;
-        margin: 2px 0;
-      }
-      
-      .file-list h4, .legend h4 {
-        font-size: 11px;
-        margin: 4px 0;
-      }
-      
-      .legend-item span {
-        font-size: 11px;
-      }
-      
-      .loading {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          z-index: 1001;
-          background: white;
-          padding: 15px;
-          border-radius: 5px;
-          box-shadow: 0 0 15px rgba(0,0,0,0.3);
-          text-align: center;
-          width: 80%;
-          max-width: 280px;
-          display: none;
-      }
-      
-      .loading h3 {
-        color: #333;
-        margin: 0 0 10px 0;
-        font-size: 14px;
-      }
-      
-      #progress {
-        margin: 0;
-        color: #555;
-        font-size: 12px;
-      }
-      
-      .leaflet-control-layers {
-        font-size: 11px;
-      }
+      .map-controls { max-width: 220px; padding: 6px; right: 5px; top: 5px; }
+      .sensus-title h2 { font-size: 12px; }
+      .sensus-title .subtitle { font-size: 9px; }
+      #blok-title, #location-info p { font-size: 11px; margin: 2px 0; }
+      .file-list h4, .legend h4 { font-size: 11px; margin: 4px 0; }
+      .legend-item span { font-size: 11px; }
+      .loading { display: none; }
+      .leaflet-control-layers { font-size: 11px; }
     }
-    
     @media (max-width: 480px) {
-      .map-controls {
-        max-width: 200px;
-        right: 3px;
-        top: 3px;
-      }
-      
-      .sensus-title {
-        padding: 4px;
-      }
-      
-      .sensus-title h2 {
-        font-size: 11px;
-      }
-      
-      .sensus-title .subtitle {
-        font-size: 8px;
-      }
-      
-      .legend-item span {
-        font-size: 10px;
-      }
+      .map-controls { max-width: 200px; right: 3px; top: 3px; }
+      .sensus-title h2 { font-size: 11px; }
+      .sensus-title .subtitle { font-size: 8px; }
+      .legend-item span { font-size: 10px; }
     }
-    
-    /* Posisi layer control */
-    .leaflet-bottom {
-      z-index: 999;
-    }
-    
-    .leaflet-control-container {
-      z-index: 999;
-    }
-
-    /* Toggle Controls */
-    .map-controls.collapsed {
-        height: 100px;
-        overflow: hidden;
-    }
-    
-    /* Tambahkan indikator panah */
-    .sensus-title::after {
-        content: "▼";
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 10px;
-        transition: transform 0.3s ease;
-    }
-    
-    .map-controls.collapsed .sensus-title::after {
-        transform: translateY(-50%) rotate(-90deg);
-    }
-    
-    /* Animasi untuk toggle */
-    .map-controls {
-      transition: all 0.3s ease;
-    }
-    
-    /* Style untuk info blok */
-    #blok-title {
-      font-size: 13px;
-      margin: 6px 0;
-      font-weight: bold;
-      color: #333;
-    }
-    
-    #location-info p {
-      margin: 3px 0;
-      font-size: 12px;
-      color: #555;
-    }
-    
-    .file-list h4, .legend h4 {
-      margin: 6px 0 4px 0;
-      font-size: 12px;
-      color: #333;
-      font-weight: bold;
-    }
+    .leaflet-bottom { z-index: 999; }
+    .leaflet-control-container { z-index: 999; }
+    .map-controls.collapsed { height: 100px; overflow: hidden; }
+    .sensus-title::after { content: "▼"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; transition: transform 0.3s ease; }
+    .map-controls.collapsed .sensus-title::after { transform: translateY(-50%) rotate(-90deg); }
+    .map-controls { transition: all 0.3s ease; }
+    #blok-title { font-size: 13px; margin: 6px 0; font-weight: bold; color: #333; }
+    #location-info p { margin: 3px 0; font-size: 12px; color: #555; }
+    .file-list h4, .legend h4 { margin: 6px 0 4px 0; font-size: 12px; color: #333; font-weight: bold; }
+    /* tombol cepat */
+    .quick-toggle { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+    .quick-toggle button { flex:1 1 auto; padding:6px 8px; border-radius:6px; border:1px solid #2c3e50; background:#fff; cursor:pointer; font-size:12px; }
+    .quick-toggle button.active { background:#2ecc71; color:#fff; border-color:#27ae60; }
   </style>
 </head>
 <body>
@@ -338,11 +109,18 @@
   
   <h3 id="blok-title">Blok: Loading...</h3>
   <div id="location-info"></div>
+
+  <div class="quick-toggle">
+    <button id="btn-waypoints">Waypoints saja</button>
+    <button id="btn-tracks">Tracks saja</button>
+    <button id="btn-both" class="active">Keduanya</button>
+  </div>
+
   <div class="file-list" id="file-list">
     <h4>File yang dimuat:</h4>
     <ul id="loaded-files"></ul>
   </div>
-  <div class="legend">
+  <div class="legend" id="legend">
     <h4>Legenda:</h4>
     <div class="legend-item">
       <div class="legend-color" style="background-color: blue;"></div>
@@ -403,10 +181,10 @@
     <p><strong>Kebun:</strong> ${kebun || '-'}</p>
     <p><strong>Divisi:</strong> ${divisi || '-'}</p>
   `;
-  
+
   // Initialize map with responsive view
   const map = L.map('map').setView([1.17, 100.99], 15);
-  
+
   // Define base layers
   const baseLayers = {
       "Satellite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -422,12 +200,20 @@
           maxZoom: 17
       })
   };
-  
+
   // Add default layer (Satellite)
   baseLayers["Satellite"].addTo(map);
-  
-  // Add responsive layer control
-  const layerControl = L.control.layers(baseLayers, null, {
+
+  // === NEW: Layer groups untuk Waypoints dan Tracks ===
+  const waypointLayer = L.layerGroup().addTo(map);
+  const trackLayer = L.layerGroup().addTo(map);
+
+  // Layer control (masukkan overlays waypoint & track)
+  const overlays = {
+    "Waypoints": waypointLayer,
+    "Tracks": trackLayer
+  };
+  const layerControl = L.control.layers(baseLayers, overlays, {
       position: 'bottomright',
       collapsed: true
   }).addTo(map);
@@ -436,27 +222,22 @@
   function adjustForMobile() {
     const controlsElement = document.querySelector('.map-controls');
     if (window.innerWidth <= 768) {
-      // Sesuaikan ukuran font dan padding untuk mobile
       document.querySelector('.map-controls').style.maxWidth = '220px';
       document.querySelector('.sensus-title h2').style.fontSize = '12px';
-      
-      // Pindahkan layer control jika perlu
       layerControl.setPosition('bottomleft');
-      controlsElement.classList.add('collapsed'); // Default collap
+      controlsElement.classList.add('collapsed'); // Default collapse on mobile
     } else {
-      // Kembalikan ke ukuran desktop
-      document.querySelector('.map-controls').style.maxWidth = '280px';
+      document.querySelector('.map-controls').style.maxWidth = '320px';
       document.querySelector('.sensus-title h2').style.fontSize = '14px';
       layerControl.setPosition('bottomright');
-      controlsElement.classList.remove('collapsed'); // Default exp
+      controlsElement.classList.remove('collapsed');
     }
   }
 
   // Custom icons
   function getWaypointIcon(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // default blue
-    
+    let iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     if (sym === 'flag, green' || sym === 'city (small)') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/green-flag-cropped.png';
     } else if (sym === 'navaid, black') {
@@ -464,11 +245,10 @@
     } else if (sym === 'navaid, orange') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/orange-flag-cropped.png';
     } else if (sym === 'navaid, red') {
-      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png'; // Red now counts as TM (blue)
+      iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     } else if (sym === 'custom 7') {
       iconUrl = 'https://kopairkehidupan.github.io/gpsduri/blue-flag-cropped.png';
     }
-    
     return new L.Icon({
       iconUrl,
       iconSize: [12, 12],
@@ -477,17 +257,14 @@
     });
   }
 
-  // Modifikasi fungsi fetchFile:
+  // Fetch file from Google Drive (via Apps Script endpoint)
   async function fetchFile(url) {
     try {
       const fileId = url.match(/\/file\/d\/([^\/]+)/)?.[1];
       if (!fileId) throw new Error('Invalid Google Drive URL');
-      
       const scriptUrl = `https://script.google.com/macros/s/AKfycbxOmslqluz99kN4EZkkglSbJvBP5247Vs8MquJTNNhxUx1PZp5bCGey5sHxdFcid27CjA/exec?action=getFile&fileId=${fileId}`;
-      
       const res = await fetch(scriptUrl);
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-      
       return await res.text();
     } catch (error) {
       console.error('Error fetching file:', error);
@@ -495,33 +272,26 @@
     }
   }
 
-  // Variabel global untuk menyimpan statistik
+  // Variabel statistik legenda
   const legendStats = {
     blue: { count: 0 },
     green: { count: 0 },
-    black: { count: 0 }, // Sekarang menyimpan hitungan black + red
+    black: { count: 0 },
     orange: { count: 0 },
     track: { area: 0 }
   };
-  // Fungsi untuk menghitung luas dari track terbuka menggunakan buffer area
+
+  // Menghitung luas dari satu track (open polyline -> polygon via titik pertama terakhir)
   function calculateOpenTrackArea(latLngs) {
       if (latLngs.length < 3) {
           console.warn('Not enough points to calculate area (minimum 3 points required)');
           return 0;
       }
-      
-      // Convert to GeoJSON format (array of [longitude, latitude] pairs)
       const coordinates = latLngs.map(ll => [ll.lng, ll.lat]);
-      // Close the polygon by adding the first point at the end
       coordinates.push(coordinates[0]);
-      
       try {
-          // Create a Turf.js polygon
           const polygon = turf.polygon([coordinates]);
-          // Calculate area in square meters, then convert to hectares
           const area = turf.area(polygon) / 10000;
-          
-          console.log('Area calculated successfully:', area.toFixed(4), 'hectares');
           return area;
       } catch (error) {
           console.error('Error calculating area with Turf.js:', error);
@@ -529,46 +299,36 @@
       }
   }
 
-  // Tambahkan variabel global untuk menyimpan semua polyline track
+  // Simpan semua polyline track
   const allTrackPolylines = [];
-  
-  // Function to parse GPX and add to map
+
+  // Tambah GPX ke peta (waypoints → waypointLayer, track → trackLayer)
   function addGpxToMap(gpxContent, fileName) {
-      // Validasi awal
       if (gpxContent.includes('<html') || gpxContent.includes('Google Drive')) {
           throw new Error('File tidak valid - Terdeteksi halaman HTML');
       }
-      
       if (!gpxContent.trim().startsWith('<') || !gpxContent.includes('<gpx')) {
           throw new Error('Format GPX tidak valid');
       }
-      
       try {
           const parser = new DOMParser();
           const xml = parser.parseFromString(gpxContent, "application/xml");
-          
-          // Check for XML parsing errors
           const parserError = xml.getElementsByTagName('parsererror');
           if (parserError.length > 0) {
               throw new Error('Format GPX tidak valid');
           }
-          
-          // Proses waypoints
+          // Waypoints
           const waypoints = xml.getElementsByTagName('wpt');
           if (waypoints.length > 0) {
               console.log(`Menemukan ${waypoints.length} waypoints di ${fileName}`);
-              
               const bounds = [];
               for (let wpt of waypoints) {
                   const lat = parseFloat(wpt.getAttribute('lat'));
                   const lon = parseFloat(wpt.getAttribute('lon'));
-                  
                   if (isNaN(lat)) throw new Error('Latitude tidak valid');
                   if (isNaN(lon)) throw new Error('Longitude tidak valid');
-                  
                   const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Tanpa nama';
                   const sym = wpt.getElementsByTagName('sym')[0]?.textContent || '';
-                  
                   // Hitung waypoint berdasarkan warna
                   if (sym.toLowerCase().includes('green') || sym.toLowerCase().includes('city (small)')) {
                       legendStats.green.count++;
@@ -581,11 +341,10 @@
                   } else {
                       legendStats.blue.count++;
                   }
-      
+                  // Tambahkan marker ke waypointLayer (tidak langsung ke map)
                   const marker = L.marker([lat, lon], {
                       icon: getWaypointIcon(sym)
-                  }).addTo(map);
-      
+                  }).addTo(waypointLayer);
                   marker.bindPopup(`
                       <b>Waypoint:</b> ${name}<br>
                       <b>Kategori:</b> ${getCategoryName(sym)}<br>
@@ -593,52 +352,41 @@
                   `);
                   bounds.push([lat, lon]);
               }
-              
               if (bounds.length > 0) {
                   map.fitBounds(bounds, { padding: [50, 50], maxZoom: 20 });
               }
           }
-          
-          // Proses tracks
+          // Tracks
           const tracks = xml.getElementsByTagName('trk');
           if (tracks.length > 0) {
               console.log(`Menemukan ${tracks.length} tracks di ${fileName}`);
-              
               for (let trk of tracks) {
                   const trkpts = trk.getElementsByTagName('trkpt');
                   const latLngs = [];
-                  
                   for (let i = 0; i < trkpts.length; i++) {
                       const trkpt = trkpts[i];
                       const lat = parseFloat(trkpt.getAttribute('lat'));
                       const lon = parseFloat(trkpt.getAttribute('lon'));
                       latLngs.push(L.latLng(lat, lon));
                   }
-                  
-                  // Simpan sebagai polygon terpisah
-                  if (latLngs.length >= 3) {
-                      trackPolygons.push(latLngs);
-                  }
-                  
-                  // Add to map dan simpan referensinya
+                  // Simpan polygon points
+                  if (latLngs.length >= 3) trackPolygons.push(latLngs);
+                  // Add polyline ke trackLayer
                   const polyline = L.polyline(latLngs, {
                       color: 'red',
                       weight: 4,
                       opacity: 0.75,
                       lineCap: 'round'
-                  }).addTo(map);
-                  
-                  // Simpan polyline ke array global
+                  }).addTo(trackLayer);
                   allTrackPolylines.push(polyline);
-                  
-                  // Fit bounds untuk track ini
-                  map.fitBounds(polyline.getBounds());
+                  // Fit bounds untuk track
+                  if (polyline.getBounds && polyline.getBounds().isValid()) {
+                      map.fitBounds(polyline.getBounds());
+                  }
               }
           }
-          
-          // Update legend setelah memproses file
+          // Update legend
           updateLegend();
-          
       } catch (error) {
           console.error(`Gagal memproses file ${fileName}:`, error);
           throw error;
@@ -646,62 +394,30 @@
   }
 
   function updateLegend() {
-    const legendElement = document.querySelector('.legend');
-    
-    // Format numbers
+    const legendElement = document.getElementById('legend');
     const greenCount = legendStats.green.count.toLocaleString('id-ID');
     const blueCount = legendStats.blue.count.toLocaleString('id-ID');
     const blackCount = legendStats.black.count.toLocaleString('id-ID');
     const orangeCount = legendStats.orange.count.toLocaleString('id-ID');
-    
-    // Ubah perhitungan total pokok (biru + hijau + orange)
     const totalPokok = (legendStats.blue.count + legendStats.green.count + legendStats.orange.count).toLocaleString('id-ID');
-    
     const areaHa = parseFloat(legendStats.track.area.toFixed(2)).toLocaleString('id-ID');
-    
-    // Update stand/ha sesuai total pokok baru
     const standPerHa = legendStats.track.area > 0 
       ? (legendStats.blue.count + legendStats.green.count + legendStats.orange.count) / legendStats.track.area
       : 0;
-    const formattedStandPerHa = standPerHa.toLocaleString('id-ID', {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2
-    });
-    
+    const formattedStandPerHa = standPerHa.toLocaleString('id-ID', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
     legendElement.innerHTML = `
       <h4>Legenda:</h4>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: blue;"></div>
-        <span>TM (Biru+Merah) = ${blueCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: green;"></div>
-        <span>TBM (Hijau) = ${greenCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: orange;"></div>
-        <span>Sisipan (Orange) = ${orangeCount} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: black;"></div>
-        <span>Titik Kosong + Abnormal (Hitam) = ${blackCount} Pkk</span>
-      </div>
-      <div class="legend-item total">
-        <div class="legend-color" style="background-color: transparent;"></div>
-        <span>Jumlah Pokok = ${totalPokok} Pkk</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: red;"></div>
-        <span>Luas = ${areaHa} ha</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: transparent;"></div>
-        <span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span>
-      </div>
+      <div class="legend-item"><div class="legend-color" style="background-color: blue;"></div><span>TM (Biru+Merah) = ${blueCount} Pkk</span></div>
+      <div class="legend-item"><div class="legend-color" style="background-color: green;"></div><span>TBM (Hijau) = ${greenCount} Pkk</span></div>
+      <div class="legend-item"><div class="legend-color" style="background-color: orange;"></div><span>Sisipan (Orange) = ${orangeCount} Pkk</span></div>
+      <div class="legend-item"><div class="legend-color" style="background-color: black;"></div><span>Titik Kosong + Abnormal (Hitam) = ${blackCount} Pkk</span></div>
+      <div class="legend-item total"><div class="legend-color" style="background-color: transparent;"></div><span>Jumlah Pokok = ${totalPokok} Pkk</span></div>
+      <div class="legend-item"><div class="legend-color" style="background-color: red;"></div><span>Luas = ${areaHa} ha</span></div>
+      <div class="legend-item"><div class="legend-color" style="background-color: transparent;"></div><span>Stand/Ha = ${formattedStandPerHa} Pkk/Ha</span></div>
     `;
   }
 
-  // Modifikasi fungsi processFiles untuk menangani kedua jenis file
+  // Proses file (gabungkan waypoint dan track url)
   async function processFiles() {
       console.log('Daftar file waypoints:', waypointUrls);
       console.log('Daftar file tracks:', trackUrls);
@@ -719,7 +435,6 @@
       for (const url of allFileUrls) {
           const li = document.createElement('li');
           const fileName = getFileName(url);
-          
           try {
               document.getElementById('progress').textContent = `Memuat ${fileName}...`;
               li.textContent = `🔄 Memuat ${fileName}...`;
@@ -740,12 +455,7 @@
 
       // Setelah semua file diproses, pastikan semua track terlihat
       if (allTrackPolylines.length > 0) {
-          // Buat layer group untuk semua track
-          const trackLayerGroup = L.layerGroup(allTrackPolylines);
-          trackLayerGroup.addTo(map);
-          
-          // Jika perlu, Anda bisa menambahkan kontrol layer untuk toggle track
-          layerControl.addOverlay(trackLayerGroup, "Track Lines");
+          // trackLayer sudah berisi polylines; kita pastikan overlay ada pada control (sudah ditambahkan sebelumnya)
       }
       
       // Hitung luas total setelah semua file diproses
@@ -753,33 +463,20 @@
           const totalArea = calculateTotalAreaFromPolygons();
           legendStats.track.area = totalArea;
           updateLegend();
-          
           // Fit bounds untuk semua waypoint dan track
           const allWaypoints = [];
-          // Cari semua waypoint di peta
           map.eachLayer(layer => {
-              if (layer instanceof L.Marker) {
-                  allWaypoints.push(layer.getLatLng());
-              }
+              if (layer instanceof L.Marker) allWaypoints.push(layer.getLatLng());
           });
-          
-          // Gabungkan dengan bounds track
           const allBounds = [...allWaypoints, ...trackPolygons.flat()];
-          if (allBounds.length > 0) {
-              map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
-          }
+          if (allBounds.length > 0) map.fitBounds(L.latLngBounds(allBounds), { padding: [50, 50] });
       } else if (hasData) {
           // Jika tidak ada track tapi ada waypoint, fit ke waypoint saja
           const waypointBounds = [];
           map.eachLayer(layer => {
-              if (layer instanceof L.Marker) {
-                  waypointBounds.push(layer.getLatLng());
-              }
+              if (layer instanceof L.Marker) waypointBounds.push(layer.getLatLng());
           });
-          
-          if (waypointBounds.length > 0) {
-              map.fitBounds(L.latLngBounds(waypointBounds), { padding: [50, 50] });
-          }
+          if (waypointBounds.length > 0) map.fitBounds(L.latLngBounds(waypointBounds), { padding: [50, 50] });
       }
       
       if (!hasData) {
@@ -793,17 +490,14 @@
       updateControlsView();
   }
 
-  // Fungsi untuk mengupdate tampilan kontrol
+  // Update controls view: collapse file list bila semua load sukses
   function updateControlsView() {
     const fileListElement = document.getElementById('file-list');
     const loadedFilesList = document.getElementById('loaded-files');
     const hasErrors = Array.from(loadedFilesList.children).some(li => li.className === 'error');
-    
     if (!hasErrors) {
-      // Jika semua file berhasil dimuat, sembunyikan daftar file
       fileListElement.classList.add('collapsed');
     } else {
-      // Jika ada error, tetap tampilkan daftar file
       fileListElement.classList.remove('collapsed');
     }
   }
@@ -811,78 +505,106 @@
   // Event listener untuk resize window
   window.addEventListener('resize', adjustForMobile);
 
-  // Di bagian inisialisasi, tambahkan:
+  // Inisialisasi DOMContentLoaded
   document.addEventListener('DOMContentLoaded', function() {
       // Sembunyikan loading jika tidak ada file yang akan diproses
       if (waypointUrls.length === 0 && trackUrls.length === 0) {
           document.getElementById('loading').style.display = 'none';
-          document.getElementById('file-list').innerHTML = `
-              <h4>Tidak ada file yang perlu dimuat</h4>
-          `;
+          document.getElementById('file-list').innerHTML = `<h4>Tidak ada file yang perlu dimuat</h4>`;
       } else {
-          // Sesuaikan tampilan awal berdasarkan ukuran layar
           adjustForMobile();
           processFiles();
       }
 
-     // Tambahkan event listener untuk toggle controls
+     // Toggle controls
     const titleElement = document.querySelector('.sensus-title');
     const controlsElement = document.querySelector('.map-controls');
-    
     titleElement.addEventListener('click', function() {
         controlsElement.classList.toggle('collapsed');
     });
-    
-    // Sembunyikan controls secara default di mobile
-    if (window.innerWidth <= 768) {
-        controlsElement.classList.add('collapsed');
-    }
+    if (window.innerWidth <= 768) controlsElement.classList.add('collapsed');
+
+    // Quick toggle buttons (Waypoints / Tracks / Both)
+    document.getElementById('btn-waypoints').addEventListener('click', showOnlyWaypoints);
+    document.getElementById('btn-tracks').addEventListener('click', showOnlyTracks);
+    document.getElementById('btn-both').addEventListener('click', showBothLayers);
+
+    // Set initial button state
+    setQuickToggleButtonState('both');
   });
 
-  // Tambahkan fungsi ini di bagian script
+  // Get category name (sama seperti sebelumnya)
   function getCategoryName(symbol) {
     const sym = (symbol || '').toLowerCase().trim();
-    
-    if (sym === 'flag, green' || sym === 'city (small)') {
-      return 'Tanaman Belum Menghasilkan (TBM)';
-    } else if (sym === 'navaid, black') {
-      return 'Titik Kosong/Abnormal';
-    } else if (sym === 'navaid, orange') {
-      return 'Sisipan';
-    } else if (sym === 'navaid, red') {
-      return 'Tanaman Menghasilkan (TM)'; // Red now counts as TM
-    } else if (sym === 'custom 7') {
-      return 'Tanaman Menghasilkan (TM)';
-    } else {
-      return 'Tanaman Menghasilkan (TM)'; // Default
-    }
+    if (sym === 'flag, green' || sym === 'city (small)') return 'Tanaman Belum Menghasilkan (TBM)';
+    if (sym === 'navaid, black') return 'Titik Kosong/Abnormal';
+    if (sym === 'navaid, orange') return 'Sisipan';
+    if (sym === 'navaid, red') return 'Tanaman Menghasilkan (TM)';
+    if (sym === 'custom 7') return 'Tanaman Menghasilkan (TM)';
+    return 'Tanaman Menghasilkan (TM)';
   }
 
   function calculateTotalAreaFromPolygons() {
     if (trackPolygons.length === 0) return 0;
-    
     let totalArea = 0;
-    
     trackPolygons.forEach(polygonPoints => {
         if (polygonPoints.length < 3) return;
-        
-        // Convert to GeoJSON format
         const coordinates = polygonPoints.map(ll => [ll.lng, ll.lat]);
-        coordinates.push(coordinates[0]); // Tutup polygon
-        
+        coordinates.push(coordinates[0]);
         try {
             const polygon = turf.polygon([coordinates]);
-            const area = turf.area(polygon) / 10000; // Konversi ke hektar
+            const area = turf.area(polygon) / 10000;
             totalArea += area;
         } catch (error) {
             console.error('Error calculating polygon area:', error);
         }
     });
-    
-    console.log('Total area from all polygons:', totalArea.toFixed(4), 'hectares');
     return totalArea;
-}
-  
+  }
+
+  // === Quick toggle functions ===
+  function showOnlyWaypoints() {
+    if (!map.hasLayer(waypointLayer)) map.addLayer(waypointLayer);
+    if (map.hasLayer(trackLayer)) map.removeLayer(trackLayer);
+    setQuickToggleButtonState('waypoints');
+  }
+
+  function showOnlyTracks() {
+    if (!map.hasLayer(trackLayer)) map.addLayer(trackLayer);
+    if (map.hasLayer(waypointLayer)) map.removeLayer(waypointLayer);
+    setQuickToggleButtonState('tracks');
+  }
+
+  function showBothLayers() {
+    if (!map.hasLayer(trackLayer)) map.addLayer(trackLayer);
+    if (!map.hasLayer(waypointLayer)) map.addLayer(waypointLayer);
+    setQuickToggleButtonState('both');
+  }
+
+  function setQuickToggleButtonState(mode) {
+    const btnW = document.getElementById('btn-waypoints');
+    const btnT = document.getElementById('btn-tracks');
+    const btnB = document.getElementById('btn-both');
+    btnW.classList.remove('active'); btnT.classList.remove('active'); btnB.classList.remove('active');
+    if (mode === 'waypoints') btnW.classList.add('active');
+    else if (mode === 'tracks') btnT.classList.add('active');
+    else btnB.classList.add('active');
+  }
+
+  // Jika user membuka halaman dengan parameter ingin menampilkan hanya waypoints/tracks,
+  // bisa digunakan misal: ?show=waypoints  atau ?show=tracks  atau ?show=both
+  const showParam = urlParams.get('show') || 'both';
+  if (showParam === 'waypoints') {
+    // hide tracks at start
+    if (map.hasLayer(trackLayer)) map.removeLayer(trackLayer);
+    setQuickToggleButtonState('waypoints');
+  } else if (showParam === 'tracks') {
+    if (map.hasLayer(waypointLayer)) map.removeLayer(waypointLayer);
+    setQuickToggleButtonState('tracks');
+  } else {
+    setQuickToggleButtonState('both');
+  }
+
 </script>
 </body>
 </html>
