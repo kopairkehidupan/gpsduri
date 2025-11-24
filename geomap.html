@@ -679,5 +679,266 @@
     refreshLayerList();
 
   </script>
+
+  <!-- START: CARTO LIBRARY ADDITIONS (North Arrow, Scale Bar, Grid, PDF Export) -->
+<style>
+/* overlay helper (not rendered into canvas directly) */
+#printMapBtn { margin-top:8px; display:block; }
+.grid-label { position:absolute; background:rgba(255,255,255,0.8); padding:2px 4px; font-size:11px; border-radius:2px; pointer-events:none; }
+</style>
+
+<!-- Print button injection (safely adds button to your sidebar) -->
+<script>
+(function(){
+  function ensure(){
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return setTimeout(ensure,200);
+    if (!document.getElementById('printMapBtn')){
+      const btn = document.createElement('button');
+      btn.id = 'printMapBtn';
+      btn.className = 'btn';
+      btn.textContent = 'Print Map (PDF)';
+      btn.style.marginTop = '8px';
+      // place after first control block (adjust if needed)
+      const firstControl = sidebar.querySelector('.control');
+      if (firstControl) firstControl.after(btn); else sidebar.appendChild(btn);
+      btn.onclick = generatePDF;
+    }
+  }
+  ensure();
+})();
+</script>
+
+<script>
+// Load external libs (turf + jspdf) dynamically and provide a ready promise
+window._libsReady = (function(){
+  let p = null;
+  return function(){
+    if (p) return p;
+    p = new Promise((resolve,reject)=>{
+      const urls = [
+        'https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+      ];
+      let loaded = 0;
+      urls.forEach(u=>{
+        const s = document.createElement('script');
+        s.src = u;
+        s.onload = ()=>{ loaded++; if (loaded===urls.length) resolve(); };
+        s.onerror = ()=> reject(new Error('Failed load '+u));
+        document.head.appendChild(s);
+      });
+    });
+    return p;
+  };
+})();
+
+// Haversine distance (meters)
+function haversine(lon1,lat1,lon2,lat2){
+  const R = 6371000;
+  const toRad = Math.PI/180;
+  const dLat = (lat2-lat1)*toRad;
+  const dLon = (lon2-lon1)*toRad;
+  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Build graticule (grid) for bounds with spacing in meters (250 m)
+function buildGraticuleForBounds(bounds, spacingMeters){
+  const minLng = bounds.getWest(), maxLng = bounds.getEast();
+  const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
+  const meanLat = (minLat+maxLat)/2;
+  const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
+  const stepDeg = spacingMeters * meterToDeg;
+  const features = [];
+  const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
+  for (let lng = startLng; lng <= maxLng; lng += stepDeg){
+    features.push({ type:'Feature', geometry:{ type:'LineString', coordinates:[[lng,minLat],[lng,maxLat]] } });
+  }
+  const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
+  for (let lat = startLat; lat <= maxLat; lat += stepDeg){
+    features.push({ type:'Feature', geometry:{ type:'LineString', coordinates:[[minLng,lat],[maxLng,lat]] } });
+  }
+  return { type:'FeatureCollection', features };
+}
+
+// Ensure graticule layer exists and update labels positions for rendering into PDF
+function ensureGridLayer(map){
+  if (!map) return;
+  if (!map.getSource('graticule-source')){
+    map.addSource('graticule-source', { type:'geojson', data: { type:'FeatureCollection', features:[] } });
+    map.addLayer({ id:'graticule-layer', type:'line', source:'graticule-source', paint:{ 'line-color':'#666', 'line-width':0.6, 'line-opacity':0.6 } });
+  }
+  function update(){
+    const b = map.getBounds();
+    const grid = buildGraticuleForBounds(b, 250);
+    const src = map.getSource('graticule-source');
+    if (src && src.setData) src.setData(grid);
+    window._gridLabels = computeGridLabels(map, b, 250);
+  }
+  map.on('moveend', update);
+  map.on('zoomend', update);
+  update();
+}
+
+// compute positions for grid labels (we will draw them onto merged canvas)
+function computeGridLabels(map, bounds, spacingMeters){
+  const labels = [];
+  const minLng = bounds.getWest(), maxLng = bounds.getEast();
+  const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
+  const meanLat = (minLat+maxLat)/2;
+  const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
+  const stepDeg = spacingMeters * meterToDeg;
+  const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
+  for (let lng = startLng; lng <= maxLng; lng += stepDeg){
+    const p = map.project([lng, bounds.getNorth()]);
+    labels.push({ x: p.x, y: Math.max(8, p.y-6), text: lng.toFixed(5) });
+  }
+  const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
+  for (let lat = startLat; lat <= maxLat; lat += stepDeg){
+    const p = map.project([bounds.getWest(), lat]);
+    labels.push({ x: Math.max(6, p.x+2), y: p.y, text: lat.toFixed(5) });
+  }
+  return labels;
+}
+
+// Scale info (pixel length and pretty label)
+function updateScaleInfo(map){
+  if (!map) return {pixelLen:100, label:'100 m', valueMeters:100};
+  const refPx = 100;
+  const h = map.getContainer().clientHeight;
+  const p1 = map.unproject([0, h/2]);
+  const p2 = map.unproject([refPx, h/2]);
+  const meters = haversine(p1.lng, p1.lat, p2.lng, p2.lat);
+  const nice = [1,2,5,10,20,50,100,200,500,1000,2000,5000,10000];
+  let best = nice[0];
+  for (let n of nice){ if (meters < n){ best = n; break; } best = n; }
+  const pixelLen = refPx * (best / meters);
+  return { pixelLen, label: best < 1000 ? `${best} m` : `${(best/1000).toFixed(2)} km`, valueMeters: best };
+}
+
+// Capture merged map image: map canvas + north-arrow + scale-bar + grid labels drawn onto one canvas
+async function captureMergedMapImage(map){
+  await window._libsReady();
+  const canvas = map.getCanvas();
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const ctx = out.getContext('2d');
+  // draw base map canvas (already contains graticule layer)
+  ctx.drawImage(canvas, 0, 0, w, h);
+  // north arrow (top-right)
+  const arrowSize = Math.round(40 * dpr);
+  const margin = Math.round(12 * dpr);
+  ctx.save();
+  ctx.fillStyle = '#111';
+  const ax = w - margin - arrowSize/2;
+  const ay = margin + arrowSize/2;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay - arrowSize/2);
+  ctx.lineTo(ax - arrowSize/2, ay + arrowSize/2);
+  ctx.lineTo(ax + arrowSize/2, ay + arrowSize/2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = `${12 * dpr}px Arial`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('N', ax, ay - 2);
+  ctx.restore();
+  // scale bar (bottom-left)
+  const scale = updateScaleInfo(map);
+  const scalePx = Math.round(scale.pixelLen * dpr);
+  const barW = Math.max(40 * dpr, scalePx);
+  const barH = Math.round(6 * dpr);
+  const bx = margin;
+  const by = h - margin - barH;
+  ctx.fillStyle = '#fff'; ctx.fillRect(bx - 2*dpr, by - 6*dpr, barW + 4*dpr, barH + 12*dpr);
+  ctx.fillStyle = '#111'; ctx.fillRect(bx, by, barW, barH);
+  ctx.fillStyle = '#000'; ctx.font = `${11 * dpr}px Arial`; ctx.textAlign='left'; ctx.fillText(scale.label, bx, by - 8*dpr);
+  // draw grid labels computed earlier
+  if (window._gridLabels && window._gridLabels.length){
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.font = `${10 * dpr}px Arial`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    window._gridLabels.forEach(lbl => {
+      const x = Math.round(lbl.x * dpr), y = Math.round(lbl.y * dpr);
+      const padding = Math.round(2 * dpr);
+      const metrics = ctx.measureText(lbl.text);
+      const wbox = Math.round(metrics.width) + padding*2;
+      const hbox = Math.round(12 * dpr);
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(x - padding, y - padding, wbox, hbox);
+      ctx.fillStyle = '#000';
+      ctx.fillText(lbl.text, x, y);
+    });
+  }
+  return out.toDataURL('image/png');
+}
+
+// Polygon stats using turf (area in Ha)
+function generatePolygonStats(){
+  const stats = [];
+  if (!window.turf) return stats;
+  if (!window.state || !Array.isArray(window.state.layers)) return stats;
+  window.state.layers.forEach(layer => {
+    if (layer.type === 'polygon'){
+      layer.geojson.features.forEach((f, idx) => {
+        try {
+          const area = turf.area(f)/10000.0;
+          stats.push({ name: layer.name + (layer.geojson.features.length>1 ? ' #' + (idx+1) : ''), area });
+        } catch(e){}
+      });
+    }
+  });
+  return stats;
+}
+
+// Generate PDF (A4 landscape) — left map (68%), right legend & areas
+async function generatePDF(){
+  try { await window._libsReady(); } catch(e){ alert('Failed to load libs for PDF: ' + e.message); return; }
+  const mapInstance = window.map;
+  if (!mapInstance){ alert('Map not initialized'); return; }
+  // ensure grid overlay exists and grid labels computed
+  ensureGridLayer(mapInstance);
+  // small delay to allow sources to update on moveend
+  await new Promise(r=>setTimeout(r,250));
+  const imgData = await captureMergedMapImage(mapInstance);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('landscape','mm','a4');
+  const pw = pdf.internal.pageSize.getWidth();
+  const ph = pdf.internal.pageSize.getHeight();
+  const mapWmm = pw * 0.68;
+  const mapHmm = ph - 20;
+  const img = new Image();
+  img.src = imgData;
+  await new Promise(r=>{ img.onload = r; });
+  const imgAspect = img.width / img.height;
+  const targetW = mapWmm;
+  const targetH = Math.min(mapHmm, mapWmm / imgAspect);
+  pdf.addImage(imgData, 'PNG', 10, 10, targetW, targetH);
+  // Right panel legend & areas
+  const stats = generatePolygonStats();
+  pdf.setFontSize(14); pdf.text('Legenda & Luas Blok', 12 + targetW, 16);
+  pdf.setFontSize(11);
+  let y = 24;
+  let total = 0;
+  stats.forEach(s => {
+    pdf.text(`- ${s.name}: ${s.area.toFixed(2)} Ha`, 12 + targetW, y);
+    y += 6;
+    total += s.area;
+  });
+  pdf.setFontSize(12); pdf.text(`Total: ${total.toFixed(2)} Ha`, 12 + targetW, y+4);
+  // Title
+  pdf.setFontSize(16); pdf.text('PETA AREAL KEBUN', 10, ph - 6);
+  pdf.save('map_export.pdf');
+}
+</script>
+<!-- END: CARTO LIBRARY ADDITIONS -->
+
 </body>
 </html>
