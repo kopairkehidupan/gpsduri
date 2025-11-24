@@ -2,13 +2,13 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Peta MapLibre — GPX/GeoJSON Upload & Layer Editor (Fixed polygons)</title>
+  <title>Peta Leaflet — GPX/GeoJSON Upload & PDF Export (Areal-only)</title>
 
-  <!-- MapLibre GL JS -->
-  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- toGeoJSON (konversi GPX -> GeoJSON) -->
+  <!-- toGeoJSON (GPX -> GeoJSON) -->
   <script src="https://unpkg.com/@mapbox/togeojson@0.16.2/togeojson.js"></script>
 
   <style>
@@ -38,27 +38,43 @@
     .basemap-select { width:100%; padding:6px; border-radius:6px; border:1px solid #ddd; }
     .layer-actions { display:flex; gap:6px; }
     .muted { color:#666; font-size:12px; }
-  </style>
 
-  <style>
-  /* overlay helper (not rendered into canvas directly) */
-  #printMapBtn { margin-top:8px; display:block; }
-  .grid-label { position:absolute; background:rgba(255,255,255,0.8); padding:2px 4px; font-size:11px; border-radius:2px; pointer-events:none; }
+    /* North arrow overlay */
+    .north-arrow {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: 56px;
+      height: 56px;
+      z-index: 600;
+      pointer-events: none;
+      display:flex;align-items:center;justify-content:center;
+      background: rgba(255,255,255,0.85);
+      border-radius:6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      font-weight:700;
+    }
+
+    /* print button */
+    #printMapBtn { margin-top:8px; display:block; }
+
+    /* grid labels (on-screen optional) */
+    .grid-label { position:absolute; background:rgba(255,255,255,0.8); padding:2px 4px; font-size:11px; border-radius:2px; pointer-events:none; z-index:500; }
   </style>
 </head>
 <body>
   <div id="app">
     <aside id="sidebar">
-      <h2>Peta — ArcGIS-like (MapLibre)</h2>
+      <h2>Peta — Leaflet (A)</h2>
 
       <div class="control">
         <label>Basemap</label>
         <select id="basemapSelect" class="basemap-select">
           <option value="osm">OpenStreetMap</option>
-          <option value="terrain">Terrain (Stamen Terrain)</option>
-          <option value="satellite">Satellite (Esri.WorldImagery)</option>
-          <option value="light">Light (Carto)</option>
-          <option value="dark">Dark (Carto)</option>
+          <option value="terrain">Stamen Terrain</option>
+          <option value="satellite">Esri WorldImagery</option>
+          <option value="carto_light">Carto Light</option>
+          <option value="carto_dark">Carto Dark</option>
         </select>
       </div>
 
@@ -88,8 +104,9 @@
       </div>
 
       <div class="control">
-        <label>Export</label>
-        <div style="display:flex; gap:8px;">
+        <label>Export / Print</label>
+        <div style="display:flex; gap:8px; flex-direction:column;">
+          <button id="printMapBtn" class="btn">Print Map (PDF)</button>
           <button id="exportGeoJSON" class="btn secondary">Export All GeoJSON</button>
           <button id="exportState" class="btn secondary">Download State</button>
         </div>
@@ -102,9 +119,16 @@
     </aside>
 
     <div id="map"></div>
+    <div class="north-arrow" id="northArrow" aria-hidden="true">
+      <!-- simple stylized arrow -->
+      <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true">
+        <polygon points="12,2 4,22 12,18 20,22" fill="#111"/>
+        <text x="12" y="10" fill="#fff" font-size="6" font-weight="700" text-anchor="middle">N</text>
+      </svg>
+    </div>
   </div>
 
-  <!-- STYLE EDITOR MODAL -->
+  <!-- modal style editor -->
   <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-hidden="true">
     <div class="modal" role="document">
       <h3 id="modalTitle">Edit Layer</h3>
@@ -122,332 +146,210 @@
   </div>
 
   <script>
-    /* ====== CONFIG ====== */
-    const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL';
-    const UPLOADED_GPX_PATH = '/mnt/data/Rangkum Langkimat.gpx';
+  /* ====== CONFIG ====== */
+  const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL';
+  // path to sample GPX already uploaded to session: (tool will transform path to URL)
+  const UPLOADED_GPX_PATH = '/mnt/data/Rangkum Langkimat.gpx';
 
-    const DEFAULT_STYLE = {
-      trackLine: '#d35400',
-      trackLineOutline: '#8e2b00',
-      waypoint: '#1f78b4',
-      polygonFill: '#f6e6d8',
-      polygonOutline: '#d98b3a'
+  const DEFAULT_STYLE = {
+    trackLine: '#d35400',
+    waypoint: '#1f78b4',
+    polygonFill: '#f6e6d8',
+    polygonOutline: '#d98b3a'
+  };
+
+  // expose global state for export functions
+  window.state = { layers: [], nextId: 1 };
+
+  /* ====== Init Leaflet map ====== */
+  const map = L.map('map', { preferCanvas: true }).setView([-0.45, 101.45], 11);
+  window.map = map; // for global usage
+
+  // basemap definitions
+  const basemapDefs = {
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }),
+    terrain: L.tileLayer('https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg', { maxZoom: 18, attribution: 'Stamen Terrain' }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri World Imagery' }),
+    carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'Carto Light' }),
+    carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'Carto Dark' })
+  };
+  basemapDefs.osm.addTo(map);
+
+  L.control.scale({ metric: true, imperial: false }).addTo(map);
+
+  /* ====== Utility: simplify RDP (coords: [lng,lat]) ====== */
+  function simplifyRDP(coords, toleranceMeters) {
+    if (!coords || coords.length < 3) return coords.slice();
+    const meanLat = coords.reduce((s,c)=>s + c[1],0)/coords.length;
+    const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
+    const eps = toleranceMeters * meterToDeg;
+    function sqDist(a,b){ const dx=a[0]-b[0], dy=a[1]-b[1]; return dx*dx + dy*dy; }
+    function distToSeg2(p, v, w){
+      const l2 = sqDist(v,w); if (l2===0) return sqDist(p,v);
+      let t = ((p[0]-v[0])*(w[0]-v[0]) + (p[1]-v[1])*(w[1]-v[1]))/l2;
+      t = Math.max(0, Math.min(1, t));
+      const proj = [ v[0] + t*(w[0]-v[0]), v[1] + t*(w[1]-v[1]) ];
+      return sqDist(p, proj);
+    }
+    function rdp(points, eps){
+      const n = points.length;
+      const keep = new Array(n).fill(false);
+      keep[0] = keep[n-1] = true;
+      const stack = [[0,n-1]];
+      while(stack.length){
+        const [i,j] = stack.pop();
+        let maxd=0, idx=-1;
+        for(let k=i+1;k<j;k++){
+          const d = distToSeg2(points[k], points[i], points[j]);
+          if (d > maxd){ maxd = d; idx = k; }
+        }
+        if (Math.sqrt(maxd) > eps){
+          keep[idx]=true;
+          stack.push([i,idx]); stack.push([idx,j]);
+        }
+      }
+      const res = [];
+      for(let i=0;i<n;i++) if (keep[i]) res.push(points[i]);
+      return res;
+    }
+    return rdp(coords, eps);
+  }
+
+  /* ====== Layer management (Leaflet GeoJSON layers) ====== */
+  function addNewLayer(geojson, type, name){
+    const id = window.state.nextId++;
+    const layerObj = {
+      id, name, type, geojson,
+      visible: true,
+      style: {
+        color: type==='track' ? DEFAULT_STYLE.trackLine : type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill,
+        width: type==='track' ? 3 : undefined,
+        opacity: 1,
+        radius: type==='point' ? 6 : undefined
+      },
+      leafletLayer: null
     };
+    // create leaflet layer
+    const opts = {};
+    if (type === 'point'){
+      opts.pointToLayer = (f,latlng) => L.circleMarker(latlng, { radius: layerObj.style.radius, color: layerObj.style.color, weight:1, fillOpacity: layerObj.style.opacity, fillColor: layerObj.style.color });
+    } else {
+      opts.style = (f) => {
+        if (type === 'polygon') return { color: layerObj.style.color, weight: layerObj.style.width || 2, fillColor: layerObj.style.color, fillOpacity: layerObj.style.opacity || 0.6 };
+        return { color: layerObj.style.color, weight: layerObj.style.width || 3, opacity: layerObj.style.opacity || 1 };
+      };
+    }
+    const leafletLayer = L.geoJSON(geojson, opts).addTo(map);
+    layerObj.leafletLayer = leafletLayer;
+    window.state.layers.push(layerObj);
+    refreshLayerList(); refreshLegend();
+    return layerObj;
+  }
 
-    /* ====== Map & basemap helpers ====== */
-    const basemapDefs = {
-      osm: { tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], attribution: '© OpenStreetMap contributors' },
-      terrain: { tiles: ['https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg'], attribution: 'Terrain tiles by Stamen' },
-      satellite: { tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], attribution: 'Esri World Imagery' },
-      light: { tiles: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'], attribution: 'Carto Light' },
-      dark: { tiles: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'], attribution: 'Carto Dark' }
-    };
+  function removeLayerById(id){
+    const idx = window.state.layers.findIndex(l=>l.id===id);
+    if (idx===-1) return;
+    const l = window.state.layers[idx];
+    if (l.leafletLayer) map.removeLayer(l.leafletLayer);
+    window.state.layers.splice(idx,1);
+    refreshLayerList(); refreshLegend();
+  }
 
-    const map = new maplibregl.Map({
-      container: 'map',
-      style: { version: 8, sources: { basemap: { type: 'raster', tiles: basemapDefs.osm.tiles, tileSize: 256, attribution: basemapDefs.osm.attribution } }, layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }] },
-      center: [101.45, -0.45],
-      zoom: 11
+  function rebuildAllLayers(){
+    // remove all
+    window.state.layers.forEach(l => { if (l.leafletLayer) map.removeLayer(l.leafletLayer); l.leafletLayer = null; });
+    // re-add
+    window.state.layers.forEach(l => {
+      const opts = {};
+      if (l.type === 'point') opts.pointToLayer = (f,latlng) => L.circleMarker(latlng, { radius: l.style.radius, color: l.style.color, weight:1, fillOpacity: l.style.opacity, fillColor: l.style.color });
+      else opts.style = (f) => l.type==='polygon' ? { color: l.style.color, weight: l.style.width || 2, fillColor: l.style.color, fillOpacity: l.style.opacity || 0.6 } : { color: l.style.color, weight: l.style.width || 3, opacity: l.style.opacity || 1 };
+      l.leafletLayer = L.geoJSON(l.geojson, opts).addTo(map);
     });
-    window.map = map;   // ← FIX WAJIB
+    refreshLayerList(); refreshLegend();
+  }
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(new maplibregl.ScaleControl({maxWidth:200, unit:'metric'}), 'bottom-right');
+  /* ====== UI: layer list & legend ====== */
+  function refreshLayerList(){
+    const list = document.getElementById('layerList');
+    list.innerHTML = '';
+    window.state.layers.slice().reverse().forEach(layer => {
+      const el = document.createElement('div'); el.className='layer-item';
+      const left = document.createElement('div'); left.className='layer-left';
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = layer.visible; cb.dataset.id = layer.id;
+      cb.onchange = () => { layer.visible = cb.checked; if (layer.leafletLayer) { if (cb.checked) map.addLayer(layer.leafletLayer); else map.removeLayer(layer.leafletLayer); } refreshLegend(); };
+      const title = document.createElement('div'); title.innerHTML = `<b>${layer.name}</b><div class="small">${layer.type}</div>`;
+      left.appendChild(cb); left.appendChild(title);
 
-    /* ====== State ====== */
-    const state = { layers: [], nextId: 1 };
+      const right = document.createElement('div'); right.className='layer-actions';
+      const btnStyle = document.createElement('button'); btnStyle.className='btn secondary'; btnStyle.textContent='Style'; btnStyle.onclick = () => openStyleModal(layer.id);
+      const btnUp = document.createElement('button'); btnUp.className='btn'; btnUp.textContent='▲'; btnUp.title='Move up'; btnUp.onclick = () => moveLayer(layer.id, -1);
+      const btnDown = document.createElement('button'); btnDown.className='btn'; btnDown.textContent='▼'; btnDown.title='Move down'; btnDown.onclick = () => moveLayer(layer.id, 1);
+      const btnZoom = document.createElement('button'); btnZoom.className='btn secondary'; btnZoom.textContent='Zoom'; btnZoom.onclick = () => { map.fitBounds(layer.leafletLayer.getBounds()); };
+      const btnExport = document.createElement('button'); btnExport.className='btn secondary'; btnExport.textContent='Export'; btnExport.onclick = () => exportLayerGeoJSON(layer);
+      const btnConvert = document.createElement('button'); btnConvert.className='btn secondary'; btnConvert.textContent='Convert'; btnConvert.title='Convert track→polygon if closed'; btnConvert.onclick = () => convertTrackToPolygon(layer.id);
+      const btnRemove = document.createElement('button'); btnRemove.className='btn warn'; btnRemove.textContent='Remove'; btnRemove.onclick = () => removeLayerById(layer.id);
 
-    /* ====== Ramer–Douglas–Peucker (2D simplification) ====== */
-    // Works on arrays of [lng,lat]; tolerance in meters — will convert to degrees approx using lat correction.
-    function simplifyRDP(coords, toleranceMeters) {
-      if (!coords || coords.length < 3) return coords.slice();
-      // approximate meter -> degree at given latitude (use mean latitude)
-      const meanLat = coords.reduce((s,c)=>s + c[1],0)/coords.length;
-      const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180)); // approx degrees per meter
-      const tol = toleranceMeters * meterToDeg;
+      right.appendChild(btnStyle);
+      right.appendChild(btnUp);
+      right.appendChild(btnDown);
+      right.appendChild(btnZoom);
+      right.appendChild(btnExport);
+      right.appendChild(btnConvert);
+      right.appendChild(btnRemove);
 
-      function sqDist(p1,p2) { const dx = p1[0]-p2[0], dy = p1[1]-p2[1]; return dx*dx + dy*dy; }
-      function distToSegmentSquared(p, v, w) {
-        const l2 = sqDist(v,w);
-        if (l2 === 0) return sqDist(p,v);
-        let t = ((p[0]-v[0])*(w[0]-v[0]) + (p[1]-v[1])*(w[1]-v[1]))/l2;
-        t = Math.max(0, Math.min(1,t));
-        const proj = [ v[0] + t*(w[0]-v[0]), v[1] + t*(w[1]-v[1]) ];
-        return sqDist(p, proj);
-      }
-      function rdp(points, eps) {
-        const n = points.length;
-        const keep = new Array(n).fill(false);
-        keep[0] = keep[n-1] = true;
-        const stack = [[0, n-1]];
-        while (stack.length) {
-          const [i,j] = stack.pop();
-          let maxDist = 0, idx = -1;
-          for (let k=i+1;k<j;k++) {
-            const d = distToSegmentSquared(points[k], points[i], points[j]);
-            if (d > maxDist) { maxDist = d; idx = k; }
-          }
-          if (Math.sqrt(maxDist) > eps) {
-            keep[idx] = true;
-            stack.push([i, idx]);
-            stack.push([idx, j]);
-          }
-        }
-        const res = [];
-        for (let i=0;i<n;i++) if (keep[i]) res.push(points[i]);
-        return res;
-      }
-      return rdp(coords, tol);
-    }
+      el.appendChild(left); el.appendChild(right);
+      list.appendChild(el);
+    });
+  }
 
-    /* ====== Core: add layer to map ====== */
-    function addLayerToMap(layerObj) {
-      const id = 'layer-' + layerObj.id;
-      // remove existing source/layers to update cleanly
-      const suffixes = ['-outline','-line','-symbol','-fill'];
-      suffixes.forEach(s => { const lid = id + s; if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){} });
-      if (map.getSource(id)) try { map.removeSource(id); } catch(e){}
+  function refreshLegend(){
+    const node = document.getElementById('legendItems');
+    node.innerHTML = '';
+    window.state.layers.forEach(l => {
+      const div = document.createElement('div');
+      const sample = document.createElement('span');
+      sample.style.display='inline-block'; sample.style.width='18px'; sample.style.height='12px'; sample.style.marginRight='8px';
+      const color = (l.style && l.style.color) || (l.type === 'track' ? DEFAULT_STYLE.trackLine : l.type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill);
+      sample.style.background = color;
+      div.innerHTML = `<b>${l.name}</b> <span class="small">(${l.type})</span>`;
+      div.prepend(sample);
+      node.appendChild(div);
+    });
+  }
 
-      map.addSource(id, { type: 'geojson', data: layerObj.geojson });
+  function moveLayer(id, delta){
+    const idx = window.state.layers.findIndex(l=>l.id===id);
+    if (idx===-1) return;
+    const newIdx = idx + delta;
+    if (newIdx < 0 || newIdx >= window.state.layers.length) return;
+    [window.state.layers[idx], window.state.layers[newIdx]] = [window.state.layers[newIdx], window.state.layers[idx]];
+    rebuildAllLayers();
+  }
 
-      // style defaults
-      const style = layerObj.style = layerObj.style || {};
-      if (layerObj.type === 'track') {
-        // outline
-        map.addLayer({
-          id: id + '-outline',
-          type: 'line',
-          source: id,
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': style.outlineColor || style.color || DEFAULT_STYLE.trackLineOutline,
-            'line-width': style.outlineWidth || (style.width ? Math.max(3, style.width+2) : 6),
-            'line-opacity': typeof style.opacity === 'number' ? style.opacity : 0.9
-          },
-          filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-        });
-        // main line
-        map.addLayer({
-          id: id + '-line',
-          type: 'line',
-          source: id,
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: {
-            'line-color': style.color || DEFAULT_STYLE.trackLine,
-            'line-width': style.width || 3,
-            'line-opacity': typeof style.opacity === 'number' ? style.opacity : 1.0
-          },
-          filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-        });
-      } else if (layerObj.type === 'point') {
-        map.addLayer({
-          id: id + '-symbol',
-          type: 'circle',
-          source: id,
-          paint: {
-            'circle-radius': layerObj.style && layerObj.style.radius ? layerObj.style.radius : 6,
-            'circle-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.waypoint,
-            'circle-stroke-color': '#fff',
-            'circle-stroke-width': 1,
-            'circle-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 1
-          },
-          filter: ["==", ["geometry-type"], "Point"]
-        });
-      } else if (layerObj.type === 'polygon') {
-        map.addLayer({
-          id: id + '-fill',
-          type: 'fill',
-          source: id,
-          paint: {
-            'fill-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.polygonFill,
-            'fill-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 0.6
-          }
-        });
-        map.addLayer({
-          id: id + '-outline',
-          type: 'line',
-          source: id,
-          paint: {
-            'line-color': layerObj.style && layerObj.style.outlineColor ? layerObj.style.outlineColor : DEFAULT_STYLE.polygonOutline,
-            'line-width': layerObj.style && layerObj.style.outlineWidth ? layerObj.style.outlineWidth : 2
-          }
-        });
-      }
+  function exportLayerGeoJSON(layer){
+    const text = JSON.stringify(layer.geojson, null, 2);
+    const blob = new Blob([text], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = layer.name.replace(/\s+/g,'_') + '.geojson'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
-      toggleLayerVisibility(layerObj);
-      addClickHandlersForLayer(layerObj);
-    }
+  /* ====== File handling & parsing ====== */
+  document.getElementById('addLocal').onclick = async () => {
+    const input = document.getElementById('fileInput');
+    if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
+    const file = input.files[0];
+    const text = await file.text();
+    await parseAndAddFileContent(text, file.name);
+  };
 
-    function addClickHandlersForLayer(layerObj) {
-      const base = 'layer-' + layerObj.id;
-      const symbolId = base + '-symbol';
-      const lineId = base + '-line';
-      if (map.getLayer(symbolId)) {
-        map.off('click', symbolId, handleFeatureClick);
-        map.on('click', symbolId, handleFeatureClick);
-      }
-      if (map.getLayer(lineId)) {
-        map.off('click', lineId, handleFeatureClick);
-        map.on('click', lineId, handleFeatureClick);
-      }
-    }
-
-    function handleFeatureClick(e) {
-      const props = e.features && e.features[0] && e.features[0].properties ? e.features[0].properties : {};
-      new maplibregl.Popup()
-        .setLngLat(e.lngLat)
-        .setHTML('<pre style="font-size:12px">' + JSON.stringify(props, null, 2) + '</pre>')
-        .addTo(map);
-    }
-
-    /* ====== UI & state helpers ====== */
-    function refreshLayerList() {
-      const list = document.getElementById('layerList');
-      list.innerHTML = '';
-      state.layers.slice().reverse().forEach(layer => {
-        const el = document.createElement('div'); el.className='layer-item';
-        const left = document.createElement('div'); left.className='layer-left';
-        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = layer.visible; cb.dataset.id = layer.id;
-        cb.onchange = () => { layer.visible = cb.checked; toggleLayerVisibility(layer); refreshLegend(); };
-        const title = document.createElement('div'); title.innerHTML = `<b>${layer.name}</b><div class="small">${layer.type}</div>`;
-        left.appendChild(cb); left.appendChild(title);
-
-        const right = document.createElement('div'); right.className='layer-actions';
-        const btnStyle = document.createElement('button'); btnStyle.className='btn secondary'; btnStyle.textContent='Style'; btnStyle.onclick = () => openStyleModal(layer.id);
-        const btnUp = document.createElement('button'); btnUp.className='btn'; btnUp.textContent='▲'; btnUp.title='Move up'; btnUp.onclick = () => moveLayer(layer.id, -1);
-        const btnDown = document.createElement('button'); btnDown.className='btn'; btnDown.textContent='▼'; btnDown.title='Move down'; btnDown.onclick = () => moveLayer(layer.id, 1);
-        const btnZoom = document.createElement('button'); btnZoom.className='btn secondary'; btnZoom.textContent='Zoom'; btnZoom.onclick = () => zoomToGeoJSON(layer.geojson);
-        const btnExport = document.createElement('button'); btnExport.className='btn secondary'; btnExport.textContent='Export'; btnExport.onclick = () => exportLayerGeoJSON(layer);
-        const btnConvert = document.createElement('button'); btnConvert.className='btn secondary'; btnConvert.textContent='Convert'; btnConvert.title='Convert track→polygon if closed'; btnConvert.onclick = () => convertTrackToPolygon(layer.id);
-        const btnRemove = document.createElement('button'); btnRemove.className='btn warn'; btnRemove.textContent='Remove'; btnRemove.onclick = () => { removeLayer(layer.id); };
-
-        right.appendChild(btnStyle);
-        right.appendChild(btnUp);
-        right.appendChild(btnDown);
-        right.appendChild(btnZoom);
-        right.appendChild(btnExport);
-        right.appendChild(btnConvert);
-        right.appendChild(btnRemove);
-
-        el.appendChild(left); el.appendChild(right);
-        list.appendChild(el);
-      });
-    }
-
-    function refreshLegend(){
-      const node = document.getElementById('legendItems');
-      node.innerHTML = '';
-      state.layers.forEach(l => {
-        const div = document.createElement('div');
-        const sample = document.createElement('span');
-        sample.style.display='inline-block'; sample.style.width='18px'; sample.style.height='12px'; sample.style.marginRight='8px';
-        const color = (l.style && l.style.color) || (l.type === 'track' ? DEFAULT_STYLE.trackLine : l.type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill);
-        sample.style.background = color;
-        div.innerHTML = `<b>${l.name}</b> <span class="small">(${l.type})</span>`;
-        div.prepend(sample);
-        node.appendChild(div);
-      });
-    }
-
-    function toggleLayerVisibility(layer) {
-      const id = 'layer-' + layer.id;
-      const visible = layer.visible;
-      const suffixes = ['-outline','-line','-symbol','-fill'];
-      suffixes.forEach(s => {
-        const lid = id + s;
-        if (map.getLayer(lid)) {
-          map.setLayoutProperty(lid, 'visibility', visible ? 'visible' : 'none');
-        }
-      });
-    }
-
-    function moveLayer(id, delta) {
-      const idx = state.layers.findIndex(l => l.id === id);
-      if (idx === -1) return;
-      const newIdx = idx + delta;
-      if (newIdx < 0 || newIdx >= state.layers.length) return;
-      [state.layers[idx], state.layers[newIdx]] = [state.layers[newIdx], state.layers[idx]];
-      rebuildAllLayers();
-    }
-
-    function removeLayer(id) {
-      const idx = state.layers.findIndex(l => l.id === id);
-      if (idx === -1) return;
-      const base = 'layer-' + id;
-      ['-outline','-line','-symbol','-fill'].forEach(s => {
-        const lid = base + s;
-        if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){}
-      });
-      if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
-      state.layers.splice(idx,1);
-      refreshLayerList(); refreshLegend();
-    }
-
-    function rebuildAllLayers() {
-      // remove app layers
-      const suffixes = ['-outline','-line','-symbol','-fill'];
-      state.layers.forEach(l => {
-        const base = 'layer-' + l.id;
-        suffixes.forEach(s => { const lid = base + s; if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){} });
-        if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
-      });
-      // re-add in order
-      state.layers.forEach(l => addLayerToMap(l));
-      refreshLayerList(); refreshLegend();
-    }
-
-    function zoomToGeoJSON(geojson) {
-      if (!geojson || !geojson.features || geojson.features.length===0) return;
-      const coords = [];
-      geojson.features.forEach(f => {
-        const geom = f.geometry; if (!geom) return;
-        if (geom.type === 'Point') coords.push(geom.coordinates);
-        else if (geom.type === 'LineString') coords.push(...geom.coordinates);
-        else if (geom.type === 'MultiLineString') geom.coordinates.forEach(a => coords.push(...a));
-        else if (geom.type === 'Polygon') geom.coordinates.flat().forEach(c=>coords.push(c));
-        else if (geom.type === 'MultiPolygon') geom.coordinates.flat(2).forEach(c=>coords.push(c));
-      });
-      if (coords.length === 0) return;
-      const lats = coords.map(c => c[1]); const lngs = coords.map(c => c[0]);
-      map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], {padding:40});
-    }
-
-    /* ====== File handling & parsing ====== */
-    document.getElementById('addLocal').onclick = async () => {
-      const input = document.getElementById('fileInput');
-      if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
-      const file = input.files[0];
-      await handleFileRead(file);
-    };
-
-    document.getElementById('uploadToDrive').onclick = async () => {
-      const input = document.getElementById('fileInput');
-      if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
-      document.getElementById('uploadStatus').textContent = 'Uploading...';
-      const file = input.files[0];
-      try {
-        const res = await uploadToAppsScript(file);
-        document.getElementById('uploadStatus').textContent = 'Uploaded: ' + res.name;
-        const contentResp = await fetch(res.url);
-        const text = await contentResp.text();
-        await parseAndAddFileContent(text, file.name);
-      } catch (err) {
-        document.getElementById('uploadStatus').textContent = 'Error: ' + err.message;
-      }
-    };
-
-    document.getElementById('loadUploadedGPX').onclick = async () => {
-      try {
-        const resp = await fetch(UPLOADED_GPX_PATH);
-        if (!resp.ok) throw new Error('Fetch failed: ' + resp.status);
-        const text = await resp.text();
-        await parseAndAddFileContent(text, 'Rangkum Langkimat.gpx');
-      } catch (err) {
-        alert('Gagal load uploaded GPX: ' + err.message + '\n(If running locally, ensure your environment serves that path.)');
-      }
-    };
-
-    async function uploadToAppsScript(file) {
+  document.getElementById('uploadToDrive').onclick = async () => {
+    const input = document.getElementById('fileInput');
+    if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
+    document.getElementById('uploadStatus').textContent = 'Uploading...';
+    const file = input.files[0];
+    try {
+      // simple upload via Apps Script (unchanged)
       const form = new FormData();
       form.append('filename', file.name);
       form.append('contentType', file.type || 'application/octet-stream');
@@ -458,488 +360,418 @@
       if (!resp.ok) throw new Error('Upload failed: ' + resp.status);
       const j = await resp.json();
       if (j.error) throw new Error(j.error);
-      return j;
-    }
-
-    function arrayBufferToBase64(buffer) {
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
-      return btoa(binary);
-    }
-
-    async function handleFileRead(file) {
-      const text = await file.text();
-      await parseAndAddFileContent(text, file.name);
-    }
-
-    async function parseAndAddFileContent(text, filename) {
-      const name = filename.toLowerCase();
-      let geojson = null;
-      if (name.endsWith('.gpx') || text.trim().startsWith('<?xml')) {
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(text, 'application/xml');
-        geojson = toGeoJSON.gpx(xml);
-      } else if (name.endsWith('.geojson') || name.endsWith('.json')) {
-        geojson = JSON.parse(text);
-      } else {
-        alert('Unsupported file type. Use GPX or GeoJSON.');
-        return;
+      document.getElementById('uploadStatus').textContent = 'Uploaded: ' + j.name;
+      // try load content back if accessible
+      if (j.url){
+        const contentResp = await fetch(j.url);
+        const text = await contentResp.text();
+        await parseAndAddFileContent(text, file.name);
       }
+    } catch (err){
+      document.getElementById('uploadStatus').textContent = 'Error: ' + err.message;
+    }
+  };
 
-      // Split into feature collections
-      const points = {type:'FeatureCollection', features: []};
-      const lines = {type:'FeatureCollection', features: []};
-      const polygons = {type:'FeatureCollection', features: []};
+  document.getElementById('loadUploadedGPX').onclick = async () => {
+    try {
+      const resp = await fetch(UPLOADED_GPX_PATH);
+      if (!resp.ok) throw new Error('Fetch failed: ' + resp.status);
+      const text = await resp.text();
+      await parseAndAddFileContent(text, 'Rangkum Langkimat.gpx');
+    } catch (err){
+      alert('Gagal load uploaded GPX: ' + err.message + '\n(If running locally, ensure your environment serves that path.)');
+    }
+  };
 
-      geojson.features.forEach(f => {
-        if (!f.geometry) return;
-        const t = f.geometry.type;
-        if (t === 'Point' || t === 'MultiPoint') points.features.push(f);
-        else if (t === 'LineString' || t === 'MultiLineString') {
-          const treatAsPoly = document.getElementById('treatTrackAsPolygon').checked;
-          if (treatAsPoly && t === 'LineString') {
-            const coords = f.geometry.coordinates;
-            if (coords.length >= 3) {
-              // only convert if closes (with tolerance)
-              if (isRingClosed(coords)) {
-                const ring = closeRing(coords);
-                polygons.features.push({type:'Feature', properties: f.properties||{}, geometry: { type: 'Polygon', coordinates: [ring] }});
-                return;
-              }
-            }
+  function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  async function parseAndAddFileContent(text, filename){
+    const name = filename.toLowerCase();
+    let geojson = null;
+    if (name.endsWith('.gpx') || text.trim().startsWith('<?xml')) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, 'application/xml');
+      geojson = toGeoJSON.gpx(xml);
+    } else if (name.endsWith('.geojson') || name.endsWith('.json')) {
+      geojson = JSON.parse(text);
+    } else {
+      alert('Unsupported file type. Use GPX or GeoJSON.');
+      return;
+    }
+
+    // split features
+    const points = { type:'FeatureCollection', features:[] };
+    const lines = { type:'FeatureCollection', features:[] };
+    const polygons = { type:'FeatureCollection', features:[] };
+
+    geojson.features.forEach(f=>{
+      if (!f.geometry) return;
+      const t = f.geometry.type;
+      if (t === 'Point' || t === 'MultiPoint') points.features.push(f);
+      else if (t === 'LineString' || t === 'MultiLineString'){
+        const treatAsPoly = document.getElementById('treatTrackAsPolygon').checked;
+        if (treatAsPoly && t === 'LineString'){
+          const coords = f.geometry.coordinates;
+          if (coords.length >= 3 && isRingClosed(coords)){
+            const ring = closeRing(coords);
+            polygons.features.push({ type:'Feature', properties: f.properties||{}, geometry: { type:'Polygon', coordinates: [ring] } });
+            return;
           }
-          lines.features.push(f);
-        } else if (t === 'Polygon' || t === 'MultiPolygon') polygons.features.push(f);
-      });
-
-      // Add layers to state
-      if (lines.features.length) addNewLayer(lines, 'track', filename + ' — tracks');
-      if (points.features.length) addNewLayer(points, 'point', filename + ' — waypoints');
-      if (polygons.features.length) addNewLayer(polygons, 'polygon', filename + ' — polygons');
-
-      refreshLayerList(); refreshLegend();
-      if (document.getElementById('autoZoom').checked) {
-        const combined = {type:'FeatureCollection', features: []};
-        combined.features.push(...lines.features, ...points.features, ...polygons.features);
-        zoomToGeoJSON(combined);
-      }
-    }
-
-    function isRingClosed(coords, tolerance=0) {
-      if (!coords || coords.length < 3) return false;
-      const a = coords[0], b = coords[coords.length-1];
-      // exact equality or within tiny tolerance
-      if (Math.abs(a[0]-b[0]) <= tolerance && Math.abs(a[1]-b[1]) <= tolerance) return true;
-      return false;
-    }
-
-    function closeRing(coords) {
-      const ring = coords.slice();
-      const a = ring[0], b = ring[ring.length-1];
-      if (a[0] !== b[0] || a[1] !== b[1]) ring.push([a[0], a[1]]);
-      return ring;
-    }
-
-    function addNewLayer(geojson, type, name) {
-      const layer = {
-        id: state.nextId++,
-        name,
-        type,
-        geojson,
-        visible: true,
-        style: {
-          color: type==='track' ? DEFAULT_STYLE.trackLine : type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill,
-          width: type==='track' ? 3 : undefined,
-          opacity: 1,
-          radius: type==='point' ? 6 : undefined
         }
-      };
-      state.layers.push(layer);
-      addLayerToMap(layer);
-      refreshLayerList(); refreshLegend();
-    }
+        lines.features.push(f);
+      } else if (t === 'Polygon' || t === 'MultiPolygon') polygons.features.push(f);
+    });
 
-    /* ====== Convert track -> polygon with fixes and optional simplify ====== */
-    function convertTrackToPolygon(layerId) {
-      const layer = state.layers.find(l => l.id === layerId);
-      if (!layer || layer.type !== 'track') { alert('Layer bukan track'); return; }
-      const simplify = document.getElementById('simplifyOnConvert').checked;
-      const tolMeters = parseFloat(document.getElementById('simplifyTolerance').value || '0');
+    if (lines.features.length) addNewLayer(lines, 'track', filename + ' — tracks');
+    if (points.features.length) addNewLayer(points, 'point', filename + ' — waypoints');
+    if (polygons.features.length) addNewLayer(polygons, 'polygon', filename + ' — polygons');
 
-      const polygons = { type:'FeatureCollection', features: [] };
-      layer.geojson.features.forEach(f => {
-        const g = f.geometry; if (!g) return;
-        if (g.type === 'LineString') {
-          let coords = g.coordinates.slice();
-          if (!isRingClosed(coords)) coords = closeRing(coords);
-          if (coords.length >= 4) { // polygon needs at least 4 coords (first==last)
-            if (simplify && tolMeters > 0) coords = simplifyRDP(coords, tolMeters);
-            // ensure still closed after simplify
-            if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
-            if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties || {}, geometry: { type: 'Polygon', coordinates: [coords] } });
-          }
-        } else if (g.type === 'MultiLineString') {
-          g.coordinates.forEach(arr => {
-            let coords = arr.slice();
-            if (!isRingClosed(coords)) coords = closeRing(coords);
-            if (coords.length >= 4) {
-              if (simplify && tolMeters > 0) coords = simplifyRDP(coords, tolMeters);
-              if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
-              if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties || {}, geometry: { type: 'Polygon', coordinates: [coords] } });
-            }
-          });
-        }
-      });
-
-      if (polygons.features.length === 0) { alert('Tidak ada track tertutup untuk dikonversi (atau setelah simplifikasi tidak valid).'); return; }
-      addNewLayer(polygons, 'polygon', layer.name + ' — converted polygons');
-    }
-
-    /* ====== Modal style editor (option C) ====== */
-    const modalBackdrop = document.getElementById('modalBackdrop');
-    const styleColor = document.getElementById('styleColor');
-    const styleOpacity = document.getElementById('styleOpacity');
-    const lineWidth = document.getElementById('lineWidth');
-    const pointRadius = document.getElementById('pointRadius');
-    let editingLayerId = null;
-
-    function openStyleModal(layerId) {
-      const layer = state.layers.find(l => l.id === layerId);
-      if (!layer) return;
-      editingLayerId = layerId;
-      document.getElementById('modalTitle').textContent = 'Edit: ' + layer.name;
-      styleColor.value = (layer.style && layer.style.color) ? rgbToHex(layer.style.color) : '#ff0000';
-      styleOpacity.value = (typeof layer.style.opacity === 'number') ? layer.style.opacity : 1;
-      lineWidth.value = (layer.style && layer.style.width) ? layer.style.width : 3;
-      pointRadius.value = (layer.style && layer.style.radius) ? layer.style.radius : 6;
-      document.getElementById('lineOptions').style.display = layer.type==='track' || layer.type==='polygon' ? 'flex' : 'none';
-      document.getElementById('radiusOptions').style.display = layer.type==='point' ? 'flex' : 'none';
-      modalBackdrop.style.display = 'flex'; modalBackdrop.setAttribute('aria-hidden','false');
-    }
-
-    document.getElementById('modalCancel').onclick = () => {
-      modalBackdrop.style.display = 'none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId = null;
-    };
-
-    document.getElementById('modalSave').onclick = () => {
-      if (!editingLayerId) return;
-      const layer = state.layers.find(l => l.id === editingLayerId);
-      if (!layer) return;
-      layer.style = layer.style || {};
-      layer.style.color = styleColor.value;
-      layer.style.opacity = parseFloat(styleOpacity.value);
-      if (layer.type === 'track') layer.style.width = parseInt(lineWidth.value,10);
-      if (layer.type === 'point') layer.style.radius = parseInt(pointRadius.value,10);
-      rebuildAllLayers();
-      modalBackdrop.style.display = 'none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId = null;
-    };
-
-    function rgbToHex(input) {
-      if (!input) return '#000000';
-      if (input[0] === '#') return input;
-      const m = input.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      if (!m) return '#000000';
-      const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
-      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-    }
-
-    /* ====== Export / Save state ====== */
-    document.getElementById('exportGeoJSON').onclick = () => {
-      const all = { type:'FeatureCollection', features: [] };
-      state.layers.forEach(l => all.features.push(...l.geojson.features));
-      const text = JSON.stringify(all, null, 2);
-      const blob = new Blob([text], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'export_all.geojson'; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    document.getElementById('exportState').onclick = () => {
-      const text = JSON.stringify(state, null, 2);
-      const blob = new Blob([text], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'map_state.json'; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    function exportLayerGeoJSON(layer) {
-      const text = JSON.stringify(layer.geojson, null, 2);
-      const blob = new Blob([text], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = layer.name.replace(/\s+/g,'_') + '.geojson'; a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    /* ====== Basemap switching ====== */
-    document.getElementById('basemapSelect').onchange = (e) => { switchBasemap(e.target.value); };
-    function switchBasemap(key) {
-      const def = basemapDefs[key] || basemapDefs.osm;
-      if (map.getLayer('basemap-layer')) try { map.removeLayer('basemap-layer'); } catch(e){}
-      if (map.getSource('basemap')) try { map.removeSource('basemap'); } catch(e){}
-      map.addSource('basemap', { type: 'raster', tiles: def.tiles, tileSize: 256, attribution: def.attribution });
-      map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, undefined);
-      rebuildAllLayers();
-    }
-
-    /* ====== Init ====== */
-    refreshLayerList();
-
-  </script>
-
-
-<!-- Print button injection (safely adds button to your sidebar) -->
-<script>
-window.generatePDF = generatePDF;
-  
-(function(){
-  function ensure(){
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebar) return setTimeout(ensure,200);
-    if (!document.getElementById('printMapBtn')){
-      const btn = document.createElement('button');
-      btn.id = 'printMapBtn';
-      btn.className = 'btn';
-      btn.textContent = 'Print Map (PDF)';
-      btn.style.marginTop = '8px';
-      // place after first control block (adjust if needed)
-      const firstControl = sidebar.querySelector('.control');
-      if (firstControl) firstControl.after(btn); else sidebar.appendChild(btn);
-      btn.onclick = generatePDF;
+    if (document.getElementById('autoZoom').checked){
+      const group = L.featureGroup(window.state.layers.map(l => l.leafletLayer).filter(Boolean));
+      if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.1));
     }
   }
-  ensure();
-})();
 
-// Load external libs (turf + jspdf) dynamically and provide a ready promise
-window._libsReady = (function(){
-  let p = null;
-  return function(){
-    if (p) return p;
-    p = new Promise((resolve,reject)=>{
+  function isRingClosed(coords, tolerance=1e-6){
+    if (!coords || coords.length < 3) return false;
+    const a = coords[0], b = coords[coords.length-1];
+    if (Math.abs(a[0]-b[0]) <= tolerance && Math.abs(a[1]-b[1]) <= tolerance) return true;
+    return false;
+  }
+  function closeRing(coords){
+    const ring = coords.slice();
+    const a = ring[0], b = ring[ring.length-1];
+    if (a[0] !== b[0] || a[1] !== b[1]) ring.push([a[0], a[1]]);
+    return ring;
+  }
+
+  /* convert track to polygon */
+  function convertTrackToPolygon(layerId){
+    const layer = window.state.layers.find(l=>l.id===layerId);
+    if (!layer || layer.type !== 'track') { alert('Layer bukan track'); return; }
+    const simplify = document.getElementById('simplifyOnConvert').checked;
+    const tolMeters = parseFloat(document.getElementById('simplifyTolerance').value || '0');
+    const polygons = { type:'FeatureCollection', features:[] };
+    layer.geojson.features.forEach(f=>{
+      const g = f.geometry; if (!g) return;
+      if (g.type === 'LineString'){
+        let coords = g.coordinates.slice();
+        if (!isRingClosed(coords)) coords = closeRing(coords);
+        if (coords.length >= 4){
+          if (simplify && tolMeters>0) coords = simplifyRDP(coords, tolMeters);
+          if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
+          if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties||{}, geometry: { type:'Polygon', coordinates: [coords] } });
+        }
+      } else if (g.type === 'MultiLineString'){
+        g.coordinates.forEach(arr=>{
+          let coords = arr.slice();
+          if (!isRingClosed(coords)) coords = closeRing(coords);
+          if (coords.length >= 4){
+            if (simplify && tolMeters>0) coords = simplifyRDP(coords, tolMeters);
+            if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
+            if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties||{}, geometry: { type:'Polygon', coordinates: [coords] } });
+          }
+        });
+      }
+    });
+    if (!polygons.features.length) { alert('Tidak ada track tertutup untuk dikonversi.'); return; }
+    addNewLayer(polygons, 'polygon', layer.name + ' — converted polygons');
+  }
+
+  /* ====== Style modal ====== */
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const styleColor = document.getElementById('styleColor');
+  const styleOpacity = document.getElementById('styleOpacity');
+  const lineWidth = document.getElementById('lineWidth');
+  const pointRadius = document.getElementById('pointRadius');
+  let editingLayerId = null;
+
+  function openStyleModal(layerId){
+    const layer = window.state.layers.find(l=>l.id===layerId);
+    if (!layer) return;
+    editingLayerId = layerId;
+    document.getElementById('modalTitle').textContent = 'Edit: ' + layer.name;
+    styleColor.value = (layer.style && layer.style.color) ? rgbToHex(layer.style.color) : '#ff0000';
+    styleOpacity.value = (typeof layer.style.opacity === 'number') ? layer.style.opacity : 1;
+    lineWidth.value = (layer.style && layer.style.width) ? layer.style.width : 3;
+    pointRadius.value = (layer.style && layer.style.radius) ? layer.style.radius : 6;
+    document.getElementById('lineOptions').style.display = layer.type==='track' || layer.type==='polygon' ? 'flex' : 'none';
+    document.getElementById('radiusOptions').style.display = layer.type==='point' ? 'flex' : 'none';
+    modalBackdrop.style.display = 'flex'; modalBackdrop.setAttribute('aria-hidden','false');
+  }
+  document.getElementById('modalCancel').onclick = () => { modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId=null; };
+  document.getElementById('modalSave').onclick = () => {
+    if (!editingLayerId) return;
+    const layer = window.state.layers.find(l=>l.id===editingLayerId);
+    if (!layer) return;
+    layer.style = layer.style || {};
+    layer.style.color = styleColor.value;
+    layer.style.opacity = parseFloat(styleOpacity.value);
+    if (layer.type === 'track') layer.style.width = parseInt(lineWidth.value,10);
+    if (layer.type === 'point') layer.style.radius = parseInt(pointRadius.value,10);
+    rebuildAllLayers();
+    modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId=null;
+  };
+
+  function rgbToHex(input){
+    if (!input) return '#000000';
+    if (input[0] === '#') return input;
+    const m = input.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) return '#000000';
+    const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  /* ====== Polygon stats using turf (area in Ha) ====== */
+  // load turf & jspdf & leaflet-image dynamically before PDF
+  function loadExternalForPDF(){
+    if (window._pdfLibsLoaded) return window._pdfLibsLoaded;
+    window._pdfLibsLoaded = new Promise((resolve,reject)=>{
       const urls = [
         'https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        // leaflet-image (map -> canvas)
+        'https://rawcdn.githack.com/mapbox/leaflet-image/gh-pages/leaflet-image.js'
       ];
       let loaded = 0;
       urls.forEach(u=>{
         const s = document.createElement('script');
         s.src = u;
         s.onload = ()=>{ loaded++; if (loaded===urls.length) resolve(); };
-        s.onerror = ()=> reject(new Error('Failed load '+u));
+        s.onerror = ()=> reject(new Error('Failed to load ' + u));
         document.head.appendChild(s);
       });
     });
-    return p;
-  };
-})();
-
-// Haversine distance (meters)
-function haversine(lon1,lat1,lon2,lat2){
-  const R = 6371000;
-  const toRad = Math.PI/180;
-  const dLat = (lat2-lat1)*toRad;
-  const dLon = (lon2-lon1)*toRad;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-// Build graticule (grid) for bounds with spacing in meters (250 m)
-function buildGraticuleForBounds(bounds, spacingMeters){
-  const minLng = bounds.getWest(), maxLng = bounds.getEast();
-  const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
-  const meanLat = (minLat+maxLat)/2;
-  const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
-  const stepDeg = spacingMeters * meterToDeg;
-  const features = [];
-  const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
-  for (let lng = startLng; lng <= maxLng; lng += stepDeg){
-    features.push({ type:'Feature', geometry:{ type:'LineString', coordinates:[[lng,minLat],[lng,maxLat]] } });
+    return window._pdfLibsLoaded;
   }
-  const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
-  for (let lat = startLat; lat <= maxLat; lat += stepDeg){
-    features.push({ type:'Feature', geometry:{ type:'LineString', coordinates:[[minLng,lat],[maxLng,lat]] } });
-  }
-  return { type:'FeatureCollection', features };
-}
 
-// Ensure graticule layer exists and update labels positions for rendering into PDF
-function ensureGridLayer(map){
-  if (!map) return;
-  if (!map.getSource('graticule-source')){
-    map.addSource('graticule-source', { type:'geojson', data: { type:'FeatureCollection', features:[] } });
-    map.addLayer({ id:'graticule-layer', type:'line', source:'graticule-source', paint:{ 'line-color':'#666', 'line-width':0.6, 'line-opacity':0.6 } });
+  function generatePolygonStats(){
+    const stats = [];
+    if (!window.turf) return stats;
+    window.state.layers.forEach(layer=>{
+      if (layer.type === 'polygon'){
+        layer.geojson.features.forEach((f, idx)=>{
+          try {
+            const area = turf.area(f)/10000.0;
+            stats.push({ name: layer.name + (layer.geojson.features.length>1 ? ' #' + (idx+1) : ''), area });
+          } catch(e){}
+        });
+      }
+    });
+    return stats;
   }
-  function update(){
+
+  /* ====== Grid (graticule) creation – returns GeoJSON for lines spaced by meters ====== */
+  function buildGraticuleForBounds(bounds, spacingMeters){
+    const minLng = bounds.getWest(), maxLng = bounds.getEast();
+    const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
+    const meanLat = (minLat+maxLat)/2;
+    const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
+    const stepDeg = spacingMeters * meterToDeg;
+    const feats = [];
+    // vertical lines (lng varying)
+    const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
+    for (let lng = startLng; lng <= maxLng; lng += stepDeg){
+      feats.push({ type:'Feature', geometry: { type:'LineString', coordinates: [[lng, minLat], [lng, maxLat]] } });
+    }
+    // horizontal lines (lat varying)
+    const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
+    for (let lat = startLat; lat <= maxLat; lat += stepDeg){
+      feats.push({ type:'Feature', geometry: { type:'LineString', coordinates: [[minLng, lat], [maxLng, lat]] } });
+    }
+    return { type:'FeatureCollection', features: feats };
+  }
+
+  // graticule leaflet layer (update on moveend/zoomend)
+  let graticuleLayer = null;
+  function ensureGrid(){
     const b = map.getBounds();
     const grid = buildGraticuleForBounds(b, 250);
-    const src = map.getSource('graticule-source');
-    if (src && src.setData) src.setData(grid);
+    if (!graticuleLayer) {
+      graticuleLayer = L.geoJSON(grid, { style: { color: '#666', weight: 0.6, opacity: 0.6 } }).addTo(map);
+    } else {
+      graticuleLayer.clearLayers();
+      L.geoJSON(grid, { style: { color: '#666', weight: 0.6, opacity: 0.6 } }).eachLayer(l => graticuleLayer.addLayer(l));
+    }
+    // compute grid labels positions for drawing on canvas later
     window._gridLabels = computeGridLabels(map, b, 250);
   }
-  map.on('moveend', update);
-  map.on('zoomend', update);
-  update();
-}
+  map.on('moveend', ensureGrid);
+  map.on('zoomend', ensureGrid);
+  ensureGrid();
 
-// compute positions for grid labels (we will draw them onto merged canvas)
-function computeGridLabels(map, bounds, spacingMeters){
-  const labels = [];
-  const minLng = bounds.getWest(), maxLng = bounds.getEast();
-  const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
-  const meanLat = (minLat+maxLat)/2;
-  const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
-  const stepDeg = spacingMeters * meterToDeg;
-  const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
-  for (let lng = startLng; lng <= maxLng; lng += stepDeg){
-    const p = map.project([lng, bounds.getNorth()]);
-    labels.push({ x: p.x, y: Math.max(8, p.y-6), text: lng.toFixed(5) });
+  // compute grid label positions (screen pixels) to draw later on canvas
+  function computeGridLabels(map, bounds, spacingMeters){
+    const labels = [];
+    const minLng = bounds.getWest(), maxLng = bounds.getEast();
+    const minLat = bounds.getSouth(), maxLat = bounds.getNorth();
+    const meanLat = (minLat+maxLat)/2;
+    const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180));
+    const stepDeg = spacingMeters * meterToDeg;
+    const startLng = Math.ceil(minLng/stepDeg)*stepDeg;
+    for (let lng = startLng; lng <= maxLng; lng += stepDeg){
+      const p = map.latLngToContainerPoint([bounds.getNorth(), lng]);
+      labels.push({ x: p.x, y: Math.max(8, p.y-6), text: lng.toFixed(5) });
+    }
+    const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
+    for (let lat = startLat; lat <= maxLat; lat += stepDeg){
+      const p = map.latLngToContainerPoint([lat, bounds.getWest()]);
+      labels.push({ x: Math.max(6, p.x+2), y: p.y, text: lat.toFixed(5) });
+    }
+    return labels;
   }
-  const startLat = Math.ceil(minLat/stepDeg)*stepDeg;
-  for (let lat = startLat; lat <= maxLat; lat += stepDeg){
-    const p = map.project([bounds.getWest(), lat]);
-    labels.push({ x: Math.max(6, p.x+2), y: p.y, text: lat.toFixed(5) });
-  }
-  return labels;
-}
 
-// Scale info (pixel length and pretty label)
-function updateScaleInfo(map){
-  if (!map) return {pixelLen:100, label:'100 m', valueMeters:100};
-  const refPx = 100;
-  const h = map.getContainer().clientHeight;
-  const p1 = map.unproject([0, h/2]);
-  const p2 = map.unproject([refPx, h/2]);
-  const meters = haversine(p1.lng, p1.lat, p2.lng, p2.lat);
-  const nice = [1,2,5,10,20,50,100,200,500,1000,2000,5000,10000];
-  let best = nice[0];
-  for (let n of nice){ if (meters < n){ best = n; break; } best = n; }
-  const pixelLen = refPx * (best / meters);
-  return { pixelLen, label: best < 1000 ? `${best} m` : `${(best/1000).toFixed(2)} km`, valueMeters: best };
-}
-
-// Capture merged map image: map canvas + north-arrow + scale-bar + grid labels drawn onto one canvas
-async function captureMergedMapImage(map){
-  await window._libsReady();
-  const canvas = map.getCanvas();
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const w = Math.round(rect.width * dpr);
-  const h = Math.round(rect.height * dpr);
-  const out = document.createElement('canvas');
-  out.width = w; out.height = h;
-  const ctx = out.getContext('2d');
-  // draw base map canvas (already contains graticule layer)
-  ctx.drawImage(canvas, 0, 0, w, h);
-  // north arrow (top-right)
-  const arrowSize = Math.round(40 * dpr);
-  const margin = Math.round(12 * dpr);
-  ctx.save();
-  ctx.fillStyle = '#111';
-  const ax = w - margin - arrowSize/2;
-  const ay = margin + arrowSize/2;
-  ctx.beginPath();
-  ctx.moveTo(ax, ay - arrowSize/2);
-  ctx.lineTo(ax - arrowSize/2, ay + arrowSize/2);
-  ctx.lineTo(ax + arrowSize/2, ay + arrowSize/2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font = `${12 * dpr}px Arial`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('N', ax, ay - 2);
-  ctx.restore();
-  // scale bar (bottom-left)
-  const scale = updateScaleInfo(map);
-  const scalePx = Math.round(scale.pixelLen * dpr);
-  const barW = Math.max(40 * dpr, scalePx);
-  const barH = Math.round(6 * dpr);
-  const bx = margin;
-  const by = h - margin - barH;
-  ctx.fillStyle = '#fff'; ctx.fillRect(bx - 2*dpr, by - 6*dpr, barW + 4*dpr, barH + 12*dpr);
-  ctx.fillStyle = '#111'; ctx.fillRect(bx, by, barW, barH);
-  ctx.fillStyle = '#000'; ctx.font = `${11 * dpr}px Arial`; ctx.textAlign='left'; ctx.fillText(scale.label, bx, by - 8*dpr);
-  // draw grid labels computed earlier
-  if (window._gridLabels && window._gridLabels.length){
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.font = `${10 * dpr}px Arial`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    window._gridLabels.forEach(lbl => {
-      const x = Math.round(lbl.x * dpr), y = Math.round(lbl.y * dpr);
-      const padding = Math.round(2 * dpr);
-      const metrics = ctx.measureText(lbl.text);
-      const wbox = Math.round(metrics.width) + padding*2;
-      const hbox = Math.round(12 * dpr);
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.fillRect(x - padding, y - padding, wbox, hbox);
-      ctx.fillStyle = '#000';
-      ctx.fillText(lbl.text, x, y);
+  /* ====== PDF generation: use leaflet-image to render map to canvas, then compose overlays and jsPDF ====== */
+  async function captureMapCanvasWithOverlays(){
+    // ensure libs loaded
+    await loadExternalForPDF();
+    return new Promise((resolve, reject) => {
+      // leaflet-image will render map to canvas. It uses window.map as first arg.
+      try {
+        leafletImage(map, function(err, canvas) {
+          if (err) { reject(err); return; }
+          // now draw overlays onto a new canvas (to preserve DPI)
+          const dpr = window.devicePixelRatio || 1;
+          const w = canvas.width; const h = canvas.height;
+          const out = document.createElement('canvas');
+          out.width = w; out.height = h;
+          const ctx = out.getContext('2d');
+          // draw base
+          ctx.drawImage(canvas, 0, 0, w, h);
+          // north arrow (top-right)
+          const margin = 12 * dpr;
+          const arrowSize = 40 * dpr;
+          const ax = out.width - margin - arrowSize/2;
+          const ay = margin + arrowSize/2;
+          ctx.save();
+          ctx.fillStyle = '#111';
+          ctx.beginPath();
+          ctx.moveTo(ax, ay - arrowSize/2);
+          ctx.lineTo(ax - arrowSize/2, ay + arrowSize/2);
+          ctx.lineTo(ax + arrowSize/2, ay + arrowSize/2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.font = `${12 * dpr}px Arial`;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText('N', ax, ay - 2);
+          ctx.restore();
+          // scale bar (bottom-left) compute approximate pixel length for nice scale
+          const scaleInfo = computeScaleForCanvas(map, out.width/dpr, out.height/dpr);
+          const scalePx = Math.round(scaleInfo.pixelLen * dpr);
+          const barW = Math.max(40 * dpr, scalePx);
+          const barH = 6 * dpr;
+          const bx = margin;
+          const by = out.height - margin - barH;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(bx - 4*dpr, by - 8*dpr, barW + 8*dpr, barH + 16*dpr);
+          ctx.fillStyle = '#111'; ctx.fillRect(bx, by, barW, barH);
+          ctx.fillStyle = '#000'; ctx.font = `${11 * dpr}px Arial`; ctx.textAlign='left'; ctx.fillText(scaleInfo.label, bx, by - 8 * dpr);
+          // grid labels
+          if (window._gridLabels && window._gridLabels.length){
+            ctx.font = `${10 * dpr}px Arial`;
+            window._gridLabels.forEach(lbl=>{
+              const x = Math.round(lbl.x * dpr), y = Math.round(lbl.y * dpr);
+              const padding = Math.round(2 * dpr);
+              const metrics = ctx.measureText(lbl.text);
+              const wbox = Math.round(metrics.width) + padding*2;
+              const hbox = Math.round(12 * dpr);
+              ctx.fillStyle = 'rgba(255,255,255,0.85)';
+              ctx.fillRect(x - padding, y - padding, wbox, hbox);
+              ctx.fillStyle = '#000';
+              ctx.fillText(lbl.text, x, y);
+            });
+          }
+          resolve(out.toDataURL('image/png'));
+        });
+      } catch(e){
+        reject(e);
+      }
     });
   }
-  return out.toDataURL('image/png');
-}
 
-// Polygon stats using turf (area in Ha)
-function generatePolygonStats(){
-  const stats = [];
-  if (!window.turf) return stats;
-  if (!window.state || !Array.isArray(window.state.layers)) return stats;
-  window.state.layers.forEach(layer => {
-    if (layer.type === 'polygon'){
-      layer.geojson.features.forEach((f, idx) => {
-        try {
-          const area = turf.area(f)/10000.0;
-          stats.push({ name: layer.name + (layer.geojson.features.length>1 ? ' #' + (idx+1) : ''), area });
-        } catch(e){}
+  // compute scale for container width in px — similar approach as before
+  function computeScaleForCanvas(map, canvasWpx, canvasHpx){
+    const refPx = 100;
+    const h = map.getSize().y;
+    const p1 = map.containerPointToLatLng([0, h/2]);
+    const p2 = map.containerPointToLatLng([refPx, h/2]);
+    const meters = haversine(p1.lng, p1.lat, p2.lng, p2.lat);
+    const nice = [1,2,5,10,20,50,100,200,500,1000,2000,5000,10000];
+    let best = nice[0];
+    for (let n of nice){ if (meters < n){ best = n; break; } best = n; }
+    const pixelLen = refPx * (best / meters);
+    return { pixelLen, label: best < 1000 ? `${best} m` : `${(best/1000).toFixed(2)} km`, valueMeters: best };
+  }
+
+  // haversine
+  function haversine(lon1,lat1,lon2,lat2){
+    const R = 6371000;
+    const toRad = Math.PI/180;
+    const dLat = (lat2-lat1)*toRad;
+    const dLon = (lon2-lon1)*toRad;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Generate PDF A4 landscape: left map (68%), right legend & areas
+  async function generatePDF(){
+    try { await loadExternalForPDF(); } catch(e){ alert('Gagal load libs untuk PDF: ' + e.message); return; }
+    try {
+      ensureGrid(); // update grid and labels
+      // slight pause to ensure layers updated
+      await new Promise(r=>setTimeout(r,250));
+      const imgData = await captureMapCanvasWithOverlays();
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('landscape','mm','a4');
+      const pw = pdf.internal.pageSize.getWidth();
+      const ph = pdf.internal.pageSize.getHeight();
+      const mapWmm = pw * 0.68;
+      const mapHmm = ph - 20;
+      const img = new Image();
+      img.src = imgData;
+      await new Promise(r=>{ img.onload = r; });
+      const imgAspect = img.width / img.height;
+      const targetW = mapWmm;
+      const targetH = Math.min(mapHmm, mapWmm / imgAspect);
+      // place map (left)
+      pdf.addImage(imgData, 'PNG', 10, 10, targetW, targetH);
+      // Right panel legend & areas
+      const stats = generatePolygonStats();
+      pdf.setFontSize(14); pdf.text('Legenda & Luas Blok', 12 + targetW, 16);
+      pdf.setFontSize(11);
+      let y = 24;
+      let total = 0;
+      stats.forEach(s => {
+        pdf.text(`- ${s.name}: ${s.area.toFixed(2)} Ha`, 12 + targetW, y);
+        y += 6;
+        total += s.area;
       });
+      pdf.setFontSize(12); pdf.text(`Total: ${total.toFixed(2)} Ha`, 12 + targetW, y+4);
+      // Title & footer
+      pdf.setFontSize(16); pdf.text('PETA AREAL KEBUN', 10, ph - 6);
+      pdf.save('map_export.pdf');
+    } catch (err){
+      console.error(err);
+      alert('Export PDF gagal: ' + err.message);
     }
-  });
-  return stats;
-}
+  }
 
-// Generate PDF (A4 landscape) — left map (68%), right legend & areas
-async function generatePDF(){
-  try { await window._libsReady(); } catch(e){ alert('Failed to load libs for PDF: ' + e.message); return; }
-  const mapInstance = window.map;
-  if (!mapInstance){ alert('Map not initialized'); return; }
-  // ensure grid overlay exists and grid labels computed
-  ensureGridLayer(mapInstance);
-  // small delay to allow sources to update on moveend
-  await new Promise(r=>setTimeout(r,250));
-  const imgData = await captureMergedMapImage(mapInstance);
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('landscape','mm','a4');
-  const pw = pdf.internal.pageSize.getWidth();
-  const ph = pdf.internal.pageSize.getHeight();
-  const mapWmm = pw * 0.68;
-  const mapHmm = ph - 20;
-  const img = new Image();
-  img.src = imgData;
-  await new Promise(r=>{ img.onload = r; });
-  const imgAspect = img.width / img.height;
-  const targetW = mapWmm;
-  const targetH = Math.min(mapHmm, mapWmm / imgAspect);
-  pdf.addImage(imgData, 'PNG', 10, 10, targetW, targetH);
-  // Right panel legend & areas
-  const stats = generatePolygonStats();
-  pdf.setFontSize(14); pdf.text('Legenda & Luas Blok', 12 + targetW, 16);
-  pdf.setFontSize(11);
-  let y = 24;
-  let total = 0;
-  stats.forEach(s => {
-    pdf.text(`- ${s.name}: ${s.area.toFixed(2)} Ha`, 12 + targetW, y);
-    y += 6;
-    total += s.area;
-  });
-  pdf.setFontSize(12); pdf.text(`Total: ${total.toFixed(2)} Ha`, 12 + targetW, y+4);
-  // Title
-  pdf.setFontSize(16); pdf.text('PETA AREAL KEBUN', 10, ph - 6);
-  pdf.save('map_export.pdf');
-}
-</script>
+  // hook print button
+  document.getElementById('printMapBtn').onclick = generatePDF;
 
+  /* ====== small helpers ====== */
+  function generateId(){ return 'id' + Math.random().toString(36).slice(2,9); }
+
+  /* ====== Init UI actions already bound earlier to functions that exist; refresh UI initial state ====== */
+  refreshLayerList(); refreshLegend();
+
+  </script>
 </body>
 </html>
