@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Peta MapLibre — GPX/GeoJSON Upload & Layer Editor</title>
+  <title>Peta MapLibre — GPX/GeoJSON Upload & Layer Editor (Fixed polygons)</title>
 
   <!-- MapLibre GL JS -->
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
@@ -13,7 +13,7 @@
 
   <style>
     html,body,#map { height: 100%; margin: 0; padding: 0; font-family: Inter, Arial, sans-serif; }
-    #app { display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
+    #app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
     #sidebar { background:#fff; border-right:1px solid #e6e6e6; padding:12px; box-sizing:border-box; overflow:auto;}
     h2 { margin:6px 0 12px; font-size:18px; }
     .control { margin-bottom:12px; }
@@ -30,13 +30,14 @@
 
     /* Modal */
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:9999;}
-    .modal { background:#fff; width:420px; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+    .modal { background:#fff; width:440px; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); }
     .modal h3 { margin:0 0 8px; font-size:16px; }
     .form-row { margin:8px 0; display:flex; align-items:center; gap:8px; justify-content:space-between; }
-    .form-row input[type="range"] { width:180px; }
+    .form-row input[type="range"] { width:200px; }
     .legend { margin-top:12px; border-top:1px solid #eee; padding-top:8px; font-size:13px; }
     .basemap-select { width:100%; padding:6px; border-radius:6px; border:1px solid #ddd; }
     .layer-actions { display:flex; gap:6px; }
+    .muted { color:#666; font-size:12px; }
   </style>
 </head>
 <body>
@@ -67,9 +68,12 @@
       </div>
 
       <div class="control">
-        <label>Rendering options</label>
+        <label>Rendering & Convert options</label>
         <input type="checkbox" id="treatTrackAsPolygon" /> <label for="treatTrackAsPolygon" style="display:inline;font-weight:normal">Treat closed tracks as polygon</label><br>
-        <input type="checkbox" id="autoZoom" checked/> <label for="autoZoom" style="display:inline;font-weight:normal">Auto zoom to uploaded data</label>
+        <input type="checkbox" id="simplifyOnConvert" /> <label for="simplifyOnConvert" style="display:inline;font-weight:normal">Simplify converted polygons</label><br>
+        <label class="muted">Simplify tolerance (m) — higher = more simplification</label>
+        <input id="simplifyTolerance" type="range" min="0" max="50" step="1" value="5" />
+        <div class="muted">Auto zoom to uploaded data <input type="checkbox" id="autoZoom" checked style="margin-left:8px"/></div>
       </div>
 
       <div class="control">
@@ -99,7 +103,6 @@
     <div class="modal" role="document">
       <h3 id="modalTitle">Edit Layer</h3>
       <div id="modalBody">
-        <!-- dynamic content -->
         <div class="form-row"><label>Color</label><input type="color" id="styleColor" /></div>
         <div class="form-row" id="lineOptions"><label>Line width</label><input id="lineWidth" type="range" min="1" max="12" value="3" /></div>
         <div class="form-row" id="radiusOptions" style="display:none"><label>Radius</label><input id="pointRadius" type="range" min="1" max="20" value="6" /></div>
@@ -114,11 +117,9 @@
 
   <script>
     /* ====== CONFIG ====== */
-    const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL'; // <-- ganti jika mau upload ke Drive
-    // Untuk testing cepat: path file GPX yang sudah kamu upload di sesi ini:
-    const UPLOADED_GPX_PATH = '/mnt/data/Rangkum Langkimat.gpx'; // <-- gunakan ini untuk load cepat (server akan transform ke URL)
+    const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL';
+    const UPLOADED_GPX_PATH = '/mnt/data/Rangkum Langkimat.gpx';
 
-    /* default palette (ArcGIS-like) */
     const DEFAULT_STYLE = {
       trackLine: '#d35400',
       trackLineOutline: '#8e2b00',
@@ -129,180 +130,143 @@
 
     /* ====== Map & basemap helpers ====== */
     const basemapDefs = {
-      osm: {
-        id: 'basemap',
-        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        attribution: '© OpenStreetMap contributors'
-      },
-      terrain: {
-        id: 'basemap',
-        tiles: ['https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg'],
-        attribution: 'Terrain tiles by Stamen'
-      },
-      satellite: {
-        id: 'basemap',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        attribution: 'Esri World Imagery'
-      },
-      light: {
-        id: 'basemap',
-        tiles: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
-        attribution: 'Carto Light'
-      },
-      dark: {
-        id: 'basemap',
-        tiles: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
-        attribution: 'Carto Dark'
-      }
+      osm: { tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], attribution: '© OpenStreetMap contributors' },
+      terrain: { tiles: ['https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg'], attribution: 'Terrain tiles by Stamen' },
+      satellite: { tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], attribution: 'Esri World Imagery' },
+      light: { tiles: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'], attribution: 'Carto Light' },
+      dark: { tiles: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'], attribution: 'Carto Dark' }
     };
 
-    // Initial style uses OSM raster
     const map = new maplibregl.Map({
       container: 'map',
-      style: {
-        version: 8,
-        sources: {
-          basemap: {
-            type: 'raster',
-            tiles: basemapDefs.osm.tiles,
-            tileSize: 256,
-            attribution: basemapDefs.osm.attribution
-          }
-        },
-        layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }]
-      },
+      style: { version: 8, sources: { basemap: { type: 'raster', tiles: basemapDefs.osm.tiles, tileSize: 256, attribution: basemapDefs.osm.attribution } }, layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }] },
       center: [101.45, -0.45],
       zoom: 11
     });
-
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(new maplibregl.ScaleControl({maxWidth:200, unit:'metric'}), 'bottom-right');
 
-    /* ====== Application state ====== */
-    const state = {
-      layers: [], // each: {id, name, type, geojson, visible, style: {color,width,opacity,radius}}
-      nextId: 1
-    };
+    /* ====== State ====== */
+    const state = { layers: [], nextId: 1 };
 
-    /* ====== Utility: rebuild all layers according to state order ====== */
-    function rebuildAllLayers() {
-      // remove all app layers & sources first
-      // the layer ids we use are 'layer-{id}-...' ; remove them all
-      // Note: keep basemap layers intact.
-      const suffixes = ['-outline','-line','-symbol','-fill'];
-      state.layers.forEach(l => {
-        const base = 'layer-' + l.id;
-        suffixes.forEach(s => {
-          const lid = base + s;
-          if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){}
-        });
-        if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
-      });
+    /* ====== Ramer–Douglas–Peucker (2D simplification) ====== */
+    // Works on arrays of [lng,lat]; tolerance in meters — will convert to degrees approx using lat correction.
+    function simplifyRDP(coords, toleranceMeters) {
+      if (!coords || coords.length < 3) return coords.slice();
+      // approximate meter -> degree at given latitude (use mean latitude)
+      const meanLat = coords.reduce((s,c)=>s + c[1],0)/coords.length;
+      const meterToDeg = 1 / (111320 * Math.cos(meanLat * Math.PI/180)); // approx degrees per meter
+      const tol = toleranceMeters * meterToDeg;
 
-      // add in order
-      state.layers.forEach(l => {
-        addLayerToMap(l, /*skipSourceCheck=*/false);
-      });
-
-      // refresh UI
-      refreshLayerList();
-      refreshLegend();
+      function sqDist(p1,p2) { const dx = p1[0]-p2[0], dy = p1[1]-p2[1]; return dx*dx + dy*dy; }
+      function distToSegmentSquared(p, v, w) {
+        const l2 = sqDist(v,w);
+        if (l2 === 0) return sqDist(p,v);
+        let t = ((p[0]-v[0])*(w[0]-v[0]) + (p[1]-v[1])*(w[1]-v[1]))/l2;
+        t = Math.max(0, Math.min(1,t));
+        const proj = [ v[0] + t*(w[0]-v[0]), v[1] + t*(w[1]-v[1]) ];
+        return sqDist(p, proj);
+      }
+      function rdp(points, eps) {
+        const n = points.length;
+        const keep = new Array(n).fill(false);
+        keep[0] = keep[n-1] = true;
+        const stack = [[0, n-1]];
+        while (stack.length) {
+          const [i,j] = stack.pop();
+          let maxDist = 0, idx = -1;
+          for (let k=i+1;k<j;k++) {
+            const d = distToSegmentSquared(points[k], points[i], points[j]);
+            if (d > maxDist) { maxDist = d; idx = k; }
+          }
+          if (Math.sqrt(maxDist) > eps) {
+            keep[idx] = true;
+            stack.push([i, idx]);
+            stack.push([idx, j]);
+          }
+        }
+        const res = [];
+        for (let i=0;i<n;i++) if (keep[i]) res.push(points[i]);
+        return res;
+      }
+      return rdp(coords, tol);
     }
 
-    /* ====== Add single layer to map (safe) ====== */
-    function addLayerToMap(layerObj, skipSourceCheck=false) {
+    /* ====== Core: add layer to map ====== */
+    function addLayerToMap(layerObj) {
       const id = 'layer-' + layerObj.id;
+      // remove existing source/layers to update cleanly
+      const suffixes = ['-outline','-line','-symbol','-fill'];
+      suffixes.forEach(s => { const lid = id + s; if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){} });
+      if (map.getSource(id)) try { map.removeSource(id); } catch(e){}
 
-      // Ensure unique source
-      if (map.getSource(id)) {
-        // update source data
-        map.getSource(id).setData(layerObj.geojson);
-      } else {
-        map.addSource(id, { type: 'geojson', data: layerObj.geojson });
-      }
+      map.addSource(id, { type: 'geojson', data: layerObj.geojson });
 
-      // Default style values if absent
+      // style defaults
       const style = layerObj.style = layerObj.style || {};
-
       if (layerObj.type === 'track') {
-        const outlineId = id + '-outline';
-        const lineId = id + '-line';
-        // outline: support LineString/MultiLineString
-        if (!map.getLayer(outlineId)) {
-          map.addLayer({
-            id: outlineId,
-            type: 'line',
-            source: id,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': style.outlineColor || style.color || DEFAULT_STYLE.trackLineOutline,
-              'line-width': style.outlineWidth || (style.width ? Math.max(3, style.width+2) : 6),
-              'line-opacity': typeof style.opacity === 'number' ? style.opacity : 0.9
-            },
-            filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-          });
-        }
-        if (!map.getLayer(lineId)) {
-          map.addLayer({
-            id: lineId,
-            type: 'line',
-            source: id,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': style.color || DEFAULT_STYLE.trackLine,
-              'line-width': style.width || 3,
-              'line-opacity': typeof style.opacity === 'number' ? style.opacity : 1.0
-            },
-            filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-          });
-        }
+        // outline
+        map.addLayer({
+          id: id + '-outline',
+          type: 'line',
+          source: id,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': style.outlineColor || style.color || DEFAULT_STYLE.trackLineOutline,
+            'line-width': style.outlineWidth || (style.width ? Math.max(3, style.width+2) : 6),
+            'line-opacity': typeof style.opacity === 'number' ? style.opacity : 0.9
+          },
+          filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+        });
+        // main line
+        map.addLayer({
+          id: id + '-line',
+          type: 'line',
+          source: id,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': style.color || DEFAULT_STYLE.trackLine,
+            'line-width': style.width || 3,
+            'line-opacity': typeof style.opacity === 'number' ? style.opacity : 1.0
+          },
+          filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+        });
       } else if (layerObj.type === 'point') {
-        const symbolId = id + '-symbol';
-        if (!map.getLayer(symbolId)) {
-          map.addLayer({
-            id: symbolId,
-            type: 'circle',
-            source: id,
-            paint: {
-              'circle-radius': layerObj.style && layerObj.style.radius ? layerObj.style.radius : 6,
-              'circle-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.waypoint,
-              'circle-stroke-color': '#fff',
-              'circle-stroke-width': 1,
-              'circle-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 1
-            },
-            filter: ["==", ["geometry-type"], "Point"]
-          });
-        }
+        map.addLayer({
+          id: id + '-symbol',
+          type: 'circle',
+          source: id,
+          paint: {
+            'circle-radius': layerObj.style && layerObj.style.radius ? layerObj.style.radius : 6,
+            'circle-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.waypoint,
+            'circle-stroke-color': '#fff',
+            'circle-stroke-width': 1,
+            'circle-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 1
+          },
+          filter: ["==", ["geometry-type"], "Point"]
+        });
       } else if (layerObj.type === 'polygon') {
-        const fillId = id + '-fill';
-        const outlineId = id + '-outline';
-        if (!map.getLayer(fillId)) {
-          map.addLayer({
-            id: fillId,
-            type: 'fill',
-            source: id,
-            paint: {
-              'fill-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.polygonFill,
-              'fill-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 0.6
-            }
-          });
-        }
-        if (!map.getLayer(outlineId)) {
-          map.addLayer({
-            id: outlineId,
-            type: 'line',
-            source: id,
-            paint: {
-              'line-color': layerObj.style && layerObj.style.outlineColor ? layerObj.style.outlineColor : DEFAULT_STYLE.polygonOutline,
-              'line-width': layerObj.style && layerObj.style.outlineWidth ? layerObj.style.outlineWidth : 2
-            }
-          });
-        }
+        map.addLayer({
+          id: id + '-fill',
+          type: 'fill',
+          source: id,
+          paint: {
+            'fill-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.polygonFill,
+            'fill-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 0.6
+          }
+        });
+        map.addLayer({
+          id: id + '-outline',
+          type: 'line',
+          source: id,
+          paint: {
+            'line-color': layerObj.style && layerObj.style.outlineColor ? layerObj.style.outlineColor : DEFAULT_STYLE.polygonOutline,
+            'line-width': layerObj.style && layerObj.style.outlineWidth ? layerObj.style.outlineWidth : 2
+          }
+        });
       }
 
-      // set visibility per layerObj.visible
       toggleLayerVisibility(layerObj);
-      // add click handlers (safe check)
       addClickHandlersForLayer(layerObj);
     }
 
@@ -310,7 +274,6 @@
       const base = 'layer-' + layerObj.id;
       const symbolId = base + '-symbol';
       const lineId = base + '-line';
-
       if (map.getLayer(symbolId)) {
         map.off('click', symbolId, handleFeatureClick);
         map.on('click', symbolId, handleFeatureClick);
@@ -329,15 +292,13 @@
         .addTo(map);
     }
 
-    /* ====== Layer list UI ====== */
+    /* ====== UI & state helpers ====== */
     function refreshLayerList() {
       const list = document.getElementById('layerList');
       list.innerHTML = '';
       state.layers.slice().reverse().forEach(layer => {
-        // display topmost first
-        const el = document.createElement('div');
-        el.className = 'layer-item';
-        const left = document.createElement('div'); left.className = 'layer-left';
+        const el = document.createElement('div'); el.className='layer-item';
+        const left = document.createElement('div'); left.className='layer-left';
         const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = layer.visible; cb.dataset.id = layer.id;
         cb.onchange = () => { layer.visible = cb.checked; toggleLayerVisibility(layer); refreshLegend(); };
         const title = document.createElement('div'); title.innerHTML = `<b>${layer.name}</b><div class="small">${layer.type}</div>`;
@@ -360,8 +321,7 @@
         right.appendChild(btnConvert);
         right.appendChild(btnRemove);
 
-        el.appendChild(left);
-        el.appendChild(right);
+        el.appendChild(left); el.appendChild(right);
         list.appendChild(el);
       });
     }
@@ -381,7 +341,6 @@
       });
     }
 
-    /* ====== Toggle visibility ====== */
     function toggleLayerVisibility(layer) {
       const id = 'layer-' + layer.id;
       const visible = layer.visible;
@@ -394,13 +353,11 @@
       });
     }
 
-    /* ====== Move layer in state order (-1 up, +1 down) ====== */
     function moveLayer(id, delta) {
       const idx = state.layers.findIndex(l => l.id === id);
       if (idx === -1) return;
       const newIdx = idx + delta;
       if (newIdx < 0 || newIdx >= state.layers.length) return;
-      // swap
       [state.layers[idx], state.layers[newIdx]] = [state.layers[newIdx], state.layers[idx]];
       rebuildAllLayers();
     }
@@ -415,17 +372,27 @@
       });
       if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
       state.layers.splice(idx,1);
-      refreshLayerList();
-      refreshLegend();
+      refreshLayerList(); refreshLegend();
     }
 
-    /* ====== Zoom to geojson extent ====== */
+    function rebuildAllLayers() {
+      // remove app layers
+      const suffixes = ['-outline','-line','-symbol','-fill'];
+      state.layers.forEach(l => {
+        const base = 'layer-' + l.id;
+        suffixes.forEach(s => { const lid = base + s; if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){} });
+        if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
+      });
+      // re-add in order
+      state.layers.forEach(l => addLayerToMap(l));
+      refreshLayerList(); refreshLegend();
+    }
+
     function zoomToGeoJSON(geojson) {
       if (!geojson || !geojson.features || geojson.features.length===0) return;
       const coords = [];
       geojson.features.forEach(f => {
-        const geom = f.geometry;
-        if (!geom) return;
+        const geom = f.geometry; if (!geom) return;
         if (geom.type === 'Point') coords.push(geom.coordinates);
         else if (geom.type === 'LineString') coords.push(...geom.coordinates);
         else if (geom.type === 'MultiLineString') geom.coordinates.forEach(a => coords.push(...a));
@@ -433,11 +400,8 @@
         else if (geom.type === 'MultiPolygon') geom.coordinates.flat(2).forEach(c=>coords.push(c));
       });
       if (coords.length === 0) return;
-      const lats = coords.map(c => c[1]);
-      const lngs = coords.map(c => c[0]);
-      const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-      map.fitBounds([[minLng, minLat],[maxLng, maxLat]], {padding:40});
+      const lats = coords.map(c => c[1]); const lngs = coords.map(c => c[0]);
+      map.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], {padding:40});
     }
 
     /* ====== File handling & parsing ====== */
@@ -445,7 +409,7 @@
       const input = document.getElementById('fileInput');
       if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
       const file = input.files[0];
-      await handleFileRead(file, {upload:false});
+      await handleFileRead(file);
     };
 
     document.getElementById('uploadToDrive').onclick = async () => {
@@ -456,7 +420,6 @@
       try {
         const res = await uploadToAppsScript(file);
         document.getElementById('uploadStatus').textContent = 'Uploaded: ' + res.name;
-        // fetch content back via apps script endpoint
         const contentResp = await fetch(res.url);
         const text = await contentResp.text();
         await parseAndAddFileContent(text, file.name);
@@ -465,7 +428,6 @@
       }
     };
 
-    // quick loader for the GPX you uploaded (path provided by session)
     document.getElementById('loadUploadedGPX').onclick = async () => {
       try {
         const resp = await fetch(UPLOADED_GPX_PATH);
@@ -473,7 +435,7 @@
         const text = await resp.text();
         await parseAndAddFileContent(text, 'Rangkum Langkimat.gpx');
       } catch (err) {
-        alert('Gagal load uploaded GPX: ' + err.message + '\n(If running locally, ensure your environment serves that path or transform the path to a URL.)');
+        alert('Gagal load uploaded GPX: ' + err.message + '\n(If running locally, ensure your environment serves that path.)');
       }
     };
 
@@ -484,12 +446,11 @@
       const arr = await file.arrayBuffer();
       const b64 = arrayBufferToBase64(arr);
       form.append('b64', b64);
-
       const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: form });
       if (!resp.ok) throw new Error('Upload failed: ' + resp.status);
       const j = await resp.json();
       if (j.error) throw new Error(j.error);
-      return j; // contains id, name, url
+      return j;
     }
 
     function arrayBufferToBase64(buffer) {
@@ -500,7 +461,7 @@
       return btoa(binary);
     }
 
-    async function handleFileRead(file, opts={upload:false}) {
+    async function handleFileRead(file) {
       const text = await file.text();
       await parseAndAddFileContent(text, file.name);
     }
@@ -533,9 +494,10 @@
           if (treatAsPoly && t === 'LineString') {
             const coords = f.geometry.coordinates;
             if (coords.length >= 3) {
-              const first = coords[0], last = coords[coords.length-1];
-              if (first[0] === last[0] && first[1] === last[1]) {
-                polygons.features.push({type:'Feature', properties: f.properties||{}, geometry: { type: 'Polygon', coordinates: [coords] }});
+              // only convert if closes (with tolerance)
+              if (isRingClosed(coords)) {
+                const ring = closeRing(coords);
+                polygons.features.push({type:'Feature', properties: f.properties||{}, geometry: { type: 'Polygon', coordinates: [ring] }});
                 return;
               }
             }
@@ -549,13 +511,27 @@
       if (points.features.length) addNewLayer(points, 'point', filename + ' — waypoints');
       if (polygons.features.length) addNewLayer(polygons, 'polygon', filename + ' — polygons');
 
-      refreshLayerList();
-      refreshLegend();
+      refreshLayerList(); refreshLegend();
       if (document.getElementById('autoZoom').checked) {
         const combined = {type:'FeatureCollection', features: []};
         combined.features.push(...lines.features, ...points.features, ...polygons.features);
         zoomToGeoJSON(combined);
       }
+    }
+
+    function isRingClosed(coords, tolerance=0) {
+      if (!coords || coords.length < 3) return false;
+      const a = coords[0], b = coords[coords.length-1];
+      // exact equality or within tiny tolerance
+      if (Math.abs(a[0]-b[0]) <= tolerance && Math.abs(a[1]-b[1]) <= tolerance) return true;
+      return false;
+    }
+
+    function closeRing(coords) {
+      const ring = coords.slice();
+      const a = ring[0], b = ring[ring.length-1];
+      if (a[0] !== b[0] || a[1] !== b[1]) ring.push([a[0], a[1]]);
+      return ring;
     }
 
     function addNewLayer(geojson, type, name) {
@@ -574,53 +550,46 @@
       };
       state.layers.push(layer);
       addLayerToMap(layer);
-      refreshLayerList();
-      refreshLegend();
+      refreshLayerList(); refreshLegend();
     }
 
-    /* ====== Export single layer ====== */
-    function exportLayerGeoJSON(layer) {
-      const text = JSON.stringify(layer.geojson, null, 2);
-      const blob = new Blob([text], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = layer.name.replace(/\s+/g,'_') + '.geojson'; a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    /* ====== Convert track -> polygon (if closed) ====== */
+    /* ====== Convert track -> polygon with fixes and optional simplify ====== */
     function convertTrackToPolygon(layerId) {
       const layer = state.layers.find(l => l.id === layerId);
       if (!layer || layer.type !== 'track') { alert('Layer bukan track'); return; }
-      // attempt conversion for each LineString feature that's closed
+      const simplify = document.getElementById('simplifyOnConvert').checked;
+      const tolMeters = parseFloat(document.getElementById('simplifyTolerance').value || '0');
+
       const polygons = { type:'FeatureCollection', features: [] };
       layer.geojson.features.forEach(f => {
-        const g = f.geometry;
-        if (!g) return;
+        const g = f.geometry; if (!g) return;
         if (g.type === 'LineString') {
-          const coords = g.coordinates;
-          if (coords.length >=3) {
-            const first = coords[0], last = coords[coords.length-1];
-            if (first[0] === last[0] && first[1] === last[1]) {
-              polygons.features.push({type:'Feature', properties: f.properties || {}, geometry:{type:'Polygon', coordinates:[coords]}});
-            }
+          let coords = g.coordinates.slice();
+          if (!isRingClosed(coords)) coords = closeRing(coords);
+          if (coords.length >= 4) { // polygon needs at least 4 coords (first==last)
+            if (simplify && tolMeters > 0) coords = simplifyRDP(coords, tolMeters);
+            // ensure still closed after simplify
+            if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
+            if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties || {}, geometry: { type: 'Polygon', coordinates: [coords] } });
           }
         } else if (g.type === 'MultiLineString') {
-          // try each ring
           g.coordinates.forEach(arr => {
-            if (arr.length>=3) {
-              const first = arr[0], last = arr[arr.length-1];
-              if (first[0]===last[0] && first[1]===last[1]) {
-                polygons.features.push({type:'Feature', properties: f.properties || {}, geometry:{type:'Polygon', coordinates:[arr]}});
-              }
+            let coords = arr.slice();
+            if (!isRingClosed(coords)) coords = closeRing(coords);
+            if (coords.length >= 4) {
+              if (simplify && tolMeters > 0) coords = simplifyRDP(coords, tolMeters);
+              if (!isRingClosed(coords)) coords.push([coords[0][0], coords[0][1]]);
+              if (coords.length >= 4) polygons.features.push({ type:'Feature', properties: f.properties || {}, geometry: { type: 'Polygon', coordinates: [coords] } });
             }
           });
         }
       });
-      if (polygons.features.length===0) { alert('Tidak ada track tertutup untuk dikonversi'); return; }
+
+      if (polygons.features.length === 0) { alert('Tidak ada track tertutup untuk dikonversi (atau setelah simplifikasi tidak valid).'); return; }
       addNewLayer(polygons, 'polygon', layer.name + ' — converted polygons');
     }
 
-    /* ====== Modal style editor (option C: popup modal) ====== */
+    /* ====== Modal style editor (option C) ====== */
     const modalBackdrop = document.getElementById('modalBackdrop');
     const styleColor = document.getElementById('styleColor');
     const styleOpacity = document.getElementById('styleOpacity');
@@ -633,46 +602,35 @@
       if (!layer) return;
       editingLayerId = layerId;
       document.getElementById('modalTitle').textContent = 'Edit: ' + layer.name;
-      styleColor.value = layer.style && layer.style.color ? rgbToHex(layer.style.color) : '#ff0000';
+      styleColor.value = (layer.style && layer.style.color) ? rgbToHex(layer.style.color) : '#ff0000';
       styleOpacity.value = (typeof layer.style.opacity === 'number') ? layer.style.opacity : 1;
       lineWidth.value = (layer.style && layer.style.width) ? layer.style.width : 3;
       pointRadius.value = (layer.style && layer.style.radius) ? layer.style.radius : 6;
-      // show/hide controls based on type
       document.getElementById('lineOptions').style.display = layer.type==='track' || layer.type==='polygon' ? 'flex' : 'none';
       document.getElementById('radiusOptions').style.display = layer.type==='point' ? 'flex' : 'none';
-      modalBackdrop.style.display = 'flex';
-      modalBackdrop.setAttribute('aria-hidden','false');
+      modalBackdrop.style.display = 'flex'; modalBackdrop.setAttribute('aria-hidden','false');
     }
 
     document.getElementById('modalCancel').onclick = () => {
-      modalBackdrop.style.display = 'none';
-      modalBackdrop.setAttribute('aria-hidden','true');
-      editingLayerId = null;
+      modalBackdrop.style.display = 'none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId = null;
     };
 
     document.getElementById('modalSave').onclick = () => {
       if (!editingLayerId) return;
       const layer = state.layers.find(l => l.id === editingLayerId);
       if (!layer) return;
-      // save style
       layer.style = layer.style || {};
       layer.style.color = styleColor.value;
       layer.style.opacity = parseFloat(styleOpacity.value);
       if (layer.type === 'track') layer.style.width = parseInt(lineWidth.value,10);
       if (layer.type === 'point') layer.style.radius = parseInt(pointRadius.value,10);
-      // polygon uses color & opacity; for polygon outline we keep defaults
-      // rebuild layers so paint props update
       rebuildAllLayers();
-      modalBackdrop.style.display = 'none';
-      modalBackdrop.setAttribute('aria-hidden','true');
-      editingLayerId = null;
+      modalBackdrop.style.display = 'none'; modalBackdrop.setAttribute('aria-hidden','true'); editingLayerId = null;
     };
 
     function rgbToHex(input) {
-      // if already hex, return
       if (!input) return '#000000';
       if (input[0] === '#') return input;
-      // try parse rgb(...) style
       const m = input.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       if (!m) return '#000000';
       const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
@@ -698,7 +656,6 @@
       URL.revokeObjectURL(url);
     };
 
-    /* ====== Layer editing helpers ====== */
     function exportLayerGeoJSON(layer) {
       const text = JSON.stringify(layer.geojson, null, 2);
       const blob = new Blob([text], {type:'application/json'});
@@ -707,37 +664,19 @@
       URL.revokeObjectURL(url);
     }
 
-    /* ====== Basemap switching (replace basemap source & layer) ====== */
-    document.getElementById('basemapSelect').onchange = (e) => {
-      const key = e.target.value;
-      switchBasemap(key);
-    };
-
+    /* ====== Basemap switching ====== */
+    document.getElementById('basemapSelect').onchange = (e) => { switchBasemap(e.target.value); };
     function switchBasemap(key) {
       const def = basemapDefs[key] || basemapDefs.osm;
-      // remove existing basemap layer/source if present
       if (map.getLayer('basemap-layer')) try { map.removeLayer('basemap-layer'); } catch(e){}
       if (map.getSource('basemap')) try { map.removeSource('basemap'); } catch(e){}
       map.addSource('basemap', { type: 'raster', tiles: def.tiles, tileSize: 256, attribution: def.attribution });
-      map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, /*before*/ undefined);
-      // then rebuild app layers to ensure they sit above basemap
+      map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, undefined);
       rebuildAllLayers();
     }
 
-    /* ====== Utility: convert colors that might be non-hex to hex on save ====== */
-    function ensureLayerPaints(layer){
-      if (!layer.style) layer.style = {};
-      if (!layer.style.color) layer.style.color = DEFAULT_STYLE.trackLine;
-    }
-
-    /* ====== Initialization ====== */
+    /* ====== Init ====== */
     refreshLayerList();
-
-    /* ====== Notes about environment & uploaded GPX path ======
-      - Quick-load button uses path: /mnt/data/Rangkum Langkimat.gpx
-      - If running this file on a server that can serve that local path (or your environment will translate it),
-        the quick-load should work. Otherwise, upload the file via the UI to Google Drive and load from there.
-    ========================================================= */
 
   </script>
 </body>
