@@ -145,7 +145,7 @@
 
     const map = new maplibregl.Map({
       container: 'map',
-      style: {...},
+      style: { version: 8, sources: { basemap: { type: 'raster', tiles: basemapDefs.osm.tiles, tileSize: 256, attribution: basemapDefs.osm.attribution } }, layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }] },
       center: [101.45, -0.45],
       zoom: 11
     });
