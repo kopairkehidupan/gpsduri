@@ -173,7 +173,18 @@
     carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'Carto Light' }),
     carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'Carto Dark' })
   };
-  basemapDefs.osm.addTo(map);
+
+  // keep track of current base layer and provide switcher
+  let currentBase = basemapDefs.osm.addTo(map);
+  function switchBasemap(key){
+    try{
+      if (currentBase) map.removeLayer(currentBase);
+    } catch(e){}
+    const next = basemapDefs[key] || basemapDefs.osm;
+    currentBase = next.addTo(map);
+  }
+  document.getElementById('basemapSelect').value = 'osm';
+  document.getElementById('basemapSelect').onchange = (e) => switchBasemap(e.target.value);
 
   L.control.scale({ metric: true, imperial: false }).addTo(map);
 
@@ -284,7 +295,7 @@
       const btnStyle = document.createElement('button'); btnStyle.className='btn secondary'; btnStyle.textContent='Style'; btnStyle.onclick = () => openStyleModal(layer.id);
       const btnUp = document.createElement('button'); btnUp.className='btn'; btnUp.textContent='▲'; btnUp.title='Move up'; btnUp.onclick = () => moveLayer(layer.id, -1);
       const btnDown = document.createElement('button'); btnDown.className='btn'; btnDown.textContent='▼'; btnDown.title='Move down'; btnDown.onclick = () => moveLayer(layer.id, 1);
-      const btnZoom = document.createElement('button'); btnZoom.className='btn secondary'; btnZoom.textContent='Zoom'; btnZoom.onclick = () => { map.fitBounds(layer.leafletLayer.getBounds()); };
+      const btnZoom = document.createElement('button'); btnZoom.className='btn secondary'; btnZoom.textContent='Zoom'; btnZoom.onclick = () => { try{ map.fitBounds(layer.leafletLayer.getBounds()); }catch(e){} };
       const btnExport = document.createElement('button'); btnExport.className='btn secondary'; btnExport.textContent='Export'; btnExport.onclick = () => exportLayerGeoJSON(layer);
       const btnConvert = document.createElement('button'); btnConvert.className='btn secondary'; btnConvert.textContent='Convert'; btnConvert.title='Convert track→polygon if closed'; btnConvert.onclick = () => convertTrackToPolygon(layer.id);
       const btnRemove = document.createElement('button'); btnRemove.className='btn warn'; btnRemove.textContent='Remove'; btnRemove.onclick = () => removeLayerById(layer.id);
