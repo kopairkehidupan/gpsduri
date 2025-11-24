@@ -639,70 +639,82 @@
   }
 
   /* ====== PDF generation: use leaflet-image to render map to canvas, then compose overlays and jsPDF ====== */
-  async function captureMapCanvasWithOverlays(){
-    // ensure libs loaded
+  async function captureMapCanvasWithOverlays() {
     await loadExternalForPDF();
+  
     return new Promise((resolve, reject) => {
-      // leaflet-image will render map to canvas. It uses window.map as first arg.
-      try {
-        leafletImage(map, function(err, canvas) {
-          if (err) { reject(err); return; }
-          // now draw overlays onto a new canvas (to preserve DPI)
-          const dpr = window.devicePixelRatio || 1;
-          const w = canvas.width; const h = canvas.height;
-          const out = document.createElement('canvas');
-          out.width = w; out.height = h;
-          const ctx = out.getContext('2d');
-          // draw base
-          ctx.drawImage(canvas, 0, 0, w, h);
-          // north arrow (top-right)
-          const margin = 12 * dpr;
-          const arrowSize = 40 * dpr;
-          const ax = out.width - margin - arrowSize/2;
-          const ay = margin + arrowSize/2;
-          ctx.save();
-          ctx.fillStyle = '#111';
-          ctx.beginPath();
-          ctx.moveTo(ax, ay - arrowSize/2);
-          ctx.lineTo(ax - arrowSize/2, ay + arrowSize/2);
-          ctx.lineTo(ax + arrowSize/2, ay + arrowSize/2);
-          ctx.closePath();
-          ctx.fill();
-          ctx.fillStyle = '#fff';
-          ctx.font = `${12 * dpr}px Arial`;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('N', ax, ay - 2);
-          ctx.restore();
-          // scale bar (bottom-left) compute approximate pixel length for nice scale
-          const scaleInfo = computeScaleForCanvas(map, out.width/dpr, out.height/dpr);
-          const scalePx = Math.round(scaleInfo.pixelLen * dpr);
-          const barW = Math.max(40 * dpr, scalePx);
-          const barH = 6 * dpr;
-          const bx = margin;
-          const by = out.height - margin - barH;
-          ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillRect(bx - 4*dpr, by - 8*dpr, barW + 8*dpr, barH + 16*dpr);
-          ctx.fillStyle = '#111'; ctx.fillRect(bx, by, barW, barH);
-          ctx.fillStyle = '#000'; ctx.font = `${11 * dpr}px Arial`; ctx.textAlign='left'; ctx.fillText(scaleInfo.label, bx, by - 8 * dpr);
-          // grid labels
-          if (window._gridLabels && window._gridLabels.length){
-            ctx.font = `${10 * dpr}px Arial`;
-            window._gridLabels.forEach(lbl=>{
-              const x = Math.round(lbl.x * dpr), y = Math.round(lbl.y * dpr);
-              const padding = Math.round(2 * dpr);
-              const metrics = ctx.measureText(lbl.text);
-              const wbox = Math.round(metrics.width) + padding*2;
-              const hbox = Math.round(12 * dpr);
-              ctx.fillStyle = 'rgba(255,255,255,0.85)';
-              ctx.fillRect(x - padding, y - padding, wbox, hbox);
-              ctx.fillStyle = '#000';
-              ctx.fillText(lbl.text, x, y);
-            });
-          }
-          resolve(out.toDataURL('image/png'));
-        });
-      } catch(e){
-        reject(e);
-      }
+      leafletImage(map, function (err, canvas) {
+        if (err) { reject(err); return; }
+  
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.width;
+        const h = canvas.height;
+  
+        const out = document.createElement('canvas');
+        out.width = w;
+        out.height = h;
+        const ctx = out.getContext('2d');
+  
+        // ===== Draw Map =====
+        ctx.drawImage(canvas, 0, 0, w, h);
+  
+        // ===== North Arrow (fixed corner) =====
+        const NA_SIZE = 60 * dpr;
+        const_margin = 20 * dpr;
+        const x = w - NA_SIZE - _margin;
+        const y = _margin;
+  
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(x - 6, y - 6, NA_SIZE + 12, NA_SIZE + 12);
+  
+        ctx.beginPath();
+        ctx.moveTo(x + NA_SIZE / 2, y);
+        ctx.lineTo(x, y + NA_SIZE);
+        ctx.lineTo(x + NA_SIZE, y + NA_SIZE);
+        ctx.closePath();
+        ctx.fillStyle = '#000';
+        ctx.fill();
+  
+        ctx.fillStyle = '#fff';
+        ctx.font = `${20 * dpr}px Arial`;
+        ctx.textAlign = "center";
+        ctx.fillText("N", x + NA_SIZE / 2, y + NA_SIZE / 2 - 5 * dpr);
+        ctx.restore();
+  
+        // ===== Scale Bar =====
+        const scaleInfo = computeScaleForCanvas(map, w / dpr, h / dpr);
+        const PX = Math.round(scaleInfo.pixelLen * dpr);
+  
+        const sbw = PX;
+        const sbh = 10 * dpr;
+        const sbx = 40 * dpr;
+        const sby = h - 60 * dpr;
+  
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(sbx - 8, sby - 22, sbw + 16, sbh + 30);
+  
+        ctx.fillStyle = '#000';
+        ctx.fillRect(sbx, sby, sbw, sbh);
+  
+        ctx.font = `${18 * dpr}px Arial`;
+        ctx.textAlign = "left";
+        ctx.fillText(scaleInfo.label, sbx, sby - 10 * dpr);
+  
+        // ===== GRID LABELS =====
+        if (window._gridLabels) {
+          ctx.font = `${14 * dpr}px Arial`;
+          window._gridLabels.forEach(lbl => {
+            ctx.fillStyle = "rgba(255,255,255,0.85)";
+            ctx.fillRect(lbl.x * dpr - 4, lbl.y * dpr - 12, 70, 18);
+  
+            ctx.fillStyle = "#000";
+            ctx.fillText(lbl.text, lbl.x * dpr, lbl.y * dpr);
+          });
+        }
+  
+        resolve(out.toDataURL('image/png'));
+      });
     });
   }
 
@@ -732,46 +744,72 @@
   }
 
   // Generate PDF A4 landscape: left map (68%), right legend & areas
-  async function generatePDF(){
-    try { await loadExternalForPDF(); } catch(e){ alert('Gagal load libs untuk PDF: ' + e.message); return; }
-    try {
-      ensureGrid(); // update grid and labels
-      // slight pause to ensure layers updated
-      await new Promise(r=>setTimeout(r,250));
-      const imgData = await captureMapCanvasWithOverlays();
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('landscape','mm','a4');
-      const pw = pdf.internal.pageSize.getWidth();
-      const ph = pdf.internal.pageSize.getHeight();
-      const mapWmm = pw * 0.68;
-      const mapHmm = ph - 20;
-      const img = new Image();
-      img.src = imgData;
-      await new Promise(r=>{ img.onload = r; });
-      const imgAspect = img.width / img.height;
-      const targetW = mapWmm;
-      const targetH = Math.min(mapHmm, mapWmm / imgAspect);
-      // place map (left)
-      pdf.addImage(imgData, 'PNG', 10, 10, targetW, targetH);
-      // Right panel legend & areas
-      const stats = generatePolygonStats();
-      pdf.setFontSize(14); pdf.text('Legenda & Luas Blok', 12 + targetW, 16);
-      pdf.setFontSize(11);
-      let y = 24;
-      let total = 0;
+  async function generatePDF() {
+    await loadExternalForPDF();
+    ensureGrid();
+  
+    await new Promise(r => setTimeout(r, 300));
+    const imgData = await captureMapCanvasWithOverlays();
+  
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF("landscape", "mm", "a4");
+  
+    const pw = pdf.internal.pageSize.getWidth();
+    const ph = pdf.internal.pageSize.getHeight();
+  
+    // ==== MAP AREA (LEFT) ====
+    const mapW = pw * 0.70;
+    const mapH = ph - 30;
+  
+    pdf.addImage(imgData, "PNG", 10, 10, mapW, mapH);
+  
+    // ==== TITLE ====
+    pdf.setFont("Arial", "bold");
+    pdf.setFontSize(18);
+    pdf.text("PETA AREAL PERKEBUNAN", 10, ph - 8);
+  
+    // ==== LEGEND (RIGHT COLUMN) ====
+    pdf.setFont("Arial", "bold");
+    pdf.setFontSize(14);
+    pdf.text("Legenda", mapW + 20, 14);
+  
+    pdf.setFont("Arial", "normal");
+    pdf.setFontSize(11);
+  
+    let y = 24;
+  
+    window.state.layers.forEach(layer => {
+      pdf.setFont("Arial", "bold");
+      pdf.setFontSize(12);
+  
+      // color box
+      pdf.setFillColor(layer.style.color || "#000000");
+      pdf.rect(mapW + 20, y - 4, 10, 5, "F");
+  
+      // text
+      pdf.text(` ${layer.name}`, mapW + 35, y);
+  
+      y += 8;
+    });
+  
+    // ==== AREA SUMMARY (IF ANY POLYGON) ====
+    const stats = generatePolygonStats();
+  
+    if (stats.length) {
+      pdf.setFont("Arial", "bold");
+      pdf.setFontSize(14);
+      pdf.text("Luas Blok (Ha)", mapW + 20, y + 6);
+  
+      y += 14;
+      pdf.setFontSize(12);
+  
       stats.forEach(s => {
-        pdf.text(`- ${s.name}: ${s.area.toFixed(2)} Ha`, 12 + targetW, y);
-        y += 6;
-        total += s.area;
+        pdf.text(`${s.name}: ${s.area.toFixed(2)} Ha`, mapW + 20, y);
+        y += 7;
       });
-      pdf.setFontSize(12); pdf.text(`Total: ${total.toFixed(2)} Ha`, 12 + targetW, y+4);
-      // Title & footer
-      pdf.setFontSize(16); pdf.text('PETA AREAL KEBUN', 10, ph - 6);
-      pdf.save('map_export.pdf');
-    } catch (err){
-      console.error(err);
-      alert('Export PDF gagal: ' + err.message);
     }
+  
+    pdf.save("map_export.pdf");
   }
 
   // hook print button
