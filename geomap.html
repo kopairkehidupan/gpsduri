@@ -130,8 +130,11 @@
           source: id,
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: { 'line-color': COLORS.trackLineOutline, 'line-width': 6, 'line-opacity': 0.9 },
-          filter: ['==', ['geometry', 'type'], 'LineString'] // apply to lines
+          filter: ["all",
+            ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+          ]
         });
+      
         // main line
         map.addLayer({
           id: id + '-line',
@@ -139,14 +142,22 @@
           source: id,
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: { 'line-color': COLORS.trackLine, 'line-width': 3, 'line-opacity': 1.0 },
-          filter: ['==', ['geometry', 'type'], 'LineString']
+          filter: ["all",
+            ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+          ]
         });
       } else if (layerObj.type === 'point') {
         map.addLayer({
           id: id + '-symbol',
           type: 'circle',
           source: id,
-          paint: { 'circle-radius': 6, 'circle-color': COLORS.waypoint, 'circle-stroke-color': '#fff', 'circle-stroke-width': 1 }
+          filter: ["==", ["geometry-type"], "Point"],
+          paint: {
+            'circle-radius': 6,
+            'circle-color': COLORS.waypoint,
+            'circle-stroke-color': '#fff',
+            'circle-stroke-width': 1
+          }
         });
       } else if (layerObj.type === 'polygon') {
         map.addLayer({
