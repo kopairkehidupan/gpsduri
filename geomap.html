@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Peta MapLibre — GPX/GeoJSON Upload</title>
+  <title>Peta MapLibre — GPX/GeoJSON Upload & Layer Editor</title>
 
   <!-- MapLibre GL JS -->
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
@@ -12,7 +12,6 @@
   <script src="https://unpkg.com/@mapbox/togeojson@0.16.2/togeojson.js"></script>
 
   <style>
-    /* Simple ArcGIS-like layout: left sidebar + map right */
     html,body,#map { height: 100%; margin: 0; padding: 0; font-family: Inter, Arial, sans-serif; }
     #app { display: grid; grid-template-columns: 360px 1fr; height: 100vh; }
     #sidebar { background:#fff; border-right:1px solid #e6e6e6; padding:12px; box-sizing:border-box; overflow:auto;}
@@ -20,12 +19,24 @@
     .control { margin-bottom:12px; }
     #map { position: relative; }
 
-    .layer-item { display:flex; align-items:center; justify-content:space-between; padding:8px;border:1px solid #eee;border-radius:6px;margin-bottom:6px;}
+    .layer-item { display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px solid #eee;border-radius:6px;margin-bottom:6px;}
+    .layer-left { display:flex; gap:8px; align-items:center;}
     .btn { background:#2b6cb0;color:#fff;padding:6px 8px;border-radius:6px;border:none;cursor:pointer;}
     .btn.secondary { background:#edf2f7;color:#111; }
+    .btn.warn { background:#d9534f; }
     input[type=file] { display:block; margin-top:8px; }
     .small { font-size:12px;color:#666; }
     label { display:block; margin-bottom:6px; font-weight:600; }
+
+    /* Modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:9999;}
+    .modal { background:#fff; width:420px; border-radius:8px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.2); }
+    .modal h3 { margin:0 0 8px; font-size:16px; }
+    .form-row { margin:8px 0; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+    .form-row input[type="range"] { width:180px; }
+    .legend { margin-top:12px; border-top:1px solid #eee; padding-top:8px; font-size:13px; }
+    .basemap-select { width:100%; padding:6px; border-radius:6px; border:1px solid #ddd; }
+    .layer-actions { display:flex; gap:6px; }
   </style>
 </head>
 <body>
@@ -34,11 +45,23 @@
       <h2>Peta — ArcGIS-like (MapLibre)</h2>
 
       <div class="control">
+        <label>Basemap</label>
+        <select id="basemapSelect" class="basemap-select">
+          <option value="osm">OpenStreetMap</option>
+          <option value="terrain">Terrain (Stamen Terrain)</option>
+          <option value="satellite">Satellite (Esri.WorldImagery)</option>
+          <option value="light">Light (Carto)</option>
+          <option value="dark">Dark (Carto)</option>
+        </select>
+      </div>
+
+      <div class="control">
         <label>Upload file (GPX or GeoJSON)</label>
         <input id="fileInput" type="file" accept=".gpx,.xml,.geojson,.json" />
         <div style="margin-top:8px;">
           <button id="uploadToDrive" class="btn">Upload → Google Drive</button>
           <button id="addLocal" class="btn secondary">Load locally (tanpa upload)</button>
+          <button id="loadUploadedGPX" class="btn secondary" title="Load GPX yang sudah diupload di session ini">Load: Rangkum Langkimat.gpx</button>
         </div>
         <div id="uploadStatus" class="small" style="margin-top:8px;"></div>
       </div>
@@ -56,177 +79,309 @@
 
       <div class="control">
         <label>Export</label>
-        <button id="exportGeoJSON" class="btn secondary">Export All GeoJSON</button>
+        <div style="display:flex; gap:8px;">
+          <button id="exportGeoJSON" class="btn secondary">Export All GeoJSON</button>
+          <button id="exportState" class="btn secondary">Download State</button>
+        </div>
       </div>
 
-      <hr />
-      <div class="small">
-        <b>Notes:</b>
-        <ul>
-          <li>GPX tracks → converted to GeoJSON in browser</li>
-          <li>Untuk polygon (batas blok), sebaiknya upload GeoJSON</li>
-        </ul>
+      <div class="small legend" id="legend">
+        <b>Legend:</b>
+        <div id="legendItems"></div>
       </div>
     </aside>
 
     <div id="map"></div>
   </div>
 
+  <!-- STYLE EDITOR MODAL -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-hidden="true">
+    <div class="modal" role="document">
+      <h3 id="modalTitle">Edit Layer</h3>
+      <div id="modalBody">
+        <!-- dynamic content -->
+        <div class="form-row"><label>Color</label><input type="color" id="styleColor" /></div>
+        <div class="form-row" id="lineOptions"><label>Line width</label><input id="lineWidth" type="range" min="1" max="12" value="3" /></div>
+        <div class="form-row" id="radiusOptions" style="display:none"><label>Radius</label><input id="pointRadius" type="range" min="1" max="20" value="6" /></div>
+        <div class="form-row"><label>Opacity</label><input id="styleOpacity" type="range" min="0" max="1" step="0.05" value="1" /></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+          <button id="modalCancel" class="btn secondary">Cancel</button>
+          <button id="modalSave" class="btn">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     /* ====== CONFIG ====== */
-    const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL'; // <-- ganti dengan URL deploy Apps Script
-    /* ArcGIS-pro like palette (example) */
-    const COLORS = {
-      trackLine: '#d35400',      // orange
+    const APPS_SCRIPT_URL = 'REPLACE_WITH_YOUR_APPS_SCRIPT_URL'; // <-- ganti jika mau upload ke Drive
+    // Untuk testing cepat: path file GPX yang sudah kamu upload di sesi ini:
+    const UPLOADED_GPX_PATH = '/mnt/data/Rangkum Langkimat.gpx'; // <-- gunakan ini untuk load cepat (server akan transform ke URL)
+
+    /* default palette (ArcGIS-like) */
+    const DEFAULT_STYLE = {
+      trackLine: '#d35400',
       trackLineOutline: '#8e2b00',
       waypoint: '#1f78b4',
       polygonFill: '#f6e6d8',
       polygonOutline: '#d98b3a'
     };
 
-    /* ====== Initialize MapLibre map (raster OSM base) ====== */
+    /* ====== Map & basemap helpers ====== */
+    const basemapDefs = {
+      osm: {
+        id: 'basemap',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        attribution: '© OpenStreetMap contributors'
+      },
+      terrain: {
+        id: 'basemap',
+        tiles: ['https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg'],
+        attribution: 'Terrain tiles by Stamen'
+      },
+      satellite: {
+        id: 'basemap',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        attribution: 'Esri World Imagery'
+      },
+      light: {
+        id: 'basemap',
+        tiles: ['https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],
+        attribution: 'Carto Light'
+      },
+      dark: {
+        id: 'basemap',
+        tiles: ['https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],
+        attribution: 'Carto Dark'
+      }
+    };
+
+    // Initial style uses OSM raster
     const map = new maplibregl.Map({
       container: 'map',
       style: {
-        "version": 8,
-        "sources": {
-          "osm-tiles": {
-            "type": "raster",
-            "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            "tileSize": 256,
-            "attribution": "© OpenStreetMap contributors"
+        version: 8,
+        sources: {
+          basemap: {
+            type: 'raster',
+            tiles: basemapDefs.osm.tiles,
+            tileSize: 256,
+            attribution: basemapDefs.osm.attribution
           }
         },
-        "layers": [
-          { "id": "osm-tiles", "type": "raster", "source": "osm-tiles" }
-        ]
+        layers: [{ id: 'basemap-layer', type: 'raster', source: 'basemap' }]
       },
-      center: [101.45, -0.45], // default center (sesuaikan)
+      center: [101.45, -0.45],
       zoom: 11
     });
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(new maplibregl.ScaleControl({maxWidth:200, unit:'metric'}), 'bottom-right');
 
-    /* ====== State ====== */
+    /* ====== Application state ====== */
     const state = {
-      layers: [], // {id, name, type, geojson, visible}
+      layers: [], // each: {id, name, type, geojson, visible, style: {color,width,opacity,radius}}
       nextId: 1
     };
 
-    /* ====== Helpers ====== */
-    function addLayerToMap(layerObj) {
-      const id = 'layer-' + layerObj.id;
-      // Add source
-      if (map.getSource(id)) map.removeLayer(id), map.removeSource(id);
-
-      map.addSource(id, { type: 'geojson', data: layerObj.geojson });
-
-      if (layerObj.type === 'track') {
-        // outline
-        map.addLayer({
-          id: id + '-outline',
-          type: 'line',
-          source: id,
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': COLORS.trackLineOutline, 'line-width': 6, 'line-opacity': 0.9 },
-          filter: ["all",
-            ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-          ]
+    /* ====== Utility: rebuild all layers according to state order ====== */
+    function rebuildAllLayers() {
+      // remove all app layers & sources first
+      // the layer ids we use are 'layer-{id}-...' ; remove them all
+      // Note: keep basemap layers intact.
+      const suffixes = ['-outline','-line','-symbol','-fill'];
+      state.layers.forEach(l => {
+        const base = 'layer-' + l.id;
+        suffixes.forEach(s => {
+          const lid = base + s;
+          if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){}
         });
-      
-        // main line
-        map.addLayer({
-          id: id + '-line',
-          type: 'line',
-          source: id,
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': COLORS.trackLine, 'line-width': 3, 'line-opacity': 1.0 },
-          filter: ["all",
-            ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
-          ]
-        });
-      } else if (layerObj.type === 'point') {
-        map.addLayer({
-          id: id + '-symbol',
-          type: 'circle',
-          source: id,
-          filter: ["==", ["geometry-type"], "Point"],
-          paint: {
-            'circle-radius': 6,
-            'circle-color': COLORS.waypoint,
-            'circle-stroke-color': '#fff',
-            'circle-stroke-width': 1
-          }
-        });
-      } else if (layerObj.type === 'polygon') {
-        map.addLayer({
-          id: id + '-fill',
-          type: 'fill',
-          source: id,
-          paint: { 'fill-color': COLORS.polygonFill, 'fill-opacity': 0.6 }
-        });
-        map.addLayer({
-          id: id + '-outline',
-          type: 'line',
-          source: id,
-          paint: { 'line-color': COLORS.polygonOutline, 'line-width': 2 }
-        });
-      }
-
-      // add popup on click (for features)
-      map.on('click', id + '-symbol', (e) => {
-        const props = e.features[0].properties || {};
-        new maplibregl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML('<b>Waypoint</b><br/>' + JSON.stringify(props))
-          .addTo(map);
+        if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
       });
 
-      // track line click popup
-      map.on('click', id + '-line', (e) => {
-        const props = e.features[0].properties || {};
-        new maplibregl.Popup()
-          .setLngLat(e.lngLat)
-          .setHTML('<b>Track</b><br/>' + JSON.stringify(props))
-          .addTo(map);
+      // add in order
+      state.layers.forEach(l => {
+        addLayerToMap(l, /*skipSourceCheck=*/false);
       });
+
+      // refresh UI
+      refreshLayerList();
+      refreshLegend();
     }
 
+    /* ====== Add single layer to map (safe) ====== */
+    function addLayerToMap(layerObj, skipSourceCheck=false) {
+      const id = 'layer-' + layerObj.id;
+
+      // Ensure unique source
+      if (map.getSource(id)) {
+        // update source data
+        map.getSource(id).setData(layerObj.geojson);
+      } else {
+        map.addSource(id, { type: 'geojson', data: layerObj.geojson });
+      }
+
+      // Default style values if absent
+      const style = layerObj.style = layerObj.style || {};
+
+      if (layerObj.type === 'track') {
+        const outlineId = id + '-outline';
+        const lineId = id + '-line';
+        // outline: support LineString/MultiLineString
+        if (!map.getLayer(outlineId)) {
+          map.addLayer({
+            id: outlineId,
+            type: 'line',
+            source: id,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': style.outlineColor || style.color || DEFAULT_STYLE.trackLineOutline,
+              'line-width': style.outlineWidth || (style.width ? Math.max(3, style.width+2) : 6),
+              'line-opacity': typeof style.opacity === 'number' ? style.opacity : 0.9
+            },
+            filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+          });
+        }
+        if (!map.getLayer(lineId)) {
+          map.addLayer({
+            id: lineId,
+            type: 'line',
+            source: id,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': style.color || DEFAULT_STYLE.trackLine,
+              'line-width': style.width || 3,
+              'line-opacity': typeof style.opacity === 'number' ? style.opacity : 1.0
+            },
+            filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]
+          });
+        }
+      } else if (layerObj.type === 'point') {
+        const symbolId = id + '-symbol';
+        if (!map.getLayer(symbolId)) {
+          map.addLayer({
+            id: symbolId,
+            type: 'circle',
+            source: id,
+            paint: {
+              'circle-radius': layerObj.style && layerObj.style.radius ? layerObj.style.radius : 6,
+              'circle-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.waypoint,
+              'circle-stroke-color': '#fff',
+              'circle-stroke-width': 1,
+              'circle-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 1
+            },
+            filter: ["==", ["geometry-type"], "Point"]
+          });
+        }
+      } else if (layerObj.type === 'polygon') {
+        const fillId = id + '-fill';
+        const outlineId = id + '-outline';
+        if (!map.getLayer(fillId)) {
+          map.addLayer({
+            id: fillId,
+            type: 'fill',
+            source: id,
+            paint: {
+              'fill-color': layerObj.style && layerObj.style.color ? layerObj.style.color : DEFAULT_STYLE.polygonFill,
+              'fill-opacity': typeof layerObj.style && layerObj.style.opacity === 'number' ? layerObj.style.opacity : 0.6
+            }
+          });
+        }
+        if (!map.getLayer(outlineId)) {
+          map.addLayer({
+            id: outlineId,
+            type: 'line',
+            source: id,
+            paint: {
+              'line-color': layerObj.style && layerObj.style.outlineColor ? layerObj.style.outlineColor : DEFAULT_STYLE.polygonOutline,
+              'line-width': layerObj.style && layerObj.style.outlineWidth ? layerObj.style.outlineWidth : 2
+            }
+          });
+        }
+      }
+
+      // set visibility per layerObj.visible
+      toggleLayerVisibility(layerObj);
+      // add click handlers (safe check)
+      addClickHandlersForLayer(layerObj);
+    }
+
+    function addClickHandlersForLayer(layerObj) {
+      const base = 'layer-' + layerObj.id;
+      const symbolId = base + '-symbol';
+      const lineId = base + '-line';
+
+      if (map.getLayer(symbolId)) {
+        map.off('click', symbolId, handleFeatureClick);
+        map.on('click', symbolId, handleFeatureClick);
+      }
+      if (map.getLayer(lineId)) {
+        map.off('click', lineId, handleFeatureClick);
+        map.on('click', lineId, handleFeatureClick);
+      }
+    }
+
+    function handleFeatureClick(e) {
+      const props = e.features && e.features[0] && e.features[0].properties ? e.features[0].properties : {};
+      new maplibregl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML('<pre style="font-size:12px">' + JSON.stringify(props, null, 2) + '</pre>')
+        .addTo(map);
+    }
+
+    /* ====== Layer list UI ====== */
     function refreshLayerList() {
       const list = document.getElementById('layerList');
       list.innerHTML = '';
-      state.layers.forEach(layer => {
+      state.layers.slice().reverse().forEach(layer => {
+        // display topmost first
         const el = document.createElement('div');
         el.className = 'layer-item';
-        el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-id="${layer.id}" ${layer.visible ? 'checked': ''}/> <div><b>${layer.name}</b><div class="small">${layer.type}</div></div></div>
-                        <div style="display:flex;gap:6px;"><button class="btn secondary" data-action="zoom" data-id="${layer.id}">Zoom</button>
-                        <button class="btn" data-action="remove" data-id="${layer.id}">Remove</button></div>`;
-        list.appendChild(el);
-      });
+        const left = document.createElement('div'); left.className = 'layer-left';
+        const cb = document.createElement('input'); cb.type='checkbox'; cb.checked = layer.visible; cb.dataset.id = layer.id;
+        cb.onchange = () => { layer.visible = cb.checked; toggleLayerVisibility(layer); refreshLegend(); };
+        const title = document.createElement('div'); title.innerHTML = `<b>${layer.name}</b><div class="small">${layer.type}</div>`;
+        left.appendChild(cb); left.appendChild(title);
 
-      // events
-      list.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        cb.onchange = function() {
-          const id = parseInt(this.dataset.id,10);
-          const layer = state.layers.find(l => l.id === id);
-          layer.visible = this.checked;
-          toggleLayerVisibility(layer);
-        };
-      });
-      list.querySelectorAll('button[data-action]').forEach(btn => {
-        btn.onclick = function() {
-          const id = parseInt(this.dataset.id,10);
-          const layer = state.layers.find(l => l.id === id);
-          if (this.dataset.action === 'zoom') {
-            zoomToGeoJSON(layer.geojson);
-          } else if (this.dataset.action === 'remove') {
-            removeLayer(layer);
-          }
-        };
+        const right = document.createElement('div'); right.className='layer-actions';
+        const btnStyle = document.createElement('button'); btnStyle.className='btn secondary'; btnStyle.textContent='Style'; btnStyle.onclick = () => openStyleModal(layer.id);
+        const btnUp = document.createElement('button'); btnUp.className='btn'; btnUp.textContent='▲'; btnUp.title='Move up'; btnUp.onclick = () => moveLayer(layer.id, -1);
+        const btnDown = document.createElement('button'); btnDown.className='btn'; btnDown.textContent='▼'; btnDown.title='Move down'; btnDown.onclick = () => moveLayer(layer.id, 1);
+        const btnZoom = document.createElement('button'); btnZoom.className='btn secondary'; btnZoom.textContent='Zoom'; btnZoom.onclick = () => zoomToGeoJSON(layer.geojson);
+        const btnExport = document.createElement('button'); btnExport.className='btn secondary'; btnExport.textContent='Export'; btnExport.onclick = () => exportLayerGeoJSON(layer);
+        const btnConvert = document.createElement('button'); btnConvert.className='btn secondary'; btnConvert.textContent='Convert'; btnConvert.title='Convert track→polygon if closed'; btnConvert.onclick = () => convertTrackToPolygon(layer.id);
+        const btnRemove = document.createElement('button'); btnRemove.className='btn warn'; btnRemove.textContent='Remove'; btnRemove.onclick = () => { removeLayer(layer.id); };
+
+        right.appendChild(btnStyle);
+        right.appendChild(btnUp);
+        right.appendChild(btnDown);
+        right.appendChild(btnZoom);
+        right.appendChild(btnExport);
+        right.appendChild(btnConvert);
+        right.appendChild(btnRemove);
+
+        el.appendChild(left);
+        el.appendChild(right);
+        list.appendChild(el);
       });
     }
 
+    function refreshLegend(){
+      const node = document.getElementById('legendItems');
+      node.innerHTML = '';
+      state.layers.forEach(l => {
+        const div = document.createElement('div');
+        const sample = document.createElement('span');
+        sample.style.display='inline-block'; sample.style.width='18px'; sample.style.height='12px'; sample.style.marginRight='8px';
+        const color = (l.style && l.style.color) || (l.type === 'track' ? DEFAULT_STYLE.trackLine : l.type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill);
+        sample.style.background = color;
+        div.innerHTML = `<b>${l.name}</b> <span class="small">(${l.type})</span>`;
+        div.prepend(sample);
+        node.appendChild(div);
+      });
+    }
+
+    /* ====== Toggle visibility ====== */
     function toggleLayerVisibility(layer) {
       const id = 'layer-' + layer.id;
       const visible = layer.visible;
@@ -239,26 +394,43 @@
       });
     }
 
-    function removeLayer(layer) {
-      const id = 'layer-' + layer.id;
-      // remove all possible associated layers
-      ['-outline','-line','-symbol','-fill'].forEach(s => {
-        const lid = id + s;
-        if (map.getLayer(lid)) map.removeLayer(lid);
-      });
-      if (map.getSource(id)) map.removeSource(id);
-      state.layers = state.layers.filter(l => l.id !== layer.id);
-      refreshLayerList();
+    /* ====== Move layer in state order (-1 up, +1 down) ====== */
+    function moveLayer(id, delta) {
+      const idx = state.layers.findIndex(l => l.id === id);
+      if (idx === -1) return;
+      const newIdx = idx + delta;
+      if (newIdx < 0 || newIdx >= state.layers.length) return;
+      // swap
+      [state.layers[idx], state.layers[newIdx]] = [state.layers[newIdx], state.layers[idx]];
+      rebuildAllLayers();
     }
 
+    function removeLayer(id) {
+      const idx = state.layers.findIndex(l => l.id === id);
+      if (idx === -1) return;
+      const base = 'layer-' + id;
+      ['-outline','-line','-symbol','-fill'].forEach(s => {
+        const lid = base + s;
+        if (map.getLayer(lid)) try { map.removeLayer(lid); } catch(e){}
+      });
+      if (map.getSource(base)) try { map.removeSource(base); } catch(e){}
+      state.layers.splice(idx,1);
+      refreshLayerList();
+      refreshLegend();
+    }
+
+    /* ====== Zoom to geojson extent ====== */
     function zoomToGeoJSON(geojson) {
+      if (!geojson || !geojson.features || geojson.features.length===0) return;
       const coords = [];
       geojson.features.forEach(f => {
         const geom = f.geometry;
         if (!geom) return;
         if (geom.type === 'Point') coords.push(geom.coordinates);
         else if (geom.type === 'LineString') coords.push(...geom.coordinates);
-        else if (geom.type === 'Polygon') coords.push(...geom.coordinates.flat());
+        else if (geom.type === 'MultiLineString') geom.coordinates.forEach(a => coords.push(...a));
+        else if (geom.type === 'Polygon') geom.coordinates.flat().forEach(c=>coords.push(c));
+        else if (geom.type === 'MultiPolygon') geom.coordinates.flat(2).forEach(c=>coords.push(c));
       });
       if (coords.length === 0) return;
       const lats = coords.map(c => c[1]);
@@ -268,7 +440,7 @@
       map.fitBounds([[minLng, minLat],[maxLng, maxLat]], {padding:40});
     }
 
-    /* ====== File handling ====== */
+    /* ====== File handling & parsing ====== */
     document.getElementById('addLocal').onclick = async () => {
       const input = document.getElementById('fileInput');
       if (!input.files || input.files.length === 0) { alert('Pilih file dulu'); return; }
@@ -293,12 +465,22 @@
       }
     };
 
+    // quick loader for the GPX you uploaded (path provided by session)
+    document.getElementById('loadUploadedGPX').onclick = async () => {
+      try {
+        const resp = await fetch(UPLOADED_GPX_PATH);
+        if (!resp.ok) throw new Error('Fetch failed: ' + resp.status);
+        const text = await resp.text();
+        await parseAndAddFileContent(text, 'Rangkum Langkimat.gpx');
+      } catch (err) {
+        alert('Gagal load uploaded GPX: ' + err.message + '\n(If running locally, ensure your environment serves that path or transform the path to a URL.)');
+      }
+    };
+
     async function uploadToAppsScript(file) {
-      // We send form-data POST to APPS_SCRIPT_URL
       const form = new FormData();
       form.append('filename', file.name);
       form.append('contentType', file.type || 'application/octet-stream');
-      // For simplicity, read file as text and send as body param 'b64' base64 encoded
       const arr = await file.arrayBuffer();
       const b64 = arrayBufferToBase64(arr);
       form.append('b64', b64);
@@ -324,65 +506,52 @@
     }
 
     async function parseAndAddFileContent(text, filename) {
-      // Determine type by extension
       const name = filename.toLowerCase();
       let geojson = null;
-
       if (name.endsWith('.gpx') || text.trim().startsWith('<?xml')) {
-        // parse GPX
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, 'application/xml');
         geojson = toGeoJSON.gpx(xml);
       } else if (name.endsWith('.geojson') || name.endsWith('.json')) {
-        try {
-          geojson = JSON.parse(text);
-        } catch (err) {
-          alert('Failed parse JSON: ' + err.message); return;
-        }
+        geojson = JSON.parse(text);
       } else {
         alert('Unsupported file type. Use GPX or GeoJSON.');
         return;
       }
 
-      // Normalize and split into types: points, lines, polygons
-      // toGeoJSON yields features of various types
+      // Split into feature collections
       const points = {type:'FeatureCollection', features: []};
       const lines = {type:'FeatureCollection', features: []};
       const polygons = {type:'FeatureCollection', features: []};
 
       geojson.features.forEach(f => {
         if (!f.geometry) return;
-        if (f.geometry.type === 'Point' || f.geometry.type === 'MultiPoint') points.features.push(f);
-        else if (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString') {
-          // if user checked treat track as polygon and the line is closed -> polygon
+        const t = f.geometry.type;
+        if (t === 'Point' || t === 'MultiPoint') points.features.push(f);
+        else if (t === 'LineString' || t === 'MultiLineString') {
           const treatAsPoly = document.getElementById('treatTrackAsPolygon').checked;
-          if (treatAsPoly && f.geometry.type === 'LineString') {
+          if (treatAsPoly && t === 'LineString') {
             const coords = f.geometry.coordinates;
             if (coords.length >= 3) {
               const first = coords[0], last = coords[coords.length-1];
               if (first[0] === last[0] && first[1] === last[1]) {
-                // closed -> convert to polygon
-                polygons.features.push({
-                  type:'Feature',
-                  properties: f.properties||{},
-                  geometry: { type: 'Polygon', coordinates: [coords] }
-                });
+                polygons.features.push({type:'Feature', properties: f.properties||{}, geometry: { type: 'Polygon', coordinates: [coords] }});
                 return;
               }
             }
           }
           lines.features.push(f);
-        } else if (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') polygons.features.push(f);
+        } else if (t === 'Polygon' || t === 'MultiPolygon') polygons.features.push(f);
       });
 
-      // Add layers to state + map
+      // Add layers to state
       if (lines.features.length) addNewLayer(lines, 'track', filename + ' — tracks');
       if (points.features.length) addNewLayer(points, 'point', filename + ' — waypoints');
       if (polygons.features.length) addNewLayer(polygons, 'polygon', filename + ' — polygons');
 
       refreshLayerList();
+      refreshLegend();
       if (document.getElementById('autoZoom').checked) {
-        // zoom to combined extent
         const combined = {type:'FeatureCollection', features: []};
         combined.features.push(...lines.features, ...points.features, ...polygons.features);
         zoomToGeoJSON(combined);
@@ -390,12 +559,127 @@
     }
 
     function addNewLayer(geojson, type, name) {
-      const layer = { id: state.nextId++, name, type, geojson, visible: true };
+      const layer = {
+        id: state.nextId++,
+        name,
+        type,
+        geojson,
+        visible: true,
+        style: {
+          color: type==='track' ? DEFAULT_STYLE.trackLine : type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill,
+          width: type==='track' ? 3 : undefined,
+          opacity: 1,
+          radius: type==='point' ? 6 : undefined
+        }
+      };
       state.layers.push(layer);
       addLayerToMap(layer);
+      refreshLayerList();
+      refreshLegend();
     }
 
-    /* ====== Export all GeoJSON ====== */
+    /* ====== Export single layer ====== */
+    function exportLayerGeoJSON(layer) {
+      const text = JSON.stringify(layer.geojson, null, 2);
+      const blob = new Blob([text], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = layer.name.replace(/\s+/g,'_') + '.geojson'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ====== Convert track -> polygon (if closed) ====== */
+    function convertTrackToPolygon(layerId) {
+      const layer = state.layers.find(l => l.id === layerId);
+      if (!layer || layer.type !== 'track') { alert('Layer bukan track'); return; }
+      // attempt conversion for each LineString feature that's closed
+      const polygons = { type:'FeatureCollection', features: [] };
+      layer.geojson.features.forEach(f => {
+        const g = f.geometry;
+        if (!g) return;
+        if (g.type === 'LineString') {
+          const coords = g.coordinates;
+          if (coords.length >=3) {
+            const first = coords[0], last = coords[coords.length-1];
+            if (first[0] === last[0] && first[1] === last[1]) {
+              polygons.features.push({type:'Feature', properties: f.properties || {}, geometry:{type:'Polygon', coordinates:[coords]}});
+            }
+          }
+        } else if (g.type === 'MultiLineString') {
+          // try each ring
+          g.coordinates.forEach(arr => {
+            if (arr.length>=3) {
+              const first = arr[0], last = arr[arr.length-1];
+              if (first[0]===last[0] && first[1]===last[1]) {
+                polygons.features.push({type:'Feature', properties: f.properties || {}, geometry:{type:'Polygon', coordinates:[arr]}});
+              }
+            }
+          });
+        }
+      });
+      if (polygons.features.length===0) { alert('Tidak ada track tertutup untuk dikonversi'); return; }
+      addNewLayer(polygons, 'polygon', layer.name + ' — converted polygons');
+    }
+
+    /* ====== Modal style editor (option C: popup modal) ====== */
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const styleColor = document.getElementById('styleColor');
+    const styleOpacity = document.getElementById('styleOpacity');
+    const lineWidth = document.getElementById('lineWidth');
+    const pointRadius = document.getElementById('pointRadius');
+    let editingLayerId = null;
+
+    function openStyleModal(layerId) {
+      const layer = state.layers.find(l => l.id === layerId);
+      if (!layer) return;
+      editingLayerId = layerId;
+      document.getElementById('modalTitle').textContent = 'Edit: ' + layer.name;
+      styleColor.value = layer.style && layer.style.color ? rgbToHex(layer.style.color) : '#ff0000';
+      styleOpacity.value = (typeof layer.style.opacity === 'number') ? layer.style.opacity : 1;
+      lineWidth.value = (layer.style && layer.style.width) ? layer.style.width : 3;
+      pointRadius.value = (layer.style && layer.style.radius) ? layer.style.radius : 6;
+      // show/hide controls based on type
+      document.getElementById('lineOptions').style.display = layer.type==='track' || layer.type==='polygon' ? 'flex' : 'none';
+      document.getElementById('radiusOptions').style.display = layer.type==='point' ? 'flex' : 'none';
+      modalBackdrop.style.display = 'flex';
+      modalBackdrop.setAttribute('aria-hidden','false');
+    }
+
+    document.getElementById('modalCancel').onclick = () => {
+      modalBackdrop.style.display = 'none';
+      modalBackdrop.setAttribute('aria-hidden','true');
+      editingLayerId = null;
+    };
+
+    document.getElementById('modalSave').onclick = () => {
+      if (!editingLayerId) return;
+      const layer = state.layers.find(l => l.id === editingLayerId);
+      if (!layer) return;
+      // save style
+      layer.style = layer.style || {};
+      layer.style.color = styleColor.value;
+      layer.style.opacity = parseFloat(styleOpacity.value);
+      if (layer.type === 'track') layer.style.width = parseInt(lineWidth.value,10);
+      if (layer.type === 'point') layer.style.radius = parseInt(pointRadius.value,10);
+      // polygon uses color & opacity; for polygon outline we keep defaults
+      // rebuild layers so paint props update
+      rebuildAllLayers();
+      modalBackdrop.style.display = 'none';
+      modalBackdrop.setAttribute('aria-hidden','true');
+      editingLayerId = null;
+    };
+
+    function rgbToHex(input) {
+      // if already hex, return
+      if (!input) return '#000000';
+      if (input[0] === '#') return input;
+      // try parse rgb(...) style
+      const m = input.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (!m) return '#000000';
+      const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+    }
+
+    /* ====== Export / Save state ====== */
     document.getElementById('exportGeoJSON').onclick = () => {
       const all = { type:'FeatureCollection', features: [] };
       state.layers.forEach(l => all.features.push(...l.geojson.features));
@@ -406,8 +690,54 @@
       URL.revokeObjectURL(url);
     };
 
-    // initial empty layer list
+    document.getElementById('exportState').onclick = () => {
+      const text = JSON.stringify(state, null, 2);
+      const blob = new Blob([text], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'map_state.json'; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    /* ====== Layer editing helpers ====== */
+    function exportLayerGeoJSON(layer) {
+      const text = JSON.stringify(layer.geojson, null, 2);
+      const blob = new Blob([text], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = layer.name.replace(/\s+/g,'_') + '.geojson'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* ====== Basemap switching (replace basemap source & layer) ====== */
+    document.getElementById('basemapSelect').onchange = (e) => {
+      const key = e.target.value;
+      switchBasemap(key);
+    };
+
+    function switchBasemap(key) {
+      const def = basemapDefs[key] || basemapDefs.osm;
+      // remove existing basemap layer/source if present
+      if (map.getLayer('basemap-layer')) try { map.removeLayer('basemap-layer'); } catch(e){}
+      if (map.getSource('basemap')) try { map.removeSource('basemap'); } catch(e){}
+      map.addSource('basemap', { type: 'raster', tiles: def.tiles, tileSize: 256, attribution: def.attribution });
+      map.addLayer({ id: 'basemap-layer', type: 'raster', source: 'basemap' }, /*before*/ undefined);
+      // then rebuild app layers to ensure they sit above basemap
+      rebuildAllLayers();
+    }
+
+    /* ====== Utility: convert colors that might be non-hex to hex on save ====== */
+    function ensureLayerPaints(layer){
+      if (!layer.style) layer.style = {};
+      if (!layer.style.color) layer.style.color = DEFAULT_STYLE.trackLine;
+    }
+
+    /* ====== Initialization ====== */
     refreshLayerList();
+
+    /* ====== Notes about environment & uploaded GPX path ======
+      - Quick-load button uses path: /mnt/data/Rangkum Langkimat.gpx
+      - If running this file on a server that can serve that local path (or your environment will translate it),
+        the quick-load should work. Otherwise, upload the file via the UI to Google Drive and load from there.
+    ========================================================= */
 
   </script>
 </body>
