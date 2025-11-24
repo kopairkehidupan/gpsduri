@@ -689,6 +689,8 @@
 
 <!-- Print button injection (safely adds button to your sidebar) -->
 <script>
+window.generatePDF = generatePDF;
+  
 (function(){
   function ensure(){
     const sidebar = document.getElementById('sidebar');
