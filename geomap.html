@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Peta Leaflet — GPX/GeoJSON Upload & Print (Areal-only)</title>
+  <title>Peta Leaflet — GPX/GeoJSON Upload & Print (Areal-only) — with editing</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -10,6 +10,13 @@
 
   <!-- toGeoJSON (GPX -> GeoJSON) -->
   <script src="https://unpkg.com/@mapbox/togeojson@0.16.2/togeojson.js"></script>
+
+  <!-- Leaflet.pm (editing toolbar + vertex editing) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.pm/dist/leaflet.pm.css" />
+  <script src="https://unpkg.com/leaflet.pm/dist/leaflet.pm.min.js"></script>
+
+  <!-- togpx (GeoJSON -> GPX) -->
+  <script src="https://unpkg.com/togpx@0.1.2/togpx.js"></script>
 
   <!-- turf for area calc -->
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
@@ -28,6 +35,7 @@
     .btn { background:#2b6cb0;color:#fff;padding:6px 8px;border-radius:6px;border:none;cursor:pointer;}
     .btn.secondary { background:#edf2f7;color:#111; }
     .btn.warn { background:#d9534f; }
+    .btn.ghost { background:transparent;color:#2b6cb0;border:1px solid #2b6cb0; }
     input[type=file] { display:block; margin-top:8px; }
     .small { font-size:12px;color:#666; }
     label { display:block; margin-bottom:6px; font-weight:600; }
@@ -171,7 +179,7 @@
     </div>
   </div>
 
-  <!-- modal style editor -->
+  <!-- modal style editor (kept minimal) -->
   <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-hidden="true" style="display:none;">
     <div class="modal" role="document">
       <h3 id="modalTitle">Edit Layer</h3>
@@ -227,6 +235,23 @@ document.getElementById('basemapSelect').onchange = (e) => switchBasemap(e.targe
 
 L.control.scale({ metric: true, imperial: false }).addTo(map);
 
+/* ====== Leaflet.pm toolbar (manual edit mode as requested: B) ====== */
+map.pm.addControls({
+  position: 'topright',
+  drawMarker: false,
+  drawPolyline: false,
+  drawPolygon: false,
+  drawRectangle: false,
+  drawCircle: false,
+  editMode: true,      // enter global edit mode for features
+  removalMode: true,   // enable remove features
+  dragMode: true,      // allow dragging features
+  cutPolygon: false,
+  rotateMode: false
+});
+/* Note: user will use the toolbar to enter edit mode and then click vertexes to edit. */
+/* Additionally, per-layer Edit/Stop buttons are provided in the layer list. */
+
 /* ====== Utility: simplify RDP (coords: [lng,lat]) ====== */
 function simplifyRDP(coords, toleranceMeters) {
   if (!coords || coords.length < 3) return coords.slice();
@@ -265,6 +290,28 @@ function simplifyRDP(coords, toleranceMeters) {
   return rdp(coords, eps);
 }
 
+/* ====== Helper: convert a L.GeoJSON layer (group) back to a single FeatureCollection ====== */
+function layerGroupToFeatureCollection(leafletLayer) {
+  const feats = [];
+  if (!leafletLayer || !leafletLayer.getLayers) return { type:'FeatureCollection', features: [] };
+  leafletLayer.getLayers().forEach(child => {
+    try {
+      const g = child.toGeoJSON();
+      if (g) {
+        // If a FeatureCollection (rare), flatten
+        if (g.type === 'FeatureCollection') {
+          g.features.forEach(f => feats.push(f));
+        } else if (g.type === 'Feature') {
+          feats.push(g);
+        } else if (g.geometry) {
+          feats.push(g);
+        }
+      }
+    } catch(e){}
+  });
+  return { type:'FeatureCollection', features: feats };
+}
+
 /* ====== Layer management (Leaflet GeoJSON layers) ====== */
 function addNewLayer(geojson, type, name){
   const id = window.state.nextId++;
@@ -277,7 +324,8 @@ function addNewLayer(geojson, type, name){
       opacity: 1,
       radius: type==='point' ? 6 : undefined
     },
-    leafletLayer: null
+    leafletLayer: null,
+    editing: false
   };
   // create leaflet layer
   const opts = {};
@@ -290,8 +338,27 @@ function addNewLayer(geojson, type, name){
     };
   }
   const leafletLayer = L.geoJSON(geojson, opts).addTo(map);
+
+  // enable popup or interactions? keep default but attach pm hooks per child
+  // store layer
   layerObj.leafletLayer = leafletLayer;
   window.state.layers.push(layerObj);
+
+  // Attach pm events to child layers: when edit occurs, update state
+  leafletLayer.eachLayer(child => {
+    // enable pm removal/drag handlers but not enable editing globally
+    child.on('pm:edit', () => {
+      // rebuild geojson for the whole layer group
+      layerObj.geojson = layerGroupToFeatureCollection(layerObj.leafletLayer);
+      refreshLegend(); populateMapLegend();
+    });
+    child.on('pm:update', () => {
+      layerObj.geojson = layerGroupToFeatureCollection(layerObj.leafletLayer);
+      refreshLegend(); populateMapLegend();
+    });
+    // if the child is draggable or has pm events, it's handled via toolbar or per-layer enable calls
+  });
+
   refreshLayerList(); refreshLegend(); populateMapLegend();
   return layerObj;
 }
@@ -312,6 +379,17 @@ function rebuildAllLayers(){
     if (l.type === 'point') opts.pointToLayer = (f,latlng) => L.circleMarker(latlng, { radius: l.style.radius, color: l.style.color, weight:1, fillOpacity: l.style.opacity, fillColor: l.style.color });
     else opts.style = (f) => l.type==='polygon' ? { color: l.style.color, weight: l.style.width || 2, fillColor: l.style.color, fillOpacity: l.style.opacity || 0.6 } : { color: l.style.color, weight: l.style.width || 3, opacity: l.style.opacity || 1 };
     l.leafletLayer = L.geoJSON(l.geojson, opts).addTo(map);
+    // re-bind pm events
+    l.leafletLayer.eachLayer(child => {
+      child.on('pm:edit', () => {
+        l.geojson = layerGroupToFeatureCollection(l.leafletLayer);
+        refreshLegend(); populateMapLegend();
+      });
+      child.on('pm:update', () => {
+        l.geojson = layerGroupToFeatureCollection(l.leafletLayer);
+        refreshLegend(); populateMapLegend();
+      });
+    });
   });
   refreshLayerList(); refreshLegend(); populateMapLegend();
 }
@@ -337,7 +415,29 @@ function refreshLayerList(){
     const btnConvert = document.createElement('button'); btnConvert.className='btn secondary'; btnConvert.textContent='Convert'; btnConvert.title='Convert track→polygon if closed'; btnConvert.onclick = () => convertTrackToPolygon(layer.id);
     const btnRemove = document.createElement('button'); btnRemove.className='btn warn'; btnRemove.textContent='Remove'; btnRemove.onclick = () => removeLayerById(layer.id);
 
+    // New: Edit toggle per-layer
+    const btnEdit = document.createElement('button'); btnEdit.className='btn ghost'; btnEdit.textContent = layer.editing ? 'Stop Edit' : 'Edit';
+    btnEdit.onclick = () => {
+      if (!layer.leafletLayer) return;
+      if (!layer.editing) {
+        enableLayerEditing(layer.id);
+        btnEdit.textContent = 'Stop Edit';
+        layer.editing = true;
+      } else {
+        disableLayerEditing(layer.id);
+        btnEdit.textContent = 'Edit';
+        layer.editing = false;
+      }
+    };
+
+    // New: Download GPX per-layer
+    const btnDownload = document.createElement('button'); btnDownload.className='btn'; btnDownload.textContent='Download GPX';
+    btnDownload.title = 'Download edited layer as GPX';
+    btnDownload.onclick = () => downloadLayerGPX(layer.id);
+
     right.appendChild(btnStyle);
+    right.appendChild(btnEdit);
+    right.appendChild(btnDownload);
     right.appendChild(btnUp);
     right.appendChild(btnDown);
     right.appendChild(btnZoom);
@@ -357,7 +457,7 @@ function refreshLegend(){
     const div = document.createElement('div');
     const sample = document.createElement('span');
     sample.style.display='inline-block'; sample.style.width='18px'; sample.style.height='12px'; sample.style.marginRight='8px';
-    const color = (l.style && l.style.color) || (l.type === 'track' ? DEFAULT_STYLE.trackLine : l.type==='point' ? DEFAULT_STYLE.waypoint : DEFAULT_STYLE.polygonFill);
+    const color = (l.style && l.style.color) || (l.type === 'track' ? DEFAULT_STYLE.trackLine : l.type==='point' ? DEFAULT_STYLE.waypoint : l.type=== 'polygon' ? DEFAULT_STYLE.polygonFill : '#000');
     sample.style.background = color;
     div.innerHTML = `<b>${l.name}</b> <span class="small">(${l.type})</span>`;
     div.prepend(sample);
@@ -389,6 +489,62 @@ function populateMapLegend(){
       div.textContent = `${s.name}: ${s.area.toFixed(2)} Ha`;
       summaryNode.appendChild(div);
     });
+  }
+}
+
+/* ====== Layer editing helpers (Leaflet.pm integration) ====== */
+function enableLayerEditing(layerId) {
+  const layer = window.state.layers.find(l => l.id === layerId);
+  if (!layer || !layer.leafletLayer) return;
+  // enable editing for each child layer inside the geojson group
+  layer.leafletLayer.eachLayer(child => {
+    try { child.pm.enable({ allowSelfIntersection: false }); } catch(e){}
+    // bind events
+    child.on('pm:edit', () => {
+      layer.geojson = layerGroupToFeatureCollection(layer.leafletLayer);
+      refreshLegend(); populateMapLegend();
+    });
+    child.on('pm:update', () => {
+      layer.geojson = layerGroupToFeatureCollection(layer.leafletLayer);
+      refreshLegend(); populateMapLegend();
+    });
+  });
+  layer.editing = true;
+}
+
+function disableLayerEditing(layerId) {
+  const layer = window.state.layers.find(l => l.id === layerId);
+  if (!layer || !layer.leafletLayer) return;
+  layer.leafletLayer.eachLayer(child => {
+    try { child.pm.disable(); } catch(e){}
+    // unbind events if necessary
+    child.off('pm:edit');
+    child.off('pm:update');
+  });
+  // ensure geojson saved
+  layer.geojson = layerGroupToFeatureCollection(layer.leafletLayer);
+  layer.editing = false;
+  refreshLegend(); populateMapLegend();
+}
+
+/* ====== Convert GeoJSON -> GPX and download ====== */
+function downloadLayerGPX(layerId) {
+  const layer = window.state.layers.find(l => l.id === layerId);
+  if (!layer) { alert('Layer tidak ditemukan'); return; }
+  // build FeatureCollection from current leaflet layer (with edits)
+  const fc = layerGroupToFeatureCollection(layer.leafletLayer || layer.geojson);
+  // togpx expects FeatureCollection; it will convert Points -> wpt and LineString -> trk
+  try {
+    const gpx = togpx(fc, { creator: 'Leaflet Editor' });
+    const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (layer.name ? layer.name.replace(/\s+/g,'_') : 'layer') + '_edited.gpx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Gagal convert ke GPX: ' + e.message);
   }
 }
 
@@ -451,9 +607,14 @@ async function parseAndAddFileContent(text, filename){
   const name = filename.toLowerCase();
   let geojson = null;
   if (name.endsWith('.gpx') || text.trim().startsWith('<?xml')) {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, 'application/xml');
-    geojson = toGeoJSON.gpx(xml);
+    try {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, 'application/xml');
+      geojson = toGeoJSON.gpx(xml);
+    } catch(e){
+      alert('Gagal parse GPX: ' + e.message);
+      return;
+    }
   } else if (name.endsWith('.geojson') || name.endsWith('.json')) {
     geojson = JSON.parse(text);
   } else {
@@ -659,23 +820,17 @@ function computeGridLabels(map, bounds, spacingMeters){
 
 /* ====== Print handling (browser print) ====== */
 document.getElementById('printMapBtn').onclick = () => {
-  // prepare legend/area before print
   populateMapLegend();
-  // ensure grid up-to-date
   ensureGrid();
-  // small delay to allow DOM updates then print
-  setTimeout(()=> window.print(), 200);
+  setTimeout(()=> window.print(), 250);
 };
 
 window.onbeforeprint = () => {
-  // ensure legend/areas visible and up to date for print
   populateMapLegend();
-  // increase map redraw for print resolution
   map.invalidateSize();
 };
 
 window.onafterprint = () => {
-  // restore anything if needed
   map.invalidateSize();
 };
 
