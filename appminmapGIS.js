@@ -386,13 +386,17 @@ function geojsonToGpx(geojson, name, metadata){
       var c = geom.coordinates;
       xml += '<wpt lat="'+c[1]+'" lon="'+c[0]+'"><name>' + (esc(f.properties && f.properties.name || 'pt')) + '</name></wpt>\n';
     } else if(geom.type === 'LineString'){
-      xml += '<trk><name>' + (esc(f.properties && f.properties.name || 'line')) + '</name><trkseg>\n';
+      xml += '<trk><name>' + (esc(f.properties && f.properties.name || 'polyline')) + '</name>';
+      xml += '<type>polyline</type>'; // ← Tandai sebagai polyline
+      xml += '<trkseg>\n';
       geom.coordinates.forEach(function(c){ xml += '<trkpt lat="'+c[1]+'" lon="'+c[0]+'"></trkpt>\n'; });
       xml += '</trkseg></trk>\n';
     } else if(geom.type === 'Polygon'){
       // export outer ring as track
       var ring = geom.coordinates[0];
-      xml += '<trk><name>' + (esc(f.properties && f.properties.name || 'poly')) + '</name><trkseg>\n';
+      xml += '<trk><name>' + (esc(f.properties && f.properties.name || 'polygon')) + '</name>';
+      xml += '<type>polygon</type>'; // ← Tandai sebagai polygon
+      xml += '<trkseg>\n';
       ring.forEach(function(c){ xml += '<trkpt lat="'+c[1]+'" lon="'+c[0]+'"></trkpt>\n'; });
       xml += '</trkseg></trk>\n';
     } else if(geom.type === 'MultiLineString'){
@@ -1114,26 +1118,41 @@ function convertLineToPolygonGeoJSON(gj) {
     gj.features.forEach(function (f) {
         if (!f.geometry) return;
 
-        // Jika LineString → jadikan Polygon
+        // ===== BIARKAN LINESTRING TETAP LINESTRING =====
+        // Hanya konversi ke Polygon jika koordinat awal == koordinat akhir (closed line)
         if (f.geometry.type === "LineString") {
             var coords = f.geometry.coordinates;
 
-            if (coords.length >= 3) {
-                var ring = coords.slice();
-                ring.push(coords[0]); // Tutup polygon
-
-                newFeatures.push({
-                    type: "Feature",
-                    properties: f.properties || {},
-                    geometry: {
-                        type: "Polygon",
-                        coordinates: [ring]
-                    }
-                });
+            if (coords.length >= 4) { // Minimal 4 titik untuk polygon valid
+                var firstPoint = coords[0];
+                var lastPoint = coords[coords.length - 1];
+                
+                // CEK: Apakah LineString ini CLOSED (ujung bertemu)?
+                var isClosed = (
+                    Math.abs(firstPoint[0] - lastPoint[0]) < 0.000001 && 
+                    Math.abs(firstPoint[1] - lastPoint[1]) < 0.000001
+                );
+                
+                if (isClosed) {
+                    // Jika closed → jadikan Polygon
+                    newFeatures.push({
+                        type: "Feature",
+                        properties: f.properties || {},
+                        geometry: {
+                            type: "Polygon",
+                            coordinates: [coords]
+                        }
+                    });
+                } else {
+                    // Jika NOT closed → TETAP LineString
+                    newFeatures.push(f);
+                }
             } else {
+                // Kurang dari 4 titik → tetap LineString
                 newFeatures.push(f);
             }
         } else {
+            // Bukan LineString → langsung push
             newFeatures.push(f);
         }
     });
