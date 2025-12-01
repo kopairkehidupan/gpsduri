@@ -1958,23 +1958,79 @@ async function exportPdfFromLayers() {
             itemY = legendStartY - ((index - itemsPerColumn) % itemsPerColumn) * lineHeight;
         }
         
-        const fillRgb = hexToRgb(meta.fillColor || meta.color || '#0077ff');
-        const strokeRgb = hexToRgb(meta.color || '#0077ff');
+        // ===== DETEKSI GEOMETRY TYPE =====
+        const layerGj = meta.group.toGeoJSON();
+        let hasPolyline = false;
+        let hasPolygon = false;
         
-        // Color box
-        page.drawRectangle({
-            x: itemX,
-            y: itemY - 7,
-            width: 13,
-            height: 7,
-            color: rgb(fillRgb.r, fillRgb.g, fillRgb.b),
-            borderColor: rgb(strokeRgb.r, strokeRgb.g, strokeRgb.b),
-            borderWidth: 0.8,
-            opacity: meta.fillOpacity || 0.4
+        layerGj.features.forEach(f => {
+            if (!f.geometry) return;
+            const type = f.geometry.type;
+            if (type === 'LineString' || type === 'MultiLineString') {
+                hasPolyline = true;
+            } else if (type === 'Polygon' || type === 'MultiPolygon') {
+                hasPolygon = true;
+            }
         });
         
+        const strokeRgb = hexToRgb(meta.color || '#0077ff');
+        const strokeColor = rgb(strokeRgb.r, strokeRgb.g, strokeRgb.b);
+        
+        // ===== GAMBAR SYMBOL SESUAI TIPE =====
+        if (hasPolyline && !hasPolygon) {
+            // POLYLINE: Gambar GARIS horizontal
+            const lineY = itemY - 3.5; // Tengah vertikal dari box (7px height / 2)
+            
+            // Cek apakah ada dash pattern
+            const dashPattern = meta.dashArray || '';
+            const isDashed = dashPattern.length > 0;
+            
+            if (isDashed) {
+                // Gambar garis dashed (simplified untuk legenda)
+                const dashLength = 3;
+                const gapLength = 2;
+                let currentX = itemX;
+                const endX = itemX + 13;
+                
+                while (currentX < endX) {
+                    const segmentEnd = Math.min(currentX + dashLength, endX);
+                    page.drawLine({
+                        start: { x: currentX, y: lineY },
+                        end: { x: segmentEnd, y: lineY },
+                        thickness: 2,
+                        color: strokeColor,
+                        opacity: 1
+                    });
+                    currentX = segmentEnd + gapLength;
+                }
+            } else {
+                // Gambar garis solid
+                page.drawLine({
+                    start: { x: itemX, y: lineY },
+                    end: { x: itemX + 13, y: lineY },
+                    thickness: 2,
+                    color: strokeColor,
+                    opacity: 1
+                });
+            }
+        } else {
+            // POLYGON: Gambar KOTAK dengan fill
+            const fillRgb = hexToRgb(meta.fillColor || meta.color || '#0077ff');
+            const fillColor = rgb(fillRgb.r, fillRgb.g, fillRgb.b);
+            
+            page.drawRectangle({
+                x: itemX,
+                y: itemY - 7,
+                width: 13,
+                height: 7,
+                color: fillColor,
+                borderColor: strokeColor,
+                borderWidth: 0.8,
+                opacity: meta.fillOpacity || 0.4
+            });
+        }
+        
         // Calculate area
-        const layerGj = meta.group.toGeoJSON();
         let layerArea = 0;
         layerGj.features.forEach(f => {
             if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
@@ -1991,9 +2047,17 @@ async function exportPdfFromLayers() {
             displayName = displayName.substring(0, maxChars - 2) + '..';
         }
         
-        // Text label dengan indikator
-        const labelText = displayName + " - " + areaHa + " Ha";
-        const labelColor = meta.includeInTotal ? rgb(0, 0, 0) : rgb(0.5, 0.5, 0.5); // Abu-abu jika tidak dihitung
+        // ===== TEXT LABEL: Tampilkan area hanya untuk polygon =====
+        let labelText;
+        if (hasPolyline && !hasPolygon) {
+            // Polyline: Hanya nama (tanpa area)
+            labelText = displayName;
+        } else {
+            // Polygon: Nama + area
+            labelText = displayName + " - " + areaHa + " Ha";
+        }
+        
+        const labelColor = meta.includeInTotal ? rgb(0, 0, 0) : rgb(0.5, 0.5, 0.5);
         
         page.drawText(labelText, { 
             x: itemX + 17, 
@@ -2008,7 +2072,7 @@ async function exportPdfFromLayers() {
                 x: itemX + 17 + (labelText.length * 7 * 0.4) + 2, 
                 y: itemY - 5, 
                 size: 9,
-                color: rgb(0.7, 0, 0) // Merah
+                color: rgb(0.7, 0, 0)
             });
         }
     });
