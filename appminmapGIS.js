@@ -1722,10 +1722,10 @@ async function exportPdfFromLayers() {
                             borderWidth: 0.5
                         });
                         
-                        // Teks nama blok (centered)
+                        // Teks nama blok (centered - PRESISI TINGGI)
                         page.drawText(labelText, {
-                            x: centX - (labelText.length * labelSize * 0.25),
-                            y: centY - (labelSize * 0.25),
+                            x: centX - (textWidth / 2),
+                            y: centY - (textHeight / 2) + (labelSize * 0.3),  // +adjustment untuk baseline
                             size: labelSize,
                             color: rgb(labelTextColor.r, labelTextColor.g, labelTextColor.b)
                         });
