@@ -1673,9 +1673,8 @@ async function exportPdfFromLayers() {
                         const [centX, centY] = project(labelCoords);
                         
                         const blockName = meta.labelSettings.blockName || meta.name.replace('.gpx', '');
-                        const labelTextColor = hexToRgb(meta.labelSettings.textColor || '#000000');
                         
-                        // ===== UKURAN FONT KECIL DAN SERAGAM =====
+                        // ===== UKURAN FONT =====
                         const labelSize = 7;
                         
                         // Hitung ukuran polygon di layar (pixel)
@@ -1703,32 +1702,30 @@ async function exportPdfFromLayers() {
                             return;
                         }
                         
-                        // Background kotak putih
-                        page.drawRectangle({
-                            x: centX - textWidth/2 - 3,
-                            y: centY - textHeight/2,
-                            width: textWidth + 6,
-                            height: textHeight,
-                            color: rgb(1, 1, 1),
-                            opacity: 0.9
-                        });
+                        // ===== AUTO TEXT COLOR: Hitam untuk polygon terang, Putih untuk polygon gelap =====
+                        // Hitung brightness dari fill color
+                        const fillRgbValue = hexToRgb(meta.fillColor || meta.color || '#0077ff');
                         
-                        // Border kotak
-                        page.drawRectangle({
-                            x: centX - textWidth/2 - 3,
-                            y: centY - textHeight/2,
-                            width: textWidth + 6,
-                            height: textHeight,
-                            borderColor: rgb(0, 0, 0),
-                            borderWidth: 0.5
-                        });
+                        // Formula luminance (perceived brightness)
+                        // https://www.w3.org/TR/WCAG20/#relativeluminancedef
+                        const luminance = 0.299 * fillRgbValue.r + 0.587 * fillRgbValue.g + 0.114 * fillRgbValue.b;
                         
-                        // Teks nama blok (centered)
+                        // Jika polygon gelap (luminance < 0.5) → text putih
+                        // Jika polygon terang (luminance >= 0.5) → text hitam
+                        let textColor;
+                        if (luminance < 0.5) {
+                            textColor = rgb(1, 1, 1); // Putih untuk background gelap
+                        } else {
+                            textColor = rgb(0, 0, 0); // Hitam untuk background terang
+                        }
+                        
+                        // ===== HAPUS BACKGROUND & BORDER, HANYA GAMBAR TEXT =====
+                        // Teks nama blok (centered, tanpa background)
                         page.drawText(labelText, {
                             x: centX - (labelText.length * labelSize * 0.25),
                             y: centY - (labelSize * 0.25),
                             size: labelSize,
-                            color: rgb(labelTextColor.r, labelTextColor.g, labelTextColor.b)
+                            color: textColor
                         });
                     }
                 });
