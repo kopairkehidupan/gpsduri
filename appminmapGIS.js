@@ -1675,7 +1675,7 @@ async function exportPdfFromLayers() {
                         const labelTextColor = hexToRgb(meta.labelSettings.textColor || '#000000');
                         
                         // ===== UKURAN FONT LEBIH KECIL =====
-                        const labelSize = 6;  // 
+                        const labelSize = 7;  // 
                         
                         // Hitung ukuran polygon di layar (pixel)
                         const polyBounds = turf.bbox(f);
