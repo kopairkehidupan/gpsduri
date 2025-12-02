@@ -1674,8 +1674,8 @@ async function exportPdfFromLayers() {
                         const blockName = meta.labelSettings.blockName || meta.name.replace('.gpx', '');
                         const labelTextColor = hexToRgb(meta.labelSettings.textColor || '#000000');
                         
-                        // ===== UKURAN FONT KECIL DAN SERAGAM =====
-                        const labelSize = 7;
+                        // ===== UKURAN FONT LEBIH KECIL =====
+                        const labelSize = 5;  // ← UBAH INI (dari 7 ke 5)
                         
                         // Hitung ukuran polygon di layar (pixel)
                         const polyBounds = turf.bbox(f);
@@ -1722,11 +1722,11 @@ async function exportPdfFromLayers() {
                             borderWidth: 0.5
                         });
                         
-                        // Teks nama blok (centered - DIPERBAIKI)
+                        // Teks nama blok (centered - dengan font lebih kecil)
                         page.drawText(labelText, {
-                            x: centX - (textWidth / 2),  // Center horizontal sempurna
-                            y: centY - (labelSize / 2),  // Center vertical sempurna
-                            size: labelSize,
+                            x: centX - (textWidth / 2),
+                            y: centY - (labelSize / 2),
+                            size: labelSize,  // ← Menggunakan labelSize baru (5)
                             color: rgb(labelTextColor.r, labelTextColor.g, labelTextColor.b)
                         });
                     }
