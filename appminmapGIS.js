@@ -143,8 +143,7 @@ map.on(L.Draw.Event.CREATED, function(e){
             offsetY: 0
         },
         isDrawn: true,
-        includeInTotal: true,
-        manualArea: null  // ← BARU: Simpan luas manual (null = belum diinput)
+        includeInTotal: true  // ← BARU: Default dihitung dalam total
     };
     
     // ===== APPLY STYLE LANGSUNG KE LAYER =====
@@ -1313,97 +1312,11 @@ function showPdfModal() {
   titleInput.value = pdfSettings.title || "PETA AREAL KEBUN";
   subtitleInput.value = pdfSettings.subtitle || ""; // Kosong by default
   
-  // ===== GENERATE INPUT LIST UNTUK LUAS MANUAL =====
-  generateAreaInputList();
-  
   // Tampilkan modal
   modal.style.display = 'flex';
   
   // Focus ke input pertama
   setTimeout(() => titleInput.focus(), 100);
-}
-
-// ===== FUNGSI BARU: Generate Input List untuk Luas Manual =====
-function generateAreaInputList() {
-  const container = document.getElementById('pdfAreaInputList');
-  container.innerHTML = ''; // Clear previous content
-  
-  // Filter hanya file yang dicentang
-  const visibleFileIds = Object.keys(uploadedFiles).filter(id => {
-    const card = document.getElementById('file-' + id);
-    if (!card) return false;
-    const checkbox = card.querySelector('input[type="checkbox"]');
-    return checkbox && checkbox.checked;
-  });
-  
-  // Jika tidak ada file yang dicentang
-  if (visibleFileIds.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding:20px; color:#999">Tidak ada file yang dicentang</div>';
-    return;
-  }
-  
-  // Loop setiap file yang dicentang
-  visibleFileIds.forEach(id => {
-    const meta = uploadedFiles[id];
-    
-    // Hitung luas otomatis dari polygon
-    const layerGj = meta.group.toGeoJSON();
-    let autoArea = 0;
-    let hasPolygon = false;
-    
-    layerGj.features.forEach(f => {
-      if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
-        autoArea += turf.area(f);
-        hasPolygon = true;
-      }
-    });
-    
-    const autoAreaHa = (autoArea / 10000).toFixed(2);
-    
-    // Buat item input
-    const item = document.createElement('div');
-    item.className = 'area-input-item';
-    
-    // Label nama file
-    const label = document.createElement('label');
-    label.textContent = meta.name.replace('.gpx', '');
-    label.title = meta.name;
-    
-    // Input manual area
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.step = '0.01';
-    input.min = '0';
-    input.id = 'manualArea-' + id;
-    input.placeholder = hasPolygon ? autoAreaHa : '0.00';
-    
-    // Load nilai manual yang sudah disimpan (jika ada)
-    if (meta.manualArea !== undefined && meta.manualArea !== null) {
-      input.value = meta.manualArea;
-    }
-    
-    // Auto area display
-    const autoDisplay = document.createElement('span');
-    autoDisplay.className = 'auto-area';
-    autoDisplay.textContent = hasPolygon ? '(Auto: ' + autoAreaHa + ' Ha)' : '(Polyline)';
-    
-    // Event: Simpan nilai ke meta saat input berubah
-    input.addEventListener('input', function() {
-      const value = parseFloat(this.value);
-      if (!isNaN(value) && value >= 0) {
-        meta.manualArea = value;
-      } else {
-        meta.manualArea = null; // Reset jika kosong/invalid
-      }
-      console.log('Manual area for ' + meta.name + ':', meta.manualArea);
-    });
-    
-    item.appendChild(label);
-    item.appendChild(input);
-    item.appendChild(autoDisplay);
-    
-    container.appendChild(item);
-  });
 }
 
 // Fungsi untuk menyembunyikan modal
@@ -2116,24 +2029,13 @@ async function exportPdfFromLayers() {
             });
         }
         
-        // ===== HITUNG AREA: Prioritas Manual > Otomatis =====
-        let areaHa;
-        
-        if (meta.manualArea !== undefined && meta.manualArea !== null && meta.manualArea > 0) {
-            // Gunakan luas MANUAL jika sudah diinput
-            areaHa = meta.manualArea.toFixed(2);
-            console.log('Using manual area for ' + meta.name + ':', areaHa);
-        } else {
-            // Gunakan luas OTOMATIS dari turf.area
-            let layerArea = 0;
-            layerGj.features.forEach(f => {
-                if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
-                    layerArea += turf.area(f);
-                }
-            });
-            areaHa = (layerArea / 10000).toFixed(2);
-            console.log('Using auto area for ' + meta.name + ':', areaHa);
-        }
+        // Calculate area
+        let layerArea = 0;
+        layerGj.features.forEach(f => {
+            if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+                layerArea += turf.area(f);
+            }
+        });
         
         const areaHa = (layerArea / 10000).toFixed(2);
         
@@ -2176,7 +2078,7 @@ async function exportPdfFromLayers() {
     
     yPos = legendStartY - (itemsPerColumn * lineHeight) - 15;
     
-    // ===== HITUNG TOTAL LUAS: Prioritas Manual > Otomatis =====
+    // ===== HITUNG TOTAL LUAS HANYA DARI FILE YANG includeInTotal = true =====
     let calculatedTotalArea = 0;
     
     Object.keys(visibleFiles).forEach(id => {
@@ -2184,24 +2086,14 @@ async function exportPdfFromLayers() {
         
         // Hanya hitung jika includeInTotal = true
         if (meta.includeInTotal) {
-            if (meta.manualArea !== undefined && meta.manualArea !== null && meta.manualArea > 0) {
-                // Gunakan luas MANUAL (sudah dalam Ha, konversi ke m²)
-                calculatedTotalArea += meta.manualArea * 10000;
-                console.log('Total: Adding manual area for ' + meta.name + ':', meta.manualArea);
-            } else {
-                // Gunakan luas OTOMATIS dari turf.area
-                const layerGj = meta.group.toGeoJSON();
-                layerGj.features.forEach(f => {
-                    if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
-                        calculatedTotalArea += turf.area(f);
-                    }
-                });
-            }
+            const layerGj = meta.group.toGeoJSON();
+            layerGj.features.forEach(f => {
+                if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+                    calculatedTotalArea += turf.area(f);
+                }
+            });
         }
     });
-    
-    // Total Luas (centered)
-    const totalHa = (calculatedTotalArea / 10000).toFixed(2);
     
     // Total Luas (centered)
     const totalHa = (calculatedTotalArea / 10000).toFixed(2);
