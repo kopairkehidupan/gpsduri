@@ -1310,7 +1310,10 @@ function showPdfModal() {
   
   // Set nilai default (title wajib, subtitle kosong)
   titleInput.value = pdfSettings.title || "PETA AREAL KEBUN";
-  subtitleInput.value = pdfSettings.subtitle || ""; // Kosong by default
+  subtitleInput.value = pdfSettings.subtitle || "";
+  
+  // ===== GENERATE INPUT LUAS PER BLOK =====
+  generateAreaInputs();
   
   // Tampilkan modal
   modal.style.display = 'flex';
@@ -1318,6 +1321,109 @@ function showPdfModal() {
   // Focus ke input pertama
   setTimeout(() => titleInput.focus(), 100);
 }
+
+// ===== FUNGSI BARU: Generate input luas untuk setiap file yang dicentang =====
+function generateAreaInputs() {
+  const container = document.getElementById('areaInputsContainer');
+  container.innerHTML = ''; // Clear existing inputs
+  
+  // Filter hanya file yang dicentang
+  Object.keys(uploadedFiles).forEach(id => {
+    const card = document.getElementById('file-' + id);
+    if (!card) return;
+    
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    if (!checkbox || !checkbox.checked) return; // Skip jika tidak dicentang
+    
+    const meta = uploadedFiles[id];
+    
+    // Hitung luas dari GPS
+    const layerGj = meta.group.toGeoJSON();
+    let gpsArea = 0;
+    layerGj.features.forEach(f => {
+      if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+        gpsArea += turf.area(f);
+      }
+    });
+    const gpsAreaHa = (gpsArea / 10000).toFixed(2);
+    
+    // Ambil luas manual jika sudah ada (dari input sebelumnya)
+    const manualArea = meta.manualArea || '';
+    
+    // Buat row input
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; gap:10px; align-items:center; margin-bottom:8px; padding:8px; background:white; border-radius:4px; border:1px solid #ddd;';
+    
+    // Nama blok
+    const nameLabel = document.createElement('div');
+    nameLabel.style.cssText = 'flex:1; font-size:13px; font-weight:600; color:#333;';
+    nameLabel.innerText = meta.name.replace('.gpx', '');
+    
+    // Input luas manual
+    const areaInput = document.createElement('input');
+    areaInput.type = 'number';
+    areaInput.step = '0.01';
+    areaInput.placeholder = gpsAreaHa + ' Ha (GPS)';
+    areaInput.value = manualArea;
+    areaInput.id = 'manualArea-' + id;
+    areaInput.style.cssText = 'width:120px; padding:6px; font-size:13px; border:1px solid #ccc; border-radius:4px; text-align:right;';
+    
+    // Label "Ha"
+    const haLabel = document.createElement('span');
+    haLabel.innerText = 'Ha';
+    haLabel.style.cssText = 'font-size:13px; color:#666;';
+    
+    // Info GPS area (kecil)
+    const gpsInfo = document.createElement('div');
+    gpsInfo.style.cssText = 'font-size:11px; color:#999; width:90px; text-align:right;';
+    gpsInfo.innerText = 'GPS: ' + gpsAreaHa + ' Ha';
+    
+    row.appendChild(nameLabel);
+    row.appendChild(areaInput);
+    row.appendChild(haLabel);
+    row.appendChild(gpsInfo);
+    
+    container.appendChild(row);
+  });
+  
+  // Jika tidak ada file yang dicentang
+  if (container.children.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.style.cssText = 'text-align:center; padding:20px; color:#999; font-size:13px;';
+    emptyMsg.innerText = 'Tidak ada polygon yang dicentang untuk dicetak.';
+    container.appendChild(emptyMsg);
+  }
+}
+
+// ===== FUNGSI BARU: Auto fill luas dari GPS =====
+document.getElementById('btnAutoFillAreas').onclick = function() {
+  Object.keys(uploadedFiles).forEach(id => {
+    const card = document.getElementById('file-' + id);
+    if (!card) return;
+    
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    if (!checkbox || !checkbox.checked) return;
+    
+    const meta = uploadedFiles[id];
+    const input = document.getElementById('manualArea-' + id);
+    if (!input) return;
+    
+    // Hitung luas dari GPS
+    const layerGj = meta.group.toGeoJSON();
+    let gpsArea = 0;
+    layerGj.features.forEach(f => {
+      if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+        gpsArea += turf.area(f);
+      }
+    });
+    const gpsAreaHa = (gpsArea / 10000).toFixed(2);
+    
+    // Set nilai input
+    input.value = gpsAreaHa;
+  });
+  
+  alert('Luas GPS telah diisi otomatis ke semua input!');
+};
 
 // Fungsi untuk menyembunyikan modal
 function hidePdfModal() {
@@ -1345,7 +1451,21 @@ document.getElementById('btnConfirmPdf').onclick = function() {
   }
   
   pdfSettings.title = titleValue;
-  pdfSettings.subtitle = subtitleInput.value.trim(); // Subtitle boleh kosong
+  pdfSettings.subtitle = subtitleInput.value.trim();
+  
+  // ===== SIMPAN LUAS MANUAL KE METADATA =====
+  Object.keys(uploadedFiles).forEach(id => {
+    const input = document.getElementById('manualArea-' + id);
+    if (input) {
+      const manualValue = input.value.trim();
+      if (manualValue && manualValue.length > 0 && !isNaN(parseFloat(manualValue))) {
+        uploadedFiles[id].manualArea = parseFloat(manualValue);
+      } else {
+        // Kosongkan jika input kosong (gunakan GPS)
+        delete uploadedFiles[id].manualArea;
+      }
+    }
+  });
   
   // Sembunyikan modal
   hidePdfModal();
@@ -2029,15 +2149,22 @@ async function exportPdfFromLayers() {
             });
         }
         
-        // Calculate area
-        let layerArea = 0;
-        layerGj.features.forEach(f => {
-            if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
-                layerArea += turf.area(f);
-            }
-        });
+        // ===== GUNAKAN LUAS MANUAL JIKA ADA, JIKA TIDAK GUNAKAN GPS =====
+        let areaHa;
         
-        const areaHa = (layerArea / 10000).toFixed(2);
+        if (meta.manualArea && meta.manualArea > 0) {
+            // Gunakan luas manual
+            areaHa = meta.manualArea.toFixed(2);
+        } else {
+            // Hitung dari GPS
+            let layerArea = 0;
+            layerGj.features.forEach(f => {
+                if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+                    layerArea += turf.area(f);
+                }
+            });
+            areaHa = (layerArea / 10000).toFixed(2);
+        }
         
         // Truncate name
         let displayName = meta.name.replace('.gpx', '');
@@ -2078,7 +2205,7 @@ async function exportPdfFromLayers() {
     
     yPos = legendStartY - (itemsPerColumn * lineHeight) - 15;
     
-    // ===== HITUNG TOTAL LUAS HANYA DARI FILE YANG includeInTotal = true =====
+    // ===== HITUNG TOTAL LUAS MENGGUNAKAN LUAS MANUAL (jika ada) =====
     let calculatedTotalArea = 0;
     
     Object.keys(visibleFiles).forEach(id => {
@@ -2086,17 +2213,23 @@ async function exportPdfFromLayers() {
         
         // Hanya hitung jika includeInTotal = true
         if (meta.includeInTotal) {
-            const layerGj = meta.group.toGeoJSON();
-            layerGj.features.forEach(f => {
-                if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
-                    calculatedTotalArea += turf.area(f);
-                }
-            });
+            if (meta.manualArea && meta.manualArea > 0) {
+                // Gunakan luas manual (sudah dalam Ha)
+                calculatedTotalArea += meta.manualArea;
+            } else {
+                // Hitung dari GPS (convert ke Ha)
+                const layerGj = meta.group.toGeoJSON();
+                layerGj.features.forEach(f => {
+                    if (f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')) {
+                        calculatedTotalArea += turf.area(f) / 10000;
+                    }
+                });
+            }
         }
     });
     
     // Total Luas (centered)
-    const totalHa = (calculatedTotalArea / 10000).toFixed(2);
+    const totalHa = calculatedTotalArea.toFixed(2);
     const totalText = "Total Luas: " + totalHa + " Ha";
     const totalWidth = totalText.length * 6;
     page.drawText(totalText, { 
