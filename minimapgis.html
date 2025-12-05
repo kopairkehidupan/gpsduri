@@ -259,7 +259,7 @@
 
   <!-- Modal untuk Print PDF -->
   <div id="pdfModal" class="pdf-modal" style="display:none">
-    <div class="pdf-modal-content">
+    <div class="pdf-modal-content" style="max-width: 600px; max-height: 85vh; overflow-y: auto;">
       <h3 style="margin-top:0">Pengaturan PDF</h3>
       
       <div style="margin:15px 0">
@@ -270,8 +270,34 @@
       
       <div style="margin:15px 0">
         <label style="display:block; margin-bottom:5px; font-weight:600">Subtitle:</label>
-        <input type="text" id="pdfSubtitle" value="HASIL PENGOLAHAN GPX" 
+        <input type="text" id="pdfSubtitle" value="" 
                style="width:100%; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:4px">
+      </div>
+      
+      <!-- ===== SECTION INPUT LUAS MANUAL ===== -->
+      <hr style="margin: 20px 0; border: none; border-top: 2px solid #e0e0e0;">
+      
+      <div style="margin:15px 0">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <label style="font-weight:600; font-size: 15px;">Luas Manual per Blok:</label>
+          <button id="btnAutoFillAreas" class="btn-small" style="padding:6px 12px; background:#2196F3; color:white; border-color:#2196F3">
+            Auto Fill dari GPS
+          </button>
+        </div>
+        
+        <div style="font-size:12px; color:#666; margin-bottom:10px">
+          Isi luas manual (Ha) untuk perhitungan akurat. Kosongkan untuk menggunakan luas dari GPS.
+        </div>
+        
+        <!-- Container untuk list input luas -->
+        <div id="areaInputsContainer" style="
+          max-height: 300px; 
+          overflow-y: auto; 
+          border: 1px solid #e0e0e0; 
+          border-radius: 4px; 
+          padding: 10px;
+          background: #f9f9f9;
+        "></div>
       </div>
       
       <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end">
