@@ -1807,7 +1807,7 @@ async function exportPdfFromLayers() {
                         const polySize = Math.min(polyWidth, polyHeight);
                         
                         // Skip polygon yang terlalu kecil
-                        if (polySize < 25) {
+                        if (polySize < 15) {
                             console.log('Polygon terlalu kecil untuk label:', blockName);
                             return;
                         }
