@@ -372,28 +372,45 @@ function attachLayerClickEvent(layer, fileId) {
 function geojsonToGpx(geojson, name, metadata){
   var esc = function(s){ return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
   var xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-  xml += '<gpx version="1.1" creator="MiniArcGIS" xmlns:miniarcgis="http://miniarcgis.local/gpx/1/0">\n';
+  xml += '<gpx version="1.1" creator="MiniMapGIS" xmlns:miniarcgis="http://miniarcgis.local/gpx/1/0">\n';
   xml += '<name>' + esc(name||'export') + '</name>\n';
   
-  // ===== METADATA LAYER (sebagai extensions) =====
+  // ===== METADATA LAYER LENGKAP (sebagai extensions) =====
   if (metadata) {
     xml += '<metadata>\n';
     xml += '  <extensions>\n';
+    
+    // Nama layer
     xml += '    <miniarcgis:layerName>' + esc(metadata.name) + '</miniarcgis:layerName>\n';
-    xml += '    <miniarcgis:includeInTotal>' + metadata.includeInTotal + '</miniarcgis:includeInTotal>\n';
+    
+    // Pengaturan total luas
+    xml += '    <miniarcgis:includeInTotal>' + (metadata.includeInTotal ? 'true' : 'false') + '</miniarcgis:includeInTotal>\n';
+    
+    // Luas manual (jika ada)
+    if (metadata.manualArea && metadata.manualArea > 0) {
+      xml += '    <miniarcgis:manualArea>' + metadata.manualArea + '</miniarcgis:manualArea>\n';
+    }
+    
+    // Style settings
     xml += '    <miniarcgis:style>\n';
-    xml += '      <miniarcgis:color>' + esc(metadata.color) + '</miniarcgis:color>\n';
-    xml += '      <miniarcgis:weight>' + metadata.weight + '</miniarcgis:weight>\n';
-    xml += '      <miniarcgis:fillColor>' + esc(metadata.fillColor) + '</miniarcgis:fillColor>\n';
-    xml += '      <miniarcgis:fillOpacity>' + metadata.fillOpacity + '</miniarcgis:fillOpacity>\n';
+    xml += '      <miniarcgis:color>' + esc(metadata.color || '#0077ff') + '</miniarcgis:color>\n';
+    xml += '      <miniarcgis:weight>' + (metadata.weight || 3) + '</miniarcgis:weight>\n';
+    xml += '      <miniarcgis:fillColor>' + esc(metadata.fillColor || '#ee00ff') + '</miniarcgis:fillColor>\n';
+    xml += '      <miniarcgis:fillOpacity>' + (metadata.fillOpacity || 0.4) + '</miniarcgis:fillOpacity>\n';
     xml += '      <miniarcgis:dashArray>' + esc(metadata.dashArray || '') + '</miniarcgis:dashArray>\n';
+    xml += '      <miniarcgis:markerSymbol>' + esc(metadata.markerSymbol || 'circle') + '</miniarcgis:markerSymbol>\n';
     xml += '    </miniarcgis:style>\n';
+    
+    // Label settings
     xml += '    <miniarcgis:label>\n';
-    xml += '      <miniarcgis:show>' + metadata.labelSettings.show + '</miniarcgis:show>\n';
+    xml += '      <miniarcgis:show>' + (metadata.labelSettings.show ? 'true' : 'false') + '</miniarcgis:show>\n';
     xml += '      <miniarcgis:blockName>' + esc(metadata.labelSettings.blockName) + '</miniarcgis:blockName>\n';
     xml += '      <miniarcgis:textColor>' + esc(metadata.labelSettings.textColor) + '</miniarcgis:textColor>\n';
-    xml += '      <miniarcgis:textSize>' + metadata.labelSettings.textSize + '</miniarcgis:textSize>\n';
+    xml += '      <miniarcgis:textSize>' + (metadata.labelSettings.textSize || 12) + '</miniarcgis:textSize>\n';
+    xml += '      <miniarcgis:offsetX>' + (metadata.labelSettings.offsetX || 0) + '</miniarcgis:offsetX>\n';
+    xml += '      <miniarcgis:offsetY>' + (metadata.labelSettings.offsetY || 0) + '</miniarcgis:offsetY>\n';
     xml += '    </miniarcgis:label>\n';
+    
     xml += '  </extensions>\n';
     xml += '</metadata>\n';
   }
@@ -976,10 +993,15 @@ el('#exportGeojson').onclick = function(){
             offsetX: meta.labelSettings.offsetX,
             offsetY: meta.labelSettings.offsetY
         };
+
+        // ===== SIMPAN LUAS MANUAL (jika ada) =====
+        if (meta.manualArea && meta.manualArea > 0) {
+            feature.properties._manualArea = meta.manualArea;
+        }
     });
     
     var blob = new Blob([JSON.stringify(gj, null, 2)], {type:'application/json'}); 
-    saveAs(blob, (meta.name||'layer') + '.geojson'); 
+    saveAs(blob, (meta.name||'layer') + '.geojson');  
 };
 el('#exportGpx').onclick = function(){ 
     if(!lastSelectedId) return; 
@@ -1013,6 +1035,18 @@ el('#exportKml').onclick = function(){
         feature.properties.LabelBlockName = meta.labelSettings.blockName;
         feature.properties.LabelTextColor = meta.labelSettings.textColor;
         feature.properties.LabelTextSize = meta.labelSettings.textSize;
+
+        // ===== SIMPAN LUAS MANUAL (jika ada) =====
+        if (meta.manualArea && meta.manualArea > 0) {
+            feature.properties.ManualArea = meta.manualArea;
+        }
+        
+        // Simpan marker symbol
+        feature.properties.MarkerSymbol = meta.markerSymbol || 'circle';
+        
+        // Simpan label offset
+        feature.properties.LabelOffsetX = meta.labelSettings.offsetX || 0;
+        feature.properties.LabelOffsetY = meta.labelSettings.offsetY || 0;
     });
     
     var kml = tokml(gj); 
@@ -1024,6 +1058,76 @@ el('#deleteLayer').onclick = function(){ if(!lastSelectedId) return deleteFile(l
 function exportAllFor(id){
   openProperties(id);
   // user can click desired export button
+}
+
+// ===== FUNGSI BARU: Parse metadata dari GPX extensions =====
+function parseGpxMetadata(dom) {
+  try {
+    // Cari <extensions> di dalam <metadata>
+    var metadataEl = dom.querySelector('metadata extensions');
+    if (!metadataEl) {
+      console.log('No metadata extensions found in GPX');
+      return null;
+    }
+    
+    // Helper function untuk get text dari element
+    function getTagValue(tagName, defaultValue) {
+      var el = metadataEl.querySelector(tagName);
+      return el ? el.textContent.trim() : defaultValue;
+    }
+    
+    // Helper function untuk get boolean
+    function getBoolValue(tagName, defaultValue) {
+      var val = getTagValue(tagName, '');
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return defaultValue;
+    }
+    
+    // Helper function untuk get number
+    function getNumValue(tagName, defaultValue) {
+      var val = getTagValue(tagName, '');
+      var num = parseFloat(val);
+      return isNaN(num) ? defaultValue : num;
+    }
+    
+    // Parse semua metadata
+    var metadata = {
+      name: getTagValue('layerName', null),
+      includeInTotal: getBoolValue('includeInTotal', true),
+      manualArea: getNumValue('manualArea', undefined),
+      
+      // Style
+      color: getTagValue('color', '#0077ff'),
+      weight: getNumValue('weight', 3),
+      fillColor: getTagValue('fillColor', '#ee00ff'),
+      fillOpacity: getNumValue('fillOpacity', 0.4),
+      dashArray: getTagValue('dashArray', null) || null,
+      markerSymbol: getTagValue('markerSymbol', 'circle'),
+      
+      // Label
+      labelSettings: {
+        show: getBoolValue('show', true),
+        blockName: getTagValue('blockName', ''),
+        textColor: getTagValue('textColor', '#000000'),
+        textSize: getNumValue('textSize', 12),
+        offsetX: getNumValue('offsetX', 0),
+        offsetY: getNumValue('offsetY', 0)
+      }
+    };
+    
+    // Validasi: Jika tidak ada data penting, return null
+    if (!metadata.name && !metadata.color) {
+      return null;
+    }
+    
+    console.log('Successfully parsed GPX metadata:', metadata);
+    return metadata;
+    
+  } catch (error) {
+    console.error('Error parsing GPX metadata:', error);
+    return null;
+  }
 }
 
 el('#btnUpload').onclick = function(){
@@ -1053,9 +1157,12 @@ el('#btnUpload').onclick = function(){
         var dom = new DOMParser().parseFromString(reader.result, 'text/xml');
         var geojson = toGeoJSON.gpx(dom);
         geojson = convertLineToPolygonGeoJSON(geojson);
-
+    
         var id = Date.now() + '-' + index + '-' + Math.floor(Math.random()*1000);
-
+    
+        // ===== PARSE METADATA DARI GPX (jika ada) =====
+        var savedMetadata = parseGpxMetadata(dom);
+        
         // ===== DETEKSI GEOMETRY TYPE =====
         var hasPolyline = false;
         var hasPolygon = false;
@@ -1070,39 +1177,47 @@ el('#btnUpload').onclick = function(){
           }
         });
         
-        // ===== SET WARNA DEFAULT BERDASARKAN TYPE =====
+        // ===== SET METADATA: PRIORITASKAN SAVED, FALLBACK KE DEFAULT =====
         var metaDefaults;
         
-        if (hasPolyline && !hasPolygon) {
-          // Pure polyline file → gunakan warna polygon (pink) untuk polyline
-          metaDefaults = {
-            color: '#ee00ff',        // Polyline PINK (mengikuti default polygon)
-            weight: 3,
-            fillColor: '#ee00ff',    // Tidak digunakan untuk polyline
-            fillOpacity: 0.4,        // Tidak digunakan untuk polyline
-            dashArray: null,
-            markerSymbol: 'circle'
-          };
+        if (savedMetadata) {
+          // ===== ADA METADATA TERSIMPAN: GUNAKAN METADATA LAMA =====
+          console.log('Using saved metadata from GPX:', savedMetadata);
+          metaDefaults = savedMetadata;
         } else {
-          // File berisi polygon atau campuran → gunakan warna default normal
-          metaDefaults = {
-            color: '#000000',        // Line hitam untuk polygon border
-            weight: 3,
-            fillColor: '#ee00ff',    // Polygon pink
-            fillOpacity: 0.4,
-            dashArray: null,
-            markerSymbol: 'circle'
-          };
+          // ===== TIDAK ADA METADATA: GUNAKAN DEFAULT (GPX MENTAH) =====
+          console.log('No saved metadata, using defaults');
+          
+          if (hasPolyline && !hasPolygon) {
+            // Pure polyline file → gunakan warna polygon (pink) untuk polyline
+            metaDefaults = {
+              color: '#ee00ff',
+              weight: 3,
+              fillColor: '#ee00ff',
+              fillOpacity: 0.4,
+              dashArray: null,
+              markerSymbol: 'circle'
+            };
+          } else {
+            // File berisi polygon atau campuran → gunakan warna default normal
+            metaDefaults = {
+              color: '#000000',
+              weight: 3,
+              fillColor: '#ee00ff',
+              fillOpacity: 0.4,
+              dashArray: null,
+              markerSymbol: 'circle'
+            };
+          }
         }
         
-        console.log('Detected geometry types:', { hasPolyline, hasPolygon });
-        console.log('Using color defaults:', metaDefaults);
+        console.log('Using metadata:', metaDefaults);
         
         var group = createGroupFromGeoJSON(geojson, metaDefaults, id);
         var bounds = group.getBounds();
-
+    
         uploadedFiles[id] = {
-          name: file.name,
+          name: savedMetadata ? savedMetadata.name : file.name,
           group: group,
           bounds: bounds,
           color: metaDefaults.color,
@@ -1111,7 +1226,7 @@ el('#btnUpload').onclick = function(){
           fillOpacity: metaDefaults.fillOpacity,
           dashArray: metaDefaults.dashArray,
           markerSymbol: metaDefaults.markerSymbol,
-          labelSettings: {
+          labelSettings: savedMetadata ? savedMetadata.labelSettings : {
             show: true,
             blockName: file.name.replace('.gpx', ''),
             textColor: '#000000',
@@ -1119,7 +1234,8 @@ el('#btnUpload').onclick = function(){
             offsetX: 0,
             offsetY: 0
           },
-          includeInTotal: true  // ← BARU: Default dihitung dalam total
+          includeInTotal: savedMetadata ? savedMetadata.includeInTotal : true,
+          manualArea: savedMetadata ? savedMetadata.manualArea : undefined  // ← RESTORE LUAS MANUAL
         };
 
         group.eachLayer(function(l){
