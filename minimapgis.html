@@ -139,6 +139,25 @@
       border-color: #4CAF50;
       box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
     }
+
+    #areaInputsContainer {
+      max-height: 300px;      /* Scroll jika banyak */
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+    
+    /* Custom scrollbar */
+    #areaInputsContainer::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    #areaInputsContainer::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
