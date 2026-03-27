@@ -1,327 +1,1085 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
 <meta charset="utf-8">
 <title>Flight Planner PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
+:root {
+  --bg-primary: #080d14;
+  --bg-secondary: #0c1420;
+  --bg-panel: #0f1a28;
+  --bg-card: #132035;
+  --bg-card-hover: #1a2d47;
+  --accent-cyan: #00d4ff;
+  --accent-cyan-dim: rgba(0, 212, 255, 0.15);
+  --accent-teal: #00b89c;
+  --accent-orange: #ff7d3b;
+  --accent-red: #ff3d5a;
+  --accent-green: #39e96e;
+  --text-primary: #e8f4f8;
+  --text-secondary: #7a9bb5;
+  --text-dim: #3a5570;
+  --border-dim: rgba(0, 212, 255, 0.12);
+  --border-glow: rgba(0, 212, 255, 0.4);
+  --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  margin:0;
-  font-family:sans-serif;
+  font-family: 'Exo 2', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
 }
 
-.container {
-  display:flex;
-  height:100vh;
+.app-container {
+  display: flex;
+  height: 100vh;
 }
 
+/* ── SIDEBAR ── */
 .sidebar {
-  width:300px;
-  background:#ffffff;
-  padding:15px;
-  border-right:1px solid #ddd;
-  overflow-y:auto;
+  width: 300px;
+  min-width: 300px;
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-dim);
+  overflow: hidden;
+}
+
+/* Header */
+.sidebar-header {
+  background: var(--bg-panel);
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border-dim);
+  position: relative;
+}
+.sidebar-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+}
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
+  border-radius: 6px;
+  display: flex;align-items:center;justify-content:center;
+  font-size: 16px;
+}
+.brand-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+.brand-sub {
+  font-size: 9px;
+  color: var(--text-secondary);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 18px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-dim);
+}
+.status-pill {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 5px 8px;
+  text-align: center;
+}
+.status-pill .val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--accent-cyan);
+  display: block;
+}
+.status-pill .lbl {
+  font-size: 8px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Scroll body */
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sidebar-body::-webkit-scrollbar { width: 4px; }
+.sidebar-body::-webkit-scrollbar-track { background: transparent; }
+.sidebar-body::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+/* Section cards */
+.section-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.section-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  padding: 8px 12px 6px;
+  background: rgba(0, 212, 255, 0.04);
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title .dot {
+  width: 5px; height: 5px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+.section-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Form rows */
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.form-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 90px;
+  letter-spacing: 0.5px;
+}
+.form-input {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  padding: 5px 8px;
+  transition: border-color 0.2s;
+  outline: none;
+  width: 100%;
+}
+.form-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+.form-input option {
+  background: var(--bg-card);
+}
+.unit-badge {
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 22px;
+  text-align: right;
+}
+
+/* Dual input row */
+.dual-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.dual-item label {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 3px;
+}
+
+/* Action buttons */
+.btn-primary {
+  width: 100%;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,184,156,0.1));
+  border: 1px solid var(--accent-cyan);
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.btn-primary:hover {
+  background: rgba(0,212,255,0.2);
+  box-shadow: 0 0 16px rgba(0,212,255,0.25);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  width: 100%;
+  padding: 9px 12px;
+  background: rgba(0,184,156,0.08);
+  border: 1px solid rgba(0,184,156,0.4);
+  border-radius: 6px;
+  color: var(--accent-teal);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-secondary:hover {
+  background: rgba(0,184,156,0.16);
+  box-shadow: 0 0 12px rgba(0,184,156,0.2);
+}
+
+/* Export buttons grid */
+.export-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 10px 12px;
+}
+.btn-export {
+  padding: 8px 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-dim);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;flex-direction:column;align-items:center;gap:4px;
+}
+.btn-export .icon { font-size: 16px; }
+.btn-export:hover {
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+  background: rgba(255, 125, 59, 0.08);
+}
+
+/* Info panel */
+.info-panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.info-row:last-child { border-bottom: none; }
+.info-key {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+.info-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--accent-green);
+}
+
+/* Mission list */
+.mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mission-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-dim);
+  border-radius: 5px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.mission-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mission-label {
+  flex: 1;
+  color: var(--text-secondary);
+}
+.mission-count {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Bottom actions */
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-panel);
+}
+
+/* ── MAP AREA ── */
+.map-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 }
 
 #map {
-  flex:1;
+  width: 100%;
+  height: 100%;
 }
 
-button {
-  width:100%;
-  margin-top:5px;
-  padding:6px;
-  cursor:pointer;
+/* Map top bar */
+.map-topbar {
+  position: absolute;
+  top: 10px; left: 10px; right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 1000;
+  pointer-events: none;
 }
+.map-badge {
+  background: rgba(8,13,20,0.85);
+  border: 1px solid var(--border-dim);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  pointer-events: auto;
+}
+.map-badge span { color: var(--accent-cyan); }
+
+/* Compass rose */
+.compass {
+  position: absolute;
+  bottom: 30px; right: 14px;
+  z-index: 1000;
+  background: rgba(8,13,20,0.8);
+  border: 1px solid var(--border-dim);
+  border-radius: 50%;
+  width: 52px; height: 52px;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(6px);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+/* Toast notifications */
+.toast-container {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  background: rgba(8,13,20,0.95);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: var(--text-primary);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+}
+.toast.success { border-color: var(--accent-green); }
+.toast.warning { border-color: var(--accent-orange); }
+.toast.info { border-color: var(--accent-cyan); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Leaflet overrides */
+.leaflet-bar a {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-dim) !important;
+}
+.leaflet-bar a:hover {
+  background: var(--bg-card-hover) !important;
+  color: var(--accent-cyan) !important;
+}
+.leaflet-control-layers {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-dim) !important;
+  color: var(--text-primary) !important;
+  border-radius: 6px !important;
+}
+.leaflet-control-layers label {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+}
+.leaflet-draw-toolbar a, .leaflet-edit-toolbar a {
+  background: var(--bg-card) !important;
+  border-color: var(--border-dim) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-dim) !important;
+  border-radius: 6px !important;
+}
+.leaflet-popup-tip { background: var(--bg-card) !important; }
 </style>
-  
 </head>
 
 <body>
+<div class="app-container">
 
-<div class="container">
-
+  <!-- ── SIDEBAR ── -->
   <div class="sidebar">
-    <b>Flight Planner</b><br><br>
 
-    Altitude (m):
-    <input type="number" id="alt" value="100"><br><br>
+    <div class="sidebar-header">
+      <div class="brand-row">
+        <div class="brand-icon">✈</div>
+        <div>
+          <div class="brand-text">FlightPlanner</div>
+          <div class="brand-sub">Autonomous Mission Designer</div>
+        </div>
+      </div>
+    </div>
 
-    Speed (m/s):
-    <input type="number" id="speed" value="8"><br><br>
+    <!-- Status pills -->
+    <div class="status-bar">
+      <div class="status-pill">
+        <span class="val" id="stat-wp">0</span>
+        <span class="lbl">Waypoints</span>
+      </div>
+      <div class="status-pill">
+        <span class="val" id="stat-mis">0</span>
+        <span class="lbl">Missions</span>
+      </div>
+      <div class="status-pill">
+        <span class="val" id="stat-bat">—</span>
+        <span class="lbl">Battery</span>
+      </div>
+    </div>
 
-    Drone:
-    <select id="drone">
-      <option value="mavic2">Mavic 2 Pro</option>
-      <option value="air2s">Air 2S</option>
-      <option value="phantom4">Phantom 4 Pro</option>
-    </select><br><br>
+    <div class="sidebar-body">
 
-    <hr>
+      <!-- Flight Params -->
+      <div class="section-card">
+        <div class="section-title"><span class="dot"></span> Flight Parameters</div>
+        <div class="section-body">
+          <div class="form-row">
+            <span class="form-label">Drone</span>
+            <select class="form-input" id="drone">
+              <option value="mavic2">Mavic 2 Pro</option>
+              <option value="air2s" selected>Air 2S</option>
+              <option value="phantom4">Phantom 4 Pro</option>
+            </select>
+          </div>
+          <div class="dual-row">
+            <div class="dual-item">
+              <label>Altitude</label>
+              <div style="position:relative">
+                <input class="form-input" type="number" id="alt" value="100" style="padding-right:26px">
+                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">m</span>
+              </div>
+            </div>
+            <div class="dual-item">
+              <label>Speed</label>
+              <div style="position:relative">
+                <input class="form-input" type="number" id="speed" value="8" style="padding-right:30px">
+                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">m/s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    Sidelap (%):
-    <input type="number" id="sidelap" value="70"><br><br>
+      <!-- Overlap -->
+      <div class="section-card">
+        <div class="section-title"><span class="dot"></span> Coverage Overlap</div>
+        <div class="section-body">
+          <div class="dual-row">
+            <div class="dual-item">
+              <label>Sidelap</label>
+              <div style="position:relative">
+                <input class="form-input" type="number" id="sidelap" value="70" min="10" max="95" style="padding-right:18px">
+                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">%</span>
+              </div>
+            </div>
+            <div class="dual-item">
+              <label>Frontlap</label>
+              <div style="position:relative">
+                <input class="form-input" type="number" id="frontlap" value="75" min="10" max="95" style="padding-right:18px">
+                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    Frontlap (%):
-    <input type="number" id="frontlap" value="75"><br><br>
+      <!-- Flight Stats -->
+      <div class="section-card">
+        <div class="section-title"><span class="dot"></span> Mission Statistics</div>
+        <div class="section-body" style="padding:0">
+          <div class="info-panel" style="border:none;border-radius:0;background:transparent">
+            <div class="info-row">
+              <span class="info-key">Est. Flight Time</span>
+              <span class="info-val" id="stat-time">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Total Photos</span>
+              <span class="info-val" id="stat-photos">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Photo Interval</span>
+              <span class="info-val" id="stat-interval">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Forward Spacing</span>
+              <span class="info-val" id="stat-spacing">—</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Total Distance</span>
+              <span class="info-val" id="stat-dist">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <hr>
+      <!-- Mission Breakdown -->
+      <div class="section-card" id="mission-section" style="display:none">
+        <div class="section-title"><span class="dot"></span> Mission Breakdown</div>
+        <div class="section-body" id="mission-list-container">
+          <div class="mission-list" id="mission-list"></div>
+        </div>
+      </div>
 
-    <button onclick="generateGrid()">Generate Grid</button>
-    <button onclick="splitMission()">Split Mission</button>
-    <button onclick="exportCSVLitchi()">Export CSV</button>
+      <!-- Export -->
+      <div class="section-card">
+        <div class="section-title"><span class="dot"></span> Export Mission</div>
+        <div class="export-grid">
+          <button class="btn-export" onclick="exportCSVLitchi()">
+            <span class="icon">📄</span> CSV Litchi
+          </button>
+          <button class="btn-export" onclick="exportKML()">
+            <span class="icon">🗺</span> KML
+          </button>
+          <button class="btn-export" onclick="exportGeoJSON()">
+            <span class="icon">{ }</span> GeoJSON
+          </button>
+          <button class="btn-export" onclick="exportKMZ()">
+            <span class="icon">📦</span> KMZ
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /sidebar-body -->
+
+    <div class="sidebar-footer">
+      <button class="btn-primary" onclick="generateGrid()">
+        ⚡ Generate Grid
+      </button>
+      <button class="btn-secondary" onclick="splitMission()">
+        ✂ Split Mission
+      </button>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ── MAP ── -->
+  <div class="map-wrapper">
+    <div id="map"></div>
+
+    <!-- Top bar overlay -->
+    <div class="map-topbar">
+      <div class="map-badge">
+        <span id="map-coords">Hover for coordinates</span>
+      </div>
+      <div class="map-badge" id="map-zoom-badge">
+        Zoom: <span id="map-zoom">15</span>
+      </div>
+    </div>
+
+    <!-- Compass -->
+    <div class="compass">N</div>
+
+    <!-- Toasts -->
+    <div class="toast-container" id="toast-container"></div>
   </div>
-
-  <div id="map"></div>
 
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
+// ── STATE ──
 var missions = [];
-var map = L.map('map').setView([0.5,101.45], 15);
-
-// BASEMAP LAYERS 
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'); 
-var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'); 
-var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ subdomains:['mt0','mt1','mt2','mt3'] }); 
-var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'); 
-var none = L.layerGroup();
-
-L.control.layers({"OSM":osm,"Topo":topo,"Satellite":satellite,"Dark":dark,"None":none}).addTo(map);
-
-var drawnItems = new L.FeatureGroup().addTo(map);
-var gridLayer = new L.FeatureGroup().addTo(map);
-
-map.addControl(new L.Control.Draw({
-  edit: { featureGroup: drawnItems },
-  draw: { polygon:true, polyline:false, rectangle:false, circle:false, marker:false }
-}));
-
-map.on(L.Draw.Event.CREATED, function(e){
-  drawnItems.clearLayers();
-  gridLayer.clearLayers();
-  drawnItems.addLayer(e.layer);
-});
-
 var waypoints = [];
 
-// Drone camera specs (sensor width mm, focal length mm)
+// ── MAP INIT ──
+var map = L.map('map', { zoomControl: false }).setView([0.5, 101.45], 15);
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// Basemaps
+var osm       = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+var dark      = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+var topo      = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+dark.addTo(map);
+
+L.control.layers({"Dark": dark, "Satellite": satellite, "OSM": osm, "Topo": topo}, {}, {position:'topright'}).addTo(map);
+
+var drawnItems = new L.FeatureGroup().addTo(map);
+var gridLayer  = new L.FeatureGroup().addTo(map);
+
+map.addControl(new L.Control.Draw({
+  position: 'topright',
+  edit: { featureGroup: drawnItems },
+  draw: { polygon: true, polyline: false, rectangle: true, circle: false, marker: false, circlemarker: false }
+}));
+
+map.on(L.Draw.Event.CREATED, function(e) {
+  drawnItems.clearLayers();
+  gridLayer.clearLayers();
+  missions = [];
+  waypoints = [];
+  drawnItems.addLayer(e.layer);
+  updateStats();
+  showToast('info', '✅ Polygon siap. Klik Generate Grid.');
+});
+
+map.on('mousemove', function(e) {
+  document.getElementById('map-coords').textContent =
+    e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6);
+});
+
+map.on('zoomend', function() {
+  document.getElementById('map-zoom').textContent = map.getZoom();
+});
+
+// ── DRONE SPECS ──
 const droneSpecs = {
-  mavic2: {sensor: 13.2, focal: 10.26},
-  air2s: {sensor: 13.2, focal: 8.4},
-  phantom4: {sensor: 13.2, focal: 8.8}
+  mavic2:   { sensor: 13.2, focal: 10.26, sensorH: 8.8,  focalH: 10.26 },
+  air2s:    { sensor: 13.2, focal: 8.4,   sensorH: 8.8,  focalH: 8.4  },
+  phantom4: { sensor: 13.2, focal: 8.8,   sensorH: 8.8,  focalH: 8.8  }
 };
 
-function splitMission(){
-  if(waypoints.length === 0) return alert("Generate grid dulu!");
-
-  let speed = parseFloat(document.getElementById('speed').value);
-
-  let batteryTime = 25 * 60; // detik per baterai
-  let currentMission = [];
-  let currentTime = 0;
-
-  missions = [];
-
-  for(let i=1; i<waypoints.length; i++){
-    let prev = waypoints[i-1];
-    let curr = waypoints[i];
-
-    let segmentDist = map.distance(
-      [prev.lat, prev.lng],
-      [curr.lat, curr.lng]
-    );
-
-    let segmentTime = segmentDist / speed;
-
-    // jika melebihi kapasitas baterai → split
-    if(currentTime + segmentTime > batteryTime){
-      missions.push(currentMission);
-      currentMission = [];
-      currentTime = 0;
-    }
-
-    currentMission.push(curr);
-    currentTime += segmentTime;
-  }
-
-  if(currentMission.length > 0){
-    missions.push(currentMission);
-  }
-
-  visualizeMissions();
-
-  alert("Mission dibagi menjadi " + missions.length + " flight");
+// ── SPACING CALC ──
+function calculateSpacing() {
+  const alt = parseFloat(document.getElementById('alt').value);
+  const drone = document.getElementById('drone').value;
+  const sidelap = parseFloat(document.getElementById('sidelap').value) / 100;
+  const spec = droneSpecs[drone];
+  const footprint = (spec.sensor / spec.focal) * alt;
+  return footprint * (1 - sidelap);
 }
 
-function visualizeMissions(){
-  gridLayer.clearLayers();
-
-  let colors = ["red","blue","green","orange","purple","black"];
-
-  missions.forEach((mission, index)=>{
-    let latlngs = mission.map(p=>[p.lat, p.lng]);
-
-    L.polyline(latlngs, {
-      color: colors[index % colors.length],
-      weight: 3
-    }).addTo(gridLayer);
-  });
+function calculatePhotoParams() {
+  const alt = parseFloat(document.getElementById('alt').value);
+  const speed = parseFloat(document.getElementById('speed').value);
+  const drone = document.getElementById('drone').value;
+  const frontlap = parseFloat(document.getElementById('frontlap').value) / 100;
+  const spec = droneSpecs[drone];
+  const footprint = (spec.sensor / spec.focal) * alt;
+  const forwardSpacing = footprint * (1 - frontlap);
+  const interval = forwardSpacing / speed;
+  return { footprint, forwardSpacing, interval };
 }
 
-function calculateSpacing(){
-  let alt = parseFloat(document.getElementById('alt').value);
-  let drone = document.getElementById('drone').value;
-  let sidelap = parseFloat(document.getElementById('sidelap').value)/100;
-
-  let spec = droneSpecs[drone];
-
-  // footprint width (m)
-  let footprint = (spec.sensor / spec.focal) * alt;
-
-  // spacing based on sidelap
-  let spacing = footprint * (1 - sidelap);
-
-  return spacing;
-}
-
-function calculatePhotoParams(){
-  let alt = parseFloat(document.getElementById('alt').value);
-  let speed = parseFloat(document.getElementById('speed').value);
-  let drone = document.getElementById('drone').value;
-  let frontlap = parseFloat(document.getElementById('frontlap').value)/100;
-
-  let spec = droneSpecs[drone];
-
-  // Footprint panjang (arah terbang)
-  let footprint = (spec.sensor / spec.focal) * alt;
-
-  // Jarak antar foto (forward spacing)
-  let forwardSpacing = footprint * (1 - frontlap);
-
-  // Interval waktu antar foto
-  let interval = forwardSpacing / speed;
-
-  return {
-    footprint,
-    forwardSpacing,
-    interval
-  };
-}
-
-function generateGrid(){
+// ── GENERATE GRID ──
+function generateGrid() {
   gridLayer.clearLayers();
   waypoints = [];
+  missions = [];
 
   var polyLayer = drawnItems.getLayers()[0];
-  if(!polyLayer) return alert("Gambar polygon dulu!");
+  if (!polyLayer) { showToast('warning', '⚠ Gambar polygon area terlebih dahulu!'); return; }
 
-  let alt = parseFloat(document.getElementById('alt').value);
-  let spacing = calculateSpacing();
+  const alt = parseFloat(document.getElementById('alt').value);
+  const spacing = calculateSpacing();
+  const polygon = polyLayer.toGeoJSON();
+  const bbox = turf.bbox(polygon);
 
-  var polygon = polyLayer.toGeoJSON();
-  var bbox = turf.bbox(polygon);
+  const step = spacing / 111320;
+  let y = bbox[1];
+  let toggle = false;
 
-  var step = spacing / 111320;
-  var y = bbox[1];
-  var toggle = false;
+  while (y <= bbox[3]) {
+    const line = turf.lineString([[bbox[0], y], [bbox[2], y]]);
+    const clipped = turf.lineIntersect(polygon, line);
 
-  while(y <= bbox[3]){
-    var line = turf.lineString([[bbox[0], y],[bbox[2], y]]);
-    var clipped = turf.lineIntersect(polygon, line);
+    if (clipped.features.length >= 2) {
+      let pts = clipped.features.map(f => f.geometry.coordinates);
+      pts.sort((a, b) => a[0] - b[0]);
+      if (toggle) pts.reverse();
 
-    if(clipped.features.length >= 2){
-      var pts = clipped.features.map(f=>f.geometry.coordinates);
-      pts.sort((a,b)=>a[0]-b[0]);
-      if(toggle) pts.reverse();
-
-      for(let i=0;i<pts.length;i++){
+      for (let i = 0; i < pts.length; i++) {
         let heading = 90;
-        if(i < pts.length-1){
-          let dx = pts[i+1][0] - pts[i][0];
-          let dy = pts[i+1][1] - pts[i][1];
-          heading = Math.atan2(dx, dy) * 180/Math.PI;
+        if (i < pts.length - 1) {
+          const dx = pts[i+1][0] - pts[i][0];
+          const dy = pts[i+1][1] - pts[i][1];
+          heading = Math.atan2(dx, dy) * 180 / Math.PI;
         }
-
-        waypoints.push({
-          lat: pts[i][1],
-          lng: pts[i][0],
-          alt: alt,
-          heading: heading
-        });
+        waypoints.push({ lat: pts[i][1], lng: pts[i][0], alt, heading });
       }
 
-      var latlngs = pts.map(p=>[p[1],p[0]]);
-      L.polyline(latlngs).addTo(gridLayer);
+      const latlngs = pts.map(p => [p[1], p[0]]);
+      L.polyline(latlngs, {
+        color: '#00d4ff',
+        weight: 1.5,
+        opacity: 0.7
+      }).addTo(gridLayer);
+
+      // Waypoint markers (start/end only for clarity)
+      if (pts.length > 0) {
+        const c = [pts[0][1], pts[0][0]];
+        L.circleMarker(c, { radius: 3, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 1, weight: 0 }).addTo(gridLayer);
+      }
+
       toggle = !toggle;
     }
-
     y += step;
   }
 
-  estimateFlight();
+  updateStats();
+  showToast('success', `✅ ${waypoints.length} waypoints generated`);
 }
 
-function estimateFlight(){
-  let speed = parseFloat(document.getElementById('speed').value);
-  let distance = 0;
+// ── SPLIT MISSION ──
+function splitMission() {
+  if (waypoints.length === 0) { showToast('warning', '⚠ Generate grid terlebih dahulu!'); return; }
 
-  for(let i=1;i<waypoints.length;i++){
-    distance += map.distance(
-      [waypoints[i-1].lat, waypoints[i-1].lng],
-      [waypoints[i].lat, waypoints[i].lng]
-    );
+  const speed = parseFloat(document.getElementById('speed').value);
+  const batteryTime = 25 * 60;
+  let currentMission = [];
+  let currentTime = 0;
+  missions = [];
+
+  for (let i = 1; i < waypoints.length; i++) {
+    const prev = waypoints[i - 1];
+    const curr = waypoints[i];
+    const dist = map.distance([prev.lat, prev.lng], [curr.lat, curr.lng]);
+    const t = dist / speed;
+
+    if (currentTime + t > batteryTime) {
+      if (currentMission.length > 0) missions.push(currentMission);
+      currentMission = [];
+      currentTime = 0;
+    }
+    currentMission.push(curr);
+    currentTime += t;
+  }
+  if (currentMission.length > 0) missions.push(currentMission);
+
+  // Add first waypoint to first mission if missing
+  if (missions.length > 0 && waypoints.length > 0) {
+    missions[0].unshift(waypoints[0]);
   }
 
-  let time = distance / speed;
-
-  let photoParams = calculatePhotoParams();
-  let totalPhotos = Math.ceil(distance / photoParams.forwardSpacing);
-
-  // Estimasi baterai (misal 25 menit efektif)
-  let batteryTime = 25 * 60; // detik
-  let batteryNeeded = Math.ceil(time / batteryTime);
-
-  alert(
-    "Estimasi flight: " + (time/60).toFixed(2) + " menit\n" +
-    "Jumlah foto: " + totalPhotos + "\n" +
-    "Interval foto: " + photoParams.interval.toFixed(2) + " detik\n" +
-    "Perkiraan baterai: " + batteryNeeded + " unit"
-  );
+  visualizeMissions();
+  renderMissionList();
+  document.getElementById('stat-mis').textContent = missions.length;
+  document.getElementById('mission-section').style.display = '';
+  showToast('success', `✅ Dibagi menjadi ${missions.length} mission`);
 }
 
-function exportCSVLitchi(){
-  if(missions.length === 0) return alert("Split mission dulu!");
+const missionColors = ['#ff3d5a', '#00d4ff', '#39e96e', '#ff7d3b', '#b57aff', '#ffd600'];
 
-  let speed = document.getElementById('speed').value;
-
-  missions.forEach((mission, index)=>{
-    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
-
-    mission.forEach(w=>{
-      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
-    });
-
-    downloadFile(`mission_${index+1}.csv`, csv);
+function visualizeMissions() {
+  gridLayer.clearLayers();
+  missions.forEach((mission, idx) => {
+    const color = missionColors[idx % missionColors.length];
+    const latlngs = mission.map(p => [p.lat, p.lng]);
+    L.polyline(latlngs, { color, weight: 2.5, opacity: 0.85 }).addTo(gridLayer);
+    if (latlngs.length > 0) {
+      L.circleMarker(latlngs[0], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 0 })
+        .bindPopup(`<b>Mission ${idx + 1}</b><br>Start`)
+        .addTo(gridLayer);
+    }
   });
 }
 
-function downloadFile(name, content){
-  var blob = new Blob([content], {type:"text/plain"});
-  var a = document.createElement("a");
+function renderMissionList() {
+  const list = document.getElementById('mission-list');
+  list.innerHTML = '';
+  missions.forEach((mission, idx) => {
+    const color = missionColors[idx % missionColors.length];
+    const div = document.createElement('div');
+    div.className = 'mission-item';
+    div.innerHTML = `
+      <div class="mission-dot" style="background:${color};box-shadow:0 0 6px ${color}"></div>
+      <span class="mission-label">Mission ${idx + 1}</span>
+      <span class="mission-count">${mission.length} WP</span>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function updateStats() {
+  const speed = parseFloat(document.getElementById('speed').value);
+  let distance = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    distance += map.distance([waypoints[i-1].lat, waypoints[i-1].lng], [waypoints[i].lat, waypoints[i].lng]);
+  }
+
+  if (waypoints.length < 2) {
+    document.getElementById('stat-wp').textContent = waypoints.length;
+    return;
+  }
+
+  const time = distance / speed;
+  const params = calculatePhotoParams();
+  const totalPhotos = Math.ceil(distance / params.forwardSpacing);
+  const batteryNeeded = Math.ceil(time / (25 * 60));
+
+  document.getElementById('stat-wp').textContent = waypoints.length;
+  document.getElementById('stat-bat').textContent = batteryNeeded;
+  document.getElementById('stat-time').textContent = (time / 60).toFixed(1) + ' min';
+  document.getElementById('stat-photos').textContent = totalPhotos + ' pcs';
+  document.getElementById('stat-interval').textContent = params.interval.toFixed(1) + ' s';
+  document.getElementById('stat-spacing').textContent = params.forwardSpacing.toFixed(1) + ' m';
+  document.getElementById('stat-dist').textContent = (distance / 1000).toFixed(2) + ' km';
+}
+
+// ── EXPORT: CSV LITCHI ──
+function exportCSVLitchi() {
+  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
+
+  const speed = parseFloat(document.getElementById('speed').value);
+  const params = calculatePhotoParams();
+
+  const header = [
+    'latitude','longitude','altitude(m)','heading(deg)',
+    'curvesize(m)','rotationdir','gimbalmode','gimbalpitchangle',
+    'actiontype1','actionparam1','altitudemode','speed(m/s)',
+    'poi_latitude','poi_longitude','poi_altitude(m)','poi_altitudemode',
+    'photo_timeinterval','photo_distinterval'
+  ].join(',');
+
+  missions.forEach((mission, idx) => {
+    const rows = mission.map(w => [
+      w.lat, w.lng, w.alt,
+      w.heading.toFixed(1),
+      0, 0, 0, -90, 1, 0, 0,
+      speed,
+      0, 0, 0, 0, -1,
+      params.forwardSpacing.toFixed(1)
+    ].join(','));
+
+    downloadFile(`mission_${idx + 1}_litchi.csv`, header + '\n' + rows.join('\n'));
+  });
+  showToast('success', `✅ ${missions.length} file CSV diekspor`);
+}
+
+// ── EXPORT: KML ──
+function exportKML() {
+  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
+
+  missions.forEach((mission, idx) => {
+    const color = missionColors[idx % missionColors.length].replace('#', '');
+    const placemarks = mission.map((w, i) => `
+    <Placemark>
+      <name>WP ${i + 1}</name>
+      <Style><IconStyle><scale>0.6</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
+      <Point><coordinates>${w.lng},${w.lat},${w.alt}</coordinates></Point>
+    </Placemark>`).join('');
+
+    const coords = mission.map(w => `${w.lng},${w.lat},${w.alt}`).join(' ');
+    const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Mission ${idx + 1}</name>
+  <Placemark>
+    <name>Flight Path</name>
+    <Style><LineStyle><color>ff${color}</color><width>2</width></LineStyle></Style>
+    <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${coords}</coordinates></LineString>
+  </Placemark>
+  ${placemarks}
+</Document>
+</kml>`;
+    downloadFile(`mission_${idx + 1}.kml`, kml);
+  });
+  showToast('success', `✅ ${missions.length} file KML diekspor`);
+}
+
+// ── EXPORT: GeoJSON ──
+function exportGeoJSON() {
+  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
+
+  missions.forEach((mission, idx) => {
+    const features = [];
+
+    // LineString
+    features.push({
+      type: 'Feature',
+      properties: { name: `Mission ${idx + 1}`, type: 'flightPath' },
+      geometry: {
+        type: 'LineString',
+        coordinates: mission.map(w => [w.lng, w.lat, w.alt])
+      }
+    });
+
+    // Waypoints as Points
+    mission.forEach((w, i) => {
+      features.push({
+        type: 'Feature',
+        properties: {
+          name: `WP ${i + 1}`,
+          altitude: w.alt,
+          heading: w.heading,
+          sequence: i + 1
+        },
+        geometry: { type: 'Point', coordinates: [w.lng, w.lat, w.alt] }
+      });
+    });
+
+    const geojson = {
+      type: 'FeatureCollection',
+      properties: { mission: idx + 1, waypoints: mission.length, drone: document.getElementById('drone').value },
+      features
+    };
+
+    downloadFile(`mission_${idx + 1}.geojson`, JSON.stringify(geojson, null, 2));
+  });
+  showToast('success', `✅ ${missions.length} file GeoJSON diekspor`);
+}
+
+// ── EXPORT: KMZ ──
+async function exportKMZ() {
+  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
+  if (typeof JSZip === 'undefined') { showToast('warning', '⚠ JSZip belum load. Coba lagi.'); return; }
+
+  for (let idx = 0; idx < missions.length; idx++) {
+    const mission = missions[idx];
+    const color = missionColors[idx % missionColors.length].replace('#', '');
+
+    const placemarks = mission.map((w, i) => `
+    <Placemark>
+      <name>WP ${i + 1}</name>
+      <Point><coordinates>${w.lng},${w.lat},${w.alt}</coordinates></Point>
+    </Placemark>`).join('');
+
+    const coords = mission.map(w => `${w.lng},${w.lat},${w.alt}`).join(' ');
+    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Mission ${idx + 1}</name>
+  <Placemark>
+    <name>Flight Path</name>
+    <Style><LineStyle><color>ff${color}</color><width>3</width></LineStyle></Style>
+    <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${coords}</coordinates></LineString>
+  </Placemark>
+  ${placemarks}
+</Document>
+</kml>`;
+
+    const zip = new JSZip();
+    zip.file('doc.kml', kmlContent);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mission_${idx + 1}.kmz`;
+    a.click();
+  }
+  showToast('success', `✅ ${missions.length} file KMZ diekspor`);
+}
+
+// ── UTILS ──
+function downloadFile(name, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
 }
-</script>
 
+function showToast(type, msg) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3100);
+}
+
+// ── Auto-update stats on input change ──
+['alt', 'speed', 'sidelap', 'frontlap', 'drone'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateStats);
+});
+</script>
 </body>
 </html>
