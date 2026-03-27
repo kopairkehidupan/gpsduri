@@ -73,7 +73,7 @@ button {
 
     <button onclick="generateGrid()">Generate Grid</button>
     <button onclick="splitMission()">Split Mission</button>
-    <button onclick="exportCSVLitchi()">Export CSV</button>
+    <button onclick="exportMavenJSON()">Export Maven JSON</button>
   </div>
 
   <div id="map"></div>
@@ -298,20 +298,36 @@ function estimateFlight(){
   );
 }
 
-function exportCSVLitchi(){
-  if(missions.length === 0) return alert("Split mission dulu!");
+function exportMavenJSON(){
 
-  let speed = document.getElementById('speed').value;
+  if(waypoints.length === 0){
+    return alert("Generate grid dulu!");
+  }
 
-  missions.forEach((mission, index)=>{
-    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
+  let speed = parseFloat(document.getElementById('speed').value);
 
-    mission.forEach(w=>{
-      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
+  let mission = {
+    mission: {
+      speed: speed,
+      waypoints: []
+    }
+  };
+
+  waypoints.forEach(w => {
+    mission.mission.waypoints.push({
+      latitude: w.lat,
+      longitude: w.lng,
+      altitude: w.alt,
+      heading: w.heading || 0,
+      gimbalPitch: -90
     });
-
-    downloadFile(`mission_${index+1}.csv`, csv);
   });
+
+  let jsonStr = JSON.stringify(mission, null, 2);
+
+  downloadFile("mission_maven.json", jsonStr);
+
+  alert("JSON Maven siap!");
 }
 
 function downloadFile(name, content){
