@@ -55,20 +55,27 @@ button {
 <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
 <script>
-// Base layers
+var map = L.map('map').setView([0.5,101.45], 15);
+
+// BASEMAP LAYERS
 var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
 var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
-var satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+
+var satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
   subdomains:['mt0','mt1','mt2','mt3']
 });
+
 var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-var none = L.tileLayer('');
+
+var none = L.layerGroup();
 
 osm.addTo(map);
 
+// LAYER CONTROL
 var baseMaps = {
   "OSM": osm,
-  "Topo": topo,
+  "Topographic": topo,
   "Satellite": satellite,
   "Dark": dark,
   "None": none
@@ -105,8 +112,7 @@ function generateGrid(){
   var polygon = polyLayer.toGeoJSON();
   var bbox = turf.bbox(polygon);
 
-  var lines = [];
-  var step = spacing / 111320; // meter to degree approx
+  var step = spacing / 111320;
 
   var y = bbox[1];
   var toggle = false;
@@ -135,7 +141,7 @@ function generateGrid(){
       }
 
       var latlngs = pts.map(p=>[p[1],p[0]]);
-      L.polyline(latlngs,{color:'red'}).addTo(gridLayer);
+      L.polyline(latlngs).addTo(gridLayer);
 
       toggle = !toggle;
     }
