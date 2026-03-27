@@ -227,134 +227,47 @@ function generateGrid(){
   let alt = parseFloat(document.getElementById('alt').value);
   let spacing = calculateSpacing();
 
-  let polygon = polyLayer.toGeoJSON();
+  var polygon = polyLayer.toGeoJSON();
+  var bbox = turf.bbox(polygon);
 
-  // 🔥 1. Hitung sudut orientasi polygon
-  let angle = getPolygonAngle(polygon);
-
-  // 🔥 2. Rotate polygon supaya sejajar horizontal
-  let rotatedPoly = turf.transformRotate(polygon, -angle);
-
-  let bbox = turf.bbox(rotatedPoly);
-
-  let step = spacing / 111320;
-  let y = bbox[1];
-  let toggle = false;
+  var step = spacing / 111320;
+  var y = bbox[1];
+  var toggle = false;
 
   while(y <= bbox[3]){
-
-    // buat garis horizontal di polygon yang sudah di-rotate
-    let line = turf.lineString([
-      [bbox[0], y],
-      [bbox[2], y]
-    ]);
-
-    let clipped = turf.lineIntersect(rotatedPoly, line);
+    var line = turf.lineString([[bbox[0], y],[bbox[2], y]]);
+    var clipped = turf.lineIntersect(polygon, line);
 
     if(clipped.features.length >= 2){
-
-      let pts = clipped.features.map(f=>f.geometry.coordinates);
-
-      // urutkan dari kiri ke kanan
+      var pts = clipped.features.map(f=>f.geometry.coordinates);
       pts.sort((a,b)=>a[0]-b[0]);
-
-      // zig-zag pattern
       if(toggle) pts.reverse();
 
-      let latlngs = [];
-
       for(let i=0;i<pts.length;i++){
-
-        // 🔥 3. Balikkan rotasi ke koordinat asli
-        let rotatedBack = turf.transformRotate(
-          turf.point(pts[i]),
-          angle
-        );
-
-        let coord = rotatedBack.geometry.coordinates;
-
         let heading = 90;
-
         if(i < pts.length-1){
-          let nextRotatedBack = turf.transformRotate(
-            turf.point(pts[i+1]),
-            angle
-          );
-
-          let nextCoord = nextRotatedBack.geometry.coordinates;
-
-          let dx = nextCoord[0] - coord[0];
-          let dy = nextCoord[1] - coord[1];
-
+          let dx = pts[i+1][0] - pts[i][0];
+          let dy = pts[i+1][1] - pts[i][1];
           heading = Math.atan2(dx, dy) * 180/Math.PI;
         }
 
         waypoints.push({
-          lat: coord[1],
-          lng: coord[0],
+          lat: pts[i][1],
+          lng: pts[i][0],
           alt: alt,
           heading: heading
         });
-
-        latlngs.push([coord[1], coord[0]]);
       }
 
-      // 🔥 tampilkan hasil grid di peta (sudah kembali ke orientasi asli)
-      L.polyline(latlngs, {color:"red"}).addTo(gridLayer);
-
+      var latlngs = pts.map(p=>[p[1],p[0]]);
+      L.polyline(latlngs).addTo(gridLayer);
       toggle = !toggle;
     }
 
     y += step;
   }
 
-  // 🔥 optimasi titik start
-  optimizeStart();
-
   estimateFlight();
-}
-
-function getPolygonAngle(polygon){
-
-  let coords = polygon.geometry.coordinates[0];
-
-  let maxDist = 0;
-  let bestAngle = 0;
-
-  for(let i = 0; i < coords.length - 1; i++){
-
-    let p1 = coords[i];
-    let p2 = coords[i+1];
-
-    let dx = p2[0] - p1[0];
-    let dy = p2[1] - p1[1];
-
-    let dist = Math.sqrt(dx*dx + dy*dy);
-
-    if(dist > maxDist){
-      maxDist = dist;
-      bestAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-    }
-  }
-
-  return bestAngle;
-}
-
-function optimizeStart(){
-  if(waypoints.length === 0) return;
-
-  let first = waypoints[0];
-  let last = waypoints[waypoints.length - 1];
-
-  // pilih yang paling dekat ke tengah map
-  let center = map.getCenter();
-
-  let distFirst = map.distance(center, [first.lat, first.lng]);
-  let distLast = map.distance(center, [last.lat, last.lng]);
-
-  if(distLast < distFirst){
-    waypoints.reverse();
-  }
 }
 
 function estimateFlight(){
@@ -389,37 +302,16 @@ function exportCSVLitchi(){
   if(missions.length === 0) return alert("Split mission dulu!");
 
   let speed = document.getElementById('speed').value;
-  let photoParams = calculatePhotoParams();
 
   missions.forEach((mission, index)=>{
+    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
 
-    let interval = getPhotoInterval();
-
-    // Tambahkan di header
-    csv = "latitude,longitude,altitude(m),heading(deg),curvesize(m),rotationdir,gimbalmode,gimbalpitchangle,actiontype1,actionparam1,actiontype2,actionparam2,speed(m/s)\n";
-    
-    mission.forEach((w, i)=>{
-    
-      let action1 = 0; // start capture
-      let param1 = 0;
-    
-      let action2 = 1; // set interval
-      let param2 = interval.toFixed(2);
-    
-      csv += `${w.lat},${w.lng},${w.alt},${w.heading},0,0,0,-90,${action1},${param1},${action2},${param2},${speed}\n`;
-    
+    mission.forEach(w=>{
+      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
     });
 
-    downloadFile(`mission_litchi_${index+1}.csv`, csv);
-
+    downloadFile(`mission_${index+1}.csv`, csv);
   });
-
-  alert("CSV Litchi siap! Tinggal upload ke Mission Hub");
-}
-
-function getPhotoInterval(){
-  let params = calculatePhotoParams();
-  return params.interval;
 }
 
 function downloadFile(name, content){
