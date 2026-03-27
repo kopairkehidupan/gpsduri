@@ -73,7 +73,7 @@ button {
 
     <button onclick="generateGrid()">Generate Grid</button>
     <button onclick="splitMission()">Split Mission</button>
-    <button onclick="exportMavenCSV()">Export Maven CSV</button>
+    <button onclick="exportCSVLitchi()">Export CSV</button>
   </div>
 
   <div id="map"></div>
@@ -298,30 +298,20 @@ function estimateFlight(){
   );
 }
 
-function exportMavenCSV(){
+function exportCSVLitchi(){
+  if(missions.length === 0) return alert("Split mission dulu!");
 
-  if(waypoints.length === 0){
-    return alert("Generate grid dulu!");
-  }
+  let speed = document.getElementById('speed').value;
 
-  let speed = parseFloat(document.getElementById('speed').value);
+  missions.forEach((mission, index)=>{
+    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
 
-  let csv = "latitude,longitude,altitude(m),heading(deg),curvesize(m),rotationdir,gimbalmode,gimbalpitchangle,actiontype1,actionparam1,speed(m/s)\n";
+    mission.forEach(w=>{
+      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
+    });
 
-  waypoints.forEach(w => {
-
-    let heading = w.heading || 0;
-
-    // normalisasi heading 0–360
-    if(heading < 0) heading += 360;
-
-    csv += `${w.lat},${w.lng},${w.alt},${heading},0,0,0,-90,0,0,${speed}\n`;
-
+    downloadFile(`mission_${index+1}.csv`, csv);
   });
-
-  downloadFile("mission_maven.csv", csv);
-
-  alert("CSV Maven FIXED siap!");
 }
 
 function downloadFile(name, content){
