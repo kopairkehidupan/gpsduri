@@ -9,29 +9,26 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
 
 <style>
-body { margin:0; font-family:sans-serif; }
-#map { height:100vh; }
-
-.panel-left {
-  position:absolute;
-  top:10px; left:10px;
-  background:#fff;
-  padding:10px;
-  border-radius:8px;
-  z-index:999;
-  width:260px;
-  font-size:12px;
+body {
+  margin:0;
+  font-family:sans-serif;
 }
 
-.panel-right {
-  position:absolute;
-  top:10px; right:10px;
-  background:#fff;
-  padding:10px;
-  border-radius:8px;
-  z-index:999;
-  width:260px;
-  font-size:12px;
+.container {
+  display:flex;
+  height:100vh;
+}
+
+.sidebar {
+  width:300px;
+  background:#ffffff;
+  padding:15px;
+  border-right:1px solid #ddd;
+  overflow-y:auto;
+}
+
+#map {
+  flex:1;
 }
 
 button {
@@ -41,42 +38,46 @@ button {
   cursor:pointer;
 }
 </style>
+  
 </head>
 
 <body>
 
-<div id="map"></div>
+<div class="container">
 
-<div class="panel-left">
-  <b>Flight Planner</b><br><br>
+  <div class="sidebar">
+    <b>Flight Planner</b><br><br>
 
-  Altitude (m):
-  <input type="number" id="alt" value="100"><br><br>
+    Altitude (m):
+    <input type="number" id="alt" value="100"><br><br>
 
-  Speed (m/s):
-  <input type="number" id="speed" value="8"><br><br>
+    Speed (m/s):
+    <input type="number" id="speed" value="8"><br><br>
 
-  Drone:
-  <select id="drone">
-    <option value="mavic2">Mavic 2 Pro</option>
-    <option value="air2s">Air 2S</option>
-    <option value="phantom4">Phantom 4 Pro</option>
-  </select><br><br>
+    Drone:
+    <select id="drone">
+      <option value="mavic2">Mavic 2 Pro</option>
+      <option value="air2s">Air 2S</option>
+      <option value="phantom4">Phantom 4 Pro</option>
+    </select><br><br>
 
-  <button onclick="generateGrid()">Generate Grid</button>
-</div>
+    <hr>
 
-<div class="panel-right">
-  <b>Overlap Settings</b><br><br>
+    Sidelap (%):
+    <input type="number" id="sidelap" value="70"><br><br>
 
-  Sidelap (%):
-  <input type="number" id="sidelap" value="70"><br><br>
+    Frontlap (%):
+    <input type="number" id="frontlap" value="75"><br><br>
 
-  Frontlap (%):
-  <input type="number" id="frontlap" value="75"><br><br>
+    <hr>
 
-  <button onclick="splitMission()">Split Mission</button>
-  <button onclick="exportCSVLitchi()">Export Litchi CSV</button>
+    <button onclick="generateGrid()">Generate Grid</button>
+    <button onclick="splitMission()">Split Mission</button>
+    <button onclick="exportCSVLitchi()">Export CSV</button>
+  </div>
+
+  <div id="map"></div>
+
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
