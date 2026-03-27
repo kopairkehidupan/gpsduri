@@ -19,7 +19,7 @@ body { margin:0; font-family:sans-serif; }
   padding:10px;
   border-radius:8px;
   z-index:999;
-  width:260px;
+  width:280px;
   font-size:12px;
 }
 
@@ -45,8 +45,18 @@ button {
   Speed (m/s):
   <input type="number" id="speed" value="8"><br><br>
 
-  Spacing (m):
-  <input type="number" id="spacing" value="40"><br><br>
+  Drone Preset:
+  <select id="drone">
+    <option value="mavic2">Mavic 2 Pro</option>
+    <option value="air2s">Air 2S</option>
+    <option value="phantom4">Phantom 4 Pro</option>
+  </select><br><br>
+
+  Sidelap (%):
+  <input type="number" id="sidelap" value="70"><br><br>
+
+  Frontlap (%):
+  <input type="number" id="frontlap" value="75"><br><br>
 
   <button onclick="generateGrid()">Generate Grid</button>
   <button onclick="exportCSVLitchi()">Export Litchi CSV</button>
@@ -59,11 +69,14 @@ button {
 <script>
 var map = L.map('map').setView([0.5,101.45], 15);
 
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// BASEMAP LAYERS 
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'); 
+var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'); 
+var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ subdomains:['mt0','mt1','mt2','mt3'] }); 
+var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'); 
+var none = L.layerGroup();
 
-var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-
-L.control.layers({"OSM":osm,"Satellite":satellite}).addTo(map);
+L.control.layers({"OSM":osm,"Topo":topo,"Satellite":satellite,"Dark":dark,,"None":none}).addTo(map);
 
 var drawnItems = new L.FeatureGroup().addTo(map);
 var gridLayer = new L.FeatureGroup().addTo(map);
@@ -81,6 +94,29 @@ map.on(L.Draw.Event.CREATED, function(e){
 
 var waypoints = [];
 
+// Drone camera specs (sensor width mm, focal length mm)
+const droneSpecs = {
+  mavic2: {sensor: 13.2, focal: 10.26},
+  air2s: {sensor: 13.2, focal: 8.4},
+  phantom4: {sensor: 13.2, focal: 8.8}
+};
+
+function calculateSpacing(){
+  let alt = parseFloat(document.getElementById('alt').value);
+  let drone = document.getElementById('drone').value;
+  let sidelap = parseFloat(document.getElementById('sidelap').value)/100;
+
+  let spec = droneSpecs[drone];
+
+  // footprint width (m)
+  let footprint = (spec.sensor / spec.focal) * alt;
+
+  // spacing based on sidelap
+  let spacing = footprint * (1 - sidelap);
+
+  return spacing;
+}
+
 function generateGrid(){
   gridLayer.clearLayers();
   waypoints = [];
@@ -88,8 +124,8 @@ function generateGrid(){
   var polyLayer = drawnItems.getLayers()[0];
   if(!polyLayer) return alert("Gambar polygon dulu!");
 
-  var alt = parseFloat(document.getElementById('alt').value);
-  var spacing = parseFloat(document.getElementById('spacing').value);
+  let alt = parseFloat(document.getElementById('alt').value);
+  let spacing = calculateSpacing();
 
   var polygon = polyLayer.toGeoJSON();
   var bbox = turf.bbox(polygon);
@@ -150,7 +186,6 @@ function exportCSVLitchi(){
   if(waypoints.length===0) return alert("Generate grid dulu!");
 
   var csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
-
   let speed = document.getElementById('speed').value;
 
   waypoints.forEach(w=>{
