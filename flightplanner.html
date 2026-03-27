@@ -306,19 +306,22 @@ function exportMavenCSV(){
 
   let speed = parseFloat(document.getElementById('speed').value);
 
-  let csv = "latitude,longitude,altitude,heading,curvesize,rotationdir,gimbalpitch,speed\n";
+  let csv = "latitude,longitude,altitude(m),heading(deg),curvesize(m),rotationdir,gimbalmode,gimbalpitchangle,actiontype1,actionparam1,speed(m/s)\n";
 
   waypoints.forEach(w => {
 
     let heading = w.heading || 0;
 
-    csv += `${w.lat},${w.lng},${w.alt},${heading},0,0,-90,${speed}\n`;
+    // normalisasi heading 0–360
+    if(heading < 0) heading += 360;
+
+    csv += `${w.lat},${w.lng},${w.alt},${heading},0,0,0,-90,0,0,${speed}\n`;
 
   });
 
   downloadFile("mission_maven.csv", csv);
 
-  alert("CSV Maven siap!");
+  alert("CSV Maven FIXED siap!");
 }
 
 function downloadFile(name, content){
