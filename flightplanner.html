@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Flight Planner</title>
+<title>Flight Planner PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -19,7 +19,7 @@ body { margin:0; font-family:sans-serif; }
   padding:10px;
   border-radius:8px;
   z-index:999;
-  width:230px;
+  width:260px;
   font-size:12px;
 }
 
@@ -37,17 +37,19 @@ button {
 <div id="map"></div>
 
 <div class="panel">
-  <b>Flight Planner</b><br><br>
+  <b>Flight Planner PRO</b><br><br>
 
   Altitude (m):
   <input type="number" id="alt" value="100"><br><br>
+
+  Speed (m/s):
+  <input type="number" id="speed" value="8"><br><br>
 
   Spacing (m):
   <input type="number" id="spacing" value="40"><br><br>
 
   <button onclick="generateGrid()">Generate Grid</button>
-  <button onclick="exportKML()">Export KML</button>
-  <button onclick="exportCSV()">Export CSV</button>
+  <button onclick="exportCSVLitchi()">Export Litchi CSV</button>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -57,31 +59,11 @@ button {
 <script>
 var map = L.map('map').setView([0.5,101.45], 15);
 
-// BASEMAP LAYERS
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-  subdomains:['mt0','mt1','mt2','mt3']
-});
-
-var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-
-var none = L.layerGroup();
-
-osm.addTo(map);
-
-// LAYER CONTROL
-var baseMaps = {
-  "OSM": osm,
-  "Topographic": topo,
-  "Satellite": satellite,
-  "Dark": dark,
-  "None": none
-};
-
-L.control.layers(baseMaps).addTo(map);
+L.control.layers({"OSM":osm,"Satellite":satellite}).addTo(map);
 
 var drawnItems = new L.FeatureGroup().addTo(map);
 var gridLayer = new L.FeatureGroup().addTo(map);
@@ -113,80 +95,69 @@ function generateGrid(){
   var bbox = turf.bbox(polygon);
 
   var step = spacing / 111320;
-
   var y = bbox[1];
   var toggle = false;
 
   while(y <= bbox[3]){
-    var line = turf.lineString([
-      [bbox[0], y],
-      [bbox[2], y]
-    ]);
-
+    var line = turf.lineString([[bbox[0], y],[bbox[2], y]]);
     var clipped = turf.lineIntersect(polygon, line);
 
     if(clipped.features.length >= 2){
       var pts = clipped.features.map(f=>f.geometry.coordinates);
-
       pts.sort((a,b)=>a[0]-b[0]);
-
       if(toggle) pts.reverse();
 
       for(let i=0;i<pts.length;i++){
+        let heading = 90;
+        if(i < pts.length-1){
+          let dx = pts[i+1][0] - pts[i][0];
+          let dy = pts[i+1][1] - pts[i][1];
+          heading = Math.atan2(dx, dy) * 180/Math.PI;
+        }
+
         waypoints.push({
           lat: pts[i][1],
           lng: pts[i][0],
-          alt: alt
+          alt: alt,
+          heading: heading
         });
       }
 
       var latlngs = pts.map(p=>[p[1],p[0]]);
       L.polyline(latlngs).addTo(gridLayer);
-
       toggle = !toggle;
     }
 
     y += step;
   }
 
-  alert("Grid berhasil dibuat: " + waypoints.length + " waypoint");
+  estimateFlight();
 }
 
-function exportKML(){
-  if(waypoints.length===0) return alert("Generate grid dulu!");
+function estimateFlight(){
+  let speed = parseFloat(document.getElementById('speed').value);
+  let distance = 0;
 
-  var kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-<Document>
-<Placemark>
-<LineString>
-<coordinates>
-`;
+  for(let i=1;i<waypoints.length;i++){
+    distance += map.distance([waypoints[i-1].lat, waypoints[i-1].lng],[waypoints[i].lat, waypoints[i].lng]);
+  }
 
-  waypoints.forEach(w=>{
-    kml += `${w.lng},${w.lat},${w.alt}\n`;
-  });
-
-  kml += `
-</coordinates>
-</LineString>
-</Placemark>
-</Document>
-</kml>`;
-
-  downloadFile("flight_plan.kml", kml);
+  let time = distance / speed;
+  alert("Estimasi flight: " + (time/60).toFixed(2) + " menit");
 }
 
-function exportCSV(){
+function exportCSVLitchi(){
   if(waypoints.length===0) return alert("Generate grid dulu!");
 
-  var csv = "lat,lng,alt\n";
+  var csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
+
+  let speed = document.getElementById('speed').value;
 
   waypoints.forEach(w=>{
-    csv += `${w.lat},${w.lng},${w.alt}\n`;
+    csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
   });
 
-  downloadFile("flight_plan.csv", csv);
+  downloadFile("litchi_mission.csv", csv);
 }
 
 function downloadFile(name, content){
