@@ -302,16 +302,30 @@ function exportCSVLitchi(){
   if(missions.length === 0) return alert("Split mission dulu!");
 
   let speed = document.getElementById('speed').value;
+  let photoParams = calculatePhotoParams();
 
   missions.forEach((mission, index)=>{
-    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
 
-    mission.forEach(w=>{
-      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
+    let csv = "latitude,longitude,altitude(m),heading(deg),curvesize(m),rotationdir,gimbalmode,gimbalpitchangle,actiontype1,actionparam1,speed(m/s)\n";
+
+    mission.forEach((w, i)=>{
+
+      // Heading fix (optional bisa ubah ke auto mode nanti)
+      let heading = w.heading || 0;
+
+      // Action: ambil foto di setiap waypoint
+      let actionType = 0; // take photo
+      let actionParam = 0;
+
+      csv += `${w.lat},${w.lng},${w.alt},${heading},0,0,0,-90,${actionType},${actionParam},${speed}\n`;
+
     });
 
-    downloadFile(`mission_${index+1}.csv`, csv);
+    downloadFile(`mission_litchi_${index+1}.csv`, csv);
+
   });
+
+  alert("CSV Litchi siap! Tinggal upload ke Mission Hub");
 }
 
 function downloadFile(name, content){
