@@ -76,7 +76,7 @@ var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/service
 var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'); 
 var none = L.layerGroup();
 
-L.control.layers({"OSM":osm,"Topo":topo,"Satellite":satellite,"Dark":dark,,"None":none}).addTo(map);
+L.control.layers({"OSM":osm,"Topo":topo,"Satellite":satellite,"Dark":dark,"None":none}).addTo(map);
 
 var drawnItems = new L.FeatureGroup().addTo(map);
 var gridLayer = new L.FeatureGroup().addTo(map);
