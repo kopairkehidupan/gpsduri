@@ -315,15 +315,29 @@ function generateGrid(){
 }
 
 function getPolygonAngle(polygon){
+
   let coords = polygon.geometry.coordinates[0];
 
-  let p1 = coords[0];
-  let p2 = coords[1];
+  let maxDist = 0;
+  let bestAngle = 0;
 
-  let dx = p2[0] - p1[0];
-  let dy = p2[1] - p1[1];
+  for(let i = 0; i < coords.length - 1; i++){
 
-  return Math.atan2(dy, dx) * 180 / Math.PI;
+    let p1 = coords[i];
+    let p2 = coords[i+1];
+
+    let dx = p2[0] - p1[0];
+    let dy = p2[1] - p1[1];
+
+    let dist = Math.sqrt(dx*dx + dy*dy);
+
+    if(dist > maxDist){
+      maxDist = dist;
+      bestAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+    }
+  }
+
+  return bestAngle;
 }
 
 function optimizeStart(){
