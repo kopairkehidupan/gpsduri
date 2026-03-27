@@ -12,14 +12,25 @@
 body { margin:0; font-family:sans-serif; }
 #map { height:100vh; }
 
-.panel {
+.panel-left {
   position:absolute;
   top:10px; left:10px;
   background:#fff;
   padding:10px;
   border-radius:8px;
   z-index:999;
-  width:280px;
+  width:260px;
+  font-size:12px;
+}
+
+.panel-right {
+  position:absolute;
+  top:10px; right:10px;
+  background:#fff;
+  padding:10px;
+  border-radius:8px;
+  z-index:999;
+  width:260px;
   font-size:12px;
 }
 
@@ -36,8 +47,8 @@ button {
 
 <div id="map"></div>
 
-<div class="panel">
-  <b>Flight Planner PRO</b><br><br>
+<div class="panel-left">
+  <b>Flight Planner</b><br><br>
 
   Altitude (m):
   <input type="number" id="alt" value="100"><br><br>
@@ -45,12 +56,18 @@ button {
   Speed (m/s):
   <input type="number" id="speed" value="8"><br><br>
 
-  Drone Preset:
+  Drone:
   <select id="drone">
     <option value="mavic2">Mavic 2 Pro</option>
     <option value="air2s">Air 2S</option>
     <option value="phantom4">Phantom 4 Pro</option>
   </select><br><br>
+
+  <button onclick="generateGrid()">Generate Grid</button>
+</div>
+
+<div class="panel-right">
+  <b>Overlap Settings</b><br><br>
 
   Sidelap (%):
   <input type="number" id="sidelap" value="70"><br><br>
@@ -58,7 +75,7 @@ button {
   Frontlap (%):
   <input type="number" id="frontlap" value="75"><br><br>
 
-  <button onclick="generateGrid()">Generate Grid</button>
+  <button onclick="splitMission()">Split Mission</button>
   <button onclick="exportCSVLitchi()">Export Litchi CSV</button>
 </div>
 
@@ -67,6 +84,7 @@ button {
 <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
 
 <script>
+var missions = [];
 var map = L.map('map').setView([0.5,101.45], 15);
 
 // BASEMAP LAYERS 
@@ -100,6 +118,63 @@ const droneSpecs = {
   air2s: {sensor: 13.2, focal: 8.4},
   phantom4: {sensor: 13.2, focal: 8.8}
 };
+
+function splitMission(){
+  if(waypoints.length === 0) return alert("Generate grid dulu!");
+
+  let speed = parseFloat(document.getElementById('speed').value);
+
+  let batteryTime = 25 * 60; // detik per baterai
+  let currentMission = [];
+  let currentTime = 0;
+
+  missions = [];
+
+  for(let i=1; i<waypoints.length; i++){
+    let prev = waypoints[i-1];
+    let curr = waypoints[i];
+
+    let segmentDist = map.distance(
+      [prev.lat, prev.lng],
+      [curr.lat, curr.lng]
+    );
+
+    let segmentTime = segmentDist / speed;
+
+    // jika melebihi kapasitas baterai → split
+    if(currentTime + segmentTime > batteryTime){
+      missions.push(currentMission);
+      currentMission = [];
+      currentTime = 0;
+    }
+
+    currentMission.push(curr);
+    currentTime += segmentTime;
+  }
+
+  if(currentMission.length > 0){
+    missions.push(currentMission);
+  }
+
+  visualizeMissions();
+
+  alert("Mission dibagi menjadi " + missions.length + " flight");
+}
+
+function visualizeMissions(){
+  gridLayer.clearLayers();
+
+  let colors = ["red","blue","green","orange","purple","black"];
+
+  missions.forEach((mission, index)=>{
+    let latlngs = mission.map(p=>[p.lat, p.lng]);
+
+    L.polyline(latlngs, {
+      color: colors[index % colors.length],
+      weight: 3
+    }).addTo(gridLayer);
+  });
+}
 
 function calculateSpacing(){
   let alt = parseFloat(document.getElementById('alt').value);
@@ -222,32 +297,20 @@ function estimateFlight(){
   );
 }
 
-function estimateFlight(){
-  let speed = parseFloat(document.getElementById('speed').value);
-  let distance = 0;
+function exportCSVLitchi(){
+  if(missions.length === 0) return alert("Split mission dulu!");
 
-  for(let i=1;i<waypoints.length;i++){
-    distance += map.distance(
-      [waypoints[i-1].lat, waypoints[i-1].lng],
-      [waypoints[i].lat, waypoints[i].lng]
-    );
-  }
+  let speed = document.getElementById('speed').value;
 
-  let time = distance / speed;
+  missions.forEach((mission, index)=>{
+    let csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
 
-  let photoParams = calculatePhotoParams();
-  let totalPhotos = Math.ceil(distance / photoParams.forwardSpacing);
+    mission.forEach(w=>{
+      csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
+    });
 
-  // Estimasi baterai (misal 25 menit efektif)
-  let batteryTime = 25 * 60; // detik
-  let batteryNeeded = Math.ceil(time / batteryTime);
-
-  alert(
-    "Estimasi flight: " + (time/60).toFixed(2) + " menit\n" +
-    "Jumlah foto: " + totalPhotos + "\n" +
-    "Interval foto: " + photoParams.interval.toFixed(2) + " detik\n" +
-    "Perkiraan baterai: " + batteryNeeded + " unit"
-  );
+    downloadFile(`mission_${index+1}.csv`, csv);
+  });
 }
 
 function downloadFile(name, content){
