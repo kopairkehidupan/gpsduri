@@ -117,6 +117,30 @@ function calculateSpacing(){
   return spacing;
 }
 
+function calculatePhotoParams(){
+  let alt = parseFloat(document.getElementById('alt').value);
+  let speed = parseFloat(document.getElementById('speed').value);
+  let drone = document.getElementById('drone').value;
+  let frontlap = parseFloat(document.getElementById('frontlap').value)/100;
+
+  let spec = droneSpecs[drone];
+
+  // Footprint panjang (arah terbang)
+  let footprint = (spec.sensor / spec.focal) * alt;
+
+  // Jarak antar foto (forward spacing)
+  let forwardSpacing = footprint * (1 - frontlap);
+
+  // Interval waktu antar foto
+  let interval = forwardSpacing / speed;
+
+  return {
+    footprint,
+    forwardSpacing,
+    interval
+  };
+}
+
 function generateGrid(){
   gridLayer.clearLayers();
   waypoints = [];
@@ -175,24 +199,55 @@ function estimateFlight(){
   let distance = 0;
 
   for(let i=1;i<waypoints.length;i++){
-    distance += map.distance([waypoints[i-1].lat, waypoints[i-1].lng],[waypoints[i].lat, waypoints[i].lng]);
+    distance += map.distance(
+      [waypoints[i-1].lat, waypoints[i-1].lng],
+      [waypoints[i].lat, waypoints[i].lng]
+    );
   }
 
   let time = distance / speed;
-  alert("Estimasi flight: " + (time/60).toFixed(2) + " menit");
+
+  let photoParams = calculatePhotoParams();
+  let totalPhotos = Math.ceil(distance / photoParams.forwardSpacing);
+
+  // Estimasi baterai (misal 25 menit efektif)
+  let batteryTime = 25 * 60; // detik
+  let batteryNeeded = Math.ceil(time / batteryTime);
+
+  alert(
+    "Estimasi flight: " + (time/60).toFixed(2) + " menit\n" +
+    "Jumlah foto: " + totalPhotos + "\n" +
+    "Interval foto: " + photoParams.interval.toFixed(2) + " detik\n" +
+    "Perkiraan baterai: " + batteryNeeded + " unit"
+  );
 }
 
-function exportCSVLitchi(){
-  if(waypoints.length===0) return alert("Generate grid dulu!");
+function estimateFlight(){
+  let speed = parseFloat(document.getElementById('speed').value);
+  let distance = 0;
 
-  var csv = "latitude,longitude,altitude(m),heading(deg),speed(m/s)\n";
-  let speed = document.getElementById('speed').value;
+  for(let i=1;i<waypoints.length;i++){
+    distance += map.distance(
+      [waypoints[i-1].lat, waypoints[i-1].lng],
+      [waypoints[i].lat, waypoints[i].lng]
+    );
+  }
 
-  waypoints.forEach(w=>{
-    csv += `${w.lat},${w.lng},${w.alt},${w.heading},${speed}\n`;
-  });
+  let time = distance / speed;
 
-  downloadFile("litchi_mission.csv", csv);
+  let photoParams = calculatePhotoParams();
+  let totalPhotos = Math.ceil(distance / photoParams.forwardSpacing);
+
+  // Estimasi baterai (misal 25 menit efektif)
+  let batteryTime = 25 * 60; // detik
+  let batteryNeeded = Math.ceil(time / batteryTime);
+
+  alert(
+    "Estimasi flight: " + (time/60).toFixed(2) + " menit\n" +
+    "Jumlah foto: " + totalPhotos + "\n" +
+    "Interval foto: " + photoParams.interval.toFixed(2) + " detik\n" +
+    "Perkiraan baterai: " + batteryNeeded + " unit"
+  );
 }
 
 function downloadFile(name, content){
