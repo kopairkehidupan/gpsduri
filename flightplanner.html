@@ -727,9 +727,9 @@ var osm       = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 var dark      = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
 var topo      = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
-dark.addTo(map);
+satellite.addTo(map);
 
-L.control.layers({"Dark": dark, "Satellite": satellite, "OSM": osm, "Topo": topo}, {}, {position:'topright'}).addTo(map);
+L.control.layers({"OSM": osm, "Satellite": satellite, "Dark": dark, "Topo": topo}, {}, {position:'topright'}).addTo(map);
 
 var drawnItems = new L.FeatureGroup().addTo(map);
 var gridLayer  = new L.FeatureGroup().addTo(map);
