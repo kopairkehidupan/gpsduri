@@ -148,6 +148,12 @@ body {
   border: 1px solid var(--border-dim);
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 220px; /* <-- batas tinggi */
+}
+.section-card:nth-child(3) {
+  max-height: 180px;
 }
 .section-title {
   font-family: 'Rajdhani', sans-serif;
@@ -174,6 +180,18 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+
+  overflow-y: auto;   /* <-- aktifkan scroll */
+  scrollbar-gutter: stable;
+}
+
+/* Scrollbar styling */
+.section-body::-webkit-scrollbar {
+  width: 4px;
+}
+.section-body::-webkit-scrollbar-thumb {
+  background: var(--border-dim);
+  border-radius: 2px;
 }
 
 /* Form rows */
@@ -280,10 +298,7 @@ body {
 
 /* Export buttons grid */
 .export-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 10px 12px;
+  overflow: hidden;
 }
 .btn-export {
   padding: 8px 6px;
@@ -500,6 +515,12 @@ body {
   border-radius: 6px !important;
 }
 .leaflet-popup-tip { background: var(--bg-card) !important; }
+
+#mission-section .section-card {
+  max-height: 260px;
+}
+
+
 </style>
 </head>
 
