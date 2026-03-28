@@ -150,11 +150,8 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: 220px; /* <-- batas tinggi */
 }
-.section-card:nth-child(3) {
-  max-height: 180px;
-}
+
 .section-title {
   font-family: 'Rajdhani', sans-serif;
   font-size: 10px;
@@ -180,9 +177,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-
-  overflow-y: auto;   /* <-- aktifkan scroll */
-  scrollbar-gutter: stable;
 }
 
 /* Scrollbar styling */
@@ -517,11 +511,6 @@ body {
   border-radius: 6px !important;
 }
 .leaflet-popup-tip { background: var(--bg-card) !important; }
-
-#mission-section .section-card {
-  max-height: 260px;
-}
-
 
 </style>
 </head>
