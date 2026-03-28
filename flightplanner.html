@@ -821,6 +821,7 @@ function generateGrid() {
           const dx = pts[i+1][0] - pts[i][0];
           const dy = pts[i+1][1] - pts[i][1];
           heading = Math.atan2(dx, dy) * 180 / Math.PI;
+          if (heading < 0) heading += 360;
         }
         waypoints.push({ lat: pts[i][1], lng: pts[i][0], alt, heading });
       }
