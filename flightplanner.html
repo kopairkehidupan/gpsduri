@@ -298,7 +298,9 @@ body {
 
 /* Export buttons grid */
 .export-grid {
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 .btn-export {
   padding: 8px 6px;
@@ -652,6 +654,7 @@ body {
       <!-- Export -->
       <div class="section-card">
         <div class="section-title"><span class="dot"></span> Export Mission</div>
+        <div class="section-body">
         <div class="export-grid">
           <button class="btn-export" onclick="exportCSVLitchi()">
             <span class="icon">📄</span> CSV Litchi
@@ -665,6 +668,7 @@ body {
           <button class="btn-export" onclick="exportKMZ()">
             <span class="icon">📦</span> KMZ
           </button>
+        </div>
         </div>
       </div>
 
