@@ -33,7 +33,7 @@
       list-style:none;
       padding:0;
       margin:6px 0;
-      max-height: 520px;  /* ~5 cards × 104px per card */
+      max-height: 520px;
       overflow-y: auto;
       overflow-x: hidden;
       border: 1px solid #e0e0e0;
@@ -43,24 +43,11 @@
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    /* Custom Scrollbar untuk File List */
-    #fileList::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    #fileList::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 4px;
-    }
-    
-    #fileList::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 4px;
-    }
-    
-    #fileList::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
+    #fileList::-webkit-scrollbar { width: 8px; }
+    #fileList::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+    #fileList::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+    #fileList::-webkit-scrollbar-thumb:hover { background: #555; }
+
     .file-card{border:1px solid #e0e0e0;padding:8px;margin-bottom:8px;background:#fff;border-radius:6px}
     .file-header{display:flex;align-items:center;gap:8px}
     .file-title{flex:1;font-weight:600;cursor:pointer}
@@ -79,18 +66,27 @@
     .hidden{display:none}
     .symbol-select{padding:4px;font-size:12px}
 
-    /* Layer Control Custom Style */
+    /* ===== BADGE TIPE FILE ===== */
+    .file-type-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .badge-gpx  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .badge-json { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+    .badge-kml  { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+    .badge-drawn{ background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+
     .leaflet-control-layers {
       background: white;
       padding: 8px;
       border-radius: 6px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-    
-    .leaflet-control-layers-toggle {
-      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAApgAAAKYB3X3/OAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAADCSURBVEiJ7ZUxDoJAEEXfQryBPQfwBNyAK3ABb2DN2lhZGaAyNlxBE2IhxkKSTQjBFWHBmP+3ySb/zWQ2MwvwJ5FUAugAXACuAHoADYBaUsN2UQDYAngD2AI4AWiBBYANgD2AvaSU7aICkDLzAuAJ4AxgKumB7aIAkDHzHMAFwAnAUdID20UFIGPmOYAzgAOAvaQbtovqV4C5/xfwnwDm/l/AfwKY+38B/wn4BfDbF/gF8NsX+AXw2xf4BfDbF/gF8NsX+AXwJ+ELhB5BlQrVvCQAAAAASUVORK5CYII=);
-      width: 24px;
-      height: 24px;
     }
 
     /* Modal PDF */
@@ -118,45 +114,37 @@
     }
     
     @keyframes modalSlideIn {
-      from {
-        transform: translateY(-50px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
+      from { transform: translateY(-50px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
     }
     
-    .pdf-modal-content h3 {
-      color: #333;
-      border-bottom: 2px solid #4CAF50;
-      padding-bottom: 10px;
-    }
-    
-    .pdf-modal-content input:focus {
-      outline: none;
-      border-color: #4CAF50;
-      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-    }
+    .pdf-modal-content h3 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+    .pdf-modal-content input:focus { outline: none; border-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76,175,80,0.2); }
 
     #areaInputsContainer {
-      max-height: 300px;      /* Scroll jika banyak */
+      max-height: 300px;
       overflow-y: auto;
       border: 1px solid #e0e0e0;
       border-radius: 4px;
       padding: 10px;
       background: #f9f9f9;
     }
-    
-    /* Custom scrollbar */
-    #areaInputsContainer::-webkit-scrollbar {
-      width: 6px;
+    #areaInputsContainer::-webkit-scrollbar { width: 6px; }
+    #areaInputsContainer::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+
+    /* ===== INFO PANEL FORMAT ===== */
+    #formatInfo {
+      font-size: 11px;
+      color: #666;
+      margin: 4px 0 8px;
+      line-height: 1.5;
     }
-    
-    #areaInputsContainer::-webkit-scrollbar-thumb {
-      background: #888;
+    #formatInfo span {
+      display: inline-block;
+      padding: 1px 5px;
       border-radius: 3px;
+      margin: 1px;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -166,9 +154,20 @@
       <h3>Mini MapGIS</h3>
 
       <div class="control-panel">
-        <h3>Upload GPX File</h3>
-        <input type="file" id="gpxFile" accept=".gpx" multiple>
-         <hr>
+        <h3>Upload File</h3>
+
+        <!-- ===== INPUT MULTI-FORMAT ===== -->
+        <input type="file" id="gpxFile" accept=".gpx,.json,.geojson,.kml" multiple>
+
+        <div id="formatInfo">
+          Format didukung:
+          <span class="file-type-badge badge-gpx">GPX</span>
+          <span class="file-type-badge badge-json">JSON</span>
+          <span class="file-type-badge badge-json">GeoJSON</span>
+          <span class="file-type-badge badge-kml">KML</span>
+        </div>
+
+        <hr>
         <button id="btnUpload">Upload</button>
         <div id="uploadProgress" style="display:none; margin-top:10px; color:#666;">
           Uploading: <span id="progressText">0/0</span> files...
@@ -229,7 +228,6 @@
           </select>
         </div>
 
-        <!-- Tambahkan ini di index.html setelah baris tombol Reset, sebelum <hr> export buttons -->
         <hr>
         
         <div><label class="small">Label Editor</label></div>
@@ -256,7 +254,6 @@
         </div>
         
         <hr>
-
         <hr>
 
         <div style="display:flex;gap:8px">
@@ -293,7 +290,6 @@
                style="width:100%; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:4px">
       </div>
       
-      <!-- ===== SECTION INPUT LUAS MANUAL ===== -->
       <hr style="margin: 20px 0; border: none; border-top: 2px solid #e0e0e0;">
       
       <div style="margin:15px 0">
@@ -308,15 +304,7 @@
           Isi luas manual (Ha) untuk perhitungan akurat. Kosongkan untuk menggunakan luas dari GPS.
         </div>
         
-        <!-- Container untuk list input luas -->
-        <div id="areaInputsContainer" style="
-          max-height: 300px; 
-          overflow-y: auto; 
-          border: 1px solid #e0e0e0; 
-          border-radius: 4px; 
-          padding: 10px;
-          background: #f9f9f9;
-        "></div>
+        <div id="areaInputsContainer"></div>
       </div>
       
       <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end">
