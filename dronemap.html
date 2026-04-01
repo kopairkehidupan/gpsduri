@@ -248,9 +248,12 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
         </button>
         <!-- INFO ORIENTASI -->
         <div class="orient-info">
-          <b>Tips orientasi akurat:</b><br>
-          Tandai GCP di <b>4 sudut foto</b> agar rotasi terdeteksi otomatis.<br>
-          Semakin menyebar titik GCP → semakin akurat orientasinya.
+          <b>⚠️ Kunci hasil akurat:</b><br>
+          GCP harus di <b>4 SUDUT BERBEDA</b> foto drone,<br>
+          bukan menumpuk di satu area!<br><br>
+          <b>Contoh benar:</b> pojok kiri-atas, kanan-atas,<br>
+          kiri-bawah, kanan-bawah foto.<br>
+          Spread &lt;35% → hasil meleset jauh.
         </div>
         <input type="file" id="csvInput" accept=".csv,.txt">
         <div id="csvPreview" style="font-size:9px;color:var(--mu);margin-top:6px;font-family:'Space Mono',monospace"></div>
@@ -705,14 +708,37 @@ function clearPhotoGCP(){
   var p=getPhoto(currentPhotoId);if(!p)return;
   p.gcps=[];renderGCPList();redrawCanvas(p);updateGCPStatus();renderPhotoList();updateStats();
 }
+function gcpSpreadScore(gcps){
+  // Hitung seberapa menyebar GCP: rasio area bbox GCP vs dimensi foto
+  if(!gcps||gcps.length<2)return 0;
+  var xs=gcps.map(function(g){return g.px}),ys=gcps.map(function(g){return g.py});
+  var rangeX=Math.max.apply(null,xs)-Math.min.apply(null,xs);
+  var rangeY=Math.max.apply(null,ys)-Math.min.apply(null,ys);
+  var p=getPhoto(currentPhotoId);
+  if(!p||!p.w)return 1;
+  return Math.min(rangeX/p.w, rangeY/p.h);
+}
+
 function updateGCPStatus(){
   var p=getPhoto(currentPhotoId);var n=p?p.gcps.length:0;
   document.getElementById('gcpCount').textContent=n;
   document.getElementById('gcpPhotoActions').classList.toggle('hidden',!p);
   var sb=document.getElementById('btnSplitView');if(sb)sb.disabled=!p;
   var btn=document.getElementById('btnApply'),warn=document.getElementById('gcpWarn');
-  if(p&&n>=3){btn.disabled=false;warn.innerHTML='<span style="color:var(--ok)">&#10003; Siap georeference ('+n+' GCP)</span>';}
-  else{btn.disabled=true;warn.textContent=p?'Perlu '+(3-n)+' GCP lagi':'Pilih foto terlebih dahulu'}
+  if(p&&n>=3){
+    var spread=gcpSpreadScore(p.gcps);
+    var spreadPct=Math.round(spread*100);
+    var spreadColor=spread<0.2?'var(--er)':spread<0.4?'var(--ac)':'var(--ok)';
+    var spreadMsg=spread<0.2
+      ?'⚠️ GCP terlalu berdekatan! Sebar ke sudut-sudut foto'
+      :spread<0.4?'⚡ Spread cukup, hasil lebih baik jika GCP lebih menyebar'
+      :'✓ Spread GCP baik ('+spreadPct+'% foto)';
+    btn.disabled=false;
+    warn.innerHTML='<span style="color:var(--ok)">&#10003; Siap georef ('+n+' GCP)</span>'+
+      '<div style="margin-top:4px;font-size:9px;color:'+spreadColor+';font-family:\'Space Mono\',monospace">'+spreadMsg+'</div>'+
+      (spread<0.3?'<div style="margin-top:4px;padding:5px 7px;background:rgba(248,81,73,.1);border-radius:4px;border-left:2px solid var(--er);font-size:9px;color:var(--er)">'+
+        '⚠️ PENTING: Tandai GCP di <b>4 sudut berbeda</b> pada foto agar hasil georef akurat. GCP yang menumpuk = foto meleset jauh.</div>':'');
+  } else{btn.disabled=true;warn.textContent=p?'Perlu '+(3-n)+' GCP lagi':'Pilih foto terlebih dahulu'}
   var info=document.getElementById('gcpPhotoInfo');
   if(p){
     info.innerHTML='<div style="display:flex;align-items:center;gap:8px">'+
@@ -950,11 +976,12 @@ function createRotatedOverlay(photo, toGeo, opacity){
       imgEl2.setAttribute('clip-path','url(#'+uid+')');
       // Set transform: matrix(a,c,b,d,e,f)
       imgEl2.setAttribute('transform','matrix('+a2+','+c2+','+b2+','+d2+','+e2+','+f2+')');
-      imgEl2.style.opacity=opacity;
+      imgEl2.style.opacity=photo.opacity;
       this._svg.appendChild(imgEl2);
       this._imgEl=imgEl2;
     },
     setOpacityVal:function(op){
+      photo.opacity=op;
       if(this._imgEl)this._imgEl.style.opacity=op;
     }
   });
@@ -985,6 +1012,23 @@ function georefPhoto(photo){
 
   // Bangun affine transform penuh (6 param, least-squares)
   var toGeo=buildAffine(photo.gcps);
+
+  // ── Hitung & tampilkan residual error tiap GCP ──
+  var residuals=photo.gcps.map(function(g){
+    var pred=toGeo(g.px,g.py);
+    // Konversi selisih derajat ke meter (approx)
+    var dLat=(pred.lat-g.lat)*111320;
+    var dLng=(pred.lng-g.lng)*111320*Math.cos(g.lat*Math.PI/180);
+    return Math.sqrt(dLat*dLat+dLng*dLng);
+  });
+  var maxRes=Math.max.apply(null,residuals);
+  var avgRes=residuals.reduce(function(s,r){return s+r},0)/residuals.length;
+
+  // Peringatan spread GCP
+  var xs=photo.gcps.map(function(g){return g.px}),ys=photo.gcps.map(function(g){return g.py});
+  var spreadX=(Math.max.apply(null,xs)-Math.min.apply(null,xs))/photo.w;
+  var spreadY=(Math.max.apply(null,ys)-Math.min.apply(null,ys))/photo.h;
+  var spreadOk=spreadX>0.35&&spreadY>0.35;
 
   // Hitung sudut rotasi untuk info header
   var dx_lat=toGeo(1,0).lat-toGeo(0,0).lat;
@@ -1022,9 +1066,27 @@ function georefPhoto(photo){
   }
   renderPhotoList();renderLayerList();updateStats();
   updateStep(2);
+
+  // Panel residual di tab GCP
+  var gcpWarnEl=document.getElementById('gcpWarn');
+  if(gcpWarnEl){
+    var resHtml='<div style="margin-top:6px;background:var(--s2);border-radius:5px;padding:7px 9px;border-left:3px solid '+resColor+'">'
+      +'<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu);margin-bottom:4px">RESIDUAL ERROR GEOREF</div>';
+    residuals.forEach(function(r,i){
+      var rc=r>5?'var(--er)':r>2?'var(--ac)':'var(--ok)';
+      resHtml+='<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:'+rc+'">GCP '+(i+1)+': '+r.toFixed(2)+'m</div>';
+    });
+    resHtml+='<div style="margin-top:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--tx)">Rata2: '+avgRes.toFixed(2)+'m &nbsp; Max: '+maxRes.toFixed(2)+'m</div>';
+    if(!spreadOk)resHtml+='<div style="margin-top:5px;color:var(--er);font-size:9px">⚠️ GCP kurang menyebar di foto.<br>Hapus GCP & tandai ulang di 4 sudut foto!</div>';
+    resHtml+='</div>';
+    gcpWarnEl.innerHTML='<span style="color:var(--ok)">&#10003; Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
+  }
   document.getElementById('imagePanel').classList.add('hidden');
   document.getElementById('mapPanel').classList.remove('hidden');
-  setStatus('Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(2)+'° | '+photos.filter(function(p){return p.georef}).length+'/'+photos.length+' foto di peta.','green');
+  var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
+  var statusMsg='Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(1)+'° | Error rata2: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m';
+  if(!spreadOk) statusMsg+=' ⚠️ GCP kurang menyebar!';
+  setStatus(statusMsg, spreadOk&&maxRes<5?'green':'amber');
   updateStep(3);
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('active')});
