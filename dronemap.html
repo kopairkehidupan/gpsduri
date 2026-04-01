@@ -1081,8 +1081,8 @@ function georefPhoto(photo){
     resHtml+='</div>';
     gcpWarnEl.innerHTML='<span style="color:var(--ok)">&#10003; Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
   }
-  document.getElementById('imagePanel').classList.add('hidden');
-  document.getElementById('mapPanel').classList.remove('hidden');
+  // Panel sudah di-switch oleh initMap, pastikan map di-resize
+  setTimeout(function(){ if(map) map.invalidateSize(); }, 100);
   var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
   var statusMsg='Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(1)+'° | Error rata2: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m';
   if(!spreadOk) statusMsg+=' ⚠️ GCP kurang menyebar!';
@@ -1095,6 +1095,10 @@ function georefPhoto(photo){
 }
 
 function initMap(refPhoto){
+  // ← Tampilkan mapPanel dulu sebelum Leaflet init
+  document.getElementById('imagePanel').classList.add('hidden');
+  document.getElementById('mapPanel').classList.remove('hidden');
+
   var toGeo=buildAffine(refPhoto.gcps);
   var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
