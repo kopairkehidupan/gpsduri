@@ -166,6 +166,20 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* PROGRESS BAR for georef */
 .georef-prog{height:3px;border-radius:3px;background:var(--ac);margin-top:5px;transition:width .3s}
+
+/* SPLIT VIEW */
+.split-wrap{display:flex;width:100%;height:100%;overflow:hidden}
+.split-photo{flex:1;position:relative;overflow:hidden;background:#060a10;cursor:crosshair;border-right:2px solid var(--ac)}
+.split-map{flex:1;position:relative;overflow:hidden}
+.split-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--ac);border-radius:16px;padding:4px 14px;font-size:10px;color:var(--ac);z-index:200;font-family:'Space Mono',monospace;pointer-events:none;white-space:nowrap}
+.split-map .split-label{border-color:var(--in);color:var(--in)}
+.split-cursor{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:300}
+.split-cursor::before,.split-cursor::after{content:'';position:absolute;background:var(--in);opacity:.7}
+.split-cursor::before{width:1px;height:24px;left:0;top:-12px}
+.split-cursor::after{width:24px;height:1px;left:-12px;top:0}
+.split-step{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.95);border:1px solid var(--bd);border-radius:8px;padding:7px 14px;font-size:10px;color:var(--tx);z-index:200;text-align:center;white-space:nowrap}
+.split-step strong{color:var(--ac)}
+.split-photo-marker{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--ac);border:2px solid #000;transform:translate(-50%,-50%);z-index:150;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;color:#000;pointer-events:none}
 </style>
 </head>
 <body>
@@ -249,6 +263,12 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
         <div class="btn-row">
           <button class="btn btn-sc btn-sm" onclick="clearPhotoGCP()">&#128465; Hapus Semua GCP</button>
           <button class="btn btn-sc btn-sm" onclick="document.getElementById('csvInput').click()">&#128194; Import CSV</button>
+        </div>
+        <button class="btn btn-full" id="btnSplitView" onclick="enterSplitView()" style="background:rgba(88,166,255,.15);color:var(--in);border:1px solid rgba(88,166,255,.3);margin-bottom:4px" disabled>
+          &#9881; Pilih GCP dari Peta Satelit
+        </button>
+        <div class="ibox" style="font-size:9px;margin-top:4px">
+          <strong>Cara akurat:</strong> Klik titik di foto, lalu klik lokasi yang sama di peta satelit. Ulangi 4+ titik.
         </div>
         <input type="file" id="csvInput" accept=".csv,.txt">
         <div id="csvPreview" style="font-size:9px;color:var(--mu);margin-top:6px;font-family:'Space Mono',monospace"></div>
@@ -782,6 +802,8 @@ function updateGCPStatus(){
   var n=p?p.gcps.length:0;
   document.getElementById('gcpCount').textContent=n;
   document.getElementById('gcpPhotoActions').classList.toggle('hidden',!p);
+  var sb=document.getElementById('btnSplitView');
+  if(sb)sb.disabled=!p;
   var btn=document.getElementById('btnApply'),warn=document.getElementById('gcpWarn');
   if(p&&n>=3){
     btn.disabled=false;
@@ -1226,6 +1248,232 @@ function setStatus(msg,color){
 function updateStep(n){
   [1,2,3].forEach(function(i){var el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active')});
 }
+
+// =====================================================
+// SPLIT VIEW - Pick GCP from Satellite Map
+// =====================================================
+var _splitMap = null;
+var _splitPhotoClick = null;   // pending photo pixel click
+var _splitStep = 'photo';      // 'photo' | 'map'
+var _splitGcpNum = 1;
+var _splitMarkers = [];        // [{px,py,lat,lng, photoMarkerEl}]
+
+function enterSplitView(){
+  var p = getPhoto(currentPhotoId);
+  if(!p || !p.src) return;
+  if(typeof L === 'undefined'){ setStatus('Library belum siap...','amber'); onReady(enterSplitView); return; }
+
+  // Build split UI inside content area
+  var content = document.querySelector('.content');
+  content.innerHTML =
+    '<div class="split-wrap" id="splitWrap">'+
+      '<div class="split-photo" id="splitPhotoPane">'+
+        '<span class="split-label">1&#10132; Klik titik di FOTO</span>'+
+        '<div class="split-step" id="splitStepMsg"><strong>Langkah 1:</strong> Klik titik pada foto drone yang mudah dikenali (pojok bangunan, persimpangan jalan)</div>'+
+      '</div>'+
+      '<div class="split-map" id="splitMapPane">'+
+        '<span class="split-label" style="border-color:var(--in);color:var(--in)">2&#10132; Klik lokasi yang sama di PETA</span>'+
+      '</div>'+
+    '</div>';
+
+  // Render photo in left pane
+  var photoPane = document.getElementById('splitPhotoPane');
+  var img = document.createElement('img');
+  img.src = p.src;
+  img.style.cssText = 'position:absolute;transform-origin:0 0;max-width:none;user-select:none;';
+  img.draggable = false;
+  img.id = 'splitImg';
+
+  var sScale = 1, sOffX = 0, sOffY = 0;
+  img.onload = function(){
+    var pw = photoPane.clientWidth, ph = photoPane.clientHeight;
+    sScale = Math.min(pw / p.w, ph / p.h) * 0.92;
+    sOffX = (pw - p.w * sScale) / 2;
+    sOffY = (ph - p.h * sScale) / 2;
+    img.style.transform = 'translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
+  };
+  photoPane.appendChild(img);
+
+  // Photo pan/zoom
+  var sDrag=false, sDragStart={x:0,y:0};
+  photoPane.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var r=photoPane.getBoundingClientRect();
+    var mx=e.clientX-r.left, my=e.clientY-r.top;
+    var f=e.deltaY<0?1.13:0.885;
+    var ns=Math.max(0.04,Math.min(sScale*f,24));
+    sOffX=mx-(mx-sOffX)*(ns/sScale); sOffY=my-(my-sOffY)*(ns/sScale); sScale=ns;
+    img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
+  },{passive:false});
+  photoPane.addEventListener('mousedown',function(e){if(e.button===0){sDrag=true;sDragStart={x:e.clientX-sOffX,y:e.clientY-sOffY}}});
+  photoPane.addEventListener('mousemove',function(e){if(sDrag){sOffX=e.clientX-sDragStart.x;sOffY=e.clientY-sDragStart.y;img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')'}});
+  photoPane.addEventListener('mouseup',function(){sDrag=false});
+
+  // Photo click → record pixel, switch to map step
+  photoPane.addEventListener('click', function(e){
+    if(_splitStep !== 'photo') return;
+    var r = photoPane.getBoundingClientRect();
+    var px = (e.clientX - r.left - sOffX) / sScale;
+    var py = (e.clientY - r.top  - sOffY) / sScale;
+    if(px<0||px>p.w||py<0||py>p.h) return;
+    _splitPhotoClick = {px:px, py:py, screenX:e.clientX-r.left, screenY:e.clientY-r.top};
+
+    // Show marker on photo
+    var mk = document.createElement('div');
+    mk.className = 'split-photo-marker';
+    mk.textContent = _splitGcpNum;
+    mk.style.left = _splitPhotoClick.screenX + 'px';
+    mk.style.top  = _splitPhotoClick.screenY + 'px';
+    mk.id = 'splitMk'+_splitGcpNum;
+    photoPane.appendChild(mk);
+
+    // Switch to map step
+    _splitStep = 'map';
+    document.getElementById('splitStepMsg').innerHTML =
+      '<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta satelit';
+    if(_splitMap) _splitMap.getContainer().style.cursor='crosshair';
+  });
+
+  // Init satellite map in right pane
+  var mapPane = document.getElementById('splitMapPane');
+  var initLat = p.gcps.length > 0 ? p.gcps[0].lat : 0.5275;
+  var initLng = p.gcps.length > 0 ? p.gcps[0].lng : 101.4713;
+  // Use first georef photo center if available
+  var gp = photos.find(function(ph){return ph.georef && ph.bounds});
+  if(gp){ initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2; initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2; }
+
+  _splitMap = L.map(mapPane, {zoomControl:true}).setView([initLat, initLng], 18);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Esri Satellite', maxZoom:22, maxNativeZoom:17
+  }).addTo(_splitMap);
+
+  // Show existing georef photos as reference overlays
+  photos.filter(function(ph){return ph.georef&&ph.overlay}).forEach(function(ph){
+    L.imageOverlay(ph.src, ph.bounds, {opacity:0.5, zIndex:100, interactive:false}).addTo(_splitMap);
+  });
+  // Show existing GCPs on map
+  if(p.gcps.length>0){
+    p.gcps.forEach(function(g,i){
+      L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1})
+        .addTo(_splitMap).bindPopup('GCP '+(i+1));
+    });
+    _splitMap.setView([p.gcps[0].lat,p.gcps[0].lng],18);
+  }
+
+  // Map click → record lat/lng, save GCP pair
+  _splitMap.on('click', function(e){
+    if(_splitStep !== 'map' || !_splitPhotoClick) return;
+    var lat = e.latlng.lat, lng = e.latlng.lng;
+
+    // Add to photo
+    p.gcps.push({px:_splitPhotoClick.px, py:_splitPhotoClick.py, lat:lat, lng:lng, id:Date.now()});
+    renderGCPList(); updateGCPStatus(); renderPhotoList(); updateStats();
+
+    // Map marker
+    L.circleMarker([lat,lng],{radius:7,fillColor:'#58a6ff',color:'#000',weight:2,fillOpacity:1})
+      .addTo(_splitMap).bindPopup('GCP '+_splitGcpNum+': '+lat.toFixed(6)+', '+lng.toFixed(6));
+
+    // Update marker color on photo
+    var mk = document.getElementById('splitMk'+_splitGcpNum);
+    if(mk) mk.style.background='var(--ok)';
+
+    _splitGcpNum++;
+    _splitStep = 'photo';
+    _splitPhotoClick = null;
+    if(_splitMap) _splitMap.getContainer().style.cursor='';
+
+    var n = p.gcps.length;
+    document.getElementById('splitStepMsg').innerHTML =
+      '<strong>GCP '+n+' tersimpan!</strong> '+(n>=3?'<span style="color:var(--ok)">Siap georeference ✓ — tambah lebih banyak untuk akurasi</span>':'Klik titik berikutnya di foto');
+  });
+
+  // Add toolbar at bottom
+  var toolbar = document.createElement('div');
+  toolbar.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(13,17,23,.95);border-top:1px solid var(--bd);padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:9999;flex-wrap:wrap';
+  toolbar.innerHTML=
+    '<span style="font-size:10px;color:var(--mu);font-family:'Space Mono',monospace">'+
+    '<span id="splitGcpBadge" style="color:var(--ac)">0 GCP</span> &nbsp;|&nbsp; Klik foto → klik peta</span>'+
+    '<div style="flex:1"></div>'+
+    '<button class="btn btn-sc btn-sm" onclick="resetSplitStep()">&#8635; Ulangi Langkah</button>'+
+    '<button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">&#128465; Reset GCP</button>'+
+    '<button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" disabled>&#128506; Georeference</button>'+
+    '<button class="btn" style="background:var(--s2);color:var(--mu);border:1px solid var(--bd)" onclick="exitSplitView()">&#10005; Tutup</button>';
+  document.querySelector('.split-wrap').appendChild(toolbar);
+
+  // Update badge
+  function updateSplitBadge(){
+    var n=p.gcps.length;
+    var badge=document.getElementById('splitGcpBadge');
+    if(badge)badge.textContent=n+' GCP';
+    var applyBtn=document.getElementById('btnSplitApply');
+    if(applyBtn)applyBtn.disabled=n<3;
+  }
+  // Override save to update badge
+  var origSave = p.gcps;
+  var origInterval = setInterval(function(){updateSplitBadge();}, 500);
+  window._splitInterval = origInterval;
+}
+
+function resetSplitStep(){
+  _splitStep = 'photo';
+  _splitPhotoClick = null;
+  if(_splitMap) _splitMap.getContainer().style.cursor='';
+  var msg=document.getElementById('splitStepMsg');
+  if(msg)msg.innerHTML='<strong>Ulangi:</strong> Klik titik pada foto drone';
+}
+
+function clearSplitGCPs(){
+  var p=getPhoto(currentPhotoId);if(!p)return;
+  p.gcps=[];
+  renderGCPList();updateGCPStatus();renderPhotoList();updateStats();
+  resetSplitStep();
+  _splitGcpNum=1;
+  // Remove photo markers
+  document.querySelectorAll('.split-photo-marker').forEach(function(el){el.remove()});
+  var msg=document.getElementById('splitGcpBadge');if(msg)msg.textContent='0 GCP';
+}
+
+function applySplitGeoref(){
+  var p=getPhoto(currentPhotoId);
+  if(!p||p.gcps.length<3)return;
+  exitSplitView();
+  if(typeof L==='undefined'||typeof turf==='undefined'){onReady(function(){georefPhoto(p)});return}
+  georefPhoto(p);
+}
+
+function exitSplitView(){
+  if(window._splitInterval)clearInterval(window._splitInterval);
+  if(_splitMap){try{_splitMap.remove();}catch(e){}  _splitMap=null;}
+  _splitStep='photo'; _splitPhotoClick=null; _splitGcpNum=1; _splitMarkers=[];
+  // Restore content
+  var content=document.querySelector('.content');
+  content.innerHTML=
+    '<div id="imagePanel">'+
+      '<div class="welcome" id="welcomeMsg">'+
+        '<div class="welcome-icon">&#128752;&#65039;</div>'+
+        '<h2>DroneMap v3 &mdash; Multi Photo</h2>'+
+        '<p>Upload banyak foto drone sekaligus, tandai GCP tiap foto, georeference semua ke peta, ukur &amp; export GeoJSON gabungan.</p>'+
+      '</div>'+
+    '</div>'+
+    '<div id="mapPanel" class="hidden"></div>';
+  // Re-show current photo if any
+  var p=getPhoto(currentPhotoId);
+  if(p&&p.src){
+    document.getElementById('imagePanel').classList.remove('hidden');
+    document.getElementById('mapPanel').classList.add('hidden');
+    buildImagePanel(p);
+  } else {
+    // Restore map if georef photos exist
+    var hasGeoref=photos.some(function(ph){return ph.georef});
+    if(hasGeoref&&map){
+      document.getElementById('imagePanel').classList.add('hidden');
+      document.getElementById('mapPanel').classList.remove('hidden');
+      setTimeout(function(){if(map)map.invalidateSize();},100);
+    }
+  }
+  renderGCPList();updateGCPStatus();
+}
+
 </script>
 </body>
 </html>
