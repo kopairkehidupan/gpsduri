@@ -880,87 +880,109 @@ function createRotatedOverlay(photo, toGeo, opacity){
   var W=Math.min.apply(null,lngs),E=Math.max.apply(null,lngs);
   photo.bounds=[[S,W],[N,E]];
 
-  var RotatedLayer=L.Layer.extend({
-    onAdd:function(map){
-      this._map=map;
-      this._corners=[tl,tr,br,bl];
-      // Buat SVG langsung di overlayPane tanpa setPosition
-      var svgNS='http://www.w3.org/2000/svg';
-      this._svg=document.createElementNS(svgNS,'svg');
-      this._svg.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
-      this._svg.style.zIndex='200';
-      map.getPanes().overlayPane.appendChild(this._svg);
-      map.on('zoom viewreset move zoomend moveend',this._update,this);
+  // Buat SVG string dengan ukuran SAMA dengan foto
+  // Affine dari foto-space ke foto-space = identity (image mengisi full SVG)
+  // L.SVGOverlay yang menangani transform geo → screen
+  // Kita pakai 4-corner SVGOverlay via ImageOverlay dulu, tapi untuk rotasi
+  // kita pakai pendekatan: buat SVG dengan 4 corner menggunakan viewBox foto
+  // lalu overlay dengan bounds yang TEPAT di 4 sudut
+
+  // Pendekatan terbukti: gunakan L.ImageOverlay dengan L.LatLngBounds
+  // untuk non-rotasi, tapi untuk rotasi kita perlu SVGOverlay dengan
+  // transform affine yang dirender ulang setiap zoom.
+
+  // === SOLUSI: Custom Layer dengan canvas approach ===
+  var RotatedLayer = L.Layer.extend({
+    onAdd: function(map) {
+      this._map = map;
+      this._corners = [tl, tr, br, bl]; // TL, TR, BR, BL
+
+      // Buat canvas di dalam overlayPane
+      this._canvas = document.createElement('canvas');
+      this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+      this._canvas.style.zIndex = '200';
+
+      // Tambahkan ke mapPane (bukan overlayPane) agar tidak kena transform
+      map.getPanes().mapPane.appendChild(this._canvas);
+      map.on('zoom viewreset move zoomend moveend resize', this._update, this);
       this._update();
     },
-    onRemove:function(map){
-      if(this._svg&&this._svg.parentNode)this._svg.parentNode.removeChild(this._svg);
-      map.off('zoom viewreset move zoomend moveend',this._update,this);
+
+    onRemove: function(map) {
+      if(this._canvas && this._canvas.parentNode)
+        this._canvas.parentNode.removeChild(this._canvas);
+      map.off('zoom viewreset move zoomend moveend resize', this._update, this);
     },
-    _update:function(){
-      var map=this._map;
-      var svgNS='http://www.w3.org/2000/svg';
-      var xlinkNS='http://www.w3.org/1999/xlink';
 
-      // Ukuran container peta
-      var size=map.getSize();
-      this._svg.setAttribute('width',size.x);
-      this._svg.setAttribute('height',size.y);
-      // viewBox dari 0,0 — tidak pakai koordinat layer absolut
-      this._svg.setAttribute('viewBox','0 0 '+size.x+' '+size.y);
+    _update: function() {
+      var map = this._map;
+      var size = map.getSize();
+      var canvas = this._canvas;
+      canvas.width = size.x;
+      canvas.height = size.y;
 
-      // Project 4 sudut ke pixel RELATIF terhadap pojok kiri-atas peta
-      var topLeft=map.containerPointToLayerPoint([0,0]);
-      var pts=this._corners.map(function(c){
-        var lp=map.latLngToLayerPoint([c.lat,c.lng]);
-        // Konversi layer point ke container point
-        var cp=map.layerPointToContainerPoint(lp);
-        return {x:cp.x, y:cp.y};
+      // Project 4 sudut ke container point (pixel layar relatif pojok kiri-atas peta)
+      var corners = this._corners;
+      var pts = corners.map(function(c) {
+        return map.latLngToContainerPoint([c.lat, c.lng]);
       });
+      // pts[0]=TL, pts[1]=TR, pts[2]=BR, pts[3]=BL
 
-      // Bersihkan SVG
-      while(this._svg.firstChild)this._svg.removeChild(this._svg.firstChild);
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size.x, size.y);
 
-      // Buat clipPath dengan ID unik per update
-      var uid='clip_'+photo.id+'_'+Date.now();
-      var defs=document.createElementNS(svgNS,'defs');
-      var clipPath=document.createElementNS(svgNS,'clipPath');
-      clipPath.setAttribute('id',uid);
-      var polyClip=document.createElementNS(svgNS,'polygon');
-      var pStr=pts.map(function(p){return p.x+','+p.y}).join(' ');
-      polyClip.setAttribute('points',pStr);
-      clipPath.appendChild(polyClip);
-      defs.appendChild(clipPath);
-      this._svg.appendChild(defs);
+      // Gambar foto menggunakan drawImage dengan transform affine
+      // Affine: foto (0,0)→pts[0], (W,0)→pts[1], (0,H)→pts[3]
+      var W2 = photo.w, H2 = photo.h;
 
-      // Hitung affine transform: foto pixel → screen pixel
-      // TL(0,0)→pts[0], TR(W,0)→pts[1], BL(0,H)→pts[3]
-      var W2=photo.w, H2=photo.h;
-      var a=(pts[1].x-pts[0].x)/W2;
-      var b=(pts[3].x-pts[0].x)/H2;
-      var c=(pts[1].y-pts[0].y)/W2;
-      var d=(pts[3].y-pts[0].y)/H2;
-      var e=pts[0].x;
-      var f=pts[0].y;
+      // Matrix transform: screen = M * foto
+      // [a b e]   [px]   [screen_x]
+      // [c d f] * [py] = [screen_y]
+      // [0 0 1]   [ 1]
+      var a = (pts[1].x - pts[0].x) / W2;
+      var b = (pts[3].x - pts[0].x) / H2;
+      var c = (pts[1].y - pts[0].y) / W2;
+      var d = (pts[3].y - pts[0].y) / H2;
+      var e = pts[0].x;
+      var f = pts[0].y;
 
-      // Image dengan affine transform + clipPath
-      var imgEl=document.createElementNS(svgNS,'image');
-      imgEl.setAttributeNS(xlinkNS,'href',photo.src);
-      imgEl.setAttribute('width',W2);
-      imgEl.setAttribute('height',H2);
-      imgEl.setAttribute('preserveAspectRatio','none');
-      imgEl.setAttribute('clip-path','url(#'+uid+')');
-      // SVG matrix(a,c,b,d,e,f) — perhatikan urutan kolom-major
-      imgEl.setAttribute('transform','matrix('+a+','+c+','+b+','+d+','+e+','+f+')');
-      imgEl.style.opacity=photo.opacity;
-      this._svg.appendChild(imgEl);
-      this._imgEl=imgEl;
+      // Load/cache image
+      if(!this._img) {
+        var self = this;
+        var img = new Image();
+        img.onload = function() {
+          self._img = img;
+          self._update();
+        };
+        img.src = photo.src;
+        return; // Tunggu gambar load
+      }
+
+      ctx.save();
+      ctx.globalAlpha = photo.opacity;
+
+      // Clip ke polygon 4 sudut
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.lineTo(pts[2].x, pts[2].y);
+      ctx.lineTo(pts[3].x, pts[3].y);
+      ctx.closePath();
+      ctx.clip();
+
+      // Apply affine transform dan gambar foto
+      ctx.transform(a, c, b, d, e, f);
+      ctx.drawImage(this._img, 0, 0, W2, H2);
+
+      ctx.restore();
     },
-    setOpacityVal:function(op){
-      photo.opacity=op;
-      if(this._imgEl)this._imgEl.style.opacity=op;
+
+    setOpacityVal: function(op) {
+      photo.opacity = op;
+      this._update();
     }
   });
+
   return new RotatedLayer();
 }
 
