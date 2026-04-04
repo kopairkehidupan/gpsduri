@@ -110,8 +110,9 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
 .ibox{font-size:10px;color:var(--mu);background:var(--s2);padding:7px 9px;border-radius:5px;border-left:3px solid var(--ac);line-height:1.6}
 .ibox strong{color:var(--ac)}
 .content{flex:1;position:relative;overflow:hidden}
-#imagePanel{width:100%;height:100%;background:#060a10;position:relative;overflow:hidden;cursor:crosshair}
-#mapPanel{width:100%;height:100%}
+#imagePanel{width:100%;height:100%;background:#060a10;position:absolute;top:0;left:0;overflow:hidden;cursor:crosshair;z-index:10}
+#mapPanel{width:100%;height:100%;position:absolute;top:0;left:0;}
+.content{flex:1;position:relative;overflow:hidden}
 .hidden{display:none!important}
 .img-hint{position:absolute;top:11px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--bd);border-radius:18px;padding:5px 14px;font-size:10px;color:var(--mu);z-index:100;backdrop-filter:blur(8px);white-space:nowrap;pointer-events:none}
 .img-hint strong{color:var(--ac)}
@@ -360,6 +361,9 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
 </div>
 
 <div class="content">
+  <!-- mapPanel selalu ada di background, tidak pernah di-hidden -->
+  <div id="mapPanel"></div>
+  <!-- imagePanel overlay di atas mapPanel saat mode GCP -->
   <div id="imagePanel">
     <div class="welcome" id="welcomeMsg">
       <div class="welcome-icon">&#128752;&#65039;</div>
@@ -367,7 +371,6 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
       <p>Upload foto drone, tandai GCP, dan foto akan tampil di peta <strong style="color:var(--ac)">dengan orientasi yang benar</strong> — termasuk rotasi.</p>
     </div>
   </div>
-  <div id="mapPanel" class="hidden"></div>
 </div>
 </div>
 
@@ -473,7 +476,7 @@ function addPhoto(file){
   var id=Date.now()+Math.random();
   var photo={id:id,name:file.name,src:null,w:0,h:0,gcps:[],georef:false,
              bounds:null,overlay:null,visible:true,opacity:0.82,gcpLayer:null,
-             corners:null  // ← 4 sudut hasil affine transform
+             corners:null
             };
   photos.push(photo);
   var reader=new FileReader();
@@ -484,8 +487,7 @@ function addPhoto(file){
       photo.w=img.naturalWidth;photo.h=img.naturalHeight;
       renderPhotoList();updateStats();
       if(currentPhotoId===photo.id){
-        document.getElementById('imagePanel').classList.remove('hidden');
-        document.getElementById('mapPanel').classList.add('hidden');
+        showImagePanel();
         buildImagePanel(photo);renderGCPList();updateGCPStatus();
       }
     };
@@ -502,26 +504,40 @@ function removePhoto(id){
   if(p&&p.overlay&&map)map.removeLayer(p.overlay);
   if(p&&p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
   photos=photos.filter(function(x){return x.id!==id});
-  if(currentPhotoId===id)currentPhotoId=null;
-  renderPhotoList();updateStats();renderLayerList();
-  document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
-  if(photos.length===0){
-    document.getElementById('imagePanel').classList.remove('hidden');
-    document.getElementById('mapPanel').classList.add('hidden');
-    var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='';
+  if(currentPhotoId===id){
+    currentPhotoId=null;
+    // Jika masih ada foto georef, tetap tampilkan peta; jika tidak, tampilkan welcome
+    var hasGeoref=photos.some(function(ph){return ph.georef});
+    if(!hasGeoref){
+      showImagePanel();
+      var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='';
+    } else {
+      hideImagePanel();
+    }
     imgEl=null;canvasEl=null;
     if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}_abortCtrl=null;}
   }
+  renderPhotoList();updateStats();renderLayerList();
+  document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
 }
 
 function getPhoto(id){return photos.find(function(p){return p.id===id})||null}
+
+// ── Helper: tampilkan imagePanel (overlay di atas map), sembunyikan atau biarkan map tetap hidup
+function showImagePanel(){
+  document.getElementById('imagePanel').style.display='';
+}
+function hideImagePanel(){
+  document.getElementById('imagePanel').style.display='none';
+  // Map tetap ada di bawah — invalidateSize agar tile tidak kosong
+  if(map)setTimeout(function(){map.invalidateSize();},50);
+}
 
 function setCurrentPhoto(id){
   currentPhotoId=id;
   renderPhotoList();
   var p=getPhoto(id);if(!p||!p.src)return;
-  document.getElementById('imagePanel').classList.remove('hidden');
-  document.getElementById('mapPanel').classList.add('hidden');
+  showImagePanel();
   buildImagePanel(p);renderGCPList();updateGCPStatus();
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p2){p2.classList.remove('active')});
@@ -1082,6 +1098,7 @@ function georefPhoto(photo){
   updateStep(2);
 
   // Panel residual di tab GCP
+  var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
   var gcpWarnEl=document.getElementById('gcpWarn');
   if(gcpWarnEl){
     var resHtml='<div style="margin-top:6px;background:var(--s2);border-radius:5px;padding:7px 9px;border-left:3px solid '+resColor+'">'
@@ -1095,9 +1112,10 @@ function georefPhoto(photo){
     resHtml+='</div>';
     gcpWarnEl.innerHTML='<span style="color:var(--ok)">&#10003; Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
   }
-  document.getElementById('imagePanel').classList.add('hidden');
-  document.getElementById('mapPanel').classList.remove('hidden');
-  var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
+
+  // Sembunyikan imagePanel, map tetap hidup di bawah
+  hideImagePanel();
+
   var statusMsg='Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(1)+'° | Error rata2: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m';
   if(!spreadOk) statusMsg+=' ⚠️ GCP kurang menyebar!';
   setStatus(statusMsg, spreadOk&&maxRes<5?'green':'amber');
@@ -1111,6 +1129,8 @@ function georefPhoto(photo){
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);
   var c=toGeo(refPhoto.w/2,refPhoto.h/2);
+  // mapPanel sudah selalu ada di DOM dan visible di background
+  // imagePanel overlay di atasnya — tidak perlu show/hide mapPanel
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
   baseTile=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OSM',maxZoom:22,maxNativeZoom:19}).addTo(map);
   drawnItems=new L.FeatureGroup().addTo(map);
@@ -1388,6 +1408,8 @@ function enterSplitView(){
   var p=getPhoto(currentPhotoId);if(!p||!p.src)return;
   if(typeof L==='undefined'){setStatus('Library belum siap...','amber');onReady(enterSplitView);return}
   var content=document.querySelector('.content');
+  // Simpan referensi map lama sebelum DOM di-replace
+  var oldMap=map;
   content.innerHTML=
     '<div class="split-wrap" id="splitWrap">'+
       '<div class="split-photo" id="splitPhotoPane">'+
@@ -1398,6 +1420,8 @@ function enterSplitView(){
         '<span class="split-label" style="border-color:var(--in);color:var(--in)">2&#10132; Klik lokasi yang sama di PETA</span>'+
       '</div>'+
     '</div>';
+  // Hapus map lama dari memori (DOM-nya sudah tidak ada)
+  if(oldMap){try{oldMap.remove();}catch(e){} map=null;}
   var photoPane=document.getElementById('splitPhotoPane');
   var img=document.createElement('img');img.src=p.src;
   img.style.cssText='position:absolute;transform-origin:0 0;max-width:none;user-select:none;';
@@ -1498,28 +1522,81 @@ function applySplitGeoref(){
 function exitSplitView(){
   if(_splitMap){try{_splitMap.remove();}catch(e){}_splitMap=null;}
   _splitStep='photo';_splitPhotoClick=null;_splitGcpNum=1;
+
+  // Restore content area ke struktur normal (imagePanel overlay di atas mapPanel)
   var content=document.querySelector('.content');
   content.innerHTML=
-    '<div id="imagePanel">'+
+    '<div id="mapPanel"></div>'+
+    '<div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;">'+
       '<div class="welcome" id="welcomeMsg">'+
         '<div class="welcome-icon">&#128752;&#65039;</div>'+
         '<h2>DroneMap v3 &mdash; Multi Photo</h2>'+
         '<p>Upload foto drone, tandai GCP, dan foto tampil di peta dengan orientasi yang benar.</p>'+
       '</div>'+
-    '</div>'+
-    '<div id="mapPanel" class="hidden"></div>';
+    '</div>';
+
+  // Re-init map (karena DOM-nya di-replace)
+  map=null;
+  var hasGeoref=photos.some(function(ph){return ph.georef});
+  if(hasGeoref){
+    // Re-buat map dan tambahkan kembali semua overlay
+    var firstGeoref=photos.find(function(ph){return ph.georef&&ph.bounds});
+    if(firstGeoref){
+      var toGeo=buildAffine(firstGeoref.gcps);
+      var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
+      map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
+      baseTile=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OSM',maxZoom:22,maxNativeZoom:19}).addTo(map);
+      drawnItems=new L.FeatureGroup().addTo(map);
+      // Re-draw control
+      var drawCtrl=new L.Control.Draw({
+        position:'topright',edit:{featureGroup:drawnItems,remove:true},
+        draw:{polygon:{showArea:true,shapeOptions:{color:'#f0a500',weight:2,fillOpacity:.14}},
+          polyline:{shapeOptions:{color:'#58a6ff',weight:3}},
+          rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
+          circle:false,circlemarker:false,
+          marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#f0a500;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}}
+      });
+      map.addControl(drawCtrl);
+      map.on(L.Draw.Event.CREATED,onDrawCreated);
+      map.on(L.Draw.Event.EDITED,refreshMeasures);
+      map.on(L.Draw.Event.DELETED,function(e){
+        e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});
+        renderMeasures();updateStats();
+      });
+      map.on('mousemove',function(e){
+        document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);
+      });
+      // Re-tambahkan semua overlay foto yang sudah georef
+      photos.forEach(function(ph){
+        if(ph.georef&&ph.gcps.length>=3){
+          var tg=buildAffine(ph.gcps);
+          ph.overlay=createRotatedOverlay(ph,tg,ph.opacity);
+          if(ph.visible)ph.overlay.addTo(map);
+          if(ph.gcpLayer){ph.gcpLayer=L.featureGroup();
+            ph.gcps.forEach(function(g,i){
+              L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#111',weight:2,fillOpacity:1,zIndexOffset:900})
+                .addTo(ph.gcpLayer).bindPopup('<b>'+ph.name+'</b><br>GCP '+(i+1));
+            });
+            if(document.getElementById('togGCP')&&document.getElementById('togGCP').checked)ph.gcpLayer.addTo(map);
+          }
+        }
+      });
+      // Fit semua bounds
+      var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
+      if(allBounds.length>0){
+        var allLats=[],allLngs=[];
+        allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});
+        map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});
+      }
+    }
+  }
+
   var p=getPhoto(currentPhotoId);
   if(p&&p.src){
-    document.getElementById('imagePanel').classList.remove('hidden');
-    document.getElementById('mapPanel').classList.add('hidden');
+    showImagePanel();
     buildImagePanel(p);
   } else {
-    var hasGeoref=photos.some(function(ph){return ph.georef});
-    if(hasGeoref&&map){
-      document.getElementById('imagePanel').classList.add('hidden');
-      document.getElementById('mapPanel').classList.remove('hidden');
-      setTimeout(function(){if(map)map.invalidateSize();},100);
-    }
+    hideImagePanel();
   }
   renderGCPList();updateGCPStatus();
 }
