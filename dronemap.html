@@ -867,11 +867,11 @@ function buildAffine(gcps){
 // Membuat SVG overlay yang meletakkan foto di 4 sudut yang benar
 // sehingga mendukung rotasi dan shear penuh.
 function createRotatedOverlay(photo, toGeo, opacity){
+  // ── Hitung 4 sudut foto dalam koordinat geo (lat/lng) ──────────
   var tl=toGeo(0,0);
   var tr=toGeo(photo.w,0);
   var br=toGeo(photo.w,photo.h);
   var bl=toGeo(0,photo.h);
-
   photo.corners={tl:tl,tr:tr,br:br,bl:bl};
 
   var lats=[tl.lat,tr.lat,br.lat,bl.lat];
@@ -880,88 +880,105 @@ function createRotatedOverlay(photo, toGeo, opacity){
   var W=Math.min.apply(null,lngs),E=Math.max.apply(null,lngs);
   photo.bounds=[[S,W],[N,E]];
 
-  // Buat SVG string dengan ukuran SAMA dengan foto
-  // Affine dari foto-space ke foto-space = identity (image mengisi full SVG)
-  // L.SVGOverlay yang menangani transform geo → screen
-  // Kita pakai 4-corner SVGOverlay via ImageOverlay dulu, tapi untuk rotasi
-  // kita pakai pendekatan: buat SVG dengan 4 corner menggunakan viewBox foto
-  // lalu overlay dengan bounds yang TEPAT di 4 sudut
+  // Simpan sebagai L.LatLng (immutable, patokan geo yang benar)
+  var llTL=L.latLng(tl.lat,tl.lng);
+  var llTR=L.latLng(tr.lat,tr.lng);
+  var llBR=L.latLng(br.lat,br.lng);
+  var llBL=L.latLng(bl.lat,bl.lng);
 
-  // Pendekatan terbukti: gunakan L.ImageOverlay dengan L.LatLngBounds
-  // untuk non-rotasi, tapi untuk rotasi kita perlu SVGOverlay dengan
-  // transform affine yang dirender ulang setiap zoom.
-
-  // === SOLUSI: Custom Layer dengan canvas approach ===
+  // ── Custom Leaflet Layer — Canvas di overlayPane ────────────────
+  // SOLUSI PAN-DRIFT:
+  //   overlayPane sudah di-CSS-translate oleh Leaflet saat pan.
+  //   Kalau canvas kita ikut overlayPane, kita cukup pakai
+  //   latLngToLayerPoint() (bukan containerPoint) — hasilnya
+  //   sudah dalam koordinat "layer space" yang konsisten dengan
+  //   overlayPane. Tidak perlu offset manual.
+  // ───────────────────────────────────────────────────────────────
   var RotatedLayer = L.Layer.extend({
-    onAdd: function(map) {
+    onAdd: function(map){
       this._map = map;
-      this._corners = [tl, tr, br, bl]; // TL, TR, BR, BL
 
-      // Buat canvas di dalam overlayPane
+      // Canvas di overlayPane — otomatis ikut pan bersama layer lain
       this._canvas = document.createElement('canvas');
       this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
-      this._canvas.style.zIndex = '200';
+      map.getPanes().overlayPane.appendChild(this._canvas);
 
-      // Tambahkan ke mapPane (bukan overlayPane) agar tidak kena transform
-      map.getPanes().mapPane.appendChild(this._canvas);
+      // Load image sekali, lalu update
+      var self = this;
+      this._img = new Image();
+      this._img.onload = function(){ self._update(); };
+      this._img.src = photo.src;
+
       map.on('zoom viewreset move zoomend moveend resize', this._update, this);
       this._update();
     },
 
-    onRemove: function(map) {
+    onRemove: function(map){
       if(this._canvas && this._canvas.parentNode)
         this._canvas.parentNode.removeChild(this._canvas);
       map.off('zoom viewreset move zoomend moveend resize', this._update, this);
     },
 
-    _update: function() {
+    _update: function(){
+      if(!this._img || !this._img.complete || !this._img.naturalWidth) return;
       var map = this._map;
-      var size = map.getSize();
-      var canvas = this._canvas;
-      canvas.width = size.x;
-      canvas.height = size.y;
 
-      // Project 4 sudut ke container point (pixel layar relatif pojok kiri-atas peta)
-      var corners = this._corners;
-      var pts = corners.map(function(c) {
-        return map.latLngToContainerPoint([c.lat, c.lng]);
+      // ── Ukuran canvas = ukuran seluruh layerPane ─────────────
+      // overlayPane bisa lebih besar dari viewport saat pan,
+      // kita ambil bounds semua layer sebagai ukuran aman,
+      // tapi cukup pakai mapSize + margin besar agar tidak terpotong
+      // saat foto tepi layar. Gunakan getSize() + offset.
+      var size = map.getSize();
+
+      // Leaflet menggeser overlayPane via CSS translate.
+      // Canvas harus menutupi area yang terlihat dalam koordinat layer.
+      // Trik: set ukuran canvas 3x viewport, posisikan canvas
+      // mulai dari -1x viewport, sehingga konten selalu terlihat
+      // saat pan dalam range 1 viewport.
+      // TAPI cara PALING BERSIH: gunakan ukuran canvas = size,
+      // posisi canvas = -(mapPanePos) dalam layer space.
+      // mapPanePos = offset CSS transform overlayPane relative to map container
+      // Ambil via: map.getPanes().mapPane.style.transform atau _getMapPanePos()
+
+      var panePos = map._getMapPanePos ? map._getMapPanePos() : {x:0,y:0};
+
+      // Canvas ukuran = viewport
+      this._canvas.width  = size.x;
+      this._canvas.height = size.y;
+      // Geser canvas agar origin (0,0) canvas = pojok kiri-atas viewport
+      // overlayPane sudah di-translate sebesar panePos,
+      // jadi untuk counter-translate kita offset canvas sebesar -panePos
+      this._canvas.style.left = (-panePos.x) + 'px';
+      this._canvas.style.top  = (-panePos.y) + 'px';
+
+      // ── Project 4 sudut ke container point (viewport pixel) ──
+      // latLngToContainerPoint selalu relatif pojok kiri-atas viewport,
+      // tidak terpengaruh pan (sudah di-correct oleh Leaflet).
+      var pts = [llTL, llTR, llBR, llBL].map(function(ll){
+        return map.latLngToContainerPoint(ll);
       });
       // pts[0]=TL, pts[1]=TR, pts[2]=BR, pts[3]=BL
 
-      var ctx = canvas.getContext('2d');
+      var ctx = this._canvas.getContext('2d');
       ctx.clearRect(0, 0, size.x, size.y);
 
-      // Gambar foto menggunakan drawImage dengan transform affine
-      // Affine: foto (0,0)→pts[0], (W,0)→pts[1], (0,H)→pts[3]
-      var W2 = photo.w, H2 = photo.h;
-
-      // Matrix transform: screen = M * foto
-      // [a b e]   [px]   [screen_x]
-      // [c d f] * [py] = [screen_y]
-      // [0 0 1]   [ 1]
-      var a = (pts[1].x - pts[0].x) / W2;
-      var b = (pts[3].x - pts[0].x) / H2;
-      var c = (pts[1].y - pts[0].y) / W2;
-      var d = (pts[3].y - pts[0].y) / H2;
-      var e = pts[0].x;
-      var f = pts[0].y;
-
-      // Load/cache image
-      if(!this._img) {
-        var self = this;
-        var img = new Image();
-        img.onload = function() {
-          self._img = img;
-          self._update();
-        };
-        img.src = photo.src;
-        return; // Tunggu gambar load
-      }
+      var W2=photo.w, H2=photo.h;
+      // ── Affine transform: foto-pixel → viewport-pixel ────────
+      // TL(0,0)→pts[0], TR(W,0)→pts[1], BL(0,H)→pts[3]
+      // | a  b  e |   | foto_x |   | vp_x |
+      // | c  d  f | × | foto_y | = | vp_y |
+      // | 0  0  1 |   |   1   |   |  1   |
+      var a=(pts[1].x-pts[0].x)/W2;
+      var b=(pts[3].x-pts[0].x)/H2;
+      var c=(pts[1].y-pts[0].y)/W2;
+      var d=(pts[3].y-pts[0].y)/H2;
+      var e=pts[0].x;
+      var f=pts[0].y;
 
       ctx.save();
       ctx.globalAlpha = photo.opacity;
 
-      // Clip ke polygon 4 sudut
+      // Clip ke quadrilateral 4 sudut foto (agar tidak overflow)
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
       ctx.lineTo(pts[1].x, pts[1].y);
@@ -970,14 +987,13 @@ function createRotatedOverlay(photo, toGeo, opacity){
       ctx.closePath();
       ctx.clip();
 
-      // Apply affine transform dan gambar foto
+      // Apply affine dan gambar foto
       ctx.transform(a, c, b, d, e, f);
       ctx.drawImage(this._img, 0, 0, W2, H2);
-
       ctx.restore();
     },
 
-    setOpacityVal: function(op) {
+    setOpacityVal: function(op){
       photo.opacity = op;
       this._update();
     }
@@ -1079,8 +1095,8 @@ function georefPhoto(photo){
     resHtml+='</div>';
     gcpWarnEl.innerHTML='<span style="color:var(--ok)">&#10003; Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
   }
-  // Panel sudah di-switch oleh initMap, pastikan map di-resize
-  setTimeout(function(){ if(map) map.invalidateSize(); }, 100);
+  document.getElementById('imagePanel').classList.add('hidden');
+  document.getElementById('mapPanel').classList.remove('hidden');
   var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
   var statusMsg='Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(1)+'° | Error rata2: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m';
   if(!spreadOk) statusMsg+=' ⚠️ GCP kurang menyebar!';
@@ -1093,10 +1109,6 @@ function georefPhoto(photo){
 }
 
 function initMap(refPhoto){
-  // ← Tampilkan mapPanel dulu sebelum Leaflet init
-  document.getElementById('imagePanel').classList.add('hidden');
-  document.getElementById('mapPanel').classList.remove('hidden');
-
   var toGeo=buildAffine(refPhoto.gcps);
   var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
