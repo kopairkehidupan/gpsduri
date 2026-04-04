@@ -28,7 +28,7 @@ var cartoDBDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x
   attribution: 'Erik Simarmata'
 });
 
-osmLayer.addTo(map);
+satelliteLayer.addTo(map);
 
 var baseMaps = {
   "OpenStreetMap": osmLayer,
