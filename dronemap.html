@@ -1225,7 +1225,7 @@ function initMap(refPhoto){
   // mapPanel sudah selalu ada di DOM dan visible di background
   // imagePanel overlay di atasnya — tidak perlu show/hide mapPanel
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
-  baseTile=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OSM',maxZoom:22,maxNativeZoom:19}).addTo(map);
+  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
   drawnItems=new L.FeatureGroup().addTo(map);
   var drawCtrl=new L.Control.Draw({
     position:'topright',
