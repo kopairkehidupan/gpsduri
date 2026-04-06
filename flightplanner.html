@@ -2,1090 +2,592 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<title>Flight Planner PRO</title>
+<title>DroneMap Flight Planner</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- CDN: cdnjs lebih stabil dari unpkg di Indonesia -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --bg-primary: #080d14;
-  --bg-secondary: #0c1420;
-  --bg-panel: #0f1a28;
-  --bg-card: #132035;
-  --bg-card-hover: #1a2d47;
-  --accent-cyan: #00d4ff;
-  --accent-cyan-dim: rgba(0, 212, 255, 0.15);
-  --accent-teal: #00b89c;
-  --accent-orange: #ff7d3b;
-  --accent-red: #ff3d5a;
-  --accent-green: #39e96e;
-  --text-primary: #e8f4f8;
-  --text-secondary: #7a9bb5;
-  --text-dim: #3a5570;
-  --border-dim: rgba(0, 212, 255, 0.12);
-  --border-glow: rgba(0, 212, 255, 0.4);
-  --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.1);
+:root{
+  --c0:#050a11;--c1:#080f1a;--c2:#0d1624;--c3:#111e30;--c4:#18293f;
+  --cyan:#00d4ff;--teal:#00b89c;--green:#2ecc71;--orange:#f39c12;
+  --red:#e74c3c;--purple:#9b59b6;
+  --t1:#ddeef8;--t2:#7a9bb5;--t3:#3a5570;
+  --b1:rgba(0,212,255,.13);
+  --r:8px;--r2:5px;--r3:4px;
+  --fui:'Inter',sans-serif;--fhd:'Rajdhani',sans-serif;--fmn:'Share Tech Mono',monospace;
 }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fui);background:var(--c0);color:var(--t1);height:100vh;overflow:hidden}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+.shell{display:flex;height:100vh}
 
-body {
-  font-family: 'Exo 2', sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  height: 100vh;
-  overflow: hidden;
-}
+/* PANEL */
+.panel{width:310px;min-width:310px;display:flex;flex-direction:column;background:var(--c1);border-right:1px solid var(--b1);min-height:0;overflow:hidden}
+.phead{background:var(--c2);padding:14px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;position:relative}
+.phead::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--cyan),var(--teal));border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.logo-name{font-family:var(--fhd);font-size:17px;font-weight:700;letter-spacing:2px;color:var(--cyan);text-transform:uppercase}
+.logo-sub{font-size:8px;color:var(--t3);letter-spacing:2.5px;text-transform:uppercase;margin-top:2px}
 
-.app-container {
-  display: flex;
-  height: 100vh;
-}
+.srow{display:flex;gap:6px;padding:8px 16px;background:var(--c0);border-bottom:1px solid var(--b1);flex-shrink:0}
+.spill{flex:1;background:var(--c3);border:1px solid var(--b1);border-radius:var(--r3);padding:5px 8px;text-align:center}
+.spill-v{font-family:var(--fmn);font-size:13px;color:var(--cyan);display:block;line-height:1.2}
+.spill-l{font-size:7.5px;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
 
-/* ── SIDEBAR ── */
-.sidebar {
-  width: 300px;
-  min-width: 300px;
-  background: var(--bg-secondary);
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border-dim);
-  overflow: hidden;
-  min-height: 0;
-}
+.pbody{flex:1;overflow-y:scroll;scrollbar-gutter:stable;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.pbody::-webkit-scrollbar{width:3px}
+.pbody::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
 
-/* Header */
-.sidebar-header {
-  background: var(--bg-panel);
-  padding: 16px 18px 14px;
-  border-bottom: 1px solid var(--border-dim);
-  position: relative;
-}
-.sidebar-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
-}
-.brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.brand-icon {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-teal));
-  border-radius: 6px;
-  display: flex;align-items:center;justify-content:center;
-  font-size: 16px;
-}
-.brand-text {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--accent-cyan);
-  text-transform: uppercase;
-}
-.brand-sub {
-  font-size: 9px;
-  color: var(--text-secondary);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-top: 1px;
-}
+.card{background:var(--c3);border:1px solid var(--b1);border-radius:var(--r);overflow:visible;flex-shrink:0}
+.card-head{font-family:var(--fhd);font-size:9.5px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--cyan);padding:7px 12px 5px;background:rgba(0,212,255,.04);border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+.card-head .dot{width:4px;height:4px;background:var(--cyan);border-radius:50%;box-shadow:0 0 5px var(--cyan)}
+.card-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 
-/* Status bar */
-.status-bar {
-  display: flex;
-  gap: 8px;
-  padding: 8px 18px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-dim);
-}
-.status-pill {
-  flex: 1;
-  background: var(--bg-card);
-  border: 1px solid var(--border-dim);
-  border-radius: 4px;
-  padding: 5px 8px;
-  text-align: center;
-}
-.status-pill .val {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 13px;
-  color: var(--accent-cyan);
-  display: block;
-}
-.status-pill .lbl {
-  font-size: 8px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
+.frow{display:flex;align-items:center;gap:8px}
+.flabel{font-size:11px;color:var(--t2);min-width:72px;flex-shrink:0}
+.finput{flex:1;background:var(--c1);border:1px solid var(--b1);border-radius:var(--r3);color:var(--t1);font-family:var(--fmn);font-size:12px;padding:5px 7px;outline:none;transition:border .15s;width:100%}
+.finput:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(0,212,255,.1)}
+.finput option{background:var(--c3)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fi>label{font-size:8.5px;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:3px}
+.rel{position:relative}
+.rel .u{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--t3);pointer-events:none}
+.rel .finput{padding-right:22px}
 
-/* Scroll body */
-.sidebar-body {
-  flex: 1;
-  overflow-y: scroll;           /* scroll selalu aktif, tidak ada layout shift */
-  scrollbar-gutter: stable;     /* reservasi ruang scrollbar dari awal */
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;                /* penting agar flex child bisa scroll */
-}
-.sidebar-body::-webkit-scrollbar { width: 4px; }
-.sidebar-body::-webkit-scrollbar-track { background: transparent; }
-.sidebar-body::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+.sline{display:flex;justify-content:space-between;align-items:center;padding:3.5px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.sline:last-child{border-bottom:none}
+.sk{font-size:10px;color:var(--t3)}
+.sv{font-family:var(--fmn);font-size:10.5px;color:var(--green)}
 
-/* Section cards — tinggi mengikuti isi, tidak dipotong */
-.section-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-dim);
-  border-radius: 8px;
-  overflow: visible;
-  flex-shrink: 0;               /* jangan dikecilkan oleh flex parent */
-}
-.section-title {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
-  color: var(--accent-cyan);
-  padding: 8px 12px 6px;
-  background: rgba(0, 212, 255, 0.04);
-  border-bottom: 1px solid var(--border-dim);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.section-title .dot {
-  width: 5px; height: 5px;
-  background: var(--accent-cyan);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--accent-cyan);
-}
-.section-body {
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.pbtn{background:var(--c1);border:1px solid var(--b1);border-radius:var(--r2);padding:8px 4px 7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;transition:all .18s;text-align:center}
+.pbtn:hover{border-color:rgba(0,212,255,.45);background:rgba(0,212,255,.05)}
+.pbtn.on{border-color:var(--cyan);background:rgba(0,212,255,.1);box-shadow:0 0 8px rgba(0,212,255,.12)}
+.pbtn .pi{font-size:17px;line-height:1;margin-bottom:2px}
+.pbtn .pn{font-family:var(--fhd);font-size:10.5px;font-weight:700;letter-spacing:.8px;color:var(--t1);text-transform:uppercase}
+.pbtn.on .pn{color:var(--cyan)}
+.pbtn .pd{font-size:8px;color:var(--t3);margin-top:1px}
+.pbtn .pv{font-family:var(--fmn);font-size:8px;color:var(--cyan);margin-top:2px}
+.pinfo{font-size:10px;color:var(--t2);background:var(--c1);border:1px solid var(--b1);border-radius:var(--r3);padding:7px 10px;line-height:1.55}
+.pinfo b{color:var(--cyan)}
 
-/* Form rows */
-.form-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.form-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  min-width: 90px;
-  letter-spacing: 0.5px;
-}
-.form-input {
-  flex: 1;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-dim);
-  border-radius: 4px;
-  color: var(--text-primary);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 13px;
-  padding: 5px 8px;
-  transition: border-color 0.2s;
-  outline: none;
-  width: 100%;
-}
-.form-input:focus {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
-}
-.form-input option {
-  background: var(--bg-card);
-}
-.unit-badge {
-  font-size: 10px;
-  color: var(--text-dim);
-  min-width: 22px;
-  text-align: right;
-}
+.mlist{display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto}
+.mitem{background:var(--c1);border:1px solid var(--b1);border-radius:var(--r3);padding:6px 10px;display:flex;align-items:center;gap:8px}
+.mdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.mlabel{flex:1;font-size:11px;color:var(--t2)}
+.mcount{font-family:var(--fmn);font-size:10px;color:var(--t3)}
 
-/* Dual input row */
-.dual-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.dual-item label {
-  font-size: 9px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 3px;
-}
+.egrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:10px 12px}
+.ebtn{padding:9px 6px;background:var(--c1);border:1px solid var(--b1);border-radius:var(--r3);color:var(--t2);font-family:var(--fhd);font-size:10.5px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.ebtn .ei{font-size:15px;line-height:1}
+.ebtn:hover{border-color:var(--orange);color:var(--orange);background:rgba(243,156,18,.08)}
 
-/* Action buttons */
-.btn-primary {
-  width: 100%;
-  padding: 9px 12px;
-  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,184,156,0.1));
-  border: 1px solid var(--accent-cyan);
-  border-radius: 6px;
-  color: var(--accent-cyan);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-.btn-primary:hover {
-  background: rgba(0,212,255,0.2);
-  box-shadow: 0 0 16px rgba(0,212,255,0.25);
-  transform: translateY(-1px);
-}
-.btn-primary:active { transform: translateY(0); }
+.pfoot{padding:10px 12px;border-top:1px solid var(--b1);display:flex;flex-direction:column;gap:6px;background:var(--c2);flex-shrink:0}
+.btn-p{width:100%;padding:9px;background:linear-gradient(135deg,rgba(0,212,255,.14),rgba(0,184,156,.08));border:1px solid var(--cyan);border-radius:var(--r2);color:var(--cyan);font-family:var(--fhd);font-size:12.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-p:hover{background:rgba(0,212,255,.2);box-shadow:0 0 14px rgba(0,212,255,.22);transform:translateY(-1px)}
+.btn-p:active{transform:none}
+.btn-s{width:100%;padding:9px;background:rgba(0,184,156,.06);border:1px solid rgba(0,184,156,.35);border-radius:var(--r2);color:var(--teal);font-family:var(--fhd);font-size:12.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-s:hover{background:rgba(0,184,156,.14);box-shadow:0 0 10px rgba(0,184,156,.18)}
 
-.btn-secondary {
-  width: 100%;
-  padding: 9px 12px;
-  background: rgba(0,184,156,0.08);
-  border: 1px solid rgba(0,184,156,0.4);
-  border-radius: 6px;
-  color: var(--accent-teal);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;align-items:center;justify-content:center;gap:7px;
-}
-.btn-secondary:hover {
-  background: rgba(0,184,156,0.16);
-  box-shadow: 0 0 12px rgba(0,184,156,0.2);
-}
+/* MAP */
+.mapwrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+.mbar{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:800;pointer-events:none}
+.mbadge{background:rgba(5,10,17,.9);border:1px solid var(--b1);backdrop-filter:blur(8px);border-radius:var(--r2);padding:5px 11px;font-family:var(--fmn);font-size:9.5px;color:var(--t2);pointer-events:auto}
+.mbadge span{color:var(--cyan)}
+.compass{position:absolute;bottom:28px;right:12px;z-index:800;width:44px;height:44px;background:rgba(5,10,17,.85);border:1px solid var(--b1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fhd);font-size:11px;font-weight:700;color:var(--cyan)}
 
-/* Export buttons grid */
-.export-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 10px 12px;
-}
-.btn-export {
-  padding: 8px 6px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-dim);
-  border-radius: 5px;
-  color: var(--text-secondary);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;flex-direction:column;align-items:center;gap:4px;
-}
-.btn-export .icon { font-size: 16px; line-height: 1; display: block; width: 16px; height: 16px; }
-.btn-export:hover {
-  border-color: var(--accent-orange);
-  color: var(--accent-orange);
-  background: rgba(255, 125, 59, 0.08);
-}
+/* LOADING OVERLAY */
+#mapload{position:absolute;inset:0;background:var(--c0);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:900;gap:12px;transition:opacity .4s}
+#mapload .spin{width:36px;height:36px;border:3px solid var(--b1);border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite}
+#mapload p{font-family:var(--fmn);font-size:11px;color:var(--t3);letter-spacing:1px}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* Info panel */
-.info-panel {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-dim);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-}
-.info-row:last-child { border-bottom: none; }
-.info-key {
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-}
-.info-val {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 11px;
-  color: var(--accent-green);
-}
+/* TOASTS */
+.toasts{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:5px;align-items:center;pointer-events:none}
+.toast{background:rgba(5,10,17,.96);border-radius:var(--r2);padding:9px 16px;font-size:11.5px;color:var(--t1);backdrop-filter:blur(10px);border-left:3px solid transparent;animation:tin .25s ease,tout .3s ease 2.8s forwards;white-space:nowrap}
+.toast.s{border-left-color:var(--green)}.toast.w{border-left-color:var(--orange)}.toast.i{border-left-color:var(--cyan)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes tout{to{opacity:0}}
 
-/* Mission list */
-.mission-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 160px;
-  overflow-y: auto;
-}
-.mission-item {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-dim);
-  border-radius: 5px;
-  padding: 7px 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-.mission-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.mission-label {
-  flex: 1;
-  color: var(--text-secondary);
-}
-.mission-count {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: var(--text-dim);
-}
-
-/* Bottom actions */
-.sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid var(--border-dim);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: var(--bg-panel);
-}
-
-/* ── MAP AREA ── */
-.map-wrapper {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-}
-
-#map {
-  width: 100%;
-  height: 100%;
-}
-
-/* Map top bar */
-.map-topbar {
-  position: absolute;
-  top: 10px; left: 10px; right: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  z-index: 1000;
-  pointer-events: none;
-}
-.map-badge {
-  background: rgba(8,13,20,0.85);
-  border: 1px solid var(--border-dim);
-  backdrop-filter: blur(8px);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: var(--text-secondary);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  pointer-events: auto;
-}
-.map-badge span { color: var(--accent-cyan); }
-
-/* Compass rose */
-.compass {
-  position: absolute;
-  bottom: 30px; right: 14px;
-  z-index: 1000;
-  background: rgba(8,13,20,0.8);
-  border: 1px solid var(--border-dim);
-  border-radius: 50%;
-  width: 52px; height: 52px;
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(6px);
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent-cyan);
-}
-
-/* Toast notifications */
-.toast-container {
-  position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2000;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
-  pointer-events: none;
-}
-.toast {
-  background: rgba(8,13,20,0.95);
-  border: 1px solid var(--border-dim);
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 12px;
-  color: var(--text-primary);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
-}
-.toast.success { border-color: var(--accent-green); }
-.toast.warning { border-color: var(--accent-orange); }
-.toast.info { border-color: var(--accent-cyan); }
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes toastOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* Leaflet overrides */
-.leaflet-bar a {
-  background: var(--bg-card) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--border-dim) !important;
-}
-.leaflet-bar a:hover {
-  background: var(--bg-card-hover) !important;
-  color: var(--accent-cyan) !important;
-}
-.leaflet-control-layers {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-dim) !important;
-  color: var(--text-primary) !important;
-  border-radius: 6px !important;
-}
-.leaflet-control-layers label {
-  color: var(--text-secondary) !important;
-  font-size: 12px !important;
-}
-.leaflet-draw-toolbar a, .leaflet-edit-toolbar a {
-  background: var(--bg-card) !important;
-  border-color: var(--border-dim) !important;
-}
-.leaflet-popup-content-wrapper {
-  background: var(--bg-card) !important;
-  color: var(--text-primary) !important;
-  border: 1px solid var(--border-dim) !important;
-  border-radius: 6px !important;
-}
-.leaflet-popup-tip { background: var(--bg-card) !important; }
+/* LEAFLET */
+.leaflet-bar a{background:var(--c3)!important;color:var(--t1)!important;border-color:var(--b1)!important}
+.leaflet-bar a:hover{background:var(--c4)!important;color:var(--cyan)!important}
+.leaflet-control-layers{background:var(--c3)!important;border:1px solid var(--b1)!important;border-radius:var(--r)!important}
+.leaflet-control-layers label{color:var(--t2)!important;font-size:11.5px!important}
+.leaflet-draw-toolbar a,.leaflet-edit-toolbar a{background:var(--c3)!important;border-color:var(--b1)!important}
+.leaflet-popup-content-wrapper{background:var(--c3)!important;color:var(--t1)!important;border:1px solid var(--b1)!important;border-radius:var(--r)!important}
+.leaflet-popup-tip{background:var(--c3)!important}
 </style>
 </head>
-
 <body>
-<div class="app-container">
+<div class="shell">
 
-  <!-- ── SIDEBAR ── -->
-  <div class="sidebar">
-
-    <div class="sidebar-header">
-      <div class="brand-row">
-        <div class="brand-icon">✈</div>
+  <div class="panel">
+    <div class="phead">
+      <div class="logo">
+        <div class="logo-icon">&#9992;</div>
         <div>
-          <div class="brand-text">FlightPlanner</div>
-          <div class="brand-sub">Autonomous Mission Designer</div>
+          <div class="logo-name">DroneMap</div>
+          <div class="logo-sub">Autonomous Flight Planner</div>
         </div>
       </div>
     </div>
 
-    <!-- Status pills -->
-    <div class="status-bar">
-      <div class="status-pill">
-        <span class="val" id="stat-wp">0</span>
-        <span class="lbl">Waypoints</span>
-      </div>
-      <div class="status-pill">
-        <span class="val" id="stat-mis">0</span>
-        <span class="lbl">Missions</span>
-      </div>
-      <div class="status-pill">
-        <span class="val" id="stat-bat">—</span>
-        <span class="lbl">Battery</span>
-      </div>
+    <div class="srow">
+      <div class="spill"><span class="spill-v" id="sw">0</span><div class="spill-l">Waypoints</div></div>
+      <div class="spill"><span class="spill-v" id="sm">0</span><div class="spill-l">Missions</div></div>
+      <div class="spill"><span class="spill-v" id="sb">&#8212;</span><div class="spill-l">Battery</div></div>
     </div>
 
-    <div class="sidebar-body">
+    <div class="pbody">
+      <!-- PRESET -->
+      <div class="card">
+        <div class="card-head"><span class="dot"></span>Mission Preset</div>
+        <div class="card-body">
+          <div class="pgrid">
+            <button class="pbtn on" id="pr-mapping" onclick="FP.setPreset('mapping')">
+              <span class="pi">&#128506;</span><span class="pn">Mapping</span>
+              <span class="pd">3D / Fotogrametri</span><span class="pv">FL80 &middot; SL75</span>
+            </button>
+            <button class="pbtn" id="pr-survey" onclick="FP.setPreset('survey')">
+              <span class="pi">&#128208;</span><span class="pn">Survey</span>
+              <span class="pd">Inspeksi &amp; Ukur</span><span class="pv">FL60 &middot; SL50</span>
+            </button>
+            <button class="pbtn" id="pr-doc" onclick="FP.setPreset('doc')">
+              <span class="pi">&#128247;</span><span class="pn">Documentation</span>
+              <span class="pd">Visual / Video</span><span class="pv">FL30 &middot; SL20</span>
+            </button>
+            <button class="pbtn" id="pr-seamless" onclick="FP.setPreset('seamless')">
+              <span class="pi">&#9638;</span><span class="pn">Seamless</span>
+              <span class="pd">Sambung tanpa timpa</span><span class="pv">FL5 &middot; SL5</span>
+            </button>
+          </div>
+          <div class="pinfo" id="pinfo"><b>Mapping</b> &#8212; Overlap tinggi untuk 3D &amp; ortofoto. Cocok untuk Agisoft, Pix4D, DroneDeploy.</div>
+        </div>
+      </div>
 
-      <!-- Flight Params -->
-      <div class="section-card">
-        <div class="section-title"><span class="dot"></span> Flight Parameters</div>
-        <div class="section-body">
-          <div class="form-row">
-            <span class="form-label">Drone</span>
-            <select class="form-input" id="drone">
+      <!-- FLIGHT PARAMS -->
+      <div class="card">
+        <div class="card-head"><span class="dot"></span>Flight Parameters</div>
+        <div class="card-body">
+          <div class="frow">
+            <span class="flabel">Drone</span>
+            <select class="finput" id="drone">
               <option value="mavic2">Mavic 2 Pro</option>
               <option value="air2s" selected>Air 2S</option>
               <option value="phantom4">Phantom 4 Pro</option>
             </select>
           </div>
-          <div class="dual-row">
-            <div class="dual-item">
-              <label>Altitude</label>
-              <div style="position:relative">
-                <input class="form-input" type="number" id="alt" value="100" style="padding-right:26px">
-                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">m</span>
-              </div>
-            </div>
-            <div class="dual-item">
-              <label>Speed</label>
-              <div style="position:relative">
-                <input class="form-input" type="number" id="speed" value="8" style="padding-right:30px">
-                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">m/s</span>
-              </div>
-            </div>
+          <div class="g2">
+            <div class="fi"><label>Altitude</label><div class="rel"><input class="finput" type="number" id="alt" value="100" min="10" max="500"><span class="u">m</span></div></div>
+            <div class="fi"><label>Speed</label><div class="rel"><input class="finput" type="number" id="speed" value="8" min="1" max="15"><span class="u">m/s</span></div></div>
           </div>
         </div>
       </div>
 
-      <!-- Overlap -->
-      <div class="section-card">
-        <div class="section-title"><span class="dot"></span> Coverage Overlap</div>
-        <div class="section-body">
-          <div class="dual-row">
-            <div class="dual-item">
-              <label>Sidelap</label>
-              <div style="position:relative">
-                <input class="form-input" type="number" id="sidelap" value="70" min="10" max="95" style="padding-right:18px">
-                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">%</span>
-              </div>
-            </div>
-            <div class="dual-item">
-              <label>Frontlap</label>
-              <div style="position:relative">
-                <input class="form-input" type="number" id="frontlap" value="75" min="10" max="95" style="padding-right:18px">
-                <span style="position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text-dim)">%</span>
-              </div>
-            </div>
+      <!-- OVERLAP -->
+      <div class="card">
+        <div class="card-head"><span class="dot"></span>Coverage Overlap</div>
+        <div class="card-body">
+          <div class="g2">
+            <div class="fi"><label>Sidelap</label><div class="rel"><input class="finput" type="number" id="sidelap" value="75" min="0" max="95"><span class="u">%</span></div></div>
+            <div class="fi"><label>Frontlap</label><div class="rel"><input class="finput" type="number" id="frontlap" value="80" min="0" max="95"><span class="u">%</span></div></div>
           </div>
         </div>
       </div>
 
-      <!-- Flight Stats -->
-      <div class="section-card">
-        <div class="section-title"><span class="dot"></span> Mission Statistics</div>
-        <div class="section-body" style="padding:0">
-          <div class="info-panel" style="border:none;border-radius:0;background:transparent">
-            <div class="info-row">
-              <span class="info-key">Est. Flight Time</span>
-              <span class="info-val" id="stat-time">—</span>
-            </div>
-            <div class="info-row">
-              <span class="info-key">Total Photos</span>
-              <span class="info-val" id="stat-photos">—</span>
-            </div>
-            <div class="info-row">
-              <span class="info-key">Photo Interval</span>
-              <span class="info-val" id="stat-interval">—</span>
-            </div>
-            <div class="info-row">
-              <span class="info-key">Forward Spacing</span>
-              <span class="info-val" id="stat-spacing">—</span>
-            </div>
-            <div class="info-row">
-              <span class="info-key">Total Distance</span>
-              <span class="info-val" id="stat-dist">—</span>
-            </div>
-          </div>
+      <!-- STATISTICS -->
+      <div class="card">
+        <div class="card-head"><span class="dot"></span>Mission Statistics</div>
+        <div class="card-body" style="padding:8px 12px">
+          <div class="sline"><span class="sk">Est. Flight Time</span><span class="sv" id="st-time">&#8212;</span></div>
+          <div class="sline"><span class="sk">Total Photos</span><span class="sv" id="st-photo">&#8212;</span></div>
+          <div class="sline"><span class="sk">Photo Interval</span><span class="sv" id="st-int">&#8212;</span></div>
+          <div class="sline"><span class="sk">Forward Spacing</span><span class="sv" id="st-fwd">&#8212;</span></div>
+          <div class="sline"><span class="sk">Total Distance</span><span class="sv" id="st-dist">&#8212;</span></div>
         </div>
       </div>
 
-      <!-- Mission Breakdown -->
-      <div class="section-card" id="mission-section" style="display:none">
-        <div class="section-title"><span class="dot"></span> Mission Breakdown</div>
-        <div class="section-body" id="mission-list-container">
-          <div class="mission-list" id="mission-list"></div>
+      <!-- MISSION BREAKDOWN -->
+      <div class="card" id="mis-card" style="display:none">
+        <div class="card-head"><span class="dot"></span>Mission Breakdown</div>
+        <div class="card-body">
+          <div class="mlist" id="mis-list"></div>
         </div>
       </div>
 
-      <!-- Export -->
-      <div class="section-card">
-        <div class="section-title"><span class="dot"></span> Export Mission</div>
-        <div class="export-grid">
-          <button class="btn-export" onclick="exportCSVLitchi()">
-            <span class="icon">📄</span> CSV Litchi
-          </button>
-          <button class="btn-export" onclick="exportKML()">
-            <span class="icon">🗺</span> KML
-          </button>
-          <button class="btn-export" onclick="exportGeoJSON()">
-            <span class="icon">{}</span> GeoJSON
-          </button>
-          <button class="btn-export" onclick="exportKMZ()">
-            <span class="icon">📦</span> KMZ
-          </button>
+      <!-- EXPORT -->
+      <div class="card">
+        <div class="card-head"><span class="dot"></span>Export Mission</div>
+        <div class="egrid">
+          <button class="ebtn" onclick="FP.exportCSV()"><span class="ei">&#128196;</span>CSV Litchi</button>
+          <button class="ebtn" onclick="FP.exportKML()"><span class="ei">&#128506;</span>KML</button>
+          <button class="ebtn" onclick="FP.exportJSON()"><span class="ei">{ }</span>GeoJSON</button>
+          <button class="ebtn" onclick="FP.exportKMZ()"><span class="ei">&#128230;</span>KMZ</button>
         </div>
       </div>
-
-    </div><!-- /sidebar-body -->
-
-    <div class="sidebar-footer">
-      <button class="btn-primary" onclick="generateGrid()">
-        ⚡ Generate Grid
-      </button>
-      <button class="btn-secondary" onclick="splitMission()">
-        ✂ Split Mission
-      </button>
     </div>
 
-  </div><!-- /sidebar -->
+    <div class="pfoot">
+      <button class="btn-p" onclick="FP.genGrid()">&#9889; Generate Grid</button>
+      <button class="btn-s" onclick="FP.split()">&#9986; Split Mission</button>
+    </div>
+  </div><!-- /panel -->
 
-  <!-- ── MAP ── -->
-  <div class="map-wrapper">
+  <div class="mapwrap">
     <div id="map"></div>
-
-    <!-- Top bar overlay -->
-    <div class="map-topbar">
-      <div class="map-badge">
-        <span id="map-coords">Hover for coordinates</span>
-      </div>
-      <div class="map-badge" id="map-zoom-badge">
-        Zoom: <span id="map-zoom">15</span>
-      </div>
+    <!-- loading indicator ditampilkan sampai map siap -->
+    <div id="mapload">
+      <div class="spin"></div>
+      <p>Memuat peta...</p>
     </div>
-
-    <!-- Compass -->
+    <div class="mbar">
+      <div class="mbadge"><span id="mc">Arahkan kursor ke peta</span></div>
+      <div class="mbadge">Zoom <span id="mz">15</span></div>
+    </div>
     <div class="compass">N</div>
-
-    <!-- Toasts -->
-    <div class="toast-container" id="toast-container"></div>
+    <div class="toasts" id="toasts"></div>
   </div>
 
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-<script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+<!-- CDN: cdnjs (lebih andal dari unpkg di Indonesia) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
-// ── STATE ──
-var missions = [];
-var waypoints = [];
+/* ================================================================
+   FP — Flight Planner namespace
+   Semua fungsi global di-mount ke window.FP agar aman dari konflik
+   dan dapat dipanggil dari onclick HTML.
+   Map diinisialisasi di DOMContentLoaded agar DOM pasti siap.
+================================================================ */
+var FP = {};
 
-// ── MAP INIT ──
-var map = L.map('map', { zoomControl: false }).setView([0.5, 101.45], 15);
-L.control.zoom({ position: 'topright' }).addTo(map);
-
-// Basemaps
-var osm       = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-var dark      = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-var topo      = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
-satellite.addTo(map);
-
-L.control.layers({"Dark": dark, "Satellite": satellite, "OSM": osm, "Topo": topo}, {}, {position:'topright'}).addTo(map);
-
-var drawnItems = new L.FeatureGroup().addTo(map);
-var gridLayer  = new L.FeatureGroup().addTo(map);
-
-map.addControl(new L.Control.Draw({
-  position: 'topright',
-  edit: { featureGroup: drawnItems },
-  draw: { polygon: true, polyline: false, rectangle: true, circle: false, marker: false, circlemarker: false }
-}));
-
-map.on(L.Draw.Event.CREATED, function(e) {
-  drawnItems.clearLayers();
-  gridLayer.clearLayers();
-  missions = [];
-  waypoints = [];
-  drawnItems.addLayer(e.layer);
-  updateStats();
-  showToast('info', '✅ Polygon siap. Klik Generate Grid.');
-});
-
-map.on('mousemove', function(e) {
-  document.getElementById('map-coords').textContent =
-    e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6);
-});
-
-map.on('zoomend', function() {
-  document.getElementById('map-zoom').textContent = map.getZoom();
-});
-
-// ── DRONE SPECS ──
-const droneSpecs = {
-  mavic2:   { sensor: 13.2, focal: 10.26, sensorH: 8.8,  focalH: 10.26 },
-  air2s:    { sensor: 13.2, focal: 8.4,   sensorH: 8.8,  focalH: 8.4  },
-  phantom4: { sensor: 13.2, focal: 8.8,   sensorH: 8.8,  focalH: 8.8  }
+/* ── TOAST ─────────────────────────────────────────────────── */
+FP.toast = function(cls, msg) {
+  var box = document.getElementById('toasts');
+  var el = document.createElement('div');
+  el.className = 'toast ' + cls;
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(function() { el.remove(); }, 3300);
 };
 
-// ── SPACING CALC ──
-function calculateSpacing() {
-  const alt = parseFloat(document.getElementById('alt').value);
-  const drone = document.getElementById('drone').value;
-  const sidelap = parseFloat(document.getElementById('sidelap').value) / 100;
-  const spec = droneSpecs[drone];
-  const footprint = (spec.sensor / spec.focal) * alt;
-  return footprint * (1 - sidelap);
-}
+/* ── DOWNLOAD ───────────────────────────────────────────────── */
+FP.dl = function(name, data) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type: 'text/plain'}));
+  a.download = name;
+  a.click();
+};
 
-function calculatePhotoParams() {
-  const alt = parseFloat(document.getElementById('alt').value);
-  const speed = parseFloat(document.getElementById('speed').value);
-  const drone = document.getElementById('drone').value;
-  const frontlap = parseFloat(document.getElementById('frontlap').value) / 100;
-  const spec = droneSpecs[drone];
-  const footprint = (spec.sensor / spec.focal) * alt;
-  const forwardSpacing = footprint * (1 - frontlap);
-  const interval = forwardSpacing / speed;
-  return { footprint, forwardSpacing, interval };
-}
+/* ── PRESET ─────────────────────────────────────────────────── */
+var PRESETS = {
+  mapping:  {fl: 80, sl: 75, info: '<b>Mapping</b> \u2014 Overlap tinggi untuk 3D & ortofoto. Agisoft, Pix4D, DroneDeploy.'},
+  survey:   {fl: 60, sl: 50, info: '<b>Survey</b> \u2014 Overlap menengah untuk inspeksi & pengukuran area.'},
+  doc:      {fl: 30, sl: 20, info: '<b>Documentation</b> \u2014 Overlap minimal, cocok untuk dokumentasi visual.'},
+  seamless: {fl:  5, sl:  5, info: '<b>Seamless</b> \u2014 Foto bersambung. \u26a0 Berisiko celah jika ada angin.'}
+};
+FP.setPreset = function(k) {
+  var p = PRESETS[k];
+  if (!p) return;
+  document.getElementById('frontlap').value = p.fl;
+  document.getElementById('sidelap').value  = p.sl;
+  document.getElementById('pinfo').innerHTML = p.info;
+  ['mapping','survey','doc','seamless'].forEach(function(id) {
+    document.getElementById('pr-' + id).classList.toggle('on', id === k);
+  });
+  FP.calcStats();
+  FP.toast('i', '\u2705 Preset ' + k + ' diterapkan');
+};
 
-// ── GENERATE GRID ──
-function generateGrid() {
-  gridLayer.clearLayers();
-  waypoints = [];
-  missions = [];
+/* ── DRONE SPECS ─────────────────────────────────────────────── */
+var SPECS = {
+  mavic2:   {sw: 13.2, fl: 10.26},
+  air2s:    {sw: 13.2, fl: 8.4},
+  phantom4: {sw: 13.2, fl: 8.8}
+};
+FP.spacing = function() {
+  var s  = SPECS[document.getElementById('drone').value];
+  var alt = +document.getElementById('alt').value;
+  var sl  = +document.getElementById('sidelap').value / 100;
+  return (s.sw / s.fl) * alt * (1 - sl);
+};
+FP.photoP = function() {
+  var s   = SPECS[document.getElementById('drone').value];
+  var alt = +document.getElementById('alt').value;
+  var spd = +document.getElementById('speed').value;
+  var fl  = +document.getElementById('frontlap').value / 100;
+  var fp  = (s.sw / s.fl) * alt;
+  var fwd = fp * (1 - fl);
+  return {fp: fp, fwd: fwd, ivl: fwd / spd};
+};
 
-  var polyLayer = drawnItems.getLayers()[0];
-  if (!polyLayer) { showToast('warning', '⚠ Gambar polygon area terlebih dahulu!'); return; }
+/* ── STATE ───────────────────────────────────────────────────── */
+var WP  = [];
+var MIS = [];
 
-  const alt = parseFloat(document.getElementById('alt').value);
-  const spacing = calculateSpacing();
-  const polygon = polyLayer.toGeoJSON();
-  const bbox = turf.bbox(polygon);
+/* ── MAP (diisi setelah DOMContentLoaded) ───────────────────── */
+var map    = null;
+var drawn  = null;
+var grid   = null;
 
-  const step = spacing / 111320;
-  let y = bbox[1];
-  let toggle = false;
+/* ── STATS ───────────────────────────────────────────────────── */
+FP.calcStats = function() {
+  var spd  = +document.getElementById('speed').value;
+  var dist = 0;
+  if (map) {
+    for (var i = 1; i < WP.length; i++) {
+      dist += map.distance([WP[i-1].lat, WP[i-1].lng], [WP[i].lat, WP[i].lng]);
+    }
+  }
+  document.getElementById('sw').textContent = WP.length;
+  if (WP.length < 2) return;
+  var t = dist / spd;
+  var p = FP.photoP();
+  document.getElementById('sb').textContent       = Math.ceil(t / 1500);
+  document.getElementById('st-time').textContent  = (t / 60).toFixed(1) + ' min';
+  document.getElementById('st-photo').textContent = Math.ceil(dist / p.fwd) + ' pcs';
+  document.getElementById('st-int').textContent   = p.ivl.toFixed(1) + ' s';
+  document.getElementById('st-fwd').textContent   = p.fwd.toFixed(1) + ' m';
+  document.getElementById('st-dist').textContent  = (dist / 1000).toFixed(2) + ' km';
+};
 
-  while (y <= bbox[3]) {
-    const line = turf.lineString([[bbox[0], y], [bbox[2], y]]);
-    const clipped = turf.lineIntersect(polygon, line);
-
-    if (clipped.features.length >= 2) {
-      let pts = clipped.features.map(f => f.geometry.coordinates);
-      pts.sort((a, b) => a[0] - b[0]);
-      if (toggle) pts.reverse();
-
-      for (let i = 0; i < pts.length; i++) {
-        let heading = 90;
+/* ── GENERATE GRID ───────────────────────────────────────────── */
+FP.genGrid = function() {
+  if (!map) { FP.toast('w', '\u26a0 Peta belum siap.'); return; }
+  grid.clearLayers(); WP = []; MIS = [];
+  var poly = drawn.getLayers()[0];
+  if (!poly) { FP.toast('w', '\u26a0 Gambar polygon area terlebih dahulu!'); return; }
+  var alt  = +document.getElementById('alt').value;
+  var sp   = FP.spacing();
+  var pgeo = poly.toGeoJSON();
+  var bb   = turf.bbox(pgeo);
+  var step = sp / 111320;
+  var y    = bb[1];
+  var flip = false;
+  while (y <= bb[3]) {
+    var ln = turf.lineString([[bb[0], y], [bb[2], y]]);
+    var cx = turf.lineIntersect(pgeo, ln);
+    if (cx.features.length >= 2) {
+      var pts = cx.features.map(function(f) { return f.geometry.coordinates; });
+      pts.sort(function(a, b) { return a[0] - b[0]; });
+      if (flip) pts.reverse();
+      for (var i = 0; i < pts.length; i++) {
+        var hdg = 90;
         if (i < pts.length - 1) {
-          const dx = pts[i+1][0] - pts[i][0];
-          const dy = pts[i+1][1] - pts[i][1];
-          heading = Math.atan2(dx, dy) * 180 / Math.PI;
+          hdg = Math.atan2(pts[i+1][0] - pts[i][0], pts[i+1][1] - pts[i][1]) * 180 / Math.PI;
+          if (hdg < 0) hdg += 360;
         }
-        waypoints.push({ lat: pts[i][1], lng: pts[i][0], alt, heading });
+        WP.push({lat: pts[i][1], lng: pts[i][0], alt: alt, hdg: hdg});
       }
-
-      const latlngs = pts.map(p => [p[1], p[0]]);
-      L.polyline(latlngs, {
-        color: '#00d4ff',
-        weight: 1.5,
-        opacity: 0.7
-      }).addTo(gridLayer);
-
-      // Waypoint markers (start/end only for clarity)
-      if (pts.length > 0) {
-        const c = [pts[0][1], pts[0][0]];
-        L.circleMarker(c, { radius: 3, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 1, weight: 0 }).addTo(gridLayer);
-      }
-
-      toggle = !toggle;
+      L.polyline(pts.map(function(p) { return [p[1], p[0]]; }), {color: '#00d4ff', weight: 1.4, opacity: 0.65}).addTo(grid);
+      L.circleMarker([pts[0][1], pts[0][0]], {radius: 2.5, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 1, weight: 0}).addTo(grid);
+      flip = !flip;
     }
     y += step;
   }
+  FP.calcStats();
+  FP.toast('s', '\u2705 ' + WP.length + ' waypoints generated');
+};
 
-  updateStats();
-  showToast('success', `✅ ${waypoints.length} waypoints generated`);
-}
-
-// ── SPLIT MISSION ──
-function splitMission() {
-  if (waypoints.length === 0) { showToast('warning', '⚠ Generate grid terlebih dahulu!'); return; }
-
-  const speed = parseFloat(document.getElementById('speed').value);
-  const batteryTime = 25 * 60;
-  let currentMission = [];
-  let currentTime = 0;
-  missions = [];
-
-  for (let i = 1; i < waypoints.length; i++) {
-    const prev = waypoints[i - 1];
-    const curr = waypoints[i];
-    const dist = map.distance([prev.lat, prev.lng], [curr.lat, curr.lng]);
-    const t = dist / speed;
-
-    if (currentTime + t > batteryTime) {
-      if (currentMission.length > 0) missions.push(currentMission);
-      currentMission = [];
-      currentTime = 0;
-    }
-    currentMission.push(curr);
-    currentTime += t;
+/* ── SPLIT ───────────────────────────────────────────────────── */
+var MC = ['#e74c3c','#00d4ff','#2ecc71','#f39c12','#9b59b6','#f1c40f'];
+FP.split = function() {
+  if (!WP.length) { FP.toast('w', '\u26a0 Generate grid terlebih dahulu!'); return; }
+  var spd = +document.getElementById('speed').value;
+  var BAT = 1500; // 25 menit * 60 detik
+  var cur = [], t = 0;
+  MIS = [];
+  for (var i = 1; i < WP.length; i++) {
+    var d  = map.distance([WP[i-1].lat, WP[i-1].lng], [WP[i].lat, WP[i].lng]);
+    var dt = d / spd;
+    if (t + dt > BAT) { if (cur.length) MIS.push(cur); cur = []; t = 0; }
+    cur.push(WP[i]); t += dt;
   }
-  if (currentMission.length > 0) missions.push(currentMission);
-
-  // Add first waypoint to first mission if missing
-  if (missions.length > 0 && waypoints.length > 0) {
-    missions[0].unshift(waypoints[0]);
-  }
-
-  visualizeMissions();
-  renderMissionList();
-  document.getElementById('stat-mis').textContent = missions.length;
-  document.getElementById('mission-section').style.display = '';
-  showToast('success', `✅ Dibagi menjadi ${missions.length} mission`);
-}
-
-const missionColors = ['#ff3d5a', '#00d4ff', '#39e96e', '#ff7d3b', '#b57aff', '#ffd600'];
-
-function visualizeMissions() {
-  gridLayer.clearLayers();
-  missions.forEach((mission, idx) => {
-    const color = missionColors[idx % missionColors.length];
-    const latlngs = mission.map(p => [p.lat, p.lng]);
-    L.polyline(latlngs, { color, weight: 2.5, opacity: 0.85 }).addTo(gridLayer);
-    if (latlngs.length > 0) {
-      L.circleMarker(latlngs[0], { radius: 5, color, fillColor: color, fillOpacity: 1, weight: 0 })
-        .bindPopup(`<b>Mission ${idx + 1}</b><br>Start`)
-        .addTo(gridLayer);
-    }
+  if (cur.length) MIS.push(cur);
+  if (MIS.length && WP.length) MIS[0].unshift(WP[0]);
+  FP.drawMis(); FP.buildMisUI();
+  document.getElementById('sm').textContent = MIS.length;
+  document.getElementById('mis-card').style.display = '';
+  FP.toast('s', '\u2705 Dibagi menjadi ' + MIS.length + ' mission');
+};
+FP.drawMis = function() {
+  grid.clearLayers();
+  MIS.forEach(function(m, i) {
+    var c = MC[i % MC.length];
+    L.polyline(m.map(function(p) { return [p.lat, p.lng]; }), {color: c, weight: 2.2, opacity: 0.9}).addTo(grid);
+    L.circleMarker([m[0].lat, m[0].lng], {radius: 5, color: c, fillColor: c, fillOpacity: 1, weight: 0})
+      .bindPopup('<b style="color:' + c + '">Mission ' + (i+1) + '</b><br><small>Start point</small>').addTo(grid);
   });
-}
-
-function renderMissionList() {
-  const list = document.getElementById('mission-list');
-  list.innerHTML = '';
-  missions.forEach((mission, idx) => {
-    const color = missionColors[idx % missionColors.length];
-    const div = document.createElement('div');
-    div.className = 'mission-item';
-    div.innerHTML = `
-      <div class="mission-dot" style="background:${color};box-shadow:0 0 6px ${color}"></div>
-      <span class="mission-label">Mission ${idx + 1}</span>
-      <span class="mission-count">${mission.length} WP</span>
-    `;
-    list.appendChild(div);
+};
+FP.buildMisUI = function() {
+  var el = document.getElementById('mis-list');
+  el.innerHTML = '';
+  MIS.forEach(function(m, i) {
+    var c = MC[i % MC.length];
+    var d = document.createElement('div'); d.className = 'mitem';
+    d.innerHTML = '<div class="mdot" style="background:' + c + ';box-shadow:0 0 5px ' + c + '"></div>'
+      + '<span class="mlabel">Mission ' + (i+1) + '</span>'
+      + '<span class="mcount">' + m.length + ' WP</span>';
+    el.appendChild(d);
   });
-}
+};
 
-function updateStats() {
-  const speed = parseFloat(document.getElementById('speed').value);
-  let distance = 0;
-  for (let i = 1; i < waypoints.length; i++) {
-    distance += map.distance([waypoints[i-1].lat, waypoints[i-1].lng], [waypoints[i].lat, waypoints[i].lng]);
+/* ── EXPORTS ─────────────────────────────────────────────────── */
+FP.exportCSV = function() {
+  if (!MIS.length) { FP.toast('w', '\u26a0 Split mission terlebih dahulu!'); return; }
+  var spd = +document.getElementById('speed').value;
+  var p   = FP.photoP();
+  var hdr = 'latitude,longitude,altitude(m),heading(deg),curvesize(m),rotationdir,gimbalmode,'
+          + 'gimbalpitchangle,actiontype1,actionparam1,altitudemode,speed(m/s),'
+          + 'poi_latitude,poi_longitude,poi_altitude(m),poi_altitudemode,photo_timeinterval,photo_distinterval';
+  MIS.forEach(function(m, i) {
+    var rows = m.map(function(w) {
+      return [w.lat, w.lng, w.alt, w.hdg.toFixed(1), 0, 0, 0, -90, 1, 0, 0,
+              spd, 0, 0, 0, 0, -1, p.fwd.toFixed(1)].join(',');
+    });
+    FP.dl('mission_' + (i+1) + '_litchi.csv', hdr + '\n' + rows.join('\n'));
+  });
+  FP.toast('s', '\u2705 ' + MIS.length + ' file CSV diekspor');
+};
+FP.exportKML = function() {
+  if (!MIS.length) { FP.toast('w', '\u26a0 Split mission terlebih dahulu!'); return; }
+  MIS.forEach(function(m, i) {
+    var c   = MC[i % MC.length].replace('#', '');
+    var pms = m.map(function(w, j) {
+      return '<Placemark><name>WP ' + (j+1) + '</name>'
+           + '<Point><coordinates>' + w.lng + ',' + w.lat + ',' + w.alt + '</coordinates></Point></Placemark>';
+    }).join('');
+    var crd = m.map(function(w) { return w.lng + ',' + w.lat + ',' + w.alt; }).join(' ');
+    FP.dl('mission_' + (i+1) + '.kml',
+      '<?xml version="1.0" encoding="UTF-8"?>'
+      + '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+      + '<name>Mission ' + (i+1) + '</name>'
+      + '<Placemark><name>Flight Path</name>'
+      + '<Style><LineStyle><color>ff' + c + '</color><width>2</width></LineStyle></Style>'
+      + '<LineString><altitudeMode>relativeToGround</altitudeMode>'
+      + '<coordinates>' + crd + '</coordinates></LineString></Placemark>'
+      + pms + '</Document></kml>');
+  });
+  FP.toast('s', '\u2705 ' + MIS.length + ' file KML diekspor');
+};
+FP.exportJSON = function() {
+  if (!MIS.length) { FP.toast('w', '\u26a0 Split mission terlebih dahulu!'); return; }
+  MIS.forEach(function(m, i) {
+    var fs = [{
+      type: 'Feature',
+      properties: {name: 'Mission ' + (i+1), type: 'flightPath'},
+      geometry: {type: 'LineString', coordinates: m.map(function(w) { return [w.lng, w.lat, w.alt]; })}
+    }];
+    m.forEach(function(w, j) {
+      fs.push({type: 'Feature', properties: {seq: j+1, alt: w.alt, hdg: w.hdg},
+               geometry: {type: 'Point', coordinates: [w.lng, w.lat, w.alt]}});
+    });
+    FP.dl('mission_' + (i+1) + '.geojson',
+      JSON.stringify({type: 'FeatureCollection', features: fs}, null, 2));
+  });
+  FP.toast('s', '\u2705 ' + MIS.length + ' file GeoJSON diekspor');
+};
+FP.exportKMZ = async function() {
+  if (!MIS.length) { FP.toast('w', '\u26a0 Split mission terlebih dahulu!'); return; }
+  if (typeof JSZip === 'undefined') { FP.toast('w', '\u26a0 JSZip tidak tersedia.'); return; }
+  for (var i = 0; i < MIS.length; i++) {
+    var m   = MIS[i];
+    var c   = MC[i % MC.length].replace('#', '');
+    var pms = m.map(function(w, j) {
+      return '<Placemark><name>WP ' + (j+1) + '</name>'
+           + '<Point><coordinates>' + w.lng + ',' + w.lat + ',' + w.alt + '</coordinates></Point></Placemark>';
+    }).join('');
+    var crd = m.map(function(w) { return w.lng + ',' + w.lat + ',' + w.alt; }).join(' ');
+    var kml = '<?xml version="1.0" encoding="UTF-8"?>'
+            + '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+            + '<name>Mission ' + (i+1) + '</name>'
+            + '<Placemark><name>Flight Path</name>'
+            + '<Style><LineStyle><color>ff' + c + '</color><width>3</width></LineStyle></Style>'
+            + '<LineString><altitudeMode>relativeToGround</altitudeMode>'
+            + '<coordinates>' + crd + '</coordinates></LineString></Placemark>'
+            + pms + '</Document></kml>';
+    var z    = new JSZip();
+    z.file('doc.kml', kml);
+    var blob = await z.generateAsync({type: 'blob', compression: 'DEFLATE'});
+    var a    = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
+    a.download = 'mission_' + (i+1) + '.kmz';
+    a.click();
   }
+  FP.toast('s', '\u2705 ' + MIS.length + ' file KMZ diekspor');
+};
 
-  if (waypoints.length < 2) {
-    document.getElementById('stat-wp').textContent = waypoints.length;
+/* ── MAP INIT (dijamin setelah DOM + CDN siap) ───────────────── */
+document.addEventListener('DOMContentLoaded', function() {
+
+  /* Cek apakah Leaflet berhasil dimuat */
+  if (typeof L === 'undefined') {
+    document.getElementById('mapload').innerHTML =
+      '<p style="color:#e74c3c;font-size:12px;text-align:center;padding:20px">'
+      + '&#9888; Gagal memuat Leaflet.<br>Periksa koneksi internet Anda.</p>';
     return;
   }
 
-  const time = distance / speed;
-  const params = calculatePhotoParams();
-  const totalPhotos = Math.ceil(distance / params.forwardSpacing);
-  const batteryNeeded = Math.ceil(time / (25 * 60));
+  map   = L.map('map', {zoomControl: false}).setView([0.5, 101.45], 15);
+  drawn = new L.FeatureGroup().addTo(map);
+  grid  = new L.FeatureGroup().addTo(map);
 
-  document.getElementById('stat-wp').textContent = waypoints.length;
-  document.getElementById('stat-bat').textContent = batteryNeeded;
-  document.getElementById('stat-time').textContent = (time / 60).toFixed(1) + ' min';
-  document.getElementById('stat-photos').textContent = totalPhotos + ' pcs';
-  document.getElementById('stat-interval').textContent = params.interval.toFixed(1) + ' s';
-  document.getElementById('stat-spacing').textContent = params.forwardSpacing.toFixed(1) + ' m';
-  document.getElementById('stat-dist').textContent = (distance / 1000).toFixed(2) + ' km';
-}
+  L.control.zoom({position: 'topright'}).addTo(map);
 
-// ── EXPORT: CSV LITCHI ──
-function exportCSVLitchi() {
-  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
+  var TILES = {
+    Dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
+    Satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
+    OSM:       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+    Topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png')
+  };
+  TILES.Dark.addTo(map);
+  L.control.layers(TILES, {}, {position: 'topright'}).addTo(map);
 
-  const speed = parseFloat(document.getElementById('speed').value);
-  const params = calculatePhotoParams();
+  map.addControl(new L.Control.Draw({
+    position: 'topright',
+    edit:  {featureGroup: drawn},
+    draw:  {polygon: true, rectangle: true, polyline: false, circle: false, marker: false, circlemarker: false}
+  }));
 
-  const header = [
-    'latitude','longitude','altitude(m)','heading(deg)',
-    'curvesize(m)','rotationdir','gimbalmode','gimbalpitchangle',
-    'actiontype1','actionparam1','altitudemode','speed(m/s)',
-    'poi_latitude','poi_longitude','poi_altitude(m)','poi_altitudemode',
-    'photo_timeinterval','photo_distinterval'
-  ].join(',');
-
-  missions.forEach((mission, idx) => {
-    const rows = mission.map(w => [
-      w.lat, w.lng, w.alt,
-      w.heading.toFixed(1),
-      0, 0, 0, -90, 1, 0, 0,
-      speed,
-      0, 0, 0, 0, -1,
-      params.forwardSpacing.toFixed(1)
-    ].join(','));
-
-    downloadFile(`mission_${idx + 1}_litchi.csv`, header + '\n' + rows.join('\n'));
+  map.on(L.Draw.Event.CREATED, function(e) {
+    drawn.clearLayers(); grid.clearLayers();
+    WP = []; MIS = [];
+    drawn.addLayer(e.layer);
+    FP.calcStats();
+    FP.toast('i', '\u2705 Area siap \u2014 klik Generate Grid');
   });
-  showToast('success', `✅ ${missions.length} file CSV diekspor`);
-}
 
-// ── EXPORT: KML ──
-function exportKML() {
-  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
-
-  missions.forEach((mission, idx) => {
-    const color = missionColors[idx % missionColors.length].replace('#', '');
-    const placemarks = mission.map((w, i) => `
-    <Placemark>
-      <name>WP ${i + 1}</name>
-      <Style><IconStyle><scale>0.6</scale><Icon><href>http://maps.google.com/mapfiles/kml/paddle/wht-circle.png</href></Icon></IconStyle></Style>
-      <Point><coordinates>${w.lng},${w.lat},${w.alt}</coordinates></Point>
-    </Placemark>`).join('');
-
-    const coords = mission.map(w => `${w.lng},${w.lat},${w.alt}`).join(' ');
-    const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-<Document>
-  <name>Mission ${idx + 1}</name>
-  <Placemark>
-    <name>Flight Path</name>
-    <Style><LineStyle><color>ff${color}</color><width>2</width></LineStyle></Style>
-    <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${coords}</coordinates></LineString>
-  </Placemark>
-  ${placemarks}
-</Document>
-</kml>`;
-    downloadFile(`mission_${idx + 1}.kml`, kml);
+  map.on('mousemove', function(e) {
+    document.getElementById('mc').textContent =
+      e.latlng.lat.toFixed(6) + ',  ' + e.latlng.lng.toFixed(6);
   });
-  showToast('success', `✅ ${missions.length} file KML diekspor`);
-}
 
-// ── EXPORT: GeoJSON ──
-function exportGeoJSON() {
-  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
-
-  missions.forEach((mission, idx) => {
-    const features = [];
-
-    // LineString
-    features.push({
-      type: 'Feature',
-      properties: { name: `Mission ${idx + 1}`, type: 'flightPath' },
-      geometry: {
-        type: 'LineString',
-        coordinates: mission.map(w => [w.lng, w.lat, w.alt])
-      }
-    });
-
-    // Waypoints as Points
-    mission.forEach((w, i) => {
-      features.push({
-        type: 'Feature',
-        properties: {
-          name: `WP ${i + 1}`,
-          altitude: w.alt,
-          heading: w.heading,
-          sequence: i + 1
-        },
-        geometry: { type: 'Point', coordinates: [w.lng, w.lat, w.alt] }
-      });
-    });
-
-    const geojson = {
-      type: 'FeatureCollection',
-      properties: { mission: idx + 1, waypoints: mission.length, drone: document.getElementById('drone').value },
-      features
-    };
-
-    downloadFile(`mission_${idx + 1}.geojson`, JSON.stringify(geojson, null, 2));
+  map.on('zoomend', function() {
+    document.getElementById('mz').textContent = map.getZoom();
   });
-  showToast('success', `✅ ${missions.length} file GeoJSON diekspor`);
-}
 
-// ── EXPORT: KMZ ──
-async function exportKMZ() {
-  if (missions.length === 0) { showToast('warning', '⚠ Split mission terlebih dahulu!'); return; }
-  if (typeof JSZip === 'undefined') { showToast('warning', '⚠ JSZip belum load. Coba lagi.'); return; }
+  /* Sembunyikan loading overlay */
+  var ld = document.getElementById('mapload');
+  ld.style.opacity = '0';
+  setTimeout(function() { ld.style.display = 'none'; }, 450);
 
-  for (let idx = 0; idx < missions.length; idx++) {
-    const mission = missions[idx];
-    const color = missionColors[idx % missionColors.length].replace('#', '');
+  /* Input listeners */
+  ['alt', 'speed', 'sidelap', 'frontlap', 'drone'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', FP.calcStats);
+  });
 
-    const placemarks = mission.map((w, i) => `
-    <Placemark>
-      <name>WP ${i + 1}</name>
-      <Point><coordinates>${w.lng},${w.lat},${w.alt}</coordinates></Point>
-    </Placemark>`).join('');
-
-    const coords = mission.map(w => `${w.lng},${w.lat},${w.alt}`).join(' ');
-    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-<Document>
-  <name>Mission ${idx + 1}</name>
-  <Placemark>
-    <name>Flight Path</name>
-    <Style><LineStyle><color>ff${color}</color><width>3</width></LineStyle></Style>
-    <LineString><altitudeMode>relativeToGround</altitudeMode><coordinates>${coords}</coordinates></LineString>
-  </Placemark>
-  ${placemarks}
-</Document>
-</kml>`;
-
-    const zip = new JSZip();
-    zip.file('doc.kml', kmlContent);
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `mission_${idx + 1}.kmz`;
-    a.click();
-  }
-  showToast('success', `✅ ${missions.length} file KMZ diekspor`);
-}
-
-// ── UTILS ──
-function downloadFile(name, content) {
-  const blob = new Blob([content], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-}
-
-function showToast(type, msg) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = msg;
-  container.appendChild(toast);
-  setTimeout(() => toast.remove(), 3100);
-}
-
-// ── Auto-update stats on input change ──
-['alt', 'speed', 'sidelap', 'frontlap', 'drone'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updateStats);
-});
+}); /* end DOMContentLoaded */
 </script>
 </body>
 </html>
