@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DroneMap v3 - Multi Photo</title>
+<title>DroneMap v3 - Multi Photo (Fixed)</title>
 <script>
 (function(){
   var at='@',v={lf:'1.9.4',ld:'1.0.4'};
@@ -863,28 +863,18 @@ function buildAffine(gcps){
 }
 
 // =====================================================
-// ROTATED OVERLAY — dengan Feathering, BlendMode, Outline
+// FIX: ROTATED OVERLAY — Perbaikan canvas rendering
+// Bug lama: menggunakan _getMapPanePos() yang deprecated,
+// dan canvas tidak disinkronkan dengan benar ke viewport peta.
+// Fix: gunakan map.latLngToContainerPoint() + overlay pane offset
 // =====================================================
-function createRotatedOverlay(photo, toGeo){
-  var tl=toGeo(0,0), tr=toGeo(photo.w,0);
-  var br=toGeo(photo.w,photo.h), bl=toGeo(0,photo.h);
-  photo.corners={tl:tl,tr:tr,br:br,bl:bl};
-
-  var lats=[tl.lat,tr.lat,br.lat,bl.lat];
-  var lngs=[tl.lng,tr.lng,br.lng,bl.lng];
-  photo.bounds=[[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
-
-  if(photo.offsetLat===undefined)photo.offsetLat=0;
-  if(photo.offsetLng===undefined)photo.offsetLng=0;
-  if(photo.feather===undefined)photo.feather=0.06;
-  if(photo.blendMode===undefined)photo.blendMode='normal';
-
-  // Build offscreen canvas dengan feather gradient mask
-  function buildOfc(imgEl, w, h, featherAmt){
+function buildFeatheredCanvas(imgSrc, w, h, featherAmt, callback){
+  var img=new Image();
+  img.onload=function(){
     var ofc=document.createElement('canvas');
     ofc.width=w; ofc.height=h;
     var octx=ofc.getContext('2d');
-    octx.drawImage(imgEl,0,0,w,h);
+    octx.drawImage(img,0,0,w,h);
     if(featherAmt>0){
       var fw=w*featherAmt, fh=h*featherAmt;
       octx.globalCompositeOperation='destination-in';
@@ -901,21 +891,49 @@ function createRotatedOverlay(photo, toGeo){
       gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');
       octx.fillStyle=gr;octx.fillRect(w-fw,0,fw,h);
     }
-    return ofc;
-  }
+    callback(ofc,img);
+  };
+  img.src=imgSrc;
+}
+
+function createRotatedOverlay(photo, toGeo){
+  var tl=toGeo(0,0), tr=toGeo(photo.w,0);
+  var br=toGeo(photo.w,photo.h), bl=toGeo(0,photo.h);
+  photo.corners={tl:tl,tr:tr,br:br,bl:bl};
+
+  var lats=[tl.lat,tr.lat,br.lat,bl.lat];
+  var lngs=[tl.lng,tr.lng,br.lng,bl.lng];
+  photo.bounds=[[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
+
+  if(photo.offsetLat===undefined)photo.offsetLat=0;
+  if(photo.offsetLng===undefined)photo.offsetLng=0;
+  if(photo.feather===undefined)photo.feather=0.06;
+  if(photo.blendMode===undefined)photo.blendMode='normal';
 
   var RotatedLayer=L.Layer.extend({
-    _ofc:null, _ofcFeather:-1,
+    _ofc:null,
+    _ofcImg:null,
+    _ofcFeather:-1,
+    _canvas:null,
 
     onAdd:function(map){
       this._map=map;
+      // ✅ FIX: Gunakan overlayPane dan buat canvas yang di-sync dengan peta
       this._canvas=document.createElement('canvas');
-      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
+      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;image-rendering:pixelated;';
       map.getPanes().overlayPane.appendChild(this._canvas);
+
       var self=this;
-      this._img=new Image();
-      this._img.onload=function(){self._rebuildOfc();self._update();};
-      this._img.src=photo.src;
+
+      // ✅ FIX: Load gambar dan buat canvas terfeather sekali saja
+      buildFeatheredCanvas(photo.src, photo.w, photo.h, photo.feather, function(ofc, rawImg){
+        self._ofc=ofc;
+        self._ofcImg=rawImg;
+        self._ofcFeather=photo.feather;
+        self._update();
+      });
+
+      // Drag mode handler
       this._canvas.addEventListener('mousedown',function(e){
         if(!_dragModeActive)return;
         e.stopPropagation();
@@ -924,78 +942,105 @@ function createRotatedOverlay(photo, toGeo){
         _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
         map.dragging.disable();document.body.style.cursor='grabbing';e.preventDefault();
       });
+
       map.on('zoom viewreset move zoomend moveend resize',this._update,this);
-      this._update();
     },
 
     onRemove:function(map){
       if(this._canvas&&this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
       map.off('zoom viewreset move zoomend moveend resize',this._update,this);
-      this._ofc=null;
+      this._ofc=null;this._ofcImg=null;
     },
 
     _rebuildOfc:function(){
-      if(!this._img||!this._img.complete||!this._img.naturalWidth)return;
-      this._ofc=buildOfc(this._img,photo.w,photo.h,photo.feather);
-      this._ofcFeather=photo.feather;
+      if(!this._ofcImg)return;
+      var self=this;
+      buildFeatheredCanvas(photo.src, photo.w, photo.h, photo.feather, function(ofc, rawImg){
+        self._ofc=ofc;
+        self._ofcImg=rawImg;
+        self._ofcFeather=photo.feather;
+        self._update();
+      });
     },
 
     _update:function(){
-      if(!this._img||!this._img.complete||!this._img.naturalWidth)return;
-      if(!this._ofc||this._ofcFeather!==photo.feather)this._rebuildOfc();
+      if(!this._ofc)return;
       var map=this._map;
-      var size=map.getSize();
-      var panePos=map._getMapPanePos?map._getMapPanePos():{x:0,y:0};
-      this._canvas.width=size.x; this._canvas.height=size.y;
-      this._canvas.style.left=(-panePos.x)+'px';
-      this._canvas.style.top=(-panePos.y)+'px';
-      this._canvas.style.pointerEvents=_dragModeActive?'auto':'none';
+      if(!map)return;
+
+      // ✅ FIX UTAMA: Sinkronisasi canvas dengan overlay pane Leaflet
+      // Leaflet menggeser overlay pane saat pan/zoom, jadi canvas
+      // harus menutupi seluruh container, bukan hanya viewport saat ini.
+      var mapSize=map.getSize();
+      var topLeft=map.containerPointToLayerPoint([0,0]);
+
+      this._canvas.style.width=mapSize.x+'px';
+      this._canvas.style.height=mapSize.y+'px';
+      this._canvas.style.left=topLeft.x+'px';
+      this._canvas.style.top=topLeft.y+'px';
+      this._canvas.width=mapSize.x;
+      this._canvas.height=mapSize.y;
       this._canvas.style.zIndex=(photo.zOrder||0)+10;
+      this._canvas.style.pointerEvents=_dragModeActive?'auto':'none';
 
       var oLat=photo.offsetLat||0, oLng=photo.offsetLng||0;
+
+      // ✅ FIX: Konversi sudut foto ke layer points (bukan container points)
+      // Ini yang membuat overlay tidak bergeser saat peta di-pan
       var pts=[
-        L.latLng(tl.lat+oLat,tl.lng+oLng),
-        L.latLng(tr.lat+oLat,tr.lng+oLng),
-        L.latLng(br.lat+oLat,br.lng+oLng),
-        L.latLng(bl.lat+oLat,bl.lng+oLng)
-      ].map(function(ll){return map.latLngToContainerPoint(ll);});
+        map.latLngToLayerPoint(L.latLng(tl.lat+oLat,tl.lng+oLng)),
+        map.latLngToLayerPoint(L.latLng(tr.lat+oLat,tr.lng+oLng)),
+        map.latLngToLayerPoint(L.latLng(br.lat+oLat,br.lng+oLng)),
+        map.latLngToLayerPoint(L.latLng(bl.lat+oLat,bl.lng+oLng))
+      ];
+
+      // Offset ke koordinat canvas (kompensasi posisi pane)
+      var off=topLeft;
+      var cpts=pts.map(function(p){return{x:p.x-off.x, y:p.y-off.y}});
 
       var ctx=this._canvas.getContext('2d');
-      ctx.clearRect(0,0,size.x,size.y);
+      ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
 
       var W2=photo.w, H2=photo.h;
-      var a=(pts[1].x-pts[0].x)/W2, b=(pts[3].x-pts[0].x)/H2;
-      var c=(pts[1].y-pts[0].y)/W2, d=(pts[3].y-pts[0].y)/H2;
-      var e=pts[0].x, f=pts[0].y;
+      // Hitung transform affine dari pixel foto ke koordinat canvas
+      var a=(cpts[1].x-cpts[0].x)/W2;
+      var b=(cpts[3].x-cpts[0].x)/H2;
+      var c=(cpts[1].y-cpts[0].y)/W2;
+      var d=(cpts[3].y-cpts[0].y)/H2;
+      var e2=cpts[0].x;
+      var f2=cpts[0].y;
 
-      // Outline (boundary line)
+      // Outline batas foto
       if(_showPhotoOutlines||_dragModeActive){
         ctx.save();
         ctx.globalAlpha=_dragModeActive?0.9:0.5;
         ctx.globalCompositeOperation='source-over';
         ctx.beginPath();
-        ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);
-        ctx.lineTo(pts[2].x,pts[2].y);ctx.lineTo(pts[3].x,pts[3].y);
+        ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
+        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);
         ctx.closePath();
         ctx.strokeStyle='#f0a500';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();
         ctx.restore();
       }
 
-      // Gambar foto dengan feathering + blend mode
+      // ✅ FIX: Gambar foto dengan transform yang benar + clip polygon
       ctx.save();
       ctx.globalAlpha=photo.opacity;
       ctx.globalCompositeOperation=photo.blendMode||'normal';
       ctx.beginPath();
-      ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);
-      ctx.lineTo(pts[2].x,pts[2].y);ctx.lineTo(pts[3].x,pts[3].y);
-      ctx.closePath();ctx.clip();
-      ctx.transform(a,c,b,d,e,f);
-      ctx.drawImage(this._ofc||this._img,0,0,W2,H2);
+      ctx.moveTo(cpts[0].x,cpts[0].y);
+      ctx.lineTo(cpts[1].x,cpts[1].y);
+      ctx.lineTo(cpts[2].x,cpts[2].y);
+      ctx.lineTo(cpts[3].x,cpts[3].y);
+      ctx.closePath();
+      ctx.clip();
+      ctx.transform(a,c,b,d,e2,f2);
+      ctx.drawImage(this._ofc,0,0,W2,H2);
       ctx.restore();
     },
 
     setOpacityVal:function(op){photo.opacity=op;this._update();},
-    setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();this._update();},
+    setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
     setBlendMode:function(m){photo.blendMode=m;this._update();},
     forceUpdate:function(){this._update();}
   });
@@ -1003,7 +1048,7 @@ function createRotatedOverlay(photo, toGeo){
 }
 
 // =====================================================
-// LAYER VISUAL CONTROLS — fungsi yang sebelumnya hilang
+// LAYER VISUAL CONTROLS
 // =====================================================
 function setPhotoFeather(pid,val,inputEl){
   var p=getPhoto(pid);if(!p)return;
@@ -1388,7 +1433,7 @@ function buildGeoJSON(){
     });
   }
   return{type:'FeatureCollection',features:features,
-    properties:{generated:new Date().toISOString(),tool:'DroneMap v3',
+    properties:{generated:new Date().toISOString(),tool:'DroneMap v3 Fixed',
       total_photos:photos.length,georeferenced_photos:photos.filter(function(p){return p.georef}).length,
       total_measurements:measures.length}};
 }
