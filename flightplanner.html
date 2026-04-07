@@ -97,10 +97,10 @@ body{font-family:var(--fui);background:var(--c0);color:var(--t1);height:100vh;ov
 /* MAP */
 .mapwrap{flex:1;position:relative;overflow:hidden}
 #map{width:100%;height:100%}
-.mbar{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:800;pointer-events:none}
+.mbar{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:800;pointer-events:none}
 .mbadge{background:rgba(5,10,17,.9);border:1px solid var(--b1);backdrop-filter:blur(8px);border-radius:var(--r2);padding:5px 11px;font-family:var(--fmn);font-size:9.5px;color:var(--t2);pointer-events:auto}
 .mbadge span{color:var(--cyan)}
-.compass{position:absolute;bottom:28px;right:12px;z-index:800;width:44px;height:44px;background:rgba(5,10,17,.85);border:1px solid var(--b1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fhd);font-size:11px;font-weight:700;color:var(--cyan)}
+.compass{position:absolute;bottom:28px;left:12px;z-index:800;width:44px;height:44px;background:rgba(5,10,17,.85);border:1px solid var(--b1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fhd);font-size:11px;font-weight:700;color:var(--cyan)}
 
 /* LOADING OVERLAY */
 #mapload{position:absolute;inset:0;background:var(--c0);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:900;gap:12px;transition:opacity .4s}
@@ -114,6 +114,12 @@ body{font-family:var(--fui);background:var(--c0);color:var(--t1);height:100vh;ov
 .toast.s{border-left-color:var(--green)}.toast.w{border-left-color:var(--orange)}.toast.i{border-left-color:var(--cyan)}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0}}
+
+/* CONTROL LAYOUT */
+/* ── CONTROL POSITIONING ────────────────────────────── */
+.leaflet-top.leaflet-left { top: 10px; left: 10px; }
+.leaflet-top.leaflet-left .leaflet-control { margin-top: 6px; margin-left: 0; }
+.leaflet-bottom.leaflet-right { bottom: 28px; right: 12px; }
 
 /* LEAFLET */
 .leaflet-bar a{background:var(--c3)!important;color:var(--t1)!important;border-color:var(--b1)!important}
@@ -169,6 +175,7 @@ body{font-family:var(--fui);background:var(--c0);color:var(--t1);height:100vh;ov
             </button>
           </div>
           <div class="pinfo" id="pinfo"><b>Mapping</b> &#8212; Overlap tinggi untuk 3D &amp; ortofoto. Cocok untuk Agisoft, Pix4D, DroneDeploy.</div>
+          <div id="alt-warn" style="display:none;font-size:9.5px;color:#f39c12;background:rgba(243,156,18,.08);border:1px solid rgba(243,156,18,.3);border-radius:4px;padding:6px 9px;margin-top:2px;line-height:1.5"></div>
         </div>
       </div>
 
@@ -292,10 +299,10 @@ FP.dl = function(name, data) {
 
 /* ── PRESET ─────────────────────────────────────────────────── */
 var PRESETS = {
-  mapping:  {fl: 80, sl: 75, info: '<b>Mapping</b> \u2014 Overlap tinggi untuk 3D & ortofoto. Agisoft, Pix4D, DroneDeploy.'},
-  survey:   {fl: 60, sl: 50, info: '<b>Survey</b> \u2014 Overlap menengah untuk inspeksi & pengukuran area.'},
-  doc:      {fl: 30, sl: 20, info: '<b>Documentation</b> \u2014 Overlap minimal, cocok untuk dokumentasi visual.'},
-  seamless: {fl:  5, sl:  5, info: '<b>Seamless</b> \u2014 Foto bersambung. \u26a0 Berisiko celah jika ada angin.'}
+  mapping:  {fl: 80, sl: 75, minAlt: 0, info: '<b>Mapping</b> \u2014 Overlap tinggi untuk 3D & ortofoto. Agisoft, Pix4D, DroneDeploy.'},
+  survey:   {fl: 60, sl: 50, minAlt: 0, info: '<b>Survey</b> \u2014 Overlap menengah untuk inspeksi & pengukuran area.'},
+  doc:      {fl: 30, sl: 20, minAlt: 20, info: '<b>Documentation</b> \u2014 Overlap minimal, cocok untuk dokumentasi visual.'},
+  seamless: {fl:  5, sl:  5, minAlt: 60, info: '<b>Seamless</b> \u2014 Foto bersambung tanpa tumpang tindih. \u26a0 Gunakan min. altitude <b>60m</b> agar aman dari drift GPS/angin.'}
 };
 FP.setPreset = function(k) {
   var p = PRESETS[k];
@@ -307,7 +314,14 @@ FP.setPreset = function(k) {
     document.getElementById('pr-' + id).classList.toggle('on', id === k);
   });
   FP.calcStats();
-  FP.toast('i', '\u2705 Preset ' + k + ' diterapkan');
+  // Tampilkan peringatan altitude jika preset membutuhkan minimum altitude
+  var curAlt = +document.getElementById('alt').value;
+  FP._checkAltWarn();
+  if (p.minAlt && curAlt < p.minAlt) {
+    FP.toast('w', '\u26a0 Preset ' + k + ' butuh altitude min. ' + p.minAlt + 'm. Saat ini: ' + curAlt + 'm.');
+  } else {
+    FP.toast('i', '\u2705 Preset ' + k + ' diterapkan');
+  }
 };
 
 /* ── DRONE SPECS ─────────────────────────────────────────────── */
@@ -341,8 +355,32 @@ var map    = null;
 var drawn  = null;
 var grid   = null;
 
+/* ── ALTITUDE / OVERLAP WARNING ────────────────────────────────── */
+FP._activePreset = 'mapping';
+FP._checkAltWarn = function() {
+  var alt = +document.getElementById('alt').value;
+  var fl  = +document.getElementById('frontlap').value;
+  var sl  = +document.getElementById('sidelap').value;
+  var wbox = document.getElementById('alt-warn');
+  if (!wbox) return;
+
+  var msgs = [];
+  if (fl < 10 && alt < 60) msgs.push('\u26a0 Frontlap ' + fl + '% terlalu rendah di altitude ' + alt + 'm. Naikkan altitude ke min. <b>60m</b>.');
+  if (sl < 10 && alt < 60) msgs.push('\u26a0 Sidelap ' + sl + '% terlalu rendah di altitude ' + alt + 'm. Naikkan altitude ke min. <b>60m</b>.');
+  if ((fl < 10 || sl < 10) && alt >= 60) msgs.push('\u2139 Overlap rendah (' + fl + '%/' + sl + '%). Toleransi drift GPS: \u00b1' + ((FP.spacing() * ((fl/100))) / 2).toFixed(1) + 'm.');
+  if (alt < 30 && (fl > 0 || sl > 0)) msgs.push('\u26a0 Altitude ' + alt + 'm sangat rendah. Risiko turbulensi di atas bangunan/pohon meningkat.');
+
+  if (msgs.length) {
+    wbox.innerHTML = msgs.join('<br>');
+    wbox.style.display = '';
+  } else {
+    wbox.style.display = 'none';
+  }
+};
+
 /* ── STATS ───────────────────────────────────────────────────── */
 FP.calcStats = function() {
+  FP._checkAltWarn();
   var spd  = +document.getElementById('speed').value;
   var dist = 0;
   if (map) {
@@ -365,10 +403,31 @@ FP.calcStats = function() {
 /* ── GENERATE GRID ───────────────────────────────────────────── */
 FP.genGrid = function() {
   if (!map) { FP.toast('w', '\u26a0 Peta belum siap.'); return; }
+
+  // ── VALIDASI ALTITUDE vs OVERLAP ──────────────────────────────
+  var alt = +document.getElementById('alt').value;
+  var fl  = +document.getElementById('frontlap').value;
+  var sl  = +document.getElementById('sidelap').value;
+
+  if (alt < 10) {
+    FP.toast('w', '\u26a0 Altitude minimum 10m.'); return;
+  }
+  if (fl < 10 && alt < 60) {
+    FP.toast('w', '\u26a0 Frontlap ' + fl + '% membutuhkan altitude min. 60m. Saat ini ' + alt + 'm.');
+    return;
+  }
+  if (sl < 10 && alt < 60) {
+    FP.toast('w', '\u26a0 Sidelap ' + sl + '% membutuhkan altitude min. 60m. Saat ini ' + alt + 'm.');
+    return;
+  }
+  if (fl < 10 || sl < 10) {
+    // Lanjut tapi beri peringatan
+    FP.toast('w', '\u26a0 Overlap sangat rendah (' + fl + '% / ' + sl + '%). Pastikan altitude \u2265 60m.');
+  }
+
   grid.clearLayers(); WP = []; MIS = [];
   var poly = drawn.getLayers()[0];
   if (!poly) { FP.toast('w', '\u26a0 Gambar polygon area terlebih dahulu!'); return; }
-  var alt  = +document.getElementById('alt').value;
   var sp   = FP.spacing();
   var pgeo = poly.toGeoJSON();
   var bb   = turf.bbox(pgeo);
@@ -539,19 +598,19 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  map   = L.map('map', {zoomControl: false}).setView([0.5, 101.45], 15);
+  map   = L.map('map', {zoomControl: false, maxZoom: 22}).setView([0.5, 101.45], 15);
   drawn = new L.FeatureGroup().addTo(map);
   grid  = new L.FeatureGroup().addTo(map);
 
   L.control.zoom({position: 'topright'}).addTo(map);
 
   var TILES = {
-    Dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'),
-    Satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
-    OSM:       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-    Topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png')
+    Dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:22, maxNativeZoom:20}),
+    Satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:22, maxNativeZoom:19}),
+    OSM:       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:22, maxNativeZoom:19}),
+    Topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {maxZoom:22, maxNativeZoom:17})
   };
-  TILES.Dark.addTo(map);
+  TILES.Satellite.addTo(map);
   L.control.layers(TILES, {}, {position: 'topright'}).addTo(map);
 
   map.addControl(new L.Control.Draw({
