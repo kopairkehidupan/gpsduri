@@ -1317,7 +1317,7 @@ function toggleLayerGroup(type,on){
 
 var bDefs={
   osm:{url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'OSM',mn:19},
-  esri:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Esri',mn:17},
+  esri:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Esri',mn:19},
   topo:{url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attr:'Topo',mn:17},
   dark:{url:'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',attr:'Stadia',mn:20}
 };
@@ -1578,7 +1578,7 @@ function enterSplitView(){
   if(gp){initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2;initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2;}
   _splitMap=L.map(mapPane,{zoomControl:true}).setView([initLat,initLng],18);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:17
+    attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19
   }).addTo(_splitMap);
   if(p.gcps.length>0){
     p.gcps.forEach(function(g,i){
