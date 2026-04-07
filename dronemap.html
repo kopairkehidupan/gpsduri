@@ -318,6 +318,10 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
           <span style="font-size:10px;color:var(--tx)">Marker GCP</span>
           <label class="toggle"><input type="checkbox" id="togGCP" checked onchange="toggleLayerGroup('gcp',this.checked)"><span class="toggle-sl"></span></label>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <span style="font-size:10px;color:var(--tx)">Tampilkan Batas Foto</span>
+          <label class="toggle"><input type="checkbox" id="togOutlines" onchange="toggleOutlines(this.checked)"><span class="toggle-sl"></span></label>
+        </div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Satuan</div>
@@ -476,6 +480,7 @@ var _dragModeActive=false;  // mode geser foto di peta
 var _dragPhoto=null;        // foto yang sedang di-drag
 var _dragStartLatLng=null;  // posisi mouse saat mulai drag
 var _dragStartOffset=null;  // offset foto saat mulai drag
+var _showPhotoOutlines = false;
 
 // =====================================================
 // TABS
@@ -499,7 +504,7 @@ function addPhoto(file){
   var id=Date.now()+Math.random();
   var photo={id:id,name:file.name,src:null,w:0,h:0,gcps:[],georef:false,
              bounds:null,overlay:null,visible:true,opacity:0.82,gcpLayer:null,
-             corners:null,
+             corners:null,feather:0.05, blendMode:'normal',
              offsetLat:0, offsetLng:0,  // offset geser dalam derajat
              zOrder:photos.length        // urutan tumpukan (lebih besar = lebih atas)
             };
@@ -906,7 +911,6 @@ function buildAffine(gcps){
 // ROTATED IMAGE OVERLAY — Canvas + Offset + ZOrder + Drag
 // =====================================================
 function createRotatedOverlay(photo, toGeo, opacity){
-  // Hitung 4 sudut ASAL (tanpa offset) dalam lat/lng
   var tl=toGeo(0,0), tr=toGeo(photo.w,0);
   var br=toGeo(photo.w,photo.h), bl=toGeo(0,photo.h);
   photo.corners={tl:tl,tr:tr,br:br,bl:bl};
@@ -917,110 +921,137 @@ function createRotatedOverlay(photo, toGeo, opacity){
   var W=Math.min.apply(null,lngs),E=Math.max.apply(null,lngs);
   photo.bounds=[[S,W],[N,E]];
 
-  // Inisialisasi offset jika belum ada
   if(photo.offsetLat===undefined)photo.offsetLat=0;
   if(photo.offsetLng===undefined)photo.offsetLng=0;
+  if(photo.feather===undefined)photo.feather=0.05;
+  if(photo.blendMode===undefined)photo.blendMode='normal';
+
+  // ── Helper: buat offscreen canvas dengan feathering ──
+  function buildOfc(img, w, h, featherAmt){
+    var ofc=document.createElement('canvas');ofc.width=w;ofc.height=h;
+    var octx=ofc.getContext('2d');
+    octx.drawImage(img,0,0,w,h);
+    if(featherAmt>0){
+      var fw=w*featherAmt, fh=h*featherAmt;
+      octx.globalCompositeOperation='destination-in';
+      // Top
+      var gt=octx.createLinearGradient(0,0,0,fh);
+      gt.addColorStop(0,'rgba(0,0,0,0)');gt.addColorStop(1,'rgba(0,0,0,1)');
+      octx.fillStyle=gt;octx.fillRect(0,0,w,fh);
+      // Bottom
+      var gb=octx.createLinearGradient(0,h-fh,0,h);
+      gb.addColorStop(0,'rgba(0,0,0,1)');gb.addColorStop(1,'rgba(0,0,0,0)');
+      octx.fillStyle=gb;octx.fillRect(0,h-fh,w,fh);
+      // Left
+      var gl=octx.createLinearGradient(0,0,fw,0);
+      gl.addColorStop(0,'rgba(0,0,0,0)');gl.addColorStop(1,'rgba(0,0,0,1)');
+      octx.fillStyle=gl;octx.fillRect(0,0,fw,h);
+      // Right
+      var gr=octx.createLinearGradient(w-fw,0,w,0);
+      gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');
+      octx.fillStyle=gr;octx.fillRect(w-fw,0,fw,h);
+    }
+    return ofc;
+  }
 
   var RotatedLayer = L.Layer.extend({
+    _ofc: null,
+    _ofcFeather: -1,
+
     onAdd: function(map){
-      this._map = map;
-      this._canvas = document.createElement('canvas');
-      // pointer-events: auto saat drag mode, none saat normal
-      this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
+      this._map=map;
+      this._canvas=document.createElement('canvas');
+      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
       map.getPanes().overlayPane.appendChild(this._canvas);
+      var self=this;
+      this._img=new Image();
+      this._img.onload=function(){self._rebuildOfc();self._update();};
+      this._img.src=photo.src;
 
-      var self = this;
-      this._img = new Image();
-      this._img.onload = function(){ self._update(); };
-      this._img.src = photo.src;
-
-      // Event drag pada canvas saat mode aktif
-      this._canvas.addEventListener('mousedown', function(e){
+      this._canvas.addEventListener('mousedown',function(e){
         if(!_dragModeActive)return;
         e.stopPropagation();
-        // Cek apakah klik di dalam area foto
-        var cp = map.containerPointToLatLng([e.clientX - map.getContainer().getBoundingClientRect().left, e.clientY - map.getContainer().getBoundingClientRect().top]);
-        _dragPhoto = photo;
-        _dragStartLatLng = cp;
-        _dragStartOffset = {lat:photo.offsetLat, lng:photo.offsetLng};
-        map.dragging.disable();
-        document.body.style.cursor = 'grabbing';
-        e.preventDefault();
+        var cp=map.containerPointToLatLng([e.clientX-map.getContainer().getBoundingClientRect().left,e.clientY-map.getContainer().getBoundingClientRect().top]);
+        _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
+        map.dragging.disable();document.body.style.cursor='grabbing';e.preventDefault();
       });
-
-      map.on('zoom viewreset move zoomend moveend resize', this._update, this);
+      map.on('zoom viewreset move zoomend moveend resize',this._update,this);
       this._update();
     },
 
     onRemove: function(map){
-      if(this._canvas && this._canvas.parentNode)
-        this._canvas.parentNode.removeChild(this._canvas);
-      map.off('zoom viewreset move zoomend moveend resize', this._update, this);
+      if(this._canvas&&this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
+      map.off('zoom viewreset move zoomend moveend resize',this._update,this);
+      this._ofc=null;
+    },
+
+    _rebuildOfc: function(){
+      if(!this._img||!this._img.complete)return;
+      this._ofc=buildOfc(this._img,photo.w,photo.h,photo.feather);
+      this._ofcFeather=photo.feather;
     },
 
     _update: function(){
-      if(!this._img || !this._img.complete || !this._img.naturalWidth) return;
-      var map = this._map;
-      var size = map.getSize();
-      var panePos = map._getMapPanePos ? map._getMapPanePos() : {x:0,y:0};
+      if(!this._img||!this._img.complete||!this._img.naturalWidth)return;
+      // Rebuild cache jika feather berubah
+      if(!this._ofc||this._ofcFeather!==photo.feather)this._rebuildOfc();
 
-      this._canvas.width  = size.x;
-      this._canvas.height = size.y;
-      this._canvas.style.left = (-panePos.x) + 'px';
-      this._canvas.style.top  = (-panePos.y) + 'px';
-      // pointer-events aktif hanya saat drag mode
-      this._canvas.style.pointerEvents = _dragModeActive ? 'auto' : 'none';
-      // z-index berdasarkan zOrder foto
-      this._canvas.style.zIndex = (photo.zOrder||0) + 10;
+      var map=this._map;
+      var size=map.getSize();
+      var panePos=map._getMapPanePos?map._getMapPanePos():{x:0,y:0};
+      this._canvas.width=size.x;this._canvas.height=size.y;
+      this._canvas.style.left=(-panePos.x)+'px';
+      this._canvas.style.top=(-panePos.y)+'px';
+      this._canvas.style.pointerEvents=_dragModeActive?'auto':'none';
+      this._canvas.style.zIndex=(photo.zOrder||0)+10;
 
-      // Terapkan offset ke 4 sudut
-      var oLat=photo.offsetLat||0, oLng=photo.offsetLng||0;
-      var pts = [
-        L.latLng(tl.lat+oLat, tl.lng+oLng),
-        L.latLng(tr.lat+oLat, tr.lng+oLng),
-        L.latLng(br.lat+oLat, br.lng+oLng),
-        L.latLng(bl.lat+oLat, bl.lng+oLng)
-      ].map(function(ll){ return map.latLngToContainerPoint(ll); });
+      var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
+      var pts=[
+        L.latLng(tl.lat+oLat,tl.lng+oLng),L.latLng(tr.lat+oLat,tr.lng+oLng),
+        L.latLng(br.lat+oLat,br.lng+oLng),L.latLng(bl.lat+oLat,bl.lng+oLng)
+      ].map(function(ll){return map.latLngToContainerPoint(ll);});
 
-      var ctx = this._canvas.getContext('2d');
-      ctx.clearRect(0, 0, size.x, size.y);
+      var ctx=this._canvas.getContext('2d');
+      ctx.clearRect(0,0,size.x,size.y);
 
-      var W2=photo.w, H2=photo.h;
-      var a=(pts[1].x-pts[0].x)/W2, b=(pts[3].x-pts[0].x)/H2;
-      var c=(pts[1].y-pts[0].y)/W2, d=(pts[3].y-pts[0].y)/H2;
-      var e=pts[0].x, f=pts[0].y;
+      var W2=photo.w,H2=photo.h;
+      var a=(pts[1].x-pts[0].x)/W2,b=(pts[3].x-pts[0].x)/H2;
+      var c=(pts[1].y-pts[0].y)/W2,d=(pts[3].y-pts[0].y)/H2;
+      var e=pts[0].x,f=pts[0].y;
 
       ctx.save();
-      ctx.globalAlpha = photo.opacity;
+      ctx.globalAlpha=photo.opacity;
+      ctx.globalCompositeOperation=photo.blendMode||'normal';
 
-      // Gambar border tipis saat drag mode aktif
-      if(_dragModeActive){
+      // Outline foto
+      if(_showPhotoOutlines||_dragModeActive){
+        ctx.save();
+        ctx.globalAlpha=_dragModeActive?0.9:0.35;
+        ctx.globalCompositeOperation='source-over';
         ctx.beginPath();
         ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);
         ctx.lineTo(pts[2].x,pts[2].y);ctx.lineTo(pts[3].x,pts[3].y);
         ctx.closePath();
-        ctx.strokeStyle='#f0a500';ctx.lineWidth=2;ctx.stroke();
+        ctx.strokeStyle=_dragModeActive?'#f0a500':'rgba(240,165,0,0.6)';
+        ctx.lineWidth=_dragModeActive?2:1;ctx.stroke();
+        ctx.restore();
       }
 
+      // Clip & gambar foto dengan feathering
       ctx.beginPath();
       ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);
       ctx.lineTo(pts[2].x,pts[2].y);ctx.lineTo(pts[3].x,pts[3].y);
       ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e,f);
-      ctx.drawImage(this._img, 0, 0, W2, H2);
+      ctx.drawImage(this._ofc||this._img,0,0,W2,H2);
       ctx.restore();
     },
 
-    setOpacityVal: function(op){
-      photo.opacity = op;
-      this._update();
-    },
-
-    forceUpdate: function(){
-      this._update();
-    }
+    setOpacityVal:function(op){photo.opacity=op;this._update();},
+    setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();this._update();},
+    setBlendMode:function(m){photo.blendMode=m;this._update();},
+    forceUpdate:function(){this._update();}
   });
-
   return new RotatedLayer();
 }
 
@@ -1290,6 +1321,21 @@ function renderLayerList(){
         '<label>Opacity</label>'+
         '<input type="range" min="0" max="100" value="'+(p.opacity*100).toFixed(0)+'" oninput="setPhotoOpacity('+p.id+',this.value,this)">'+
         '<span class="slider-val">'+(p.opacity*100).toFixed(0)+'%</span>'+
+      '</div>'+
+      // Feather slider
+      '<div class="slider-row" style="margin-top:4px">'+
+        '<label>Feather</label>'+
+        '<input type="range" min="0" max="20" value="'+Math.round((p.feather||0.05)*100)+'" oninput="setPhotoFeather('+p.id+',this.value,this)">'+
+        '<span class="slider-val">'+Math.round((p.feather||0.05)*100)+'%</span>'+
+      '</div>'+
+      // Blend mode
+      '<div style="margin-top:5px;display:flex;align-items:center;gap:5px">'+
+        '<span style="font-size:9px;color:var(--mu);min-width:44px">Blend</span>'+
+        '<select onchange="setPhotoBlend('+p.id+',this.value)" style="flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:3px;color:var(--tx);font-size:9px;padding:2px 4px;font-family:\'Space Mono\',monospace">'+
+          ['normal','multiply','screen','overlay','lighten','darken'].map(function(m){
+            return '<option value="'+m+'"'+(( p.blendMode||'normal')===m?' selected':'')+'>'+m+'</option>';
+          }).join('')+
+        '</select>'+
       '</div>'+
     '</div>';
   }).join('');
