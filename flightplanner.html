@@ -431,11 +431,28 @@ FP.genGrid = function() {
   var sp   = FP.spacing();
   var pgeo = poly.toGeoJSON();
   var bb   = turf.bbox(pgeo);
-  var bboxH = (bb[3] - bb[1]) * 111320; // tinggi area dalam meter
-  var step = Math.min(sp, bboxH / 2) / 111320; // minimal 2 jalur
-  var y = bb[1] + step * 0.5;
-  var flip = false;
-  while (y <= bb[3]) {
+
+  // ── Ambil vertex pertama polygon (titik awal saat user menggambar) ──
+  var lls = poly.getLatLngs();
+  var firstVtx = Array.isArray(lls[0]) ? lls[0][0] : lls[0];
+  var fvLat = firstVtx.lat, fvLng = firstVtx.lng;
+
+  // ── Tentukan arah scan berdasarkan posisi vertex pertama ──
+  var bbMidLat = (bb[1] + bb[3]) / 2;
+  var bbMidLng = (bb[0] + bb[2]) / 2;
+  var fromTop   = fvLat > bbMidLat;   // vertex di atas → scan dari atas ke bawah
+  var fromRight = fvLng > bbMidLng;   // vertex di kanan → baris pertama kanan ke kiri
+
+  var bboxH = (bb[3] - bb[1]) * 111320;
+  var step  = Math.min(sp, bboxH / 2) / 111320;
+
+  var yStart = fromTop ? bb[3] - step * 0.5 : bb[1] + step * 0.5;
+  var yEnd   = fromTop ? bb[1] : bb[3];
+  var yDir   = fromTop ? -1 : 1;
+  var flip   = fromRight; // true = baris pertama dimulai dari kanan
+
+  var y = yStart;
+  while (fromTop ? y >= yEnd : y <= yEnd) {
     var ln = turf.lineString([[bb[0], y], [bb[2], y]]);
     var cx = turf.lineIntersect(pgeo, ln);
     if (cx.features.length >= 2) {
@@ -454,7 +471,7 @@ FP.genGrid = function() {
       L.circleMarker([pts[0][1], pts[0][0]], {radius: 2.5, color: '#00d4ff', fillColor: '#00d4ff', fillOpacity: 1, weight: 0}).addTo(grid);
       flip = !flip;
     }
-    y += step;
+    y += step * yDir;
   }
   FP.calcStats();
   FP.toast('s', '\u2705 ' + WP.length + ' waypoints generated');
