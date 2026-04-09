@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DroneMap v3 - Multi Photo (Fixed)</title>
+<title>DroneMap v3 Pro — Perkebunan Sawit</title>
 <script>
 (function(){
   var at='@',v={lf:'1.9.4',ld:'1.0.4'};
@@ -14,26 +14,31 @@
 })();
 </script>
 <style>
-:root{--bg:#0d1117;--sf:#161b22;--s2:#21262d;--s3:#2d333b;--bd:#30363d;--ac:#f0a500;--ac2:#ffd166;--tx:#e6edf3;--mu:#7d8590;--ok:#3fb950;--er:#f85149;--in:#58a6ff;--pu:#bc8cff}
+:root{
+  --bg:#0d1117;--sf:#161b22;--s2:#21262d;--s3:#2d333b;--bd:#30363d;
+  --ac:#f0a500;--ac2:#ffd166;--tx:#e6edf3;--mu:#7d8590;
+  --ok:#3fb950;--er:#f85149;--in:#58a6ff;--pu:#bc8cff;
+  --saw:#5a9e35;--saw2:#7dc455;/* Sawit green */
+}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;height:48px;display:flex;align-items:center;gap:12px;flex-shrink:0}
-.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--ac);white-space:nowrap}
+.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--saw2);white-space:nowrap}
 .logo span{color:var(--tx)}.logo small{font-size:9px;color:var(--mu);margin-left:3px}
 .steps{display:flex;gap:3px;align-items:center}
 .step{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:10px;font-weight:500;color:var(--mu);border:1px solid transparent;transition:.2s;white-space:nowrap}
-.step.active{background:rgba(240,165,0,.1);border-color:var(--ac);color:var(--ac)}
+.step.active{background:rgba(90,158,53,.15);border-color:var(--saw);color:var(--saw2)}
 .step.done{color:var(--ok)}
 .step-num{width:15px;height:15px;border-radius:50%;background:var(--bd);display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
-.step.active .step-num{background:var(--ac);color:#000}
+.step.active .step-num{background:var(--saw);color:#fff}
 .step.done .step-num{background:var(--ok);color:#000}
 .hdr-r{margin-left:auto;display:flex;align-items:center;gap:7px}
 .hdr-tag{font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);background:var(--s2);padding:2px 7px;border-radius:8px;border:1px solid var(--bd)}
 .main{display:flex;flex:1;overflow:hidden}
 .sidebar{width:300px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
-.stabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
-.stab{flex:1;padding:8px 0;font-size:10px;text-align:center;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;transition:.2s}
-.stab.active{color:var(--ac);border-bottom-color:var(--ac)}
+.stabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap}
+.stab{flex:1;padding:7px 0;font-size:9px;text-align:center;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;transition:.2s;min-width:42px}
+.stab.active{color:var(--saw2);border-bottom-color:var(--saw)}
 .stab:hover{color:var(--tx)}
 .tabpane{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .tabpane.active{display:flex}
@@ -41,9 +46,9 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .s-sec{padding:10px 13px;border-bottom:1px solid var(--bd)}
 .s-ttl{font-family:'Space Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .s-ttl::after{content:'';flex:1;height:1px;background:var(--bd)}
+/* Photo items */
 .photo-item{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:9px}
-.photo-item:hover{border-color:var(--ac)}
-.photo-item.active{border-color:var(--ac);background:rgba(240,165,0,.06)}
+.photo-item:hover{border-color:var(--saw)}.photo-item.active{border-color:var(--saw);background:rgba(90,158,53,.06)}
 .photo-thumb{width:40px;height:30px;object-fit:cover;border-radius:3px;flex-shrink:0;background:var(--s3)}
 .photo-info{flex:1;min-width:0}
 .photo-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx)}
@@ -55,6 +60,7 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .badge-ok{background:rgba(63,185,80,.15);color:var(--ok)}
 .badge-warn{background:rgba(240,165,0,.15);color:var(--ac)}
 .badge-gray{background:rgba(125,133,144,.15);color:var(--mu)}
+/* GCP */
 .gcp-item{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:7px 9px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .gcp-num{width:18px;height:18px;background:var(--ac);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 .gcp-coords{flex:1;min-width:0}
@@ -62,19 +68,20 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .gcp-ll{font-size:9px;font-family:'Space Mono',monospace;color:var(--in);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcp-del{background:none;border:none;color:var(--mu);cursor:pointer;font-size:12px;padding:1px;flex-shrink:0}
 .gcp-del:hover{color:var(--er)}
+/* Measure cards */
 .m-card{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:9px 11px;margin-bottom:7px}
 .m-card-head{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.m-lbl{flex:1}
-.m-lbl input{background:transparent;border:none;border-bottom:1px dashed var(--bd);color:var(--tx);font-size:10px;width:100%;outline:none;padding:1px 2px}
-.m-lbl input:focus{border-bottom-color:var(--ac)}
+.m-lbl{flex:1}.m-lbl input{background:transparent;border:none;border-bottom:1px dashed var(--bd);color:var(--tx);font-size:10px;width:100%;outline:none;padding:1px 2px}
+.m-lbl input:focus{border-bottom-color:var(--saw)}
 .m-del{background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px}
 .m-del:hover{color:var(--er)}
-.m-val{font-size:15px;font-weight:600;font-family:'Space Mono',monospace;color:var(--ac);line-height:1.2}
+.m-val{font-size:15px;font-weight:600;font-family:'Space Mono',monospace;color:var(--saw2);line-height:1.2}
 .m-sub{font-size:10px;color:var(--mu);margin-top:2px}
 .m-pts summary{font-size:9px;color:var(--mu);cursor:pointer;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
 .m-pts summary:hover{color:var(--tx)}
 .m-pt-list{padding:4px 0 0;list-style:none}
 .m-pt-list li{font-size:9px;font-family:'Space Mono',monospace;color:var(--in);padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+/* Layer */
 .lay-row{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:8px 10px;margin-bottom:5px}
 .lay-row-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .lay-thumb{width:36px;height:26px;object-fit:cover;border-radius:2px;background:var(--s3);flex-shrink:0}
@@ -83,91 +90,134 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .toggle input{opacity:0;width:0;height:0;position:absolute}
 .toggle-sl{position:absolute;inset:0;background:var(--bd);border-radius:16px;cursor:pointer;transition:.2s}
 .toggle-sl::before{content:'';position:absolute;width:10px;height:10px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-.toggle input:checked+.toggle-sl{background:var(--ac)}
+.toggle input:checked+.toggle-sl{background:var(--saw)}
 .toggle input:checked+.toggle-sl::before{transform:translateX(14px)}
 .slider-row{display:flex;align-items:center;gap:7px}
 .slider-row label{font-size:9px;color:var(--mu);white-space:nowrap;min-width:44px}
-input[type=range]{flex:1;accent-color:var(--ac);height:3px}
-.slider-val{font-size:9px;font-family:'Space Mono',monospace;color:var(--ac);min-width:28px;text-align:right}
+input[type=range]{flex:1;accent-color:var(--saw);height:3px}
+.slider-val{font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);min-width:28px;text-align:right}
+/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
-.btn-pr{background:var(--ac);color:#000}.btn-pr:hover{background:var(--ac2)}
+.btn-pr{background:var(--saw);color:#fff}.btn-pr:hover{background:var(--saw2);color:#000}
 .btn-sc{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
-.btn-sc:hover{border-color:var(--ac);color:var(--ac)}
+.btn-sc:hover{border-color:var(--saw);color:var(--saw2)}
 .btn-ok{background:var(--ok);color:#000}.btn-ok:hover{filter:brightness(1.1)}
 .btn-pu{background:rgba(188,140,255,.15);color:var(--pu);border:1px solid rgba(188,140,255,.3)}
 .btn-pu:hover{background:rgba(188,140,255,.25)}
+.btn-saw{background:rgba(90,158,53,.15);color:var(--saw2);border:1px solid rgba(90,158,53,.35)}
+.btn-saw:hover{background:rgba(90,158,53,.3)}
+.btn-er{background:rgba(248,81,73,.15);color:var(--er);border:1px solid rgba(248,81,73,.3)}
+.btn-er:hover{background:rgba(248,81,73,.3)}
 .btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .btn-full{width:100%;justify-content:center}
 .btn-sm{padding:3px 8px;font-size:9px}
 .btn-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
 .bmap-row,.unit-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
 .bmap-btn,.unit-btn{padding:3px 8px;font-size:9px;border-radius:3px;cursor:pointer;background:var(--s2);border:1px solid var(--bd);color:var(--mu);font-family:'Space Mono',monospace;transition:.15s}
-.bmap-btn.active,.bmap-btn:hover,.unit-btn.active,.unit-btn:hover{background:rgba(240,165,0,.1);border-color:var(--ac);color:var(--ac)}
+.bmap-btn.active,.bmap-btn:hover,.unit-btn.active,.unit-btn:hover{background:rgba(90,158,53,.12);border-color:var(--saw);color:var(--saw2)}
 .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-family:'Space Mono',monospace}
-.tag-a{background:rgba(240,165,0,.15);color:var(--ac)}
+.tag-a{background:rgba(90,158,53,.18);color:var(--saw2)}
 .tag-ok{background:rgba(63,185,80,.15);color:var(--ok)}
-.ibox{font-size:10px;color:var(--mu);background:var(--s2);padding:7px 9px;border-radius:5px;border-left:3px solid var(--ac);line-height:1.6}
-.ibox strong{color:var(--ac)}
+.tag-er{background:rgba(248,81,73,.15);color:var(--er)}
+.ibox{font-size:10px;color:var(--mu);background:var(--s2);padding:7px 9px;border-radius:5px;border-left:3px solid var(--saw);line-height:1.6}
+.ibox strong{color:var(--saw2)}
+/* Panels */
 .content{flex:1;position:relative;overflow:hidden}
 #imagePanel{width:100%;height:100%;background:#060a10;position:absolute;top:0;left:0;overflow:hidden;cursor:crosshair;z-index:10}
 #mapPanel{width:100%;height:100%;position:absolute;top:0;left:0;}
 .hidden{display:none!important}
 .img-hint{position:absolute;top:11px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--bd);border-radius:18px;padding:5px 14px;font-size:10px;color:var(--mu);z-index:100;backdrop-filter:blur(8px);white-space:nowrap;pointer-events:none}
-.img-hint strong{color:var(--ac)}
-.photo-badge{position:absolute;top:11px;right:14px;background:rgba(13,17,23,.92);border:1px solid var(--ac);border-radius:18px;padding:5px 12px;font-size:10px;color:var(--ac);z-index:100;font-family:'Space Mono',monospace;pointer-events:none}
+.img-hint strong{color:var(--saw2)}
+.photo-badge{position:absolute;top:11px;right:14px;background:rgba(13,17,23,.92);border:1px solid var(--saw);border-radius:18px;padding:5px 12px;font-size:10px;color:var(--saw2);z-index:100;font-family:'Space Mono',monospace;pointer-events:none}
 .px-display{position:absolute;bottom:44px;left:11px;background:rgba(13,17,23,.85);border:1px solid var(--bd);border-radius:5px;padding:4px 10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--mu);z-index:100;pointer-events:none}
 .zoom-bar{position:absolute;bottom:11px;left:11px;display:flex;gap:3px;z-index:100}
 .zbtn{width:26px;height:26px;background:rgba(22,27,34,.9);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.zbtn:hover{border-color:var(--ac);color:var(--ac)}
+.zbtn:hover{border-color:var(--saw);color:var(--saw2)}
 .status-bar{background:var(--sf);border-top:1px solid var(--bd);padding:3px 13px;font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);display:flex;gap:16px;align-items:center;flex-shrink:0}
 .s-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:4px}
-.dot-g{background:var(--ok)}.dot-a{background:var(--ac)}.dot-i{background:var(--in)}
+.dot-g{background:var(--ok)}.dot-a{background:var(--ac)}.dot-i{background:var(--in)}.dot-saw{background:var(--saw)}
 .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--mu)}
 .welcome-icon{font-size:46px}
 .welcome h2{font-size:14px;color:var(--tx);font-weight:500}
 .welcome p{font-size:11px;text-align:center;max-width:280px;line-height:1.7}
+/* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(6px)}
 .modal{background:var(--sf);border:1px solid var(--bd);border-radius:11px;padding:18px;width:310px;max-width:95vw}
 .modal h3{font-size:12px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .modal-px{background:var(--s2);border-radius:4px;padding:6px 10px;font-family:'Space Mono',monospace;font-size:9px;color:var(--mu);margin-bottom:10px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .fg label{display:block;font-size:8px;color:var(--mu);margin-bottom:3px;font-family:'Space Mono',monospace;text-transform:uppercase}
-.fg input{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:5px 8px;color:var(--tx);font-family:'Space Mono',monospace;font-size:11px;outline:none}
-.fg input:focus{border-color:var(--ac)}
+.fg input,.fg select{width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:4px;padding:5px 8px;color:var(--tx);font-family:'Space Mono',monospace;font-size:11px;outline:none}
+.fg input:focus,.fg select:focus{border-color:var(--saw)}
 .fg input.err{border-color:var(--er)}
 .modal-acts{display:flex;gap:6px;justify-content:flex-end}
+/* Scrollbar */
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--sf)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+/* Leaflet popup */
 .leaflet-popup-content-wrapper{background:var(--sf)!important;color:var(--tx)!important;border:1px solid var(--bd)!important;border-radius:7px!important;font-size:11px!important}
 .leaflet-popup-tip{background:var(--sf)!important}
 .leaflet-popup-content{margin:9px 11px!important}
+/* Loading */
 #loadOv{position:fixed;inset:0;background:rgba(13,17,23,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px}
-.load-spin{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
-.load-txt{font-family:'Space Mono',monospace;font-size:12px;color:var(--ac)}
+.load-spin{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--saw);border-radius:50%;animation:spin .8s linear infinite}
+.load-txt{font-family:'Space Mono',monospace;font-size:12px;color:var(--saw2)}
 .load-bw{width:220px;height:4px;background:var(--bd);border-radius:4px;overflow:hidden}
-.load-b{height:100%;background:var(--ac);border-radius:4px;width:0%;transition:width .4s}
+.load-b{height:100%;background:var(--saw);border-radius:4px;width:0%;transition:width .4s}
 .load-sub{font-size:10px;color:var(--mu)}
 .load-err{display:none;background:rgba(248,81,73,.12);border:1px solid var(--er);border-radius:7px;padding:10px 16px;color:var(--er);font-size:11px;text-align:center;max-width:320px;line-height:1.8}
 @keyframes spin{to{transform:rotate(360deg)}}
-.georef-prog{height:3px;border-radius:3px;background:var(--ac);margin-top:5px;transition:width .3s}
+/* Layer controls */
+.georef-prog{height:3px;border-radius:3px;background:var(--saw);margin-top:5px;transition:width .3s}
 .orient-info{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.25);border-radius:5px;padding:7px 10px;margin-top:6px;font-size:9px;color:var(--in);font-family:'Space Mono',monospace;line-height:1.8}
-.orient-info b{color:var(--ac)}
+.orient-info b{color:var(--saw2)}
+/* Split view */
 .split-wrap{display:flex;width:100%;height:100%;overflow:hidden}
-.split-photo{flex:1;position:relative;overflow:hidden;background:#060a10;cursor:crosshair;border-right:2px solid var(--ac)}
+.split-photo{flex:1;position:relative;overflow:hidden;background:#060a10;cursor:crosshair;border-right:2px solid var(--saw)}
 .split-map{flex:1;position:relative;overflow:hidden}
-.split-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--ac);border-radius:16px;padding:4px 14px;font-size:10px;color:var(--ac);z-index:200;font-family:'Space Mono',monospace;pointer-events:none;white-space:nowrap}
+.split-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.92);border:1px solid var(--saw);border-radius:16px;padding:4px 14px;font-size:10px;color:var(--saw2);z-index:200;font-family:'Space Mono',monospace;pointer-events:none;white-space:nowrap}
 .split-map .split-label{border-color:var(--in);color:var(--in)}
 .split-step{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.95);border:1px solid var(--bd);border-radius:8px;padding:7px 14px;font-size:10px;color:var(--tx);z-index:200;text-align:center;white-space:nowrap}
-.split-step strong{color:var(--ac)}
+.split-step strong{color:var(--saw2)}
 .split-photo-marker{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--ac);border:2px solid #000;transform:translate(-50%,-50%);z-index:150;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;color:#000;pointer-events:none}
+/* Drag + Layer */
 .drag-btn{padding:2px 7px;font-size:9px;border-radius:3px;cursor:pointer;border:1px solid var(--bd);font-family:'Space Mono',monospace;transition:.15s;background:var(--s2);color:var(--mu)}
-.drag-btn.active{background:rgba(240,165,0,.15);border-color:var(--ac);color:var(--ac)}
-.drag-btn:hover{border-color:var(--ac);color:var(--ac)}
+.drag-btn.active{background:rgba(90,158,53,.15);border-color:var(--saw);color:var(--saw2)}
+.drag-btn:hover{border-color:var(--saw);color:var(--saw2)}
 .zord-btn{width:22px;height:22px;padding:0;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid var(--bd);background:var(--s2);color:var(--mu);display:inline-flex;align-items:center;justify-content:center;transition:.15s}
-.zord-btn:hover{border-color:var(--ac);color:var(--ac)}
+.zord-btn:hover{border-color:var(--saw);color:var(--saw2)}
 .lay-offset{font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);margin-top:3px;display:flex;align-items:center;gap:5px}
 .lay-offset span{color:var(--in)}
 .blend-sel{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:3px;color:var(--tx);font-size:9px;padding:2px 4px;font-family:'Space Mono',monospace;outline:none;cursor:pointer}
-.blend-sel:focus{border-color:var(--ac)}
+.blend-sel:focus{border-color:var(--saw)}
+/* === SENSUS POKOK === */
+.tree-item{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:7px 10px;margin-bottom:4px;display:flex;align-items:center;gap:7px;transition:.15s}
+.tree-item:hover{border-color:var(--saw)}
+.tree-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;font-family:'Space Mono',monospace;flex-shrink:0}
+.tree-normal{background:var(--saw);color:#fff}
+.tree-sakit{background:var(--ac);color:#000}
+.tree-mati{background:var(--er);color:#fff}
+.tree-kosong{background:var(--mu);color:#fff}
+.tree-info{flex:1;min-width:0}
+.tree-id{font-size:10px;font-weight:500;color:var(--tx)}
+.tree-coord{font-size:9px;font-family:'Space Mono',monospace;color:var(--mu)}
+.tree-del{background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px;padding:1px}
+.tree-del:hover{color:var(--er)}
+.status-pill{display:inline-block;padding:1px 7px;border-radius:8px;font-size:8px;font-family:'Space Mono',monospace}
+.pill-normal{background:rgba(90,158,53,.2);color:var(--saw2)}
+.pill-sakit{background:rgba(240,165,0,.2);color:var(--ac)}
+.pill-mati{background:rgba(248,81,73,.2);color:var(--er)}
+.pill-kosong{background:rgba(125,133,144,.2);color:var(--mu)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.stat-box{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:8px;text-align:center}
+.stat-num{font-size:18px;font-weight:700;font-family:'Space Mono',monospace;color:var(--saw2);line-height:1}
+.stat-lbl{font-size:9px;color:var(--mu);margin-top:3px}
+.mode-btn{flex:1;padding:5px 6px;font-size:9px;border-radius:4px;cursor:pointer;border:1px solid var(--bd);background:var(--s2);color:var(--mu);text-align:center;transition:.15s}
+.mode-btn.active{background:rgba(90,158,53,.15);border-color:var(--saw);color:var(--saw2);font-weight:500}
+.mode-btn:hover{border-color:var(--saw);color:var(--saw2)}
+/* Normalize badge */
+.norm-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-family:'Space Mono',monospace;background:rgba(88,166,255,.12);color:var(--in);border:1px solid rgba(88,166,255,.25)}
+/* Color adjust row */
+.adj-lbl{font-size:9px;color:var(--mu);min-width:56px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -176,7 +226,7 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
   <div class="load-spin"></div>
   <div class="load-txt" id="loadTxt">Memuat Library Peta...</div>
   <div class="load-bw"><div class="load-b" id="loadBar"></div></div>
-  <div class="load-sub">Leaflet.js, Turf.js, Leaflet.Draw</div>
+  <div class="load-sub">Leaflet.js • Turf.js • Leaflet.Draw</div>
   <div class="load-err" id="loadErr">
     Gagal memuat library. Periksa koneksi, lalu
     <button onclick="location.reload()" style="margin-top:7px;background:var(--er);color:#fff;border:none;border-radius:4px;padding:4px 12px;cursor:pointer;font-size:10px;display:block;margin:8px auto 0">&#8635; Refresh</button>
@@ -184,29 +234,31 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
 </div>
 
 <header>
-  <div class="logo">&#128752; Drone<span>Map</span><small>v3</small></div>
+  <div class="logo">🌴 Drone<span>Map</span><small>v3 Pro</small></div>
   <div class="steps">
     <div class="step active" id="step1"><div class="step-num">1</div>Foto &amp; GCP</div>
-    <div style="color:var(--bd);font-size:12px">&#8250;</div>
-    <div class="step" id="step2"><div class="step-num">2</div>Georeferencing</div>
-    <div style="color:var(--bd);font-size:12px">&#8250;</div>
-    <div class="step" id="step3"><div class="step-num">3</div>Ukur &amp; Export</div>
+    <div style="color:var(--bd);font-size:12px">›</div>
+    <div class="step" id="step2"><div class="step-num">2</div>Georef</div>
+    <div style="color:var(--bd);font-size:12px">›</div>
+    <div class="step" id="step3"><div class="step-num">3</div>Ukur &amp; Sensus</div>
   </div>
   <div class="hdr-r">
     <span class="hdr-tag" id="hdrPhotoCount">0 foto</span>
+    <span class="hdr-tag" id="hdrTreeCount" style="color:var(--saw2)">🌴 0 pokok</span>
     <span class="hdr-tag" id="hdrRotTag" style="display:none;color:var(--ok)">✓ Rotasi Aktif</span>
-    <span class="hdr-tag">Leaflet + Turf</span>
+    <span class="hdr-tag">Leaflet+Turf</span>
   </div>
 </header>
 
 <div class="main">
 <div class="sidebar">
   <div class="stabs">
-    <div class="stab active" onclick="switchTab('photos',this)">&#128247; Foto</div>
-    <div class="stab" onclick="switchTab('gcp',this)">&#128204; GCP</div>
-    <div class="stab" onclick="switchTab('layers',this)">&#128194; Layer</div>
-    <div class="stab" onclick="switchTab('measure',this)">&#128208; Ukur</div>
-    <div class="stab" onclick="switchTab('export',this)">&#128190; Export</div>
+    <div class="stab active" onclick="switchTab('photos',this)">📷 Foto</div>
+    <div class="stab" onclick="switchTab('gcp',this)">📌 GCP</div>
+    <div class="stab" onclick="switchTab('layers',this)">📂 Layer</div>
+    <div class="stab" onclick="switchTab('sensus',this)">🌴 Sensus</div>
+    <div class="stab" onclick="switchTab('measure',this)">📐 Ukur</div>
+    <div class="stab" onclick="switchTab('export',this)">💾 Export</div>
   </div>
 
   <!-- TAB FOTO -->
@@ -215,13 +267,24 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
       <div class="s-sec">
         <div class="s-ttl">Tambah Foto Drone</div>
         <div class="btn-row">
-          <button class="btn btn-pr" onclick="document.getElementById('fileInputMulti').click()">&#43; Tambah Foto</button>
-          <button class="btn btn-pu" id="btnGeorefAll" onclick="georefAll()" disabled>&#128506; Georeference Semua</button>
+          <button class="btn btn-pr" onclick="document.getElementById('fileInputMulti').click()">+ Tambah Foto</button>
+          <button class="btn btn-saw" id="btnGeorefAll" onclick="georefAll()" disabled>⚡ Georef Semua</button>
         </div>
         <input type="file" id="fileInputMulti" accept="image/*" multiple style="display:none">
         <div class="ibox" style="margin-top:8px">
-          Upload foto drone, tandai GCP min. 3 titik di <strong>4 sudut berbeda</strong>. Foto tampil di peta dengan orientasi &amp; feathering otomatis.
+          Upload foto drone UAV, tandai <strong>min. 4 GCP</strong> di <strong>4 sudut</strong> yang berbeda. Foto akan tampil di peta dengan rotasi &amp; blending otomatis.
         </div>
+      </div>
+      <div class="s-sec">
+        <div class="s-ttl">Normalisasi Warna <span class="norm-badge" style="margin-left:4px">BARU</span></div>
+        <div class="ibox" style="margin-bottom:7px">
+          Samakan kecerahan &amp; warna antar foto agar <strong>tampilan mosaik seragam</strong> seperti Google Maps.
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-saw btn-sm" onclick="autoNormalizeColors()">🎨 Auto Normalize</button>
+          <button class="btn btn-sc btn-sm" onclick="resetAllColorAdj()">↺ Reset</button>
+        </div>
+        <div id="colorNormStatus" style="font-size:9px;color:var(--mu);margin-top:5px;font-family:'Space Mono',monospace">Belum dinormalisasi</div>
       </div>
       <div class="s-sec" style="padding-bottom:8px">
         <div class="s-ttl">Daftar Foto <span class="tag tag-a" id="photoCountBadge" style="margin-left:4px">0</span></div>
@@ -244,19 +307,17 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
       </div>
       <div id="gcpPhotoActions" class="s-sec hidden">
         <div class="btn-row">
-          <button class="btn btn-sc btn-sm" onclick="clearPhotoGCP()">&#128465; Hapus Semua GCP</button>
-          <button class="btn btn-sc btn-sm" onclick="document.getElementById('csvInput').click()">&#128194; Import CSV</button>
+          <button class="btn btn-sc btn-sm" onclick="clearPhotoGCP()">🗑 Hapus GCP</button>
+          <button class="btn btn-sc btn-sm" onclick="document.getElementById('csvInput').click()">📁 Import CSV</button>
         </div>
         <button class="btn btn-full" id="btnSplitView" onclick="enterSplitView()" style="background:rgba(88,166,255,.15);color:var(--in);border:1px solid rgba(88,166,255,.3);margin-bottom:4px" disabled>
-          &#9881; Pilih GCP dari Peta Satelit
+          ⚙ Pilih GCP dari Peta Satelit
         </button>
         <div class="orient-info">
-          <b>⚠️ Kunci hasil akurat:</b><br>
-          GCP harus di <b>4 SUDUT BERBEDA</b> foto drone,<br>
-          bukan menumpuk di satu area!<br><br>
-          <b>Contoh benar:</b> pojok kiri-atas, kanan-atas,<br>
-          kiri-bawah, kanan-bawah foto.<br>
-          Spread &lt;35% → hasil meleset jauh.
+          <b>⚠️ Tips GCP akurat:</b><br>
+          Sebar GCP di <b>4 SUDUT BERBEDA</b> foto.<br>
+          Min. 4 GCP = hasil makin presisi.<br>
+          Gunakan objek tetap: tugu, pojok bangunan.
         </div>
         <input type="file" id="csvInput" accept=".csv,.txt" style="display:none">
         <div id="csvPreview" style="font-size:9px;color:var(--mu);margin-top:6px;font-family:'Space Mono',monospace"></div>
@@ -266,7 +327,7 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
         <div id="gcpList"><div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Pilih foto lalu klik pada gambar.</div></div>
       </div>
       <div class="s-sec" id="gcpApplyWrap">
-        <button class="btn btn-pr btn-full" id="btnApply" onclick="applyCurrentPhoto()" disabled>&#128506; Georeference Foto Ini</button>
+        <button class="btn btn-pr btn-full" id="btnApply" onclick="applyCurrentPhoto()" disabled>🗺 Georeference Foto Ini</button>
         <div id="gcpWarn" style="margin-top:6px;font-size:10px;color:var(--mu);text-align:center">Pilih foto &amp; tandai min. 3 GCP</div>
       </div>
     </div>
@@ -309,6 +370,10 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
           <label class="toggle"><input type="checkbox" id="togGCP" checked onchange="toggleLayerGroup('gcp',this.checked)"><span class="toggle-sl"></span></label>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <span style="font-size:10px;color:var(--tx)">Marker Pokok Sawit</span>
+          <label class="toggle"><input type="checkbox" id="togTrees" checked onchange="toggleLayerGroup('trees',this.checked)"><span class="toggle-sl"></span></label>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
           <span style="font-size:10px;color:var(--tx)">Tampilkan Batas Foto</span>
           <label class="toggle"><input type="checkbox" id="togOutlines" onchange="toggleOutlines(this.checked)"><span class="toggle-sl"></span></label>
         </div>
@@ -318,7 +383,7 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
         <div style="font-size:9px;color:var(--mu);margin-bottom:4px">Area</div>
         <div class="unit-row" id="areaUnitRow">
           <button class="unit-btn active" onclick="setUnit('auto',this)">Auto</button>
-          <button class="unit-btn" onclick="setUnit('m2',this)">m&#178;</button>
+          <button class="unit-btn" onclick="setUnit('m2',this)">m²</button>
           <button class="unit-btn" onclick="setUnit('ha',this)">ha</button>
           <button class="unit-btn" onclick="setUnit('acres',this)">acres</button>
         </div>
@@ -327,6 +392,51 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
           <button class="unit-btn active" onclick="setLenUnit('auto',this)">Auto</button>
           <button class="unit-btn" onclick="setLenUnit('m',this)">m</button>
           <button class="unit-btn" onclick="setLenUnit('km',this)">km</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB SENSUS -->
+  <div class="tabpane" id="tab-sensus">
+    <div class="sbody">
+      <div class="s-sec">
+        <div class="s-ttl">Mode Input</div>
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <div class="mode-btn active" id="modeNone" onclick="setTreeMode('none',this)">⬜ Non-aktif</div>
+          <div class="mode-btn" id="modeAdd" onclick="setTreeMode('add',this)">🌴 Tandai Pokok</div>
+        </div>
+        <div style="font-size:9px;color:var(--mu);line-height:1.8" id="treeModeHint">Klik "Tandai Pokok" lalu klik di peta untuk menandai pohon sawit.</div>
+      </div>
+      <div class="s-sec">
+        <div class="s-ttl">Status Default Pokok</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <div class="mode-btn active" id="statusNormal" onclick="setDefaultStatus('normal',this)" style="flex:1">🟢 Normal</div>
+          <div class="mode-btn" id="statusSakit" onclick="setDefaultStatus('sakit',this)" style="flex:1">🟡 Sakit</div>
+          <div class="mode-btn" id="statusMati" onclick="setDefaultStatus('mati',this)" style="flex:1">🔴 Mati</div>
+          <div class="mode-btn" id="statusKosong" onclick="setDefaultStatus('kosong',this)" style="flex:1">⬜ Kosong</div>
+        </div>
+      </div>
+      <div class="s-sec">
+        <div class="s-ttl">Statistik Sensus</div>
+        <div class="stats-grid" id="sensusStats">
+          <div class="stat-box"><div class="stat-num" id="stTotal">0</div><div class="stat-lbl">Total Pokok</div></div>
+          <div class="stat-box"><div class="stat-num" id="stNormal" style="color:var(--saw2)">0</div><div class="stat-lbl">Normal</div></div>
+          <div class="stat-box"><div class="stat-num" id="stSakit" style="color:var(--ac)">0</div><div class="stat-lbl">Sakit</div></div>
+          <div class="stat-box"><div class="stat-num" id="stMati" style="color:var(--er)">0</div><div class="stat-lbl">Mati/Kosong</div></div>
+        </div>
+        <div style="margin-top:7px;font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);line-height:2" id="sensusDensity">Kepadatan: — pokok/ha</div>
+        <button class="btn btn-saw btn-sm btn-full" onclick="countTreesInLastPolygon()" style="margin-top:6px">🔢 Hitung Pokok dalam Polygon</button>
+      </div>
+      <div class="s-sec">
+        <div class="s-ttl">Daftar Pokok <span class="tag tag-a" id="treeCountBadge">0</span></div>
+        <div style="display:flex;gap:4px;margin-bottom:7px;flex-wrap:wrap">
+          <button class="btn btn-sc btn-sm" onclick="clearAllTrees()">🗑 Hapus Semua</button>
+          <button class="btn btn-sc btn-sm" onclick="exportTreeCSV()">💾 Export CSV</button>
+          <button class="btn btn-sc btn-sm" onclick="exportTreeGeoJSON()">🗺 GeoJSON</button>
+        </div>
+        <div id="treeList">
+          <div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div>
         </div>
       </div>
     </div>
@@ -351,15 +461,20 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
       <div class="s-sec">
         <div class="s-ttl">GeoJSON Gabungan</div>
         <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">
-          Semua pengukuran + batas foto + GCP dari <strong style="color:var(--tx)" id="exportPhotoCount">0</strong> foto dalam 1 file GeoJSON.
+          Semua pengukuran + batas foto + GCP + data sensus pokok dari <strong style="color:var(--tx)" id="exportPhotoCount">0</strong> foto.
         </p>
-        <button class="btn btn-ok btn-full" onclick="exportGeoJSON()" style="margin-bottom:5px">&#128229; Download GeoJSON</button>
-        <button class="btn btn-sc btn-full" id="btnCopy" onclick="copyGeoJSON()">&#128203; Copy Clipboard</button>
+        <button class="btn btn-ok btn-full" onclick="exportGeoJSON()" style="margin-bottom:5px">📥 Download GeoJSON</button>
+        <button class="btn btn-sc btn-full" id="btnCopy" onclick="copyGeoJSON()">📋 Copy Clipboard</button>
+      </div>
+      <div class="s-sec">
+        <div class="s-ttl">Data Sensus Sawit</div>
+        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Export data pokok sawit lengkap dengan koordinat, status, dan blok.</p>
+        <button class="btn btn-saw btn-full" onclick="exportTreeCSV()" style="margin-bottom:5px">🌴 CSV Sensus Sawit</button>
+        <button class="btn btn-sc btn-full" onclick="exportTreeGeoJSON()">🗺 GeoJSON Pokok Sawit</button>
       </div>
       <div class="s-sec">
         <div class="s-ttl">CSV Koordinat</div>
-        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Semua vertex polygon/polyline.</p>
-        <button class="btn btn-sc btn-full" onclick="exportCSV()">&#128229; Download CSV</button>
+        <button class="btn btn-sc btn-full" onclick="exportCSV()">📥 Download CSV Koordinat</button>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Export per Foto</div>
@@ -367,7 +482,7 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
       </div>
       <div class="s-sec">
         <div class="s-ttl">Ringkasan Sesi</div>
-        <div id="sessionInfo" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);line-height:2.1">Total foto: 0<br>Georeferenced: 0<br>Pengukuran: 0<br>-</div>
+        <div id="sessionInfo" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);line-height:2.1">Total foto: 0<br>Georeferenced: 0<br>Pengukuran: 0<br>Pokok sawit: 0</div>
       </div>
     </div>
   </div>
@@ -377,34 +492,59 @@ input[type=range]{flex:1;accent-color:var(--ac);height:3px}
   <div id="mapPanel"></div>
   <div id="imagePanel">
     <div class="welcome" id="welcomeMsg">
-      <div class="welcome-icon">&#128752;&#65039;</div>
-      <h2>DroneMap v3 &mdash; Multi Photo</h2>
-      <p>Upload foto drone, tandai GCP, dan foto tampil di peta <strong style="color:var(--ac)">dengan orientasi yang benar</strong> — termasuk rotasi &amp; feathering.</p>
+      <div class="welcome-icon">🌴</div>
+      <h2>DroneMap v3 Pro — Sawit Edition</h2>
+      <p>Upload foto drone, tandai GCP, lakukan georeferencing, lalu <strong style="color:var(--saw2)">sensus pokok sawit</strong> langsung di peta dengan normalisasi warna otomatis.</p>
     </div>
   </div>
 </div>
 </div><!-- /main -->
 
 <div class="status-bar">
-  <span><span class="s-dot dot-a" id="statusDot"></span><span id="statusText">Menunggu foto...</span></span>
+  <span><span class="s-dot dot-saw" id="statusDot"></span><span id="statusText">Menunggu foto...</span></span>
   <span id="cursorCoord" style="margin-left:auto">-</span>
 </div>
 
 <!-- GCP MODAL -->
 <div class="modal-bg hidden" id="gcpModal">
   <div class="modal">
-    <h3>&#128204; GCP #<span id="modalNum">1</span> &mdash; <span id="modalPhotoName" style="color:var(--mu);font-size:10px;font-weight:400"></span></h3>
+    <h3>📌 GCP #<span id="modalNum">1</span> — <span id="modalPhotoName" style="color:var(--mu);font-size:10px;font-weight:400"></span></h3>
     <div class="modal-px">Pixel: <strong id="modalPx">-</strong></div>
     <div class="form-row">
       <div class="fg"><label>Latitude</label><input type="number" id="inLat" placeholder="-0.500000" step="0.000001"></div>
       <div class="fg"><label>Longitude</label><input type="number" id="inLng" placeholder="101.400000" step="0.000001"></div>
     </div>
-    <div style="font-size:9px;color:var(--mu);margin-bottom:10px">
-      Format desimal: <span style="color:var(--in);font-family:'Space Mono',monospace">0.507534, 101.447820</span>
-    </div>
+    <div style="font-size:9px;color:var(--mu);margin-bottom:10px">Format desimal: <span style="color:var(--in);font-family:'Space Mono',monospace">0.507534, 101.447820</span></div>
     <div class="modal-acts">
       <button class="btn btn-sc" onclick="closeModal()">Batal</button>
       <button class="btn btn-pr" onclick="saveGCP()">Simpan GCP</button>
+    </div>
+  </div>
+</div>
+
+<!-- TREE MODAL -->
+<div class="modal-bg hidden" id="treeModal">
+  <div class="modal">
+    <h3>🌴 Edit Data Pokok #<span id="treeModalNum">1</span></h3>
+    <div class="modal-px" id="treeModalCoord">Koordinat: -</div>
+    <div class="form-row">
+      <div class="fg"><label>Nomor Pokok</label><input type="text" id="treeNoInput" placeholder="A-001"></div>
+      <div class="fg"><label>Blok/Baris</label><input type="text" id="treeBlockInput" placeholder="A1"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Status</label>
+      <select id="treeStatusInput">
+        <option value="normal">🟢 Normal / Sehat</option>
+        <option value="sakit">🟡 Sakit / Terinfeksi</option>
+        <option value="mati">🔴 Mati</option>
+        <option value="kosong">⬜ Kosong / Belum Tanam</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Catatan</label>
+      <input type="text" id="treeNoteInput" placeholder="Keterangan tambahan...">
+    </div>
+    <div class="modal-acts">
+      <button class="btn btn-sc" onclick="closeTreeModal()">Batal</button>
+      <button class="btn btn-pr" onclick="saveTreeData()">Simpan</button>
     </div>
   </div>
 </div>
@@ -440,14 +580,8 @@ loadJS([
   'https://cdn.jsdelivr.net/npm/leaflet'+at+vl+'/dist/leaflet.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/'+vl+'/leaflet.min.js'
 ],0,'Leaflet',function(){
-  loadJS([
-    'https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js'
-  ],0,'Leaflet.Draw',null);
-  loadJS([
-    'https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js'
-  ],0,'Turf.js',null);
+  loadJS(['https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.min.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js'],0,'Leaflet.Draw',null);
+  loadJS(['https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js','https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js'],0,'Turf.js',null);
 });
 </script>
 
@@ -464,11 +598,17 @@ var imgEl=null,canvasEl=null,scale=1,offX=0,offY=0;
 var isDragging=false,_drag=false,dragStart={x:0,y:0},_mx=0,_my=0;
 var pendingPx=null;
 var _panelVersion=0,_abortCtrl=null;
-var _dragModeActive=false;
-var _dragPhoto=null;
-var _dragStartLatLng=null;
-var _dragStartOffset=null;
+var _dragModeActive=false,_dragPhoto=null,_dragStartLatLng=null,_dragStartOffset=null;
 var _showPhotoOutlines=false;
+
+// === SENSUS STATE ===
+var trees=[];
+var treeId=0;
+var _treeMode='none';
+var _defaultStatus='normal';
+var _treeLayer=null;
+var _editingTreeId=null;
+var _lastPolygonLayer=null;
 
 // =====================================================
 // TABS
@@ -491,27 +631,25 @@ document.getElementById('fileInputMulti').addEventListener('change',function(e){
 function addPhoto(file){
   var id=Date.now()+Math.random();
   var photo={
-    id:id, name:file.name, src:null, w:0, h:0,
-    gcps:[], georef:false, bounds:null, overlay:null,
-    visible:true, opacity:0.88, gcpLayer:null, corners:null,
-    feather:0.06, blendMode:'normal',
-    offsetLat:0, offsetLng:0,
-    zOrder:photos.length
+    id:id,name:file.name,src:null,w:0,h:0,
+    gcps:[],georef:false,bounds:null,overlay:null,
+    visible:true,opacity:0.9,gcpLayer:null,corners:null,
+    feather:0.12,blendMode:'normal',
+    offsetLat:0,offsetLng:0,zOrder:photos.length,
+    // Color adjust
+    brightness:100,contrast:100,saturation:100,hue:0,
+    colorNormApplied:false
   };
   photos.push(photo);
   var reader=new FileReader();
   reader.onload=function(ev){
     photo.src=ev.target.result;
     var img=new Image();
-    img.onload=function(){
-      photo.w=img.naturalWidth; photo.h=img.naturalHeight;
-      renderPhotoList(); updateStats();
-      if(currentPhotoId===photo.id){showImagePanel();buildImagePanel(photo);renderGCPList();updateGCPStatus();}
-    };
+    img.onload=function(){photo.w=img.naturalWidth;photo.h=img.naturalHeight;renderPhotoList();updateStats();if(currentPhotoId===photo.id){showImagePanel();buildImagePanel(photo);renderGCPList();updateGCPStatus();}};
     img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
-  renderPhotoList(); updateStats();
+  renderPhotoList();updateStats();
   setCurrentPhoto(id);
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
 }
@@ -533,19 +671,14 @@ function removePhoto(id){
 }
 
 function getPhoto(id){return photos.find(function(p){return p.id===id})||null}
-
 function showImagePanel(){document.getElementById('imagePanel').style.display='';}
-function hideImagePanel(){
-  document.getElementById('imagePanel').style.display='none';
-  if(map)setTimeout(function(){map.invalidateSize();},50);
-}
+function hideImagePanel(){document.getElementById('imagePanel').style.display='none';if(map)setTimeout(function(){map.invalidateSize();},50);}
 
 function setCurrentPhoto(id){
   currentPhotoId=id;
   renderPhotoList();
   var p=getPhoto(id);if(!p||!p.src)return;
-  showImagePanel();
-  buildImagePanel(p);renderGCPList();updateGCPStatus();
+  showImagePanel();buildImagePanel(p);renderGCPList();updateGCPStatus();
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p2){p2.classList.remove('active')});
   document.querySelectorAll('.stab')[1].classList.add('active');
@@ -555,35 +688,31 @@ function setCurrentPhoto(id){
 function renderPhotoList(){
   var el=document.getElementById('photoList');
   document.getElementById('photoCountBadge').textContent=photos.length;
-  if(photos.length===0){
-    el.innerHTML='<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto".</div>';return;
-  }
+  if(photos.length===0){el.innerHTML='<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto".</div>';return;}
   el.innerHTML=photos.map(function(p){
     var status='';
-    if(p.georef)status='<span class="badge badge-ok">&#10003; Georef</span>';
+    if(p.georef)status='<span class="badge badge-ok">✓ Georef</span>';
     else if(p.gcps.length>=3)status='<span class="badge badge-warn">'+p.gcps.length+' GCP</span>';
-    else if(p.gcps.length>0)status='<span class="badge badge-gray">'+p.gcps.length+'/3 GCP</span>';
+    else if(p.gcps.length>0)status='<span class="badge badge-gray">'+p.gcps.length+'/3</span>';
     else status='<span class="badge badge-gray">Belum GCP</span>';
     var ac=currentPhotoId===p.id?' active':'';
     var thumb=p.src?'<img class="photo-thumb" src="'+p.src+'" alt="">':'<div class="photo-thumb"></div>';
-    var dims=p.w?p.w+'x'+p.h:'Loading...';
+    var normTag=p.colorNormApplied?'<span style="font-size:8px;color:var(--in);font-family:\'Space Mono\',monospace"> ✓norm</span>':'';
     return '<div class="photo-item'+ac+'" onclick="setCurrentPhoto('+p.id+')">'+
-      thumb+'<div class="photo-info"><div class="photo-name">'+p.name+'</div>'+
-      '<div class="photo-meta">'+dims+' &nbsp;'+status+'</div>'+
-      (p.georef?'<div class="georef-prog" style="width:100%"></div>':'<div class="georef-prog" style="width:'+(p.gcps.length/3*100).toFixed(0)+'%;background:var(--ac);opacity:.5"></div>')+
-      '</div><div class="photo-acts"><button class="photo-del" onclick="event.stopPropagation();removePhoto('+p.id+')" title="Hapus">&#10005;</button></div></div>';
+      thumb+'<div class="photo-info"><div class="photo-name">'+p.name+normTag+'</div>'+
+      '<div class="photo-meta">'+(p.w?p.w+'x'+p.h+' ':'')+status+'</div>'+
+      (p.georef?'<div class="georef-prog" style="width:100%"></div>':'<div class="georef-prog" style="width:'+(p.gcps.length/3*100).toFixed(0)+'%;background:var(--saw);opacity:.5"></div>')+
+      '</div><div class="photo-acts"><button class="photo-del" onclick="event.stopPropagation();removePhoto('+p.id+')" title="Hapus">✕</button></div></div>';
   }).join('');
   document.getElementById('btnGeorefAll').disabled=!photos.some(function(p){return p.gcps.length>=3&&!p.georef});
 }
 
 function updateStats(){
-  var total=photos.length;
-  var hasGcp=photos.filter(function(p){return p.gcps.length>=3}).length;
-  var georef=photos.filter(function(p){return p.georef}).length;
-  var totalGcp=photos.reduce(function(s,p){return s+p.gcps.length},0);
-  document.getElementById('statsPanel').innerHTML='Total foto: '+total+'<br>Sudah GCP (&ge;3): '+hasGcp+'<br>Sudah georef: '+georef+'<br>Total GCP: '+totalGcp;
+  var total=photos.length,hasGcp=photos.filter(function(p){return p.gcps.length>=3}).length;
+  var georef=photos.filter(function(p){return p.georef}).length,totalGcp=photos.reduce(function(s,p){return s+p.gcps.length},0);
+  document.getElementById('statsPanel').innerHTML='Total foto: '+total+'<br>Sudah GCP (≥3): '+hasGcp+'<br>Sudah georef: '+georef+'<br>Total GCP: '+totalGcp+'<br>Pokok sawit: '+trees.length;
   document.getElementById('exportPhotoCount').textContent=georef;
-  document.getElementById('sessionInfo').innerHTML='Total foto: '+total+'<br>Georeferenced: '+georef+'<br>Pengukuran: '+measures.length+'<br>Total GCP: '+totalGcp;
+  document.getElementById('sessionInfo').innerHTML='Total foto: '+total+'<br>Georeferenced: '+georef+'<br>Pengukuran: '+measures.length+'<br>Pokok sawit: '+trees.length;
   updateExportPerPhoto();
 }
 
@@ -732,8 +861,7 @@ function gcpSpreadScore(gcps){
   var xs=gcps.map(function(g){return g.px}),ys=gcps.map(function(g){return g.py});
   var rangeX=Math.max.apply(null,xs)-Math.min.apply(null,xs);
   var rangeY=Math.max.apply(null,ys)-Math.min.apply(null,ys);
-  var p=getPhoto(currentPhotoId);
-  if(!p||!p.w)return 1;
+  var p=getPhoto(currentPhotoId);if(!p||!p.w)return 1;
   return Math.min(rangeX/p.w,rangeY/p.h);
 }
 function updateGCPStatus(){
@@ -743,14 +871,12 @@ function updateGCPStatus(){
   var sb=document.getElementById('btnSplitView');if(sb)sb.disabled=!p;
   var btn=document.getElementById('btnApply'),warn=document.getElementById('gcpWarn');
   if(p&&n>=3){
-    var spread=gcpSpreadScore(p.gcps);
-    var spreadPct=Math.round(spread*100);
+    var spread=gcpSpreadScore(p.gcps);var spreadPct=Math.round(spread*100);
     var spreadColor=spread<0.2?'var(--er)':spread<0.4?'var(--ac)':'var(--ok)';
-    var spreadMsg=spread<0.2?'⚠️ GCP terlalu berdekatan! Sebar ke sudut-sudut foto':spread<0.4?'⚡ Spread cukup, hasil lebih baik jika GCP lebih menyebar':'✓ Spread GCP baik ('+spreadPct+'% foto)';
+    var spreadMsg=spread<0.2?'⚠️ GCP terlalu berdekatan!':spread<0.4?'⚡ Spread cukup':'✓ Spread GCP baik ('+spreadPct+'%)';
     btn.disabled=false;
-    warn.innerHTML='<span style="color:var(--ok)">&#10003; Siap georef ('+n+' GCP)</span>'+
-      '<div style="margin-top:4px;font-size:9px;color:'+spreadColor+';font-family:\'Space Mono\',monospace">'+spreadMsg+'</div>'+
-      (spread<0.3?'<div style="margin-top:4px;padding:5px 7px;background:rgba(248,81,73,.1);border-radius:4px;border-left:2px solid var(--er);font-size:9px;color:var(--er)">⚠️ PENTING: Tandai GCP di <b>4 sudut berbeda</b> pada foto!</div>':'');
+    warn.innerHTML='<span style="color:var(--ok)">✓ Siap georef ('+n+' GCP)</span>'+
+      '<div style="margin-top:4px;font-size:9px;color:'+spreadColor+';font-family:\'Space Mono\',monospace">'+spreadMsg+'</div>';
   } else{btn.disabled=true;warn.textContent=p?'Perlu '+(3-n)+' GCP lagi':'Pilih foto terlebih dahulu'}
   var info=document.getElementById('gcpPhotoInfo');
   if(p){
@@ -759,22 +885,20 @@ function updateGCPStatus(){
       '<div><div style="font-size:11px;font-weight:500;color:var(--tx)">'+p.name+'</div>'+
       '<div style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace">'+
       (p.w?p.w+'x'+p.h+'px ':'')+
-      (p.georef?'<span style="color:var(--ok)">&#10003; Georef</span>':'GCP: '+n+'/3+')+'</div></div></div>';
+      (p.georef?'<span style="color:var(--ok)">✓ Georef</span>':'GCP: '+n+'/3+')+'</div></div></div>';
   } else {
-    info.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">Pilih foto dari tab Foto<br>untuk menandai GCP-nya.</div>';
+    info.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">Pilih foto dari tab Foto.</div>';
   }
 }
 function renderGCPList(){
   var list=document.getElementById('gcpList');
   var p=getPhoto(currentPhotoId);
-  if(!p||p.gcps.length===0){
-    list.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Klik pada gambar untuk<br>menambahkan GCP.</div>';return;
-  }
+  if(!p||p.gcps.length===0){list.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Klik pada gambar untuk<br>menambahkan GCP.</div>';return;}
   list.innerHTML=p.gcps.map(function(g,i){
     return '<div class="gcp-item"><div class="gcp-num">'+(i+1)+'</div><div class="gcp-coords">'+
       '<div class="gcp-px">Px: '+Math.round(g.px)+', '+Math.round(g.py)+'</div>'+
       '<div class="gcp-ll">'+g.lat.toFixed(6)+', '+g.lng.toFixed(6)+'</div></div>'+
-      '<button class="gcp-del" onclick="deleteGCP('+p.id+','+g.id+')">&#10005;</button></div>';
+      '<button class="gcp-del" onclick="deleteGCP('+p.id+','+g.id+')">✕</button></div>';
   }).join('');
 }
 document.getElementById('csvInput').addEventListener('change',function(e){
@@ -787,13 +911,13 @@ document.getElementById('csvInput').addEventListener('change',function(e){
     lines.forEach(function(line,i){
       if(i===0&&isNaN(parseFloat(line.split(',')[0])))return;
       var parts=line.split(',').map(function(s){return s.trim()});
-      if(parts.length<4){errors.push('Baris '+(i+1)+': error');return}
+      if(parts.length<4){errors.push('Baris '+(i+1));return}
       var px=parseFloat(parts[0]),py=parseFloat(parts[1]),lat=parseFloat(parts[2]),lng=parseFloat(parts[3]);
       if([px,py,lat,lng].some(isNaN))return;
       results.push({px:px,py:py,lat:lat,lng:lng,id:Date.now()+i*7});
     });
     if(results.length>0){p.gcps=p.gcps.concat(results);renderGCPList();redrawCanvas(p);updateGCPStatus();renderPhotoList();updateStats()}
-    document.getElementById('csvPreview').textContent='Import: '+results.length+' GCP'+(errors.length?' ('+errors.length+' error)':'');
+    document.getElementById('csvPreview').textContent='Import: '+results.length+' GCP';
   };
   reader.readAsText(f);e.target.value='';
 });
@@ -820,7 +944,72 @@ function redrawCanvas(photo){
 }
 
 // =====================================================
-// AFFINE TRANSFORM (6 PARAM, LEAST-SQUARES)
+// COLOR NORMALIZATION
+// =====================================================
+function sampleImageAvgColor(imgSrc, callback){
+  var img=new Image();
+  img.crossOrigin='anonymous';
+  img.onload=function(){
+    var ofc=document.createElement('canvas');
+    var sw=Math.min(img.naturalWidth,200),sh=Math.min(img.naturalHeight,200);
+    ofc.width=sw;ofc.height=sh;
+    var ctx=ofc.getContext('2d');
+    ctx.drawImage(img,0,0,sw,sh);
+    var d=ctx.getImageData(0,0,sw,sh).data;
+    var rSum=0,gSum=0,bSum=0,count=0;
+    for(var i=0;i<d.length;i+=4){rSum+=d[i];gSum+=d[i+1];bSum+=d[i+2];count++;}
+    callback({r:rSum/count,g:gSum/count,b:bSum/count});
+  };
+  img.src=imgSrc;
+}
+
+function autoNormalizeColors(){
+  var georefPhotos=photos.filter(function(p){return p.georef&&p.src});
+  if(georefPhotos.length<2){
+    document.getElementById('colorNormStatus').textContent='Perlu ≥2 foto georef untuk normalisasi.';return;
+  }
+  document.getElementById('colorNormStatus').textContent='Menganalisis warna foto...';
+  var avgColors=[];var done=0;
+  georefPhotos.forEach(function(p,i){
+    sampleImageAvgColor(p.src,function(avg){
+      avgColors[i]={photo:p,avg:avg};done++;
+      if(done===georefPhotos.length){
+        // Reference = average of all photos
+        var refR=avgColors.reduce(function(s,x){return s+x.avg.r},0)/avgColors.length;
+        var refG=avgColors.reduce(function(s,x){return s+x.avg.g},0)/avgColors.length;
+        var refB=avgColors.reduce(function(s,x){return s+x.avg.b},0)/avgColors.length;
+        var refLuma=0.299*refR+0.587*refG+0.114*refB;
+        avgColors.forEach(function(item){
+          var p=item.photo,avg=item.avg;
+          var luma=0.299*avg.r+0.587*avg.g+0.114*avg.b;
+          var brightFactor=refLuma/Math.max(luma,1);
+          // Clamp brightness correction between 0.7 and 1.4
+          brightFactor=Math.max(0.7,Math.min(1.4,brightFactor));
+          p.brightness=Math.round(brightFactor*100);
+          p.colorNormApplied=true;
+          if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
+          else if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();
+        });
+        document.getElementById('colorNormStatus').textContent='✓ Normalisasi selesai ('+georefPhotos.length+' foto, ref luma: '+Math.round(refLuma)+')';
+        renderPhotoList();renderLayerList();
+        setStatus('Normalisasi warna selesai — tampilan mosaik lebih seragam','green');
+      }
+    });
+  });
+}
+
+function resetAllColorAdj(){
+  photos.forEach(function(p){
+    p.brightness=100;p.contrast=100;p.saturation=100;p.hue=0;p.colorNormApplied=false;
+    if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(100,100,100);
+    else if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();
+  });
+  document.getElementById('colorNormStatus').textContent='Reset — semua adjustment dibatalkan';
+  renderPhotoList();renderLayerList();
+}
+
+// =====================================================
+// AFFINE TRANSFORM
 // =====================================================
 function buildAffine(gcps){
   var ATA=[[0,0,0],[0,0,0],[0,0,0]];
@@ -829,18 +1018,15 @@ function buildAffine(gcps){
     var row=[1,g.px,g.py];
     for(var i=0;i<3;i++){
       for(var j=0;j<3;j++)ATA[i][j]+=row[i]*row[j];
-      ATb_lat[i]+=row[i]*g.lat;
-      ATb_lng[i]+=row[i]*g.lng;
+      ATb_lat[i]+=row[i]*g.lat;ATb_lng[i]+=row[i]*g.lng;
     }
   });
   function solve3x3(M,b){
-    var A=M.map(function(r){return r.slice()});
-    var rhs=b.slice();
+    var A=M.map(function(r){return r.slice()});var rhs=b.slice();
     for(var c=0;c<3;c++){
       var mr=c;
       for(var r=c+1;r<3;r++)if(Math.abs(A[r][c])>Math.abs(A[mr][c]))mr=r;
-      var tmp=A[c];A[c]=A[mr];A[mr]=tmp;
-      var t2=rhs[c];rhs[c]=rhs[mr];rhs[mr]=t2;
+      var tmp=A[c];A[c]=A[mr];A[mr]=tmp;var t2=rhs[c];rhs[c]=rhs[mr];rhs[mr]=t2;
       for(var r2=c+1;r2<3;r2++){
         if(Math.abs(A[c][c])<1e-15)continue;
         var f=A[r2][c]/A[c][c];
@@ -849,91 +1035,80 @@ function buildAffine(gcps){
       }
     }
     var x=[0,0,0];
-    for(var i=2;i>=0;i--){
-      x[i]=rhs[i]/A[i][i];
-      for(var j=i+1;j<3;j++)x[i]-=A[i][j]*x[j]/A[i][i];
-    }
+    for(var i=2;i>=0;i--){x[i]=rhs[i]/A[i][i];for(var j=i+1;j<3;j++)x[i]-=A[i][j]*x[j]/A[i][i];}
     return x;
   }
-  var aLat=solve3x3(ATA,ATb_lat);
-  var aLng=solve3x3(ATA,ATb_lng);
-  return function(px,py){
-    return{lat:aLat[0]+aLat[1]*px+aLat[2]*py, lng:aLng[0]+aLng[1]*px+aLng[2]*py};
-  };
+  var aLat=solve3x3(ATA,ATb_lat),aLng=solve3x3(ATA,ATb_lng);
+  return function(px,py){return{lat:aLat[0]+aLat[1]*px+aLat[2]*py,lng:aLng[0]+aLng[1]*px+aLng[2]*py};};
 }
 
 // =====================================================
-// FIX: ROTATED OVERLAY — Perbaikan canvas rendering
-// Bug lama: menggunakan _getMapPanePos() yang deprecated,
-// dan canvas tidak disinkronkan dengan benar ke viewport peta.
-// Fix: gunakan map.latLngToContainerPoint() + overlay pane offset
+// IMPROVED FEATHERED CANVAS
+// Uses center-weighted (elliptical gradient) blending
+// instead of simple edge feathering — better for mosaics
 // =====================================================
-function buildFeatheredCanvas(imgSrc, w, h, featherAmt, callback){
+function buildFeatheredCanvas(imgSrc,w,h,featherAmt,brightness,contrast,saturation,callback){
   var img=new Image();
   img.onload=function(){
     var ofc=document.createElement('canvas');
-    ofc.width=w; ofc.height=h;
-    var octx=ofc.getContext('2d');
-    octx.drawImage(img,0,0,w,h);
+    ofc.width=w;ofc.height=h;
+    var ctx=ofc.getContext('2d');
+
+    // Apply CSS filter for color adjustment
+    var br=brightness||100,ct=contrast||100,sat=saturation||100;
+    ctx.filter='brightness('+br+'%) contrast('+ct+'%) saturate('+sat+'%)';
+    ctx.drawImage(img,0,0,w,h);
+    ctx.filter='none';
+
+    // === CENTER-WEIGHTED ALPHA BLENDING ===
+    // This creates a smooth gradient from center (opaque) to edges (transparent)
+    // which blends much better than linear edge feathering in overlapping areas
     if(featherAmt>0){
-      var fw=w*featherAmt, fh=h*featherAmt;
-      octx.globalCompositeOperation='destination-in';
-      var gt=octx.createLinearGradient(0,0,0,fh);
-      gt.addColorStop(0,'rgba(0,0,0,0)');gt.addColorStop(1,'rgba(0,0,0,1)');
-      octx.fillStyle=gt;octx.fillRect(0,0,w,fh);
-      var gb=octx.createLinearGradient(0,h-fh,0,h);
-      gb.addColorStop(0,'rgba(0,0,0,1)');gb.addColorStop(1,'rgba(0,0,0,0)');
-      octx.fillStyle=gb;octx.fillRect(0,h-fh,w,fh);
-      var gl=octx.createLinearGradient(0,0,fw,0);
-      gl.addColorStop(0,'rgba(0,0,0,0)');gl.addColorStop(1,'rgba(0,0,0,1)');
-      octx.fillStyle=gl;octx.fillRect(0,0,fw,h);
-      var gr=octx.createLinearGradient(w-fw,0,w,0);
-      gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');
-      octx.fillStyle=gr;octx.fillRect(w-fw,0,fw,h);
+      var mask=document.createElement('canvas');
+      mask.width=w;mask.height=h;
+      var mctx=mask.getContext('2d');
+
+      var cx=w/2,cy=h/2;
+      // Elliptical radial gradient centered on the photo
+      var edgeBlend=featherAmt; // 0..1, how much of the photo fades at edge
+
+      // We use composite with radial gradient for smooth falloff
+      var grad=mctx.createRadialGradient(cx,cy,Math.min(cx,cy)*(1-edgeBlend*1.5),cx,cy,Math.max(cx,cy)*1.05);
+      grad.addColorStop(0,'rgba(0,0,0,1)');
+      grad.addColorStop(1,'rgba(0,0,0,0)');
+      mctx.fillStyle=grad;mctx.fillRect(0,0,w,h);
+
+      // Apply the gradient as alpha mask
+      ctx.globalCompositeOperation='destination-in';
+      ctx.drawImage(mask,0,0);
+      ctx.globalCompositeOperation='source-over';
     }
     callback(ofc,img);
   };
   img.src=imgSrc;
 }
 
-function createRotatedOverlay(photo, toGeo){
-  var tl=toGeo(0,0), tr=toGeo(photo.w,0);
-  var br=toGeo(photo.w,photo.h), bl=toGeo(0,photo.h);
+function createRotatedOverlay(photo,toGeo){
+  var tl=toGeo(0,0),tr=toGeo(photo.w,0);
+  var br=toGeo(photo.w,photo.h),bl=toGeo(0,photo.h);
   photo.corners={tl:tl,tr:tr,br:br,bl:bl};
-
-  var lats=[tl.lat,tr.lat,br.lat,bl.lat];
-  var lngs=[tl.lng,tr.lng,br.lng,bl.lng];
+  var lats=[tl.lat,tr.lat,br.lat,bl.lat],lngs=[tl.lng,tr.lng,br.lng,bl.lng];
   photo.bounds=[[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
-
-  if(photo.offsetLat===undefined)photo.offsetLat=0;
-  if(photo.offsetLng===undefined)photo.offsetLng=0;
-  if(photo.feather===undefined)photo.feather=0.06;
-  if(photo.blendMode===undefined)photo.blendMode='normal';
+  if(photo.offsetLat===undefined)photo.offsetLat=0;if(photo.offsetLng===undefined)photo.offsetLng=0;
+  if(photo.feather===undefined)photo.feather=0.12;if(photo.blendMode===undefined)photo.blendMode='normal';
 
   var RotatedLayer=L.Layer.extend({
-    _ofc:null,
-    _ofcImg:null,
-    _ofcFeather:-1,
-    _canvas:null,
+    _ofc:null,_ofcImg:null,_canvas:null,
 
     onAdd:function(map){
       this._map=map;
-      // ✅ FIX: Gunakan overlayPane dan buat canvas yang di-sync dengan peta
       this._canvas=document.createElement('canvas');
-      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;image-rendering:pixelated;';
+      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
       map.getPanes().overlayPane.appendChild(this._canvas);
-
       var self=this;
-
-      // ✅ FIX: Load gambar dan buat canvas terfeather sekali saja
-      buildFeatheredCanvas(photo.src, photo.w, photo.h, photo.feather, function(ofc, rawImg){
-        self._ofc=ofc;
-        self._ofcImg=rawImg;
-        self._ofcFeather=photo.feather;
-        self._update();
+      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){
+        self._ofc=ofc;self._ofcImg=rawImg;self._update();
       });
-
-      // Drag mode handler
       this._canvas.addEventListener('mousedown',function(e){
         if(!_dragModeActive)return;
         e.stopPropagation();
@@ -942,7 +1117,6 @@ function createRotatedOverlay(photo, toGeo){
         _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
         map.dragging.disable();document.body.style.cursor='grabbing';e.preventDefault();
       });
-
       map.on('zoom viewreset move zoomend moveend resize',this._update,this);
     },
 
@@ -955,93 +1129,55 @@ function createRotatedOverlay(photo, toGeo){
     _rebuildOfc:function(){
       if(!this._ofcImg)return;
       var self=this;
-      buildFeatheredCanvas(photo.src, photo.w, photo.h, photo.feather, function(ofc, rawImg){
-        self._ofc=ofc;
-        self._ofcImg=rawImg;
-        self._ofcFeather=photo.feather;
-        self._update();
+      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){
+        self._ofc=ofc;self._ofcImg=rawImg;self._update();
       });
     },
 
     _update:function(){
       if(!this._ofc)return;
-      var map=this._map;
-      if(!map)return;
-
-      // ✅ FIX UTAMA: Sinkronisasi canvas dengan overlay pane Leaflet
-      // Leaflet menggeser overlay pane saat pan/zoom, jadi canvas
-      // harus menutupi seluruh container, bukan hanya viewport saat ini.
-      var mapSize=map.getSize();
-      var topLeft=map.containerPointToLayerPoint([0,0]);
-
-      this._canvas.style.width=mapSize.x+'px';
-      this._canvas.style.height=mapSize.y+'px';
-      this._canvas.style.left=topLeft.x+'px';
-      this._canvas.style.top=topLeft.y+'px';
-      this._canvas.width=mapSize.x;
-      this._canvas.height=mapSize.y;
+      var map=this._map;if(!map)return;
+      var mapSize=map.getSize();var topLeft=map.containerPointToLayerPoint([0,0]);
+      this._canvas.style.width=mapSize.x+'px';this._canvas.style.height=mapSize.y+'px';
+      this._canvas.style.left=topLeft.x+'px';this._canvas.style.top=topLeft.y+'px';
+      this._canvas.width=mapSize.x;this._canvas.height=mapSize.y;
       this._canvas.style.zIndex=(photo.zOrder||0)+10;
       this._canvas.style.pointerEvents=_dragModeActive?'auto':'none';
-
-      var oLat=photo.offsetLat||0, oLng=photo.offsetLng||0;
-
-      // ✅ FIX: Konversi sudut foto ke layer points (bukan container points)
-      // Ini yang membuat overlay tidak bergeser saat peta di-pan
+      var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
       var pts=[
         map.latLngToLayerPoint(L.latLng(tl.lat+oLat,tl.lng+oLng)),
         map.latLngToLayerPoint(L.latLng(tr.lat+oLat,tr.lng+oLng)),
         map.latLngToLayerPoint(L.latLng(br.lat+oLat,br.lng+oLng)),
         map.latLngToLayerPoint(L.latLng(bl.lat+oLat,bl.lng+oLng))
       ];
-
-      // Offset ke koordinat canvas (kompensasi posisi pane)
       var off=topLeft;
-      var cpts=pts.map(function(p){return{x:p.x-off.x, y:p.y-off.y}});
-
+      var cpts=pts.map(function(p){return{x:p.x-off.x,y:p.y-off.y}});
       var ctx=this._canvas.getContext('2d');
       ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
-
-      var W2=photo.w, H2=photo.h;
-      // Hitung transform affine dari pixel foto ke koordinat canvas
-      var a=(cpts[1].x-cpts[0].x)/W2;
-      var b=(cpts[3].x-cpts[0].x)/H2;
-      var c=(cpts[1].y-cpts[0].y)/W2;
-      var d=(cpts[3].y-cpts[0].y)/H2;
-      var e2=cpts[0].x;
-      var f2=cpts[0].y;
-
-      // Outline batas foto
+      var W2=photo.w,H2=photo.h;
+      var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
+      var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
+      var e2=cpts[0].x,f2=cpts[0].y;
       if(_showPhotoOutlines||_dragModeActive){
-        ctx.save();
-        ctx.globalAlpha=_dragModeActive?0.9:0.5;
-        ctx.globalCompositeOperation='source-over';
-        ctx.beginPath();
-        ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
-        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);
-        ctx.closePath();
-        ctx.strokeStyle='#f0a500';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();
-        ctx.restore();
+        ctx.save();ctx.globalAlpha=_dragModeActive?0.9:0.5;
+        ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
+        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
+        ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-
-      // ✅ FIX: Gambar foto dengan transform yang benar + clip polygon
-      ctx.save();
-      ctx.globalAlpha=photo.opacity;
+      ctx.save();ctx.globalAlpha=photo.opacity;
       ctx.globalCompositeOperation=photo.blendMode||'normal';
-      ctx.beginPath();
-      ctx.moveTo(cpts[0].x,cpts[0].y);
-      ctx.lineTo(cpts[1].x,cpts[1].y);
-      ctx.lineTo(cpts[2].x,cpts[2].y);
-      ctx.lineTo(cpts[3].x,cpts[3].y);
-      ctx.closePath();
-      ctx.clip();
-      ctx.transform(a,c,b,d,e2,f2);
-      ctx.drawImage(this._ofc,0,0,W2,H2);
-      ctx.restore();
+      ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
+      ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();ctx.clip();
+      ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
     },
 
     setOpacityVal:function(op){photo.opacity=op;this._update();},
     setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
     setBlendMode:function(m){photo.blendMode=m;this._update();},
+    setColorAdj:function(br,ct,sat){
+      photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;
+      this._rebuildOfc();
+    },
     forceUpdate:function(){this._update();}
   });
   return new RotatedLayer();
@@ -1051,21 +1187,26 @@ function createRotatedOverlay(photo, toGeo){
 // LAYER VISUAL CONTROLS
 // =====================================================
 function setPhotoFeather(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;
-  p.feather=parseFloat(val)/100;
+  var p=getPhoto(pid);if(!p)return;p.feather=parseFloat(val)/100;
   if(p.overlay&&p.overlay.setFeatherVal)p.overlay.setFeatherVal(p.feather);
-  if(inputEl){
-    var sv=inputEl.parentNode.querySelector('.slider-val');
-    if(sv)sv.textContent=Math.round(val)+'%';
-  }
+  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=Math.round(val)+'%';}
 }
-
-function setPhotoBlend(pid,val){
-  var p=getPhoto(pid);if(!p)return;
-  p.blendMode=val;
-  if(p.overlay&&p.overlay.setBlendMode)p.overlay.setBlendMode(val);
+function setPhotoBlend(pid,val){var p=getPhoto(pid);if(!p)return;p.blendMode=val;if(p.overlay&&p.overlay.setBlendMode)p.overlay.setBlendMode(val);}
+function setPhotoBrightness(pid,val,inputEl){
+  var p=getPhoto(pid);if(!p)return;p.brightness=parseInt(val);
+  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
+  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
 }
-
+function setPhotoContrast(pid,val,inputEl){
+  var p=getPhoto(pid);if(!p)return;p.contrast=parseInt(val);
+  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
+  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
+}
+function setPhotoSaturation(pid,val,inputEl){
+  var p=getPhoto(pid);if(!p)return;p.saturation=parseInt(val);
+  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
+  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
+}
 function toggleOutlines(checked){
   _showPhotoOutlines=!!checked;
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
@@ -1075,64 +1216,46 @@ function toggleOutlines(checked){
 // GEOREFERENCE
 // =====================================================
 function applyCurrentPhoto(){
-  var p=getPhoto(currentPhotoId);
-  if(!p||p.gcps.length<3)return;
+  var p=getPhoto(currentPhotoId);if(!p||p.gcps.length<3)return;
   if(typeof L==='undefined'||typeof turf==='undefined'){setStatus('Library belum siap...','amber');onReady(applyCurrentPhoto);return}
   georefPhoto(p);
 }
-
 function georefAll(){
   if(typeof L==='undefined'||typeof turf==='undefined'){setStatus('Library belum siap...','amber');onReady(georefAll);return}
-  var toGeoref=photos.filter(function(p){return p.gcps.length>=3&&!p.georef});
-  if(toGeoref.length===0)return;
-  toGeoref.forEach(function(p){georefPhoto(p)});
-  setStatus(toGeoref.length+' foto berhasil di-georeference!','green');
+  photos.filter(function(p){return p.gcps.length>=3&&!p.georef}).forEach(function(p){georefPhoto(p)});
 }
 
 function georefPhoto(photo){
   if(!photo||photo.gcps.length<3)return;
   if(!map)initMap(photo);
-
   var toGeo=buildAffine(photo.gcps);
-
   var residuals=photo.gcps.map(function(g){
     var pred=toGeo(g.px,g.py);
-    var dLat=(pred.lat-g.lat)*111320;
-    var dLng=(pred.lng-g.lng)*111320*Math.cos(g.lat*Math.PI/180);
+    var dLat=(pred.lat-g.lat)*111320,dLng=(pred.lng-g.lng)*111320*Math.cos(g.lat*Math.PI/180);
     return Math.sqrt(dLat*dLat+dLng*dLng);
   });
-  var maxRes=Math.max.apply(null,residuals);
-  var avgRes=residuals.reduce(function(s,r){return s+r},0)/residuals.length;
-
+  var maxRes=Math.max.apply(null,residuals),avgRes=residuals.reduce(function(s,r){return s+r},0)/residuals.length;
   var xs=photo.gcps.map(function(g){return g.px}),ys=photo.gcps.map(function(g){return g.py});
   var spreadX=(Math.max.apply(null,xs)-Math.min.apply(null,xs))/photo.w;
   var spreadY=(Math.max.apply(null,ys)-Math.min.apply(null,ys))/photo.h;
   var spreadOk=spreadX>0.35&&spreadY>0.35;
-
-  var dx_lat=toGeo(1,0).lat-toGeo(0,0).lat;
-  var dx_lng=toGeo(1,0).lng-toGeo(0,0).lng;
+  var dx_lat=toGeo(1,0).lat-toGeo(0,0).lat,dx_lng=toGeo(1,0).lng-toGeo(0,0).lng;
   var rotDeg=Math.atan2(-dx_lat,dx_lng)*180/Math.PI;
   document.getElementById('hdrRotTag').style.display='';
   document.getElementById('hdrRotTag').textContent='↻ '+rotDeg.toFixed(1)+'°';
-
   var maxZ=photos.reduce(function(m,p){return p.georef?(Math.max(m,p.zOrder||0)):m},0);
   if(!photo.georef)photo.zOrder=maxZ+1;
-
   if(photo.overlay&&map)map.removeLayer(photo.overlay);
-
   photo.overlay=createRotatedOverlay(photo,toGeo);
   if(photo.visible)photo.overlay.addTo(map);
-
   if(photo.gcpLayer)map.removeLayer(photo.gcpLayer);
   photo.gcpLayer=L.featureGroup();
   photo.gcps.forEach(function(g,i){
     L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#111',weight:2,fillOpacity:1,zIndexOffset:900})
-      .addTo(photo.gcpLayer)
-      .bindPopup('<b>'+photo.name+'</b><br>GCP '+(i+1)+'<br>'+g.lat.toFixed(6)+', '+g.lng.toFixed(6));
+      .addTo(photo.gcpLayer).bindPopup('<b>'+photo.name+'</b><br>GCP '+(i+1)+'<br>'+g.lat.toFixed(6)+', '+g.lng.toFixed(6));
   });
   if(document.getElementById('togGCP').checked)photo.gcpLayer.addTo(map);
   photo.georef=true;
-
   var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
   if(allBounds.length>0){
     var allLats=[],allLngs=[];
@@ -1140,31 +1263,26 @@ function georefPhoto(photo){
     map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});
   }
   renderPhotoList();renderLayerList();updateStats();updateStep(2);
-
-  var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
   var gcpWarnEl=document.getElementById('gcpWarn');
   if(gcpWarnEl){
+    var resColor=maxRes>5?'var(--er)':maxRes>2?'var(--ac)':'var(--ok)';
     var resHtml='<div style="margin-top:6px;background:var(--s2);border-radius:5px;padding:7px 9px;border-left:3px solid '+resColor+'">'+
-      '<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu);margin-bottom:4px">RESIDUAL ERROR GEOREF</div>';
+      '<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu);margin-bottom:4px">RESIDUAL ERROR</div>';
     residuals.forEach(function(r,i){
       var rc=r>5?'var(--er)':r>2?'var(--ac)':'var(--ok)';
       resHtml+='<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:'+rc+'">GCP '+(i+1)+': '+r.toFixed(2)+'m</div>';
     });
-    resHtml+='<div style="margin-top:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--tx)">Rata2: '+avgRes.toFixed(2)+'m &nbsp; Max: '+maxRes.toFixed(2)+'m</div>';
-    if(!spreadOk)resHtml+='<div style="margin-top:5px;color:var(--er);font-size:9px">⚠️ GCP kurang menyebar. Tandai ulang di 4 sudut foto!</div>';
-    resHtml+='</div>';
-    gcpWarnEl.innerHTML='<span style="color:var(--ok)">&#10003; Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
+    resHtml+='<div style="margin-top:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--tx)">Avg: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m</div></div>';
+    if(!spreadOk)resHtml+='<div style="margin-top:5px;color:var(--er);font-size:9px">⚠️ GCP kurang menyebar!</div>';
+    gcpWarnEl.innerHTML='<span style="color:var(--ok)">✓ Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
   }
-
   hideImagePanel();
-  var statusMsg='Foto "'+photo.name+'" georef ✓ | Rotasi: '+rotDeg.toFixed(1)+'° | Avg error: '+avgRes.toFixed(2)+'m';
-  if(!spreadOk)statusMsg+=' ⚠️ GCP kurang menyebar!';
-  setStatus(statusMsg,spreadOk&&maxRes<5?'green':'amber');
+  setStatus('✓ "'+photo.name+'" | Rot: '+rotDeg.toFixed(1)+'° | Error avg: '+avgRes.toFixed(2)+'m',spreadOk&&maxRes<5?'green':'amber');
   updateStep(3);
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('active')});
   document.querySelectorAll('.stab')[3].classList.add('active');
-  document.getElementById('tab-measure').classList.add('active');
+  document.getElementById('tab-sensus').classList.add('active');
 }
 
 // =====================================================
@@ -1174,10 +1292,7 @@ function toggleDragMode(btn){
   _dragModeActive=!_dragModeActive;
   btn.classList.toggle('active',_dragModeActive);
   btn.textContent=_dragModeActive?'✋ Mode Geser AKTIF — Drag Foto':'✋ Aktifkan Mode Geser Foto';
-  if(map){
-    map.getContainer().style.cursor=_dragModeActive?'crosshair':'';
-    if(!_dragModeActive){map.dragging.enable();_dragPhoto=null;}
-  }
+  if(map){map.getContainer().style.cursor=_dragModeActive?'crosshair':'';if(!_dragModeActive){map.dragging.enable();_dragPhoto=null;}}
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
 }
 document.addEventListener('mousemove',function(e){
@@ -1192,21 +1307,10 @@ document.addEventListener('mousemove',function(e){
 document.addEventListener('mouseup',function(){
   if(!_dragModeActive||!_dragPhoto)return;
   if(map)map.dragging.enable();
-  document.body.style.cursor='';
-  _dragPhoto=null;_dragStartLatLng=null;_dragStartOffset=null;
-  renderLayerList();
+  document.body.style.cursor='';_dragPhoto=null;_dragStartLatLng=null;_dragStartOffset=null;renderLayerList();
 });
-function updateOffsetDisplay(photo){
-  var el=document.getElementById('offset_'+photo.id);
-  if(el)el.textContent='Δ '+photo.offsetLat.toFixed(6)+' / '+photo.offsetLng.toFixed(6);
-}
-function resetPhotoOffset(pid){
-  var p=getPhoto(pid);if(!p)return;
-  p.offsetLat=0;p.offsetLng=0;
-  if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();
-  renderLayerList();
-  setStatus('Offset foto "'+p.name+'" direset','amber');
-}
+function updateOffsetDisplay(photo){var el=document.getElementById('offset_'+photo.id);if(el)el.textContent='Δ '+photo.offsetLat.toFixed(6)+' / '+photo.offsetLng.toFixed(6);}
+function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
 
 // =====================================================
 // Z-ORDER
@@ -1215,44 +1319,51 @@ function movePhotoUp(pid){
   var idx=photos.findIndex(function(p){return p.id===pid});
   if(idx<0||idx>=photos.length-1)return;
   var tmp=photos[idx].zOrder;photos[idx].zOrder=photos[idx+1].zOrder;photos[idx+1].zOrder=tmp;
-  if(photos[idx].overlay&&photos[idx].overlay.forceUpdate)photos[idx].overlay.forceUpdate();
-  if(photos[idx+1].overlay&&photos[idx+1].overlay.forceUpdate)photos[idx+1].overlay.forceUpdate();
+  photos[idx].overlay&&photos[idx].overlay.forceUpdate&&photos[idx].overlay.forceUpdate();
+  photos[idx+1].overlay&&photos[idx+1].overlay.forceUpdate&&photos[idx+1].overlay.forceUpdate();
   renderLayerList();
 }
 function movePhotoDown(pid){
   var idx=photos.findIndex(function(p){return p.id===pid});
   if(idx<=0)return;
   var tmp=photos[idx].zOrder;photos[idx].zOrder=photos[idx-1].zOrder;photos[idx-1].zOrder=tmp;
-  if(photos[idx].overlay&&photos[idx].overlay.forceUpdate)photos[idx].overlay.forceUpdate();
-  if(photos[idx-1].overlay&&photos[idx-1].overlay.forceUpdate)photos[idx-1].overlay.forceUpdate();
+  photos[idx].overlay&&photos[idx].overlay.forceUpdate&&photos[idx].overlay.forceUpdate();
+  photos[idx-1].overlay&&photos[idx-1].overlay.forceUpdate&&photos[idx-1].overlay.forceUpdate();
   renderLayerList();
 }
 
 function initMap(refPhoto){
-  var toGeo=buildAffine(refPhoto.gcps);
-  var c=toGeo(refPhoto.w/2,refPhoto.h/2);
+  var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
   baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
   drawnItems=new L.FeatureGroup().addTo(map);
+  _treeLayer=L.featureGroup().addTo(map);
   var drawCtrl=new L.Control.Draw({
-    position:'topright',
-    edit:{featureGroup:drawnItems,remove:true},
+    position:'topright',edit:{featureGroup:drawnItems,remove:true},
     draw:{
-      polygon:{showArea:true,shapeOptions:{color:'#f0a500',weight:2,fillOpacity:.14}},
+      polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},
       polyline:{shapeOptions:{color:'#58a6ff',weight:3}},
       rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
       circle:false,circlemarker:false,
-      marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#f0a500;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}
+      marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}
     }
   });
   map.addControl(drawCtrl);
-  map.on(L.Draw.Event.CREATED,onDrawCreated);
+  map.on(L.Draw.Event.CREATED,function(e){
+    onDrawCreated(e);
+    _lastPolygonLayer=e.layer;
+  });
   map.on(L.Draw.Event.EDITED,refreshMeasures);
   map.on(L.Draw.Event.DELETED,function(e){
     e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});
     renderMeasures();updateStats();
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
+  // Tree click handler
+  map.on('click',function(e){
+    if(_treeMode!=='add')return;
+    addTree(e.latlng.lat,e.latlng.lng);
+  });
 }
 
 // =====================================================
@@ -1261,16 +1372,14 @@ function initMap(refPhoto){
 function renderLayerList(){
   var el=document.getElementById('layerList');
   var georefPhotos=photos.filter(function(p){return p.georef});
-  if(georefPhotos.length===0){
-    el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div>';return;
-  }
-  var sorted=georefPhotos.slice().sort(function(a,b){return (b.zOrder||0)-(a.zOrder||0)});
+  if(georefPhotos.length===0){el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div>';return;}
+  var sorted=georefPhotos.slice().sort(function(a,b){return(b.zOrder||0)-(a.zOrder||0)});
   el.innerHTML=sorted.map(function(p,i){
-    var isTop=(i===0), isBot=(i===sorted.length-1);
+    var isTop=(i===0),isBot=(i===sorted.length-1);
     var hasOffset=(p.offsetLat!==0||p.offsetLng!==0);
-    var featherPct=Math.round((p.feather||0.06)*100);
+    var featherPct=Math.round((p.feather||0.12)*100);
     var blendOpts=['normal','multiply','screen','overlay','lighten','darken'];
-    return '<div class="lay-row" style="border-left:3px solid '+(hasOffset?'var(--ac)':'var(--bd)')+'">'+
+    return '<div class="lay-row" style="border-left:3px solid '+(hasOffset?'var(--saw)':'var(--bd)')+'">'+
       '<div class="lay-row-head">'+
         '<img class="lay-thumb" src="'+p.src+'" alt="">'+
         '<span class="lay-name" title="'+p.name+'">'+p.name+'</span>'+
@@ -1280,40 +1389,25 @@ function renderLayerList(){
         '</div>'+
         '<label class="toggle"><input type="checkbox" '+(p.visible?'checked':'')+' onchange="togglePhotoLayer('+p.id+',this.checked)"><span class="toggle-sl"></span></label>'+
       '</div>'+
-      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'+
-        '<span style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu)">Z='+(p.zOrder||0)+'</span>'+
-        (hasOffset?'<span style="font-size:9px;color:var(--ac);font-family:\'Space Mono\',monospace">+offset</span>':'')+
-        (hasOffset?'<button onclick="resetPhotoOffset('+p.id+')" style="font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">↺ Reset</button>':'')+
-      '</div>'+
-      '<div class="lay-offset">Δ <span id="offset_'+p.id+'">'+(hasOffset?p.offsetLat.toFixed(6)+' / '+p.offsetLng.toFixed(6):'0 / 0')+'</span></div>'+
-      '<div class="slider-row" style="margin-top:6px">'+
-        '<label>Opacity</label>'+
-        '<input type="range" min="0" max="100" value="'+Math.round(p.opacity*100)+'" oninput="setPhotoOpacity('+p.id+',this.value,this)">'+
-        '<span class="slider-val">'+Math.round(p.opacity*100)+'%</span>'+
-      '</div>'+
-      '<div class="slider-row" style="margin-top:4px">'+
-        '<label>Feather</label>'+
-        '<input type="range" min="0" max="20" value="'+featherPct+'" oninput="setPhotoFeather('+p.id+',this.value,this)">'+
-        '<span class="slider-val">'+featherPct+'%</span>'+
-      '</div>'+
+      '<div class="slider-row"><label class="adj-lbl">Opacity</label><input type="range" min="0" max="100" value="'+Math.round(p.opacity*100)+'" oninput="setPhotoOpacity('+p.id+',this.value,this)"><span class="slider-val">'+Math.round(p.opacity*100)+'%</span></div>'+
+      '<div class="slider-row" style="margin-top:3px"><label class="adj-lbl">Feather</label><input type="range" min="0" max="25" value="'+featherPct+'" oninput="setPhotoFeather('+p.id+',this.value,this)"><span class="slider-val">'+featherPct+'%</span></div>'+
+      '<div class="slider-row" style="margin-top:3px"><label class="adj-lbl">Cerah</label><input type="range" min="50" max="200" value="'+(p.brightness||100)+'" oninput="setPhotoBrightness('+p.id+',this.value,this)"><span class="slider-val">'+(p.brightness||100)+'%</span></div>'+
+      '<div class="slider-row" style="margin-top:3px"><label class="adj-lbl">Kontras</label><input type="range" min="50" max="200" value="'+(p.contrast||100)+'" oninput="setPhotoContrast('+p.id+',this.value,this)"><span class="slider-val">'+(p.contrast||100)+'%</span></div>'+
+      '<div class="slider-row" style="margin-top:3px"><label class="adj-lbl">Saturasi</label><input type="range" min="0" max="200" value="'+(p.saturation||100)+'" oninput="setPhotoSaturation('+p.id+',this.value,this)"><span class="slider-val">'+(p.saturation||100)+'%</span></div>'+
       '<div style="margin-top:5px;display:flex;align-items:center;gap:6px">'+
         '<span style="font-size:9px;color:var(--mu);min-width:44px">Blend</span>'+
         '<select class="blend-sel" onchange="setPhotoBlend('+p.id+',this.value)">'+
           blendOpts.map(function(m){return '<option value="'+m+'"'+((p.blendMode||'normal')===m?' selected':'')+'>'+m+'</option>';}).join('')+
         '</select>'+
       '</div>'+
+      (hasOffset?'<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">'+p.offsetLat.toFixed(6)+' / '+p.offsetLng.toFixed(6)+'</span> <button onclick="resetPhotoOffset('+p.id+')" style="font-size:8px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">↺ Reset</button></div>':'<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">0 / 0</span></div>')+
     '</div>';
   }).join('');
 }
 
-function togglePhotoLayer(pid,on){
-  var p=getPhoto(pid);if(!p||!p.overlay||!map)return;
-  p.visible=on;
-  if(on)p.overlay.addTo(map);else map.removeLayer(p.overlay);
-}
+function togglePhotoLayer(pid,on){var p=getPhoto(pid);if(!p||!p.overlay||!map)return;p.visible=on;if(on)p.overlay.addTo(map);else map.removeLayer(p.overlay);}
 function setPhotoOpacity(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;
-  p.opacity=val/100;
+  var p=getPhoto(pid);if(!p)return;p.opacity=val/100;
   if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);
   if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
 }
@@ -1321,6 +1415,7 @@ function toggleLayerGroup(type,on){
   if(!map)return;
   if(type==='draw'){if(drawnItems){if(on)drawnItems.addTo(map);else map.removeLayer(drawnItems)}}
   if(type==='gcp'){photos.forEach(function(p){if(p.gcpLayer){if(on)p.gcpLayer.addTo(map);else map.removeLayer(p.gcpLayer)}})}
+  if(type==='trees'){if(_treeLayer){if(on)_treeLayer.addTo(map);else map.removeLayer(_treeLayer)}}
 }
 
 var bDefs={
@@ -1343,8 +1438,10 @@ function onDrawCreated(e){
   var layer=e.layer,type=e.layerType;shapeId++;var id=shapeId;var m=null;
   if(type==='polygon'||type==='rectangle'){
     var gj=layer.toGeoJSON(),area=turf.area(gj),perim=turf.length(turf.polygonToLine(gj),{units:'meters'});
-    m={id:id,type:'polygon',area:area,perim:perim,coords:gj.geometry.coordinates[0].slice(0,-1),label:'Polygon #'+id};
-    layer.bindPopup('<b>Polygon #'+id+'</b><br>Luas: <b>'+fmtArea(area)+'</b><br>Keliling: <b>'+fmtLen(perim)+'</b>');
+    var treesInside=countTreesInPolygon(gj);
+    var density=area>0?(treesInside/(area/10000)).toFixed(1):'-';
+    m={id:id,type:'polygon',area:area,perim:perim,coords:gj.geometry.coordinates[0].slice(0,-1),label:'Blok #'+id,treesInside:treesInside,density:density};
+    layer.bindPopup('<b>Blok #'+id+'</b><br>Luas: <b>'+fmtArea(area)+'</b><br>Keliling: <b>'+fmtLen(perim)+'</b><br>🌴 Pokok: <b>'+treesInside+'</b><br>Kepadatan: <b>'+density+' pokok/ha</b>');
   }else if(type==='polyline'){
     var gj2=layer.toGeoJSON(),len=turf.length(gj2,{units:'meters'});
     m={id:id,type:'line',len:len,coords:gj2.geometry.coordinates,label:'Line #'+id};
@@ -1375,14 +1472,15 @@ function renderMeasures(){
   el.innerHTML=measures.map(function(m){
     if(m.type==='polygon'){
       var pts=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
-      return '<div class="m-card"><div class="m-card-head"><span>&#9830;</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">&#10005;</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' &middot; '+m.coords.length+' vertex</div><details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
+      var treeInfo=m.treesInside!==undefined?'<div style="font-size:9px;color:var(--saw2);font-family:\'Space Mono\',monospace;margin-top:3px">🌴 '+m.treesInside+' pokok | '+m.density+' pokok/ha</div>':'';
+      return '<div class="m-card"><div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
     }
     if(m.type==='line'){
       var pts2=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
-      return '<div class="m-card"><div class="m-card-head"><span>&#8213;</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">&#10005;</button></div><div class="m-val">'+fmtLen(m.len)+'</div><div class="m-sub">Polyline &middot; '+m.coords.length+' titik</div><details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts2+'</ul></details></div>';
+      return '<div class="m-card"><div class="m-card-head"><span>―</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtLen(m.len)+'</div><div class="m-sub">Polyline · '+m.coords.length+' titik</div><details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts2+'</ul></details></div>';
     }
     if(m.type==='marker'){
-      return '<div class="m-card"><div class="m-card-head"><span>&#128205;</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">&#10005;</button></div><div class="m-val" style="font-size:11px">'+m.lat.toFixed(8)+'</div><div class="m-sub">'+m.lng.toFixed(8)+'</div></div>';
+      return '<div class="m-card"><div class="m-card-head"><span>📍</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val" style="font-size:11px">'+m.lat.toFixed(8)+'</div><div class="m-sub">'+m.lng.toFixed(8)+'</div></div>';
     }
     return '';
   }).join('');
@@ -1390,8 +1488,193 @@ function renderMeasures(){
 function renameShape(id,val){var m=measures.find(function(m){return m.id===id});if(m)m.label=val}
 function deleteShape(id){
   drawnItems.eachLayer(function(l){if(l._mid===id)drawnItems.removeLayer(l)});
-  measures=measures.filter(function(m){return m.id!==id});
-  renderMeasures();updateStats();
+  measures=measures.filter(function(m){return m.id!==id});renderMeasures();updateStats();
+}
+
+// =====================================================
+// SENSUS POKOK SAWIT
+// =====================================================
+function setTreeMode(mode,el){
+  _treeMode=mode;
+  document.querySelectorAll('.mode-btn[id^="mode"]').forEach(function(b){b.classList.remove('active')});
+  el.classList.add('active');
+  var hint=document.getElementById('treeModeHint');
+  if(mode==='add'){
+    hint.textContent='Mode AKTIF: Klik di peta untuk menandai pokok sawit.';
+    hint.style.color='var(--saw2)';
+    if(map)map.getContainer().style.cursor='crosshair';
+  } else {
+    hint.textContent='Klik "Tandai Pokok" lalu klik di peta untuk menandai pohon sawit.';
+    hint.style.color='';
+    if(map)map.getContainer().style.cursor='';
+  }
+}
+
+function setDefaultStatus(status,el){
+  _defaultStatus=status;
+  document.querySelectorAll('.mode-btn[id^="status"]').forEach(function(b){b.classList.remove('active')});
+  el.classList.add('active');
+}
+
+function addTree(lat,lng){
+  treeId++;
+  var tree={
+    id:treeId,lat:lat,lng:lng,
+    no:'P-'+String(treeId).padStart(3,'0'),
+    block:'',status:_defaultStatus,note:'',
+    marker:null
+  };
+  trees.push(tree);
+  addTreeMarker(tree);
+  renderTreeList();updateSensusStats();updateStats();
+  document.getElementById('hdrTreeCount').textContent='🌴 '+trees.length+' pokok';
+}
+
+function getTreeIcon(status){
+  var colors={normal:'#5a9e35',sakit:'#f0a500',mati:'#f85149',kosong:'#7d8590'};
+  var c=colors[status]||'#5a9e35';
+  return L.divIcon({
+    className:'',
+    html:'<div style="width:14px;height:14px;background:'+c+';border:2px solid rgba(0,0,0,.5);border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>',
+    iconSize:[14,14],iconAnchor:[7,7]
+  });
+}
+
+function addTreeMarker(tree){
+  if(!map||!_treeLayer)return;
+  if(tree.marker)_treeLayer.removeLayer(tree.marker);
+  var marker=L.marker([tree.lat,tree.lng],{icon:getTreeIcon(tree.status),zIndexOffset:500});
+  marker.bindPopup('<b>'+tree.no+'</b>'+(tree.block?' | Blok '+tree.block:'')+'<br>Status: <b>'+tree.status+'</b>'+(tree.note?'<br>Catatan: '+tree.note:'')+'<br><small style="color:#7d8590">'+tree.lat.toFixed(7)+', '+tree.lng.toFixed(7)+'</small><br><button onclick="openTreeEdit('+tree.id+')" style="margin-top:5px;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">✏ Edit</button>');
+  marker.addTo(_treeLayer);
+  tree.marker=marker;
+}
+
+function openTreeEdit(id){
+  var t=trees.find(function(x){return x.id===id});if(!t)return;
+  _editingTreeId=id;
+  document.getElementById('treeModalNum').textContent=t.id;
+  document.getElementById('treeModalCoord').textContent='Koordinat: '+t.lat.toFixed(7)+', '+t.lng.toFixed(7);
+  document.getElementById('treeNoInput').value=t.no;
+  document.getElementById('treeBlockInput').value=t.block;
+  document.getElementById('treeStatusInput').value=t.status;
+  document.getElementById('treeNoteInput').value=t.note;
+  document.getElementById('treeModal').classList.remove('hidden');
+}
+function closeTreeModal(){document.getElementById('treeModal').classList.add('hidden');_editingTreeId=null;}
+function saveTreeData(){
+  var t=trees.find(function(x){return x.id===_editingTreeId});if(!t)return;
+  t.no=document.getElementById('treeNoInput').value||t.no;
+  t.block=document.getElementById('treeBlockInput').value;
+  t.status=document.getElementById('treeStatusInput').value;
+  t.note=document.getElementById('treeNoteInput').value;
+  addTreeMarker(t);// rebuild marker with new status color
+  closeTreeModal();renderTreeList();updateSensusStats();
+}
+document.addEventListener('keydown',function(e){
+  if(!document.getElementById('treeModal').classList.contains('hidden')){
+    if(e.key==='Escape')closeTreeModal();
+  }
+});
+
+function deleteTree(id){
+  var t=trees.find(function(x){return x.id===id});
+  if(t&&t.marker&&_treeLayer)_treeLayer.removeLayer(t.marker);
+  trees=trees.filter(function(x){return x.id!==id});
+  renderTreeList();updateSensusStats();updateStats();
+  document.getElementById('hdrTreeCount').textContent='🌴 '+trees.length+' pokok';
+}
+
+function clearAllTrees(){
+  showConfirm('Hapus semua data pokok sawit? ('+trees.length+' pokok)',function(){
+    trees.forEach(function(t){if(t.marker&&_treeLayer)_treeLayer.removeLayer(t.marker)});
+    trees=[];renderTreeList();updateSensusStats();updateStats();
+    document.getElementById('hdrTreeCount').textContent='🌴 0 pokok';
+    showToast('Semua data pokok dihapus');
+  });
+}
+
+function renderTreeList(){
+  var el=document.getElementById('treeList');
+  document.getElementById('treeCountBadge').textContent=trees.length;
+  if(trees.length===0){el.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div>';return;}
+  // Show last 20 for performance
+  var shown=trees.slice(-20).reverse();
+  el.innerHTML=(trees.length>20?'<div style="font-size:9px;color:var(--mu);text-align:center;padding:4px 0">Menampilkan 20 terbaru dari '+trees.length+'</div>':'')+
+  shown.map(function(t){
+    var cls='tree-'+t.status;
+    var pillCls='pill-'+t.status;
+    var labels={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
+    return '<div class="tree-item">'+
+      '<div class="tree-num '+cls+'">🌴</div>'+
+      '<div class="tree-info">'+
+        '<div class="tree-id">'+t.no+(t.block?' <span style="color:var(--mu);font-size:9px">| '+t.block+'</span>':'')+'</div>'+
+        '<div class="tree-coord">'+t.lat.toFixed(6)+', '+t.lng.toFixed(6)+'</div>'+
+        '<div style="margin-top:2px"><span class="status-pill '+pillCls+'">'+labels[t.status]+'</span>'+(t.note?'<span style="font-size:9px;color:var(--mu);margin-left:5px">'+t.note+'</span>':'')+'</div>'+
+      '</div>'+
+      '<button class="btn btn-sc btn-sm" onclick="openTreeEdit('+t.id+')" style="font-size:9px;padding:2px 5px;margin-right:3px">✏</button>'+
+      '<button class="tree-del" onclick="deleteTree('+t.id+')">✕</button>'+
+    '</div>';
+  }).join('');
+}
+
+function updateSensusStats(){
+  var total=trees.length;
+  var normal=trees.filter(function(t){return t.status==='normal'}).length;
+  var sakit=trees.filter(function(t){return t.status==='sakit'}).length;
+  var mati=trees.filter(function(t){return t.status==='mati'||t.status==='kosong'}).length;
+  document.getElementById('stTotal').textContent=total;
+  document.getElementById('stNormal').textContent=normal;
+  document.getElementById('stSakit').textContent=sakit;
+  document.getElementById('stMati').textContent=mati;
+  // Estimate density from last polygon
+  var densityEl=document.getElementById('sensusDensity');
+  if(measures.length>0){
+    var polys=measures.filter(function(m){return m.type==='polygon'});
+    if(polys.length>0){
+      var lastPoly=polys[polys.length-1];
+      var d=lastPoly.area>0?(total/(lastPoly.area/10000)).toFixed(1):'-';
+      densityEl.innerHTML='Kepadatan: <span style="color:var(--saw2)">'+d+'</span> pokok/ha<br><span style="font-size:8px">Dari polygon terakhir: '+fmtArea(lastPoly.area)+'</span>';
+    }
+  } else {densityEl.textContent='Kepadatan: — pokok/ha';}
+}
+
+function countTreesInPolygon(geojson){
+  if(typeof turf==='undefined')return 0;
+  return trees.filter(function(t){
+    try{return turf.booleanPointInPolygon(turf.point([t.lng,t.lat]),geojson);}catch(e){return false;}
+  }).length;
+}
+
+function countTreesInLastPolygon(){
+  if(!_lastPolygonLayer||!_lastPolygonLayer.toGeoJSON){setStatus('Gambar polygon dulu di peta!','amber');return;}
+  var gj=_lastPolygonLayer.toGeoJSON();
+  var count=countTreesInPolygon(gj);
+  var area=typeof turf!=='undefined'?turf.area(gj):0;
+  var density=area>0?(count/(area/10000)).toFixed(1):'-';
+  setStatus('Pokok dalam polygon: '+count+' | Kepadatan: '+density+' pokok/ha','green');
+  showToast('🌴 '+count+' pokok dalam polygon\n📐 Luas: '+fmtArea(area)+'\n📊 '+density+' pokok/ha');
+}
+
+// =====================================================
+// TREE EXPORT
+// =====================================================
+function exportTreeCSV(){
+  if(trees.length===0){showToast('Belum ada data pokok.');return;}
+  var rows=['no_pokok,blok,status,catatan,latitude,longitude'];
+  trees.forEach(function(t){
+    rows.push('"'+t.no+'","'+(t.block||'')+'","'+t.status+'","'+(t.note||'')+'",' +t.lat.toFixed(8)+','+t.lng.toFixed(8));
+  });
+  safeDownload(rows.join('\n'),'text/csv','sensus_sawit.csv');
+}
+function exportTreeGeoJSON(){
+  if(trees.length===0){showToast('Belum ada data pokok.');return;}
+  var features=trees.map(function(t){
+    return{type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},
+      properties:{no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note,id:t.id}};
+  });
+  var gj={type:'FeatureCollection',features:features,
+    properties:{generated:new Date().toISOString(),total:trees.length,tool:'DroneMap v3 Pro'}};
+  safeDownload(JSON.stringify(gj,null,2),'application/geo+json','pokok_sawit.geojson');
 }
 
 // =====================================================
@@ -1399,7 +1682,7 @@ function deleteShape(id){
 // =====================================================
 function setUnit(u,el){document.querySelectorAll('#areaUnitRow .unit-btn').forEach(function(b){b.classList.remove('active')});el.classList.add('active');areaUnit=u;renderMeasures()}
 function setLenUnit(u,el){document.querySelectorAll('#lenUnitRow .unit-btn').forEach(function(b){b.classList.remove('active')});el.classList.add('active');lenUnit=u;renderMeasures()}
-function fmtArea(sqm){if(areaUnit==='m2')return sqm.toFixed(2)+' m2';if(areaUnit==='ha')return (sqm/10000).toFixed(6)+' ha';if(areaUnit==='acres')return (sqm/4046.86).toFixed(4)+' acres';return sqm>=10000?(sqm/10000).toFixed(4)+' ha':sqm.toFixed(2)+' m2';}
+function fmtArea(sqm){if(areaUnit==='m2')return sqm.toFixed(2)+' m²';if(areaUnit==='ha')return (sqm/10000).toFixed(6)+' ha';if(areaUnit==='acres')return (sqm/4046.86).toFixed(4)+' acres';return sqm>=10000?(sqm/10000).toFixed(4)+' ha':sqm.toFixed(2)+' m²';}
 function fmtLen(m){if(lenUnit==='m')return m.toFixed(2)+' m';if(lenUnit==='km')return (m/1000).toFixed(4)+' km';return m>=1000?(m/1000).toFixed(3)+' km':m.toFixed(2)+' m';}
 
 // =====================================================
@@ -1408,17 +1691,16 @@ function fmtLen(m){if(lenUnit==='m')return m.toFixed(2)+' m';if(lenUnit==='km')r
 function buildGeoJSON(){
   var features=[];
   photos.filter(function(p){return p.georef}).forEach(function(photo){
-    var corners=photo.corners;
-    if(corners){
-      features.push({type:'Feature',
-        geometry:{type:'Polygon',coordinates:[[[corners.tl.lng,corners.tl.lat],[corners.tr.lng,corners.tr.lat],[corners.br.lng,corners.br.lat],[corners.bl.lng,corners.bl.lat],[corners.tl.lng,corners.tl.lat]]]},
-        properties:{feature_type:'photo_bounds',photo_name:photo.name,photo_size:[photo.w,photo.h],gcp_count:photo.gcps.length,
-          gcps:photo.gcps.map(function(g){return{pixel:[Math.round(g.px),Math.round(g.py)],coordinates:[g.lng,g.lat]}})}});
+    if(photo.corners){
+      var c=photo.corners;
+      features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[c.tl.lng,c.tl.lat],[c.tr.lng,c.tr.lat],[c.br.lng,c.br.lat],[c.bl.lng,c.bl.lat],[c.tl.lng,c.tl.lat]]]},properties:{feature_type:'photo_bounds',photo_name:photo.name,gcp_count:photo.gcps.length}});
     }
     photo.gcps.forEach(function(g,i){
-      features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},
-        properties:{feature_type:'gcp',photo_name:photo.name,gcp_index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});
+      features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',photo_name:photo.name,gcp_index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});
     });
+  });
+  trees.forEach(function(t){
+    features.push({type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},properties:{feature_type:'palm_tree',no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note}});
   });
   if(drawnItems){
     drawnItems.eachLayer(function(layer){
@@ -1426,43 +1708,20 @@ function buildGeoJSON(){
       var f=layer.toGeoJSON(),id=layer._mid;
       var m=measures.find(function(x){return x.id===id})||{};
       f.properties={id:id,feature_type:'measurement',label:m.label||'Shape #'+id,type:m.type||'unknown'};
-      if(m.area!==undefined){f.properties.area_m2=+m.area.toFixed(4);f.properties.area_ha=+(m.area/10000).toFixed(6);f.properties.perimeter_m=+m.perim.toFixed(4)}
+      if(m.area!==undefined){f.properties.area_m2=+m.area.toFixed(4);f.properties.area_ha=+(m.area/10000).toFixed(6);f.properties.perimeter_m=+m.perim.toFixed(4);if(m.treesInside!==undefined)f.properties.trees_count=m.treesInside;}
       if(m.len!==undefined)f.properties.length_m=+m.len.toFixed(4);
-      if(m.lat!==undefined){f.properties.latitude=m.lat;f.properties.longitude=m.lng}
       features.push(f);
     });
   }
-  return{type:'FeatureCollection',features:features,
-    properties:{generated:new Date().toISOString(),tool:'DroneMap v3 Fixed',
-      total_photos:photos.length,georeferenced_photos:photos.filter(function(p){return p.georef}).length,
-      total_measurements:measures.length}};
-}
-function buildPhotoGeoJSON(photo){
-  var features=[];
-  if(photo.corners){
-    var c=photo.corners;
-    features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[c.tl.lng,c.tl.lat],[c.tr.lng,c.tr.lat],[c.br.lng,c.br.lat],[c.bl.lng,c.bl.lat],[c.tl.lng,c.tl.lat]]]},properties:{feature_type:'photo_bounds',photo_name:photo.name}});
-  }
-  photo.gcps.forEach(function(g,i){features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});});
-  return{type:'FeatureCollection',features:features,properties:{photo_name:photo.name,generated:new Date().toISOString()}};
+  return{type:'FeatureCollection',features:features,properties:{generated:new Date().toISOString(),tool:'DroneMap v3 Pro',total_photos:photos.length,georef_photos:photos.filter(function(p){return p.georef}).length,total_measurements:measures.length,total_trees:trees.length}};
 }
 function exportGeoJSON(){
   var gj=buildGeoJSON();
-  var blob=new Blob([JSON.stringify(gj,null,2)],{type:'application/geo+json'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dronemap_all.geojson';a.click();
+  safeDownload(JSON.stringify(gj,null,2),'application/geo+json','dronemap_sawit.geojson');
 }
 function copyGeoJSON(){
   var gj=buildGeoJSON();var btn=document.getElementById('btnCopy');
-  navigator.clipboard.writeText(JSON.stringify(gj,null,2)).then(function(){
-    btn.textContent='Tersalin!';setTimeout(function(){btn.textContent='&#128203; Copy Clipboard'},2500);
-  }).catch(function(){btn.textContent='Gagal copy';});
-}
-function exportPhotoGeoJSON(pid){
-  var p=getPhoto(pid);if(!p)return;
-  var gj=buildPhotoGeoJSON(p);
-  var blob=new Blob([JSON.stringify(gj,null,2)],{type:'application/geo+json'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=p.name.replace(/\.[^.]+$/,'')+'.geojson';a.click();
+  navigator.clipboard.writeText(JSON.stringify(gj,null,2)).then(function(){btn.textContent='✓ Tersalin!';setTimeout(function(){btn.textContent='📋 Copy Clipboard'},2500);}).catch(function(){btn.textContent='Gagal copy';});
 }
 function exportCSV(){
   var rows=['shape_id,label,type,vertex_no,latitude,longitude'];
@@ -1470,8 +1729,18 @@ function exportCSV(){
     if(m.coords)m.coords.forEach(function(c,i){rows.push(m.id+',"'+m.label+'",'+m.type+','+(i+1)+','+c[1].toFixed(8)+','+c[0].toFixed(8))});
     else if(m.type==='marker')rows.push(m.id+',"'+m.label+'",marker,1,'+m.lat.toFixed(8)+','+m.lng.toFixed(8));
   });
-  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
-  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dronemap_koordinat.csv';a.click();
+  safeDownload(rows.join('\n'),'text/csv','koordinat.csv');
+}
+function buildPhotoGeoJSON(photo){
+  var features=[];
+  if(photo.corners){var c=photo.corners;features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[c.tl.lng,c.tl.lat],[c.tr.lng,c.tr.lat],[c.br.lng,c.br.lat],[c.bl.lng,c.bl.lat],[c.tl.lng,c.tl.lat]]]},properties:{feature_type:'photo_bounds',photo_name:photo.name}});}
+  photo.gcps.forEach(function(g,i){features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});});
+  return{type:'FeatureCollection',features:features,properties:{photo_name:photo.name,generated:new Date().toISOString()}};
+}
+function exportPhotoGeoJSON(pid){
+  var p=getPhoto(pid);if(!p)return;
+  var gj=buildPhotoGeoJSON(p);
+  safeDownload(JSON.stringify(gj,null,2),'application/geo+json',p.name.replace(/\.[^.]+$/,'')+'.geojson');
 }
 function updateExportPerPhoto(){
   var el=document.getElementById('exportPerPhoto');
@@ -1480,16 +1749,92 @@ function updateExportPerPhoto(){
   el.innerHTML=gp.map(function(p){
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
       '<div style="flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)">'+p.name+'</div>'+
-      '<button class="btn btn-sc btn-sm" onclick="exportPhotoGeoJSON('+p.id+')">&#128229; GeoJSON</button></div>';
+      '<button class="btn btn-sc btn-sm" onclick="exportPhotoGeoJSON('+p.id+')">📥 GeoJSON</button></div>';
   }).join('');
 }
 
 // =====================================================
-// UTILS
+// SANDBOX-SAFE HELPERS
 // =====================================================
+
+// Toast notification (replaces alert())
+function showToast(msg){
+  var t=document.getElementById('_toast');
+  if(!t){
+    t=document.createElement('div');t.id='_toast';
+    t.style.cssText='position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:var(--sf);border:1px solid var(--saw);border-radius:8px;padding:10px 18px;font-size:11px;color:var(--tx);z-index:99999;max-width:340px;text-align:center;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:pre-line;font-family:\'Space Mono\',monospace;';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.display='block';t.style.opacity='1';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.style.display='none'},400);},4000);
+}
+
+// Custom confirm dialog (replaces confirm())
+function showConfirm(msg,onYes){
+  var bg=document.createElement('div');
+  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(4px)';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;width:300px;max-width:90vw;font-family:\'DM Sans\',sans-serif';
+  box.innerHTML='<div style="font-size:13px;color:var(--tx);margin-bottom:14px;line-height:1.6">'+msg+'</div>'+
+    '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+    '<button id="_cfNo" style="padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Batal</button>'+
+    '<button id="_cfYes" style="padding:6px 14px;border-radius:5px;border:none;background:var(--er);color:#fff;cursor:pointer;font-size:11px;font-weight:600">Hapus</button>'+
+    '</div>';
+  bg.appendChild(box);document.body.appendChild(bg);
+  box.querySelector('#_cfNo').onclick=function(){document.body.removeChild(bg)};
+  box.querySelector('#_cfYes').onclick=function(){document.body.removeChild(bg);onYes();};
+}
+
+// Safe download — tries blob href, falls back to data: URI, fallback to new tab
+function safeDownload(content,mimeType,filename){
+  try{
+    var blob=new Blob([content],{type:mimeType});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  }catch(e1){
+    // Fallback: open data URI in new tab
+    try{
+      var enc=encodeURIComponent(content);
+      window.open('data:'+mimeType+';charset=utf-8,'+enc,'_blank');
+    }catch(e2){
+      // Last resort: show copy modal
+      showCopyModal(content,filename);
+    }
+  }
+}
+
+// Copy modal for sandboxed environments that block all downloads
+function showCopyModal(content,filename){
+  var bg=document.createElement('div');
+  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;';
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;width:480px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;';
+  var ta=document.createElement('textarea');
+  ta.value=content;
+  ta.style.cssText='flex:1;min-height:200px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:\'Space Mono\',monospace;font-size:10px;padding:8px;resize:vertical;';
+  ta.readOnly=true;
+  box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:var(--tx);font-weight:600">📋 '+filename+'</span><span style="font-size:9px;color:var(--mu)">Buka file HTML langsung di browser untuk download otomatis</span></div>';
+  box.appendChild(ta);
+  var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+  var btnCopy=document.createElement('button');
+  btnCopy.textContent='📋 Copy Semua';btnCopy.style.cssText='padding:6px 14px;border-radius:5px;border:none;background:var(--saw);color:#fff;cursor:pointer;font-size:11px';
+  btnCopy.onclick=function(){ta.select();navigator.clipboard.writeText(content).then(function(){btnCopy.textContent='✓ Tersalin!';}).catch(function(){document.execCommand('copy');btnCopy.textContent='✓ Tersalin!';});};
+  var btnClose=document.createElement('button');
+  btnClose.textContent='Tutup';btnClose.style.cssText='padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px';
+  btnClose.onclick=function(){document.body.removeChild(bg)};
+  btnRow.appendChild(btnCopy);btnRow.appendChild(btnClose);
+  box.appendChild(btnRow);bg.appendChild(box);document.body.appendChild(bg);
+  setTimeout(function(){ta.select();},100);
+}
+
+
 function setStatus(msg,color){
   document.getElementById('statusText').textContent=msg;
-  document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':'dot-a');
+  document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
 }
 function updateStep(n){
   [1,2,3].forEach(function(i){
@@ -1511,15 +1856,14 @@ function enterSplitView(){
   content.innerHTML=
     '<div class="split-wrap" id="splitWrap">'+
       '<div class="split-photo" id="splitPhotoPane">'+
-        '<span class="split-label">1&#10132; Klik titik di FOTO</span>'+
+        '<span class="split-label">1→ Klik titik di FOTO</span>'+
         '<div class="split-step" id="splitStepMsg"><strong>Langkah 1:</strong> Klik titik pada foto drone yang mudah dikenali</div>'+
       '</div>'+
       '<div class="split-map" id="splitMapPane">'+
-        '<span class="split-label" style="border-color:var(--in);color:var(--in)">2&#10132; Klik lokasi yang sama di PETA</span>'+
+        '<span class="split-label" style="border-color:var(--in);color:var(--in)">2→ Klik lokasi yang sama di PETA</span>'+
       '</div>'+
     '</div>';
   if(oldMap){try{oldMap.remove();}catch(ex){}map=null;}
-
   var photoPane=document.getElementById('splitPhotoPane');
   var img=document.createElement('img');img.src=p.src;
   img.style.cssText='position:absolute;transform-origin:0 0;max-width:none;user-select:none;';
@@ -1534,8 +1878,7 @@ function enterSplitView(){
   photoPane.appendChild(img);
   var sDrag=false,sDragStart={x:0,y:0};
   photoPane.addEventListener('wheel',function(e){
-    e.preventDefault();
-    var r=photoPane.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;
+    e.preventDefault();var r=photoPane.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;
     var f=e.deltaY<0?1.13:0.885;var ns=Math.max(0.04,Math.min(sScale*f,24));
     sOffX=mx-(mx-sOffX)*(ns/sScale);sOffY=my-(my-sOffY)*(ns/sScale);sScale=ns;
     img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
@@ -1549,17 +1892,15 @@ function enterSplitView(){
     var px=(e.clientX-r.left-sOffX)/sScale,py=(e.clientY-r.top-sOffY)/sScale;
     if(px<0||px>p.w||py<0||py>p.h)return;
     _splitPhotoClick={px:px,py:py,screenX:e.clientX-r.left,screenY:e.clientY-r.top};
-    var mk=document.createElement('div');mk.className='split-photo-marker';
-    mk.textContent=_splitGcpNum;mk.style.left=_splitPhotoClick.screenX+'px';mk.style.top=_splitPhotoClick.screenY+'px';
-    mk.id='splitMk'+_splitGcpNum;photoPane.appendChild(mk);
+    var mk=document.createElement('div');mk.className='split-photo-marker';mk.textContent=_splitGcpNum;
+    mk.style.left=_splitPhotoClick.screenX+'px';mk.style.top=_splitPhotoClick.screenY+'px';mk.id='splitMk'+_splitGcpNum;
+    photoPane.appendChild(mk);
     _splitStep='map';
-    document.getElementById('splitStepMsg').innerHTML='<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta satelit';
+    document.getElementById('splitStepMsg').innerHTML='<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta';
     if(_splitMap)_splitMap.getContainer().style.cursor='crosshair';
   });
-
   var mapPane=document.getElementById('splitMapPane');
-  var initLat=p.gcps.length>0?p.gcps[0].lat:0.5275;
-  var initLng=p.gcps.length>0?p.gcps[0].lng:101.4713;
+  var initLat=p.gcps.length>0?p.gcps[0].lat:0.5275,initLng=p.gcps.length>0?p.gcps[0].lng:101.4713;
   var gp=photos.find(function(ph){return ph.georef&&ph.bounds});
   if(gp){initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2;initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2;}
   _splitMap=L.map(mapPane,{zoomControl:true}).setView([initLat,initLng],18);
@@ -1573,37 +1914,29 @@ function enterSplitView(){
     var lat=e.latlng.lat,lng=e.latlng.lng;
     p.gcps.push({px:_splitPhotoClick.px,py:_splitPhotoClick.py,lat:lat,lng:lng,id:Date.now()});
     renderGCPList();updateGCPStatus();renderPhotoList();updateStats();
-    L.circleMarker([lat,lng],{radius:7,fillColor:'#58a6ff',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+_splitGcpNum+': '+lat.toFixed(6)+', '+lng.toFixed(6));
+    L.circleMarker([lat,lng],{radius:7,fillColor:'#58a6ff',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+_splitGcpNum);
     var mk=document.getElementById('splitMk'+_splitGcpNum);if(mk)mk.style.background='var(--ok)';
-    _splitGcpNum++;_splitStep='photo';_splitPhotoClick=null;
-    if(_splitMap)_splitMap.getContainer().style.cursor='';
+    _splitGcpNum++;_splitStep='photo';_splitPhotoClick=null;if(_splitMap)_splitMap.getContainer().style.cursor='';
     var n=p.gcps.length;
     var badge=document.getElementById('splitGcpBadge');if(badge)badge.textContent=n+' GCP';
     var applyBtn=document.getElementById('btnSplitApply');if(applyBtn)applyBtn.disabled=n<3;
     document.getElementById('splitStepMsg').innerHTML='<strong>GCP '+n+' tersimpan!</strong> '+(n>=3?'<span style="color:var(--ok)">Siap georeference ✓</span>':'Klik titik berikutnya di foto');
   });
-
   var toolbar=document.createElement('div');
   toolbar.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(13,17,23,.95);border-top:1px solid var(--bd);padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:9999;flex-wrap:wrap';
-  toolbar.innerHTML=
-    '<span style="font-size:10px;color:var(--mu);font-family:monospace"><span id="splitGcpBadge" style="color:var(--ac)">'+p.gcps.length+' GCP</span> &nbsp;|&nbsp; Klik foto → klik peta</span>'+
+  toolbar.innerHTML='<span style="font-size:10px;color:var(--mu);font-family:monospace"><span id="splitGcpBadge" style="color:var(--saw2)">'+p.gcps.length+' GCP</span></span>'+
     '<div style="flex:1"></div>'+
-    '<button class="btn btn-sc btn-sm" onclick="resetSplitStep()">&#8635; Ulangi</button>'+
-    '<button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">&#128465; Reset</button>'+
-    '<button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" '+(p.gcps.length<3?'disabled':'')+'>&#128506; Georeference</button>'+
-    '<button class="btn btn-sc btn-sm" onclick="exitSplitView()">&#10005; Tutup</button>';
+    '<button class="btn btn-sc btn-sm" onclick="resetSplitStep()">↺ Ulangi</button>'+
+    '<button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">🗑 Reset</button>'+
+    '<button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" '+(p.gcps.length<3?'disabled':'')+'>🗺 Georeference</button>'+
+    '<button class="btn btn-sc btn-sm" onclick="exitSplitView()">✕ Tutup</button>';
   document.getElementById('splitWrap').appendChild(toolbar);
 }
 
-function resetSplitStep(){
-  _splitStep='photo';_splitPhotoClick=null;
-  if(_splitMap)_splitMap.getContainer().style.cursor='';
-  var msg=document.getElementById('splitStepMsg');if(msg)msg.innerHTML='<strong>Ulangi:</strong> Klik titik pada foto drone';
-}
+function resetSplitStep(){_splitStep='photo';_splitPhotoClick=null;if(_splitMap)_splitMap.getContainer().style.cursor='';var msg=document.getElementById('splitStepMsg');if(msg)msg.innerHTML='<strong>Ulangi:</strong> Klik titik pada foto drone';}
 function clearSplitGCPs(){
   var p=getPhoto(currentPhotoId);if(!p)return;
-  p.gcps=[];renderGCPList();updateGCPStatus();renderPhotoList();updateStats();
-  resetSplitStep();_splitGcpNum=1;
+  p.gcps=[];renderGCPList();updateGCPStatus();renderPhotoList();updateStats();resetSplitStep();_splitGcpNum=1;
   document.querySelectorAll('.split-photo-marker').forEach(function(el){el.remove()});
   var badge=document.getElementById('splitGcpBadge');if(badge)badge.textContent='0 GCP';
   var applyBtn=document.getElementById('btnSplitApply');if(applyBtn)applyBtn.disabled=true;
@@ -1615,71 +1948,43 @@ function applySplitGeoref(){
   georefPhoto(p);
 }
 function exitSplitView(){
-  if(_splitMap){try{_splitMap.remove();}catch(ex){}}_splitMap=null;
-  _splitStep='photo';_splitPhotoClick=null;_splitGcpNum=1;
-
+  if(_splitMap){try{_splitMap.remove();}catch(ex){}}_splitMap=null;_splitStep='photo';_splitPhotoClick=null;_splitGcpNum=1;
   var content=document.querySelector('.content');
-  content.innerHTML=
-    '<div id="mapPanel"></div>'+
-    '<div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;">'+
-      '<div class="welcome" id="welcomeMsg">'+
-        '<div class="welcome-icon">&#128752;&#65039;</div>'+
-        '<h2>DroneMap v3 &mdash; Multi Photo</h2>'+
-        '<p>Upload foto drone, tandai GCP, dan foto tampil di peta dengan orientasi yang benar.</p>'+
-      '</div>'+
-    '</div>';
-
+  content.innerHTML='<div id="mapPanel"></div><div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;"><div class="welcome" id="welcomeMsg"><div class="welcome-icon">🌴</div><h2>DroneMap v3 Pro</h2><p>Upload foto drone, tandai GCP, lakukan georeferencing, lalu sensus pokok sawit.</p></div></div>';
   map=null;
   var hasGeoref=photos.some(function(ph){return ph.georef});
   if(hasGeoref){
     var firstGeoref=photos.find(function(ph){return ph.georef&&ph.bounds});
     if(firstGeoref){
-      var toGeo=buildAffine(firstGeoref.gcps);
-      var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
+      var toGeo=buildAffine(firstGeoref.gcps);var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
       map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
       baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
       drawnItems=new L.FeatureGroup().addTo(map);
-      var drawCtrl=new L.Control.Draw({
-        position:'topright',edit:{featureGroup:drawnItems,remove:true},
-        draw:{polygon:{showArea:true,shapeOptions:{color:'#f0a500',weight:2,fillOpacity:.14}},
-          polyline:{shapeOptions:{color:'#58a6ff',weight:3}},
-          rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
-          circle:false,circlemarker:false,
-          marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#f0a500;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}}
-      });
+      _treeLayer=L.featureGroup().addTo(map);
+      var drawCtrl=new L.Control.Draw({position:'topright',edit:{featureGroup:drawnItems,remove:true},draw:{polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},polyline:{shapeOptions:{color:'#58a6ff',weight:3}},rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},circle:false,circlemarker:false,marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}}});
       map.addControl(drawCtrl);
-      map.on(L.Draw.Event.CREATED,onDrawCreated);
+      map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
       map.on(L.Draw.Event.EDITED,refreshMeasures);
-      map.on(L.Draw.Event.DELETED,function(e){
-        e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});
-        renderMeasures();updateStats();
-      });
+      map.on(L.Draw.Event.DELETED,function(e){e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});renderMeasures();updateStats();});
       map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
+      map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
       photos.forEach(function(ph){
         if(ph.georef&&ph.gcps.length>=3){
-          var tg=buildAffine(ph.gcps);
-          ph.overlay=createRotatedOverlay(ph,tg);
+          var tg=buildAffine(ph.gcps);ph.overlay=createRotatedOverlay(ph,tg);
           if(ph.visible)ph.overlay.addTo(map);
           ph.gcpLayer=L.featureGroup();
-          ph.gcps.forEach(function(g,i){
-            L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#111',weight:2,fillOpacity:1,zIndexOffset:900})
-              .addTo(ph.gcpLayer).bindPopup('<b>'+ph.name+'</b><br>GCP '+(i+1));
-          });
-          var togGCP=document.getElementById('togGCP');
-          if(togGCP&&togGCP.checked)ph.gcpLayer.addTo(map);
+          ph.gcps.forEach(function(g,i){L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#111',weight:2,fillOpacity:1,zIndexOffset:900}).addTo(ph.gcpLayer).bindPopup('<b>'+ph.name+'</b><br>GCP '+(i+1));});
+          var togGCP=document.getElementById('togGCP');if(togGCP&&togGCP.checked)ph.gcpLayer.addTo(map);
         }
       });
+      // Re-add trees
+      trees.forEach(function(t){addTreeMarker(t);});
       var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
-      if(allBounds.length>0){
-        var allLats=[],allLngs=[];
-        allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});
-        map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});
-      }
+      if(allBounds.length>0){var allLats=[],allLngs=[];allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});}
     }
   }
   var p=getPhoto(currentPhotoId);
-  if(p&&p.src){showImagePanel();buildImagePanel(p);}
-  else hideImagePanel();
+  if(p&&p.src){showImagePanel();buildImagePanel(p);}else hideImagePanel();
   renderGCPList();updateGCPStatus();
 }
 </script>
