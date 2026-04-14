@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Sensus Ganoderma</title>
+<title>GanoKit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -252,9 +252,9 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .dialog-info-row:last-child{margin-bottom:0}
 .dialog-info-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;min-width:80px}
 .dialog-info-val{font-size:14px;font-weight:600}
-.dialog-rec{margin:12px 16px;padding:12px 14px;border-radius:var(--radius-sm);border-left:4px solid var(--green-600);background:var(--green-100)}
+.dialog-rec{margin:12px 16px;padding:14px 16px;border-radius:var(--radius-sm);border-left:4px solid var(--green-600);background:var(--green-100);max-height:300px;overflow-y:auto}
 .dialog-rec-label{font-size:11px;font-weight:700;color:var(--green-800);text-transform:uppercase;margin-bottom:4px}
-.dialog-rec-text{font-size:13px;color:var(--green-800);line-height:1.5}
+.dialog-rec-text{font-size:13px;color:var(--green-800);line-height:1.65;white-space:pre-line}
 .dialog-geo{text-align:center;padding:8px;font-size:11px;color:var(--text-muted)}
 .dialog-footer{padding:14px 16px 24px}
 .btn-lanjut{
@@ -332,8 +332,8 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   <div class="header-left">
     <div class="header-logo">🌿</div>
     <div>
-      <div class="header-title">Sensus Ganoderma</div>
-      <div class="header-sub">SISTEM PPKS — DETEKSI LAPANGAN</div>
+      <div class="header-title">GanoKit</div>
+      <div class="header-sub">SISTEM DETEKSI GANODERMA</div>
     </div>
   </div>
   <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
@@ -642,11 +642,48 @@ const STADIUM = {
 };
 
 const REC_SHORT = {
-  0:'Pemeliharaan rutin. Tabur Trichoderma preventif setiap 6 bulan.',
-  1:'Semprot biofungisida GREEMI-G di pangkal batang. Monitor intensif setiap 2 minggu.',
-  2:'Surgery: kikis jaringan busuk + biofungisida. Buat parit isolasi 50 cm. Pantau 2 minggu.',
-  3:'ERADIKASI SEGERA: Cabut bonggol total dengan excavator. Cincang batang 5-10 cm. Bera 6-12 bulan.',
-  4:'Sanitasi lanjutan: gali sisa akar, tabur Trichoderma 400 gr. Replanting varietas toleran (PPKS DP 540).',
+  0:`SEHAT — PEMELIHARAAN RUTIN:
+1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.
+2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.
+3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.
+4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.
+5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
+
+  1:`STADIUM 1 — TINDAKAN PREVENTIF DINI:
+1. Konfirmasi ulang & survei lebih detail dalam 2–4 minggu ke depan.
+2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.
+3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.
+4. Periksa & perbaiki drainase — lahan tidak boleh tergenang air.
+5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.
+6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
+
+  2:`STADIUM 2 — TINDAKAN KURATIF (SURGERY):
+1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.
+2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.
+3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.
+4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.
+5. Monitor kondisi pokok intensif setiap 2 minggu.
+6. Jika dalam 2 bulan tidak membaik atau gejala memburuk ⇒ eskalasi ke ERADIKASI.`,
+
+  3:`STADIUM 3 — ERADIKASI SEGERA (SANITASI TOTAL):
+1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.
+2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.
+   ⚠ JANGAN hanya tebang dengan Chainsaw — bonggol yang tersisa = sumber penularan ke pokok baru!
+3. Gali lubang min. kedalaman 1 m, luas 1,5 m × 1,5 m. Balik tanah agar spora terpapar sinar UV matahari.
+4. Cincang batang ketebalan 5–10 cm, sebar MERATA di permukaan — jangan ditumpuk.
+5. Tabur Dolomit + Trichoderma spp. 200–400 gr ke lubang, campur dengan tanah galian.
+6. Biarkan lubang BERA 6–12 bulan hingga dekomposisi selesai & inokulum jamur mati.
+7. Buat parit isolasi di sekeliling pokok sehat terdekat.
+8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
+
+  4:`STADIUM 4 — SANITASI LANJUTAN & PERSIAPAN REPLANTING:
+1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.
+2. Gali area bekas bonggol sedalam 80–100 cm — ambil sisa akar besar yang masih ada secara manual.
+3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.
+4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.
+5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.
+6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.
+7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
 };
 
 const GEJALA_DAUN = [
@@ -1007,6 +1044,21 @@ function showDialog(rec, skor, geo) {
   document.getElementById('d-blok').textContent    = `${rec.kebun} — ${rec.divisi} — Blok ${rec.blok}`;
   document.getElementById('d-tanggal').textContent = rec.tanggal || rec.waktu_simpan;
 
+  // Rekomendasi — warna sesuai stadium
+  const recBox = document.querySelector('.dialog-rec');
+  const recColors = {
+    0:{border:'#2D5E1E',bg:'#E8F5EC',fg:'#1A4D22',label:'🌿 Tindakan Pemeliharaan'},
+    1:{border:'#C4960A',bg:'#FFFDE7',fg:'#6B3A00',label:'⚠️ Tindakan Preventif Dini'},
+    2:{border:'#CC0000',bg:'#FFF0F0',fg:'#8B0000',label:'🔴 Tindakan Kuratif (Surgery)'},
+    3:{border:'#1A1A1A',bg:'#F5F5F5',fg:'#1A1A1A',label:'⛔ Eradikasi Segera'},
+    4:{border:'#6B6B6B',bg:'#F9F9F9',fg:'#2D2D2D',label:'🔲 Sanitasi & Replanting'},
+  };
+  const rc = recColors[skor];
+  recBox.style.borderLeftColor = rc.border;
+  recBox.style.background      = rc.bg;
+  document.querySelector('.dialog-rec-label').style.color = rc.fg;
+  document.querySelector('.dialog-rec-label').textContent = rc.label;
+  document.querySelector('.dialog-rec-text').style.color  = rc.fg;
   document.getElementById('d-rek').textContent = REC_SHORT[skor];
 
   const geoEl = document.getElementById('d-geo');
@@ -1217,9 +1269,17 @@ function showDetail(rec) {
     </div>`;
   }
 
+  const recC = {
+    0:{b:'#2D5E1E',bg:'#E8F5EC',fg:'#1A4D22'},
+    1:{b:'#C4960A',bg:'#FFFDE7',fg:'#6B3A00'},
+    2:{b:'#CC0000',bg:'#FFF0F0',fg:'#8B0000'},
+    3:{b:'#1A1A1A',bg:'#F5F5F5',fg:'#1A1A1A'},
+    4:{b:'#6B6B6B',bg:'#F9F9F9',fg:'#2D2D2D'},
+  }[skor];
   html += `<div class="detail-section"><h5>Rekomendasi Tindakan</h5>
-    <div style="background:${st.bg};color:${st.fg};padding:12px;border-radius:8px;font-size:13px;line-height:1.5">
-      ${REC_SHORT[skor]}
+    <div style="background:${recC.bg};color:${recC.fg};padding:14px 16px;border-radius:8px;
+      font-size:13px;line-height:1.65;white-space:pre-line;border-left:4px solid ${recC.b}">
+${REC_SHORT[skor]}
     </div>
   </div>
   <div style="margin-top:10px">
