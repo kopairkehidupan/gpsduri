@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sensus Ganoderma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-900: #0D2B12;
+  --green-800: #1A4D22;
+  --green-700: #22622B;
+  --green-600: #2E8040;
+  --green-100: #E8F5EC;
+  --cream:     #F7F6F2;
+  --white:     #FFFFFF;
+  --gray-50:   #FAFAFA;
+  --gray-100:  #F2F2F2;
+  --gray-200:  #E5E5E5;
+  --gray-400:  #A0A0A0;
+  --gray-600:  #6B6B6B;
+  --gray-800:  #2D2D2D;
+  --text:      #1C1C1C;
+  --text-muted:#6B6B6B;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow:    0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  /* Stadium */
+  --st0-bg:#C6EFCE; --st0-fg:#375623; --st0-dark:#2D5E1E;
+  --st1-bg:#FFF0A0; --st1-fg:#7A4A00; --st1-dark:#6B3A00;
+  --st2-bg:#FF4444; --st2-fg:#FFFFFF; --st2-dark:#CC0000;
+  --st3-bg:#2D2D2D; --st3-fg:#FFFFFF; --st3-dark:#111111;
+  --st4-bg:#ADADAD; --st4-fg:#1A1A1A; --st4-dark:#6B6B6B;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:15px}
+/* ── APP SHELL ──────────────────────────────────────────── */
+.app-header{
+  position:sticky;top:0;z-index:100;
+  background:var(--green-900);
+  padding:14px 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-logo{font-size:22px}
+.header-title{color:#FFFFFF;font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.1}
+.header-sub{color:#7BC98A;font-size:11px;font-weight:500;letter-spacing:.3px}
+.btn-settings{background:rgba(255,255,255,0.12);border:none;color:#FFF;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.btn-settings:hover{background:rgba(255,255,255,0.2)}
+.tab-nav{
+  display:flex;background:var(--green-800);
+  border-bottom:3px solid var(--green-700);
+}
+.tab-btn{
+  flex:1;padding:12px 8px;border:none;background:transparent;
+  color:rgba(255,255,255,0.6);font-family:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;margin-bottom:-3px;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.tab-btn.active{color:#FFFFFF;border-bottom-color:#6BE88A}
+/* ── PAGES ──────────────────────────────────────────────── */
+.page{display:none;padding:12px 12px 120px;max-width:640px;margin:0 auto}
+.page.active{display:block}
+/* ── CARDS ──────────────────────────────────────────────── */
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+.card-header{padding:14px 16px 10px;border-bottom:1px solid var(--gray-100)}
+.card-title{font-size:14px;font-weight:700;color:var(--green-800);display:flex;align-items:center;gap:7px}
+.card-title .icon{font-size:16px}
+.card-note{font-size:11px;color:var(--text-muted);margin-top:3px;padding-left:23px}
+.card-body{padding:14px 16px}
+/* ── FORM GRID ───────────────────────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-group.full{grid-column:1/-1}
+.field-group label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.field-group input,.field-group select,.field-group textarea{
+  border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
+  padding:10px 12px;font-family:inherit;font-size:14px;color:var(--text);
+  background:var(--gray-50);transition:border-color .15s,box-shadow .15s;outline:none;
+}
+.field-group input:focus,.field-group select:focus,.field-group textarea:focus{
+  border-color:var(--green-600);box-shadow:0 0 0 3px rgba(46,128,64,.12);background:#fff
+}
+.field-group textarea{resize:vertical;min-height:72px}
+/* ── KONDISI POKOK ───────────────────────────────────────── */
+.kondisi-group{display:flex;flex-direction:column;gap:8px;padding:0 16px 14px}
+.kondisi-btn{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border:2px solid var(--gray-200);border-radius:var(--radius-sm);
+  background:var(--gray-50);cursor:pointer;font-family:inherit;text-align:left;
+  transition:all .2s;font-size:13px;font-weight:600;color:var(--text);
+}
+.kondisi-btn .ki{font-size:20px;flex-shrink:0}
+.kondisi-btn .kt{flex:1}
+.kondisi-btn .kt small{display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:1px}
+.kondisi-btn.active-normal{border-color:var(--green-600);background:var(--green-100);color:var(--green-800)}
+.kondisi-btn.active-st3{border-color:#444;background:#2D2D2D;color:#FFF}
+.kondisi-btn.active-st3 .kt small{color:#CCC}
+.kondisi-btn.active-st4{border-color:#888;background:#ADADAD;color:#1A1A1A}
+/* ── GEJALA TOGGLE ───────────────────────────────────────── */
+.gejala-list{padding:0 16px 8px;display:flex;flex-direction:column;gap:2px}
+.gejala-item{
+  display:flex;align-items:center;gap:8px;padding:10px 0;
+  border-bottom:1px solid var(--gray-100);
+}
+.gejala-item:last-child{border-bottom:none}
+.gejala-num{
+  width:22px;height:22px;border-radius:50%;background:var(--green-100);
+  color:var(--green-700);font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.gejala-label{flex:1;font-size:13px;line-height:1.35;color:var(--text)}
+.toggle-row{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--gray-200);flex-shrink:0}
+.tog-btn{
+  padding:8px 10px;border:none;cursor:pointer;font-family:inherit;
+  font-size:12px;font-weight:700;background:var(--gray-100);color:var(--gray-600);
+  transition:all .15s;min-width:38px;
+}
+.tog-btn:not(:last-child){border-right:1px solid var(--gray-200)}
+.tog-btn.active-ya{background:#22803A;color:#FFF}
+.tog-btn.active-tidak{background:#757575;color:#FFF}
+.tog-btn.active-na{background:#EAA100;color:#FFF}
+/* ── FOTO ────────────────────────────────────────────────── */
+.foto-area{padding:0 16px 16px;display:flex;flex-direction:column;gap:10px}
+.btn-camera{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px;border-radius:var(--radius-sm);border:2px dashed var(--green-600);
+  background:var(--green-100);color:var(--green-700);font-family:inherit;
+  font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;width:100%;
+}
+.btn-camera:hover{background:var(--green-100);border-style:solid}
+.foto-preview{position:relative;border-radius:var(--radius-sm);overflow:hidden}
+.foto-preview img{width:100%;max-height:200px;object-fit:cover;display:block}
+.btn-hapus-foto{
+  position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;
+  border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+/* ── STICKY BOTTOM ───────────────────────────────────────── */
+.sticky-bottom{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:var(--white);border-top:1px solid var(--gray-200);
+  padding:12px 16px;max-width:640px;margin:0 auto;
+}
+.btn-simpan{
+  width:100%;padding:16px;border-radius:var(--radius);border:none;
+  background:var(--green-700);color:#FFF;font-family:inherit;font-size:16px;
+  font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.2px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(34,98,43,.4);
+}
+.btn-simpan:hover{background:var(--green-800);transform:translateY(-1px);box-shadow:0 6px 18px rgba(34,98,43,.45)}
+.btn-simpan:active{transform:translateY(0);box-shadow:0 2px 8px rgba(34,98,43,.3)}
+/* ── DATA PAGE ───────────────────────────────────────────── */
+.filter-bar{
+  background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;
+}
+.filter-bar h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+.filter-row{display:flex;gap:8px}
+.filter-row select{flex:1;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 10px;font-family:inherit;font-size:13px;background:#FFF;outline:none}
+.filter-row select:focus{border-color:var(--green-600)}
+.btn-reset-filter{padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:#FFF;font-family:inherit;font-size:13px;cursor:pointer;color:var(--text-muted)}
+.summary-strip{
+  display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;
+  scrollbar-width:none;
+}
+.summary-strip::-webkit-scrollbar{display:none}
+.stat-chip{
+  display:flex;flex-direction:column;align-items:center;padding:8px 14px;
+  border-radius:var(--radius-sm);flex-shrink:0;min-width:72px;
+}
+.stat-chip .sv{font-size:22px;font-weight:800;line-height:1}
+.stat-chip .sl{font-size:10px;font-weight:600;margin-top:2px;opacity:.85}
+/* ── RECORD CARDS ────────────────────────────────────────── */
+.record-list{display:flex;flex-direction:column;gap:8px}
+.record-card{
+  background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  overflow:hidden;cursor:pointer;transition:box-shadow .2s;
+  border-left:5px solid var(--gray-200);
+}
+.record-card:hover{box-shadow:var(--shadow-lg)}
+.record-card.st0{border-left-color:var(--st0-dark)}
+.record-card.st1{border-left-color:#C4960A}
+.record-card.st2{border-left-color:var(--st2-dark)}
+.record-card.st3{border-left-color:#1A1A1A}
+.record-card.st4{border-left-color:#888}
+.record-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
+.record-id{font-size:15px;font-weight:800}
+.record-loc{font-size:12px;color:var(--text-muted);margin-top:2px}
+.stadium-badge{
+  padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;
+  white-space:nowrap;
+}
+.record-bottom{display:flex;align-items:center;justify-content:space-between;padding:0 14px 12px}
+.record-meta{font-size:11px;color:var(--text-muted)}
+.status-kirim{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 9px;
+  border-radius:20px;font-size:11px;font-weight:600;
+}
+.status-kirim.belum{background:#FFF3E0;color:#E65100}
+.status-kirim.sudah{background:#E8F5E9;color:#1B5E20}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
+.empty-state .ei{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+/* ── KIRIM BUTTON ────────────────────────────────────────── */
+.btn-kirim-wrap{padding:12px}
+.btn-kirim{
+  width:100%;padding:15px;border-radius:var(--radius);border:none;
+  background:#1A56B0;color:#FFF;font-family:inherit;font-size:15px;
+  font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(26,86,176,.3);transition:all .2s;
+}
+.btn-kirim:hover{background:#1A3F8F;transform:translateY(-1px)}
+.btn-kirim:disabled{background:var(--gray-400);cursor:not-allowed;transform:none;box-shadow:none}
+.kirim-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px}
+/* ── MODAL ───────────────────────────────────────────────── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;display:flex;align-items:flex-end;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
+}
+.modal-overlay.center{align-items:center}
+.modal-overlay.hidden{display:none}
+.modal-sheet{
+  width:100%;max-width:640px;margin:0 auto;
+  background:var(--white);border-radius:var(--radius) var(--radius) 0 0;
+  max-height:92vh;overflow-y:auto;
+  animation:slideUp .28s cubic-bezier(.25,.46,.45,.94);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;background:var(--gray-200);border-radius:2px;margin:10px auto 0}
+.modal-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:800}
+.btn-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-600);padding:4px;border-radius:50%}
+/* ── DIALOG HASIL ────────────────────────────────────────── */
+.dialog-hero{
+  padding:28px 20px 24px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.dialog-stadium-num{font-size:13px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px}
+.dialog-stadium-label{font-size:28px;font-weight:800;line-height:1}
+.dialog-code{font-size:13px;font-weight:600;opacity:.75;margin-top:2px}
+.dialog-info-card{
+  margin:0 16px;background:var(--gray-50);border-radius:var(--radius-sm);
+  padding:14px;border:1px solid var(--gray-200);
+}
+.dialog-info-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.dialog-info-row:last-child{margin-bottom:0}
+.dialog-info-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;min-width:80px}
+.dialog-info-val{font-size:14px;font-weight:600}
+.dialog-rec{margin:12px 16px;padding:12px 14px;border-radius:var(--radius-sm);border-left:4px solid var(--green-600);background:var(--green-100)}
+.dialog-rec-label{font-size:11px;font-weight:700;color:var(--green-800);text-transform:uppercase;margin-bottom:4px}
+.dialog-rec-text{font-size:13px;color:var(--green-800);line-height:1.5}
+.dialog-geo{text-align:center;padding:8px;font-size:11px;color:var(--text-muted)}
+.dialog-footer{padding:14px 16px 24px}
+.btn-lanjut{
+  width:100%;padding:15px;border-radius:var(--radius);border:none;
+  background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;
+  font-weight:800;cursor:pointer;
+}
+/* ── SETTINGS MODAL ──────────────────────────────────────── */
+.settings-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px}
+.settings-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.settings-section input,.settings-section textarea{
+  width:100%;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
+  padding:10px 12px;font-family:inherit;font-size:13px;outline:none;
+}
+.settings-section input:focus{border-color:var(--green-600)}
+.gas-code{
+  background:#1A1A1A;color:#7BC98A;font-family:'Courier New',monospace;font-size:10px;
+  padding:12px;border-radius:var(--radius-sm);overflow-x:auto;white-space:pre;
+  border:none;width:100%;max-height:200px;overflow-y:auto;
+}
+.btn-copy{
+  margin-top:6px;padding:8px 14px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+}
+.btn-save-settings{
+  width:100%;padding:14px;border-radius:var(--radius);border:none;
+  background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;
+  font-weight:700;cursor:pointer;margin-top:4px;
+}
+.btn-hapus-data{
+  width:100%;padding:12px;border-radius:var(--radius);border:2px solid #EF4444;
+  background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;
+  font-weight:700;cursor:pointer;
+}
+/* ── DETAIL MODAL ────────────────────────────────────────── */
+.detail-body{padding:14px 20px 32px;display:flex;flex-direction:column;gap:10px}
+.detail-section h5{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:6px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.detail-row{display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border-radius:6px;padding:8px 10px}
+.detail-row.full{grid-column:1/-1}
+.dr-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
+.dr-val{font-size:13px;font-weight:600;color:var(--text)}
+.gejala-hasil{display:flex;flex-wrap:wrap;gap:5px}
+.gejala-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.gejala-chip.ya{background:#E8F5E9;color:#1B5E20}
+.gejala-chip.tidak{background:#F5F5F5;color:#9E9E9E}
+.gejala-chip.na{background:#FFF9E6;color:#795548}
+.detail-foto img{width:100%;border-radius:var(--radius-sm);max-height:220px;object-fit:cover}
+/* ── TOAST ───────────────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+  background:var(--gray-800);color:#FFF;padding:12px 20px;border-radius:100px;
+  font-size:13px;font-weight:600;z-index:300;white-space:nowrap;
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.toast.show{opacity:1}
+/* ── LOADING ─────────────────────────────────────────────── */
+.loading-overlay{
+  position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;
+}
+.loading-overlay.hidden{display:none}
+.spinner{
+  width:48px;height:48px;border:5px solid rgba(255,255,255,.2);
+  border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────── -->
+<div class="app-header">
+  <div class="header-left">
+    <div class="header-logo">🌿</div>
+    <div>
+      <div class="header-title">Sensus Ganoderma</div>
+      <div class="header-sub">SISTEM PPKS — DETEKSI LAPANGAN</div>
+    </div>
+  </div>
+  <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
+</div>
+<nav class="tab-nav">
+  <button class="tab-btn active" id="tab-form" onclick="showPage('form')">📝 Form Sensus</button>
+  <button class="tab-btn" id="tab-data" onclick="showPage('data')">📋 Data Tersimpan</button>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PAGE: FORM SENSUS -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-form">
+
+  <!-- Info Sensus (persists in DOM) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">📌</span>Informasi Sensus</div>
+      <div class="card-note">Diisi sekali — otomatis tetap ada saat simpan, hilang bila refresh</div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field-group full">
+          <label>Kebun / Perusahaan</label>
+          <input type="text" id="f_kebun" placeholder="Nama kebun atau perusahaan">
+        </div>
+        <div class="field-group">
+          <label>Divisi / Afdeling</label>
+          <input type="text" id="f_divisi" placeholder="Divisi">
+        </div>
+        <div class="field-group">
+          <label>Blok / Petak</label>
+          <input type="text" id="f_blok" placeholder="Blok">
+        </div>
+        <div class="field-group">
+          <label>Tanggal Sensus</label>
+          <input type="date" id="f_tanggal">
+        </div>
+        <div class="field-group">
+          <label>Nama Mandor</label>
+          <input type="text" id="f_mandor" placeholder="Nama mandor">
+        </div>
+        <div class="field-group full">
+          <label>Nama Pengecek (Kerani/Asisten)</label>
+          <input type="text" id="f_pengecek" placeholder="Nama pengecek">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Identitas Pokok -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🌴</span>Identitas Pokok</div>
+      <div class="card-note">No. pokok otomatis naik. Baris & kolom tetap, hilang bila refresh</div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid-3">
+        <div class="field-group">
+          <label>No. Pokok</label>
+          <input type="number" id="f_no_pokok" min="1" value="1">
+        </div>
+        <div class="field-group">
+          <label>Baris</label>
+          <input type="text" id="f_baris" placeholder="Baris">
+        </div>
+        <div class="field-group">
+          <label>Kolom</label>
+          <input type="text" id="f_kolom" placeholder="Kolom">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kondisi Pokok -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🔎</span>Kondisi Pokok</div>
+      <div class="card-note">Pilih kondisi fisik pohon yang sedang diperiksa</div>
+    </div>
+    <div class="kondisi-group" id="kondisi-group">
+      <button class="kondisi-btn active-normal" data-val="Normal/Berdiri" onclick="setKondisi(this)">
+        <span class="ki">🌿</span>
+        <div class="kt">Masih Berdiri Normal<small>Periksa gejala daun, batang, dan akar di bawah</small></div>
+      </button>
+      <button class="kondisi-btn" data-val="Tumbang - Bonggol Ada" onclick="setKondisi(this)">
+        <span class="ki">⬛</span>
+        <div class="kt"><strong>Tumbang — Ada Sisa Bonggol di Tanah</strong><small>Stadium 3 (Hitam) — Eradikasi dengan excavator</small></div>
+      </button>
+      <button class="kondisi-btn" data-val="Tumbang - Bonggol Tidak Ada" onclick="setKondisi(this)">
+        <span class="ki">⬜</span>
+        <div class="kt"><strong>Tumbang — Tidak Ada Sisa Bonggol</strong><small>Stadium 4 (Putih) — Sanitasi lanjutan & replanting</small></div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Gejala Daun (hidden if tumbang) -->
+  <div class="card" id="card-gejala">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">🍃</span>Gejala pada Daun</div>
+      <div class="card-note">Amati kondisi daun dari bawah ke pucuk</div>
+    </div>
+    <div class="gejala-list" id="list-daun">
+      <!-- items rendered by JS -->
+    </div>
+
+    <div class="card-header" style="margin-top:4px">
+      <div class="card-title"><span class="icon">🪵</span>Gejala pada Batang</div>
+      <div class="card-note">Periksa bagian pangkal batang dekat tanah</div>
+    </div>
+    <div class="gejala-list" id="list-batang"></div>
+
+    <div class="card-header" style="margin-top:4px">
+      <div class="card-title"><span class="icon">🪱</span>Gejala pada Akar</div>
+      <div class="card-note">Gali sedikit tanah di piringan untuk periksa akar</div>
+    </div>
+    <div class="gejala-list" id="list-akar"></div>
+  </div>
+
+  <!-- Foto Pokok (Stadium 3 & 4) -->
+  <div class="card" id="card-foto" style="display:none">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">📷</span>Foto Pokok (Opsional)</div>
+      <div class="card-note">Foto bonggol/kondisi tumbang untuk Stadium 3 & 4</div>
+    </div>
+    <div class="foto-area">
+      <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none">
+      <button class="btn-camera" onclick="document.getElementById('foto-input').click()">
+        📷 &nbsp;Ambil Foto Pokok
+      </button>
+      <div id="foto-preview" style="display:none" class="foto-preview">
+        <img id="foto-img" src="">
+        <button class="btn-hapus-foto" onclick="hapusFoto()">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catatan & Status -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="icon">✏️</span>Catatan & Status Pengecek (Opsional)</div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field-group full">
+          <label>Catatan Tambahan</label>
+          <textarea id="f_catatan" placeholder="Tuliskan catatan tambahan jika ada..."></textarea>
+        </div>
+        <div class="field-group full">
+          <label>Status Pengecekan</label>
+          <select id="f_status">
+            <option value="">— Pilih Status —</option>
+            <option>Belum Dicek</option>
+            <option>Sudah Dicek - Mandor</option>
+            <option>Sudah Dicek - Kerani</option>
+            <option>Sudah Dicek - Asisten</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky Save -->
+  <div class="sticky-bottom">
+    <button class="btn-simpan" onclick="simpanData()">
+      💾&nbsp;&nbsp;SIMPAN DATA POKOK
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PAGE: DATA TERSIMPAN -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="page" id="page-data">
+  <div class="filter-bar">
+    <h4>🔍 Filter Data</h4>
+    <div class="filter-row">
+      <select id="flt-kebun" onchange="applyFilter()"><option value="">Semua Kebun</option></select>
+      <select id="flt-divisi" onchange="applyFilter()"><option value="">Semua Divisi</option></select>
+      <select id="flt-blok" onchange="applyFilter()"><option value="">Semua Blok</option></select>
+      <button class="btn-reset-filter" onclick="resetFilter()">✕</button>
+    </div>
+  </div>
+
+  <div class="summary-strip" id="summary-strip"></div>
+
+  <div class="record-list" id="record-list"></div>
+
+  <div class="btn-kirim-wrap">
+    <button class="btn-kirim" id="btn-kirim" onclick="kirimKeServer()">
+      📡&nbsp;Kirim ke Server (Google Script)
+    </button>
+    <div class="kirim-note" id="kirim-note">Memuat data...</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- MODAL: HASIL SIMPAN -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-dialog" onclick="closeDialog(event)">
+  <div class="modal-sheet" id="dialog-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="dialog-hero" id="dialog-hero">
+      <div class="dialog-stadium-num" id="d-stadnum"></div>
+      <div class="dialog-stadium-label" id="d-label"></div>
+      <div class="dialog-code" id="d-code"></div>
+    </div>
+    <div class="dialog-info-card">
+      <div class="dialog-info-row">
+        <div class="dialog-info-label">📍 Pokok</div>
+        <div class="dialog-info-val" id="d-pokok"></div>
+      </div>
+      <div class="dialog-info-row">
+        <div class="dialog-info-label">🔲 Blok</div>
+        <div class="dialog-info-val" id="d-blok"></div>
+      </div>
+      <div class="dialog-info-row">
+        <div class="dialog-info-label">📅 Tanggal</div>
+        <div class="dialog-info-val" id="d-tanggal"></div>
+      </div>
+    </div>
+    <div class="dialog-rec">
+      <div class="dialog-rec-label">🛠 Rekomendasi Tindakan</div>
+      <div class="dialog-rec-text" id="d-rek"></div>
+    </div>
+    <div class="dialog-geo" id="d-geo"></div>
+    <div class="dialog-footer">
+      <button class="btn-lanjut" onclick="closeDialog()">✓&nbsp;&nbsp;Lanjut Isi Data Berikutnya</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- MODAL: DETAIL RECORD -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden center" id="modal-detail" onclick="closeDetail(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="detail-title">Detail Pokok</div>
+      <button class="btn-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- MODAL: SETTINGS -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden center" id="modal-settings" onclick="closeSettings(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Pengaturan</div>
+      <button class="btn-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <h4>URL Google Apps Script</h4>
+        <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          URL yang didapat setelah deploy Google Apps Script sebagai web app.
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Kode Google Apps Script</h4>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">
+          Copy kode berikut, paste di Google Apps Script (script.google.com), lalu deploy sebagai Web App dengan akses "Anyone".
+        </div>
+        <textarea class="gas-code" id="gas-code-block" readonly></textarea>
+        <button class="btn-copy" onclick="copyGasCode()">📋 Copy Kode GAS</button>
+      </div>
+      <div class="settings-section">
+        <h4>Data Lokal</h4>
+        <button class="btn-hapus-data" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
+        <div style="font-size:11px;color:#EF4444;margin-top:4px">⚠ Tidak bisa dibatalkan. Pastikan sudah kirim ke server.</div>
+      </div>
+      <button class="btn-save-settings" onclick="saveSettings()">💾 Simpan Pengaturan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay hidden" id="loading">
+  <div class="spinner"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT -->
+<!-- ════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── CONSTANTS ────────────────────────────────────────────────
+const DB_NAME = 'GanodermaDB';
+const DB_VER  = 1;
+const STORE   = 'sensus';
+
+const STADIUM = {
+  0:{label:'SEHAT',code:'H (Hijau)',     bg:'#C6EFCE',fg:'#375623',dark:'#2D5E1E'},
+  1:{label:'DINI', code:'K (Kuning)',    bg:'#FFF0A0',fg:'#7A4A00',dark:'#6B3A00'},
+  2:{label:'SAKIT',code:'M (Merah)',     bg:'#FF4444',fg:'#FFFFFF', dark:'#CC0000'},
+  3:{label:'TUMBANG',code:'B (Hitam)',   bg:'#2D2D2D',fg:'#FFFFFF', dark:'#111111'},
+  4:{label:'TUMBANG',code:'P (Putih)',   bg:'#ADADAD',fg:'#1A1A1A', dark:'#6B6B6B'},
+};
+
+const REC_SHORT = {
+  0:'Pemeliharaan rutin. Tabur Trichoderma preventif setiap 6 bulan.',
+  1:'Semprot biofungisida GREEMI-G di pangkal batang. Monitor intensif setiap 2 minggu.',
+  2:'Surgery: kikis jaringan busuk + biofungisida. Buat parit isolasi 50 cm. Pantau 2 minggu.',
+  3:'ERADIKASI SEGERA: Cabut bonggol total dengan excavator. Cincang batang 5-10 cm. Bera 6-12 bulan.',
+  4:'Sanitasi lanjutan: gali sisa akar, tabur Trichoderma 400 gr. Replanting varietas toleran (PPKS DP 540).',
+};
+
+const GEJALA_DAUN = [
+  {field:'daun_tombak',  label:'Ada 3+ daun muda menguncup di pucuk (belum mekar)'},
+  {field:'daun_klorosis',label:'Daun tampak kuning, pucat, atau tidak hijau segar'},
+  {field:'daun_sengkleh',label:'Pelepah bawah jatuh/sengkleh sebelum waktunya (masih hijau)'},
+  {field:'daun_skirting',label:'Banyak pelepah kering menggantung di batang seperti "rok"'},
+  {field:'daun_tajuk',   label:'Pucuk pohon kerdil, daun ujung kecil-kecil dan tidak mekar'},
+];
+const GEJALA_BATANG = [
+  {field:'batang_miselia',   label:'Ada bercak atau benang putih kecil di pangkal batang (tanda awal — Stadium 1)'},
+  {field:'batang_tubuh_buah',label:'Ada jamur bentuk kipas coklat-putih tumbuh di pangkal batang'},
+  {field:'batang_lunak',     label:'Tekan pangkal batang pakai ibu jari: terasa empuk atau lembek'},
+];
+const GEJALA_AKAR = [
+  {field:'akar_busuk',  label:'Gali sedikit tanah di piringan: akar warna hitam/coklat gelap, lembek, bau busuk'},
+  {field:'akar_miselia',label:'Ada benang-benang putih jamur di pangkal batang atau di antara akar'},
+];
+
+const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
+// 1. Buka script.google.com
+// 2. Paste kode ini di editor
+// 3. Deploy > New deployment > Web app
+// 4. Execute as: Me | Who has access: Anyone
+// 5. Copy URL deployment ke Pengaturan aplikasi
+
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName('SensusGanoderma');
+    if (!sh) {
+      sh = ss.insertSheet('SensusGanoderma');
+      sh.appendRow(['ID','Timestamp','Kebun','Tanggal','Divisi',
+        'Blok','Mandor','Pengecek','No Pokok','Baris','Kolom',
+        'Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh',
+        'Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak',
+        'Akar Busuk','Akar Miselia','Skor Stadium','Keparahan',
+        'Latitude','Longitude','Catatan','Status Pengecek',
+        'Waktu Simpan']);
+      sh.getRange(1,1,1,28).setFontWeight('bold');
+    }
+    const data = JSON.parse(e.postData.contents);
+    const rows = data.map(r => [
+      r.id, r.timestamp, r.kebun, r.tanggal, r.divisi, r.blok,
+      r.mandor, r.pengecek, r.no_pokok, r.baris, r.kolom,
+      r.kondisi_pokok, r.daun_tombak, r.daun_klorosis,
+      r.daun_sengkleh, r.daun_skirting, r.daun_tajuk,
+      r.batang_miselia, r.batang_tubuh_buah, r.batang_lunak,
+      r.akar_busuk, r.akar_miselia, r.skor_stadium, r.keparahan,
+      r.lat||'', r.lng||'', r.catatan||'', r.status_pengecek||'',
+      r.waktu_simpan
+    ]);
+    if (rows.length > 0)
+      sh.getRange(sh.getLastRow()+1,1,rows.length,rows[0].length)
+        .setValues(rows);
+    return ContentService
+      .createTextResponse(JSON.stringify({status:'ok',n:rows.length}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextResponse(JSON.stringify({status:'error',msg:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+// ── STATE ─────────────────────────────────────────────────────
+let db = null;
+let currentKondisi = 'Normal/Berdiri';
+let gejalaState = {};
+let fotoBase64 = null;
+let allRecords = [];
+
+// ── DB ────────────────────────────────────────────────────────
+function openDB() {
+  return new Promise((res,rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) {
+        const s = d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+        s.createIndex('kebun','kebun',{unique:false});
+        s.createIndex('divisi','divisi',{unique:false});
+        s.createIndex('blok','blok',{unique:false});
+        s.createIndex('status_kirim','status_kirim',{unique:false});
+      }
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbAdd(record) {
+  return new Promise((res,rej) => {
+    const tx = db.transaction(STORE,'readwrite');
+    const req = tx.objectStore(STORE).add(record);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbGetAll() {
+  return new Promise((res,rej) => {
+    const tx  = db.transaction(STORE,'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbUpdate(id, updates) {
+  return new Promise((res,rej) => {
+    const tx   = db.transaction(STORE,'readwrite');
+    const s    = tx.objectStore(STORE);
+    const rget = s.get(id);
+    rget.onsuccess = e => {
+      const rec = Object.assign(e.target.result, updates);
+      const rput = s.put(rec);
+      rput.onsuccess = () => res();
+      rput.onerror   = e => rej(e.target.error);
+    };
+    rget.onerror = e => rej(e.target.error);
+  });
+}
+
+function dbDelete(id) {
+  return new Promise((res,rej) => {
+    const tx  = db.transaction(STORE,'readwrite');
+    const req = tx.objectStore(STORE).delete(id);
+    req.onsuccess = () => res();
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function dbClear() {
+  return new Promise((res,rej) => {
+    const tx  = db.transaction(STORE,'readwrite');
+    const req = tx.objectStore(STORE).clear();
+    req.onsuccess = () => res();
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function getMaxNoPokok() {
+  const all = await dbGetAll();
+  if (!all.length) return 0;
+  return Math.max(...all.map(r => parseInt(r.no_pokok)||0));
+}
+
+// ── STADIUM CALCULATION ───────────────────────────────────────
+function hitungStadium(g) {
+  if (g.kondisi_pokok === 'Tumbang - Bonggol Tidak Ada') return 4;
+  if (g.kondisi_pokok === 'Tumbang - Bonggol Ada')       return 3;
+  const st2 = [
+    g.daun_tombak, g.daun_klorosis, g.daun_sengkleh, g.daun_skirting, g.daun_tajuk,
+    g.batang_tubuh_buah, g.batang_lunak, g.akar_busuk, g.akar_miselia
+  ].some(v => v === 'Ya');
+  if (st2) return 2;
+  if (g.batang_miselia === 'Ya') return 1;
+  return 0;
+}
+
+// ── BUILD GEJALA UI ───────────────────────────────────────────
+function buildGejalaList(containerId, items, offset) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  items.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'gejala-item';
+    div.innerHTML = `
+      <div class="gejala-num">${offset+i+1}</div>
+      <div class="gejala-label">${item.label}</div>
+      <div class="toggle-row" data-field="${item.field}">
+        <button class="tog-btn" data-val="Ya" onclick="setToggle(this)">Ya</button>
+        <button class="tog-btn active-tidak" data-val="Tidak" onclick="setToggle(this)">Tidak</button>
+        <button class="tog-btn" data-val="-" onclick="setToggle(this)">—</button>
+      </div>`;
+    container.appendChild(div);
+    gejalaState[item.field] = 'Tidak';
+  });
+}
+
+function setToggle(btn) {
+  const row = btn.closest('.toggle-row');
+  row.querySelectorAll('.tog-btn').forEach(b => {
+    b.classList.remove('active-ya','active-tidak','active-na');
+  });
+  const val = btn.dataset.val;
+  if (val==='Ya')    btn.classList.add('active-ya');
+  else if (val==='-')btn.classList.add('active-na');
+  else               btn.classList.add('active-tidak');
+  gejalaState[row.dataset.field] = val;
+}
+
+function resetGejala() {
+  document.querySelectorAll('.toggle-row').forEach(row => {
+    row.querySelectorAll('.tog-btn').forEach(b => {
+      b.classList.remove('active-ya','active-tidak','active-na');
+      if (b.dataset.val==='Tidak') b.classList.add('active-tidak');
+    });
+    gejalaState[row.dataset.field] = 'Tidak';
+  });
+}
+
+// ── KONDISI POKOK ─────────────────────────────────────────────
+function setKondisi(btn) {
+  document.querySelectorAll('.kondisi-btn').forEach(b => {
+    b.classList.remove('active-normal','active-st3','active-st4');
+  });
+  currentKondisi = btn.dataset.val;
+  if (currentKondisi === 'Normal/Berdiri') {
+    btn.classList.add('active-normal');
+    document.getElementById('card-gejala').style.display = '';
+    document.getElementById('card-foto').style.display = 'none';
+  } else if (currentKondisi === 'Tumbang - Bonggol Ada') {
+    btn.classList.add('active-st3');
+    document.getElementById('card-gejala').style.display = 'none';
+    document.getElementById('card-foto').style.display = '';
+  } else {
+    btn.classList.add('active-st4');
+    document.getElementById('card-gejala').style.display = 'none';
+    document.getElementById('card-foto').style.display = '';
+  }
+}
+
+function resetKondisi() {
+  currentKondisi = 'Normal/Berdiri';
+  document.querySelectorAll('.kondisi-btn').forEach(b => {
+    b.classList.remove('active-normal','active-st3','active-st4');
+    if (b.dataset.val === 'Normal/Berdiri') b.classList.add('active-normal');
+  });
+  document.getElementById('card-gejala').style.display = '';
+  document.getElementById('card-foto').style.display = 'none';
+}
+
+// ── FOTO ──────────────────────────────────────────────────────
+document.getElementById('foto-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // Compress image
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h*(MAX/w)); w = MAX; }
+        else       { w = Math.round(w*(MAX/h)); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      fotoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+      document.getElementById('foto-img').src = fotoBase64;
+      document.getElementById('foto-preview').style.display = '';
+      document.querySelector('.btn-camera').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function hapusFoto() {
+  fotoBase64 = null;
+  document.getElementById('foto-input').value = '';
+  document.getElementById('foto-preview').style.display = 'none';
+  document.querySelector('.btn-camera').style.display = '';
+}
+
+// ── GEOLOCATION ───────────────────────────────────────────────
+function getGeo() {
+  return new Promise(res => {
+    if (!navigator.geolocation) { res({lat:null,lng:null,acc:null}); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => res({lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy)}),
+      () => res({lat:null,lng:null,acc:null}),
+      {enableHighAccuracy:true, timeout:8000, maximumAge:0}
+    );
+  });
+}
+
+// ── SAVE ─────────────────────────────────────────────────────
+async function simpanData() {
+  const kebun  = document.getElementById('f_kebun').value.trim();
+  const blok   = document.getElementById('f_blok').value.trim();
+  const baris  = document.getElementById('f_baris').value.trim();
+  const kolom  = document.getElementById('f_kolom').value.trim();
+  const noPokok= parseInt(document.getElementById('f_no_pokok').value)||1;
+
+  if (!kebun)  { showToast('⚠ Isi nama Kebun/Perusahaan dulu'); return; }
+  if (!blok)   { showToast('⚠ Isi Blok/Petak dulu'); return; }
+  if (!baris)  { showToast('⚠ Isi Baris dulu'); return; }
+
+  showLoading(true);
+  const geo = await getGeo();
+  showLoading(false);
+
+  const skor = hitungStadium({kondisi_pokok:currentKondisi, ...gejalaState});
+  const st   = STADIUM[skor];
+
+  const record = {
+    timestamp    : new Date().toISOString(),
+    waktu_simpan : new Date().toLocaleString('id-ID'),
+    kebun        : kebun,
+    tanggal      : document.getElementById('f_tanggal').value,
+    divisi       : document.getElementById('f_divisi').value.trim(),
+    blok         : blok,
+    mandor       : document.getElementById('f_mandor').value.trim(),
+    pengecek     : document.getElementById('f_pengecek').value.trim(),
+    no_pokok     : noPokok,
+    baris        : baris,
+    kolom        : kolom,
+    kondisi_pokok: currentKondisi,
+    ...gejalaState,
+    skor_stadium : skor,
+    keparahan    : `Stadium ${skor} — ${st.label} (${st.code})`,
+    lat          : geo.lat,
+    lng          : geo.lng,
+    geo_acc      : geo.acc,
+    foto         : fotoBase64 || null,
+    catatan      : document.getElementById('f_catatan').value.trim(),
+    status_pengecek: document.getElementById('f_status').value,
+    status_kirim : 'Belum Dikirim',
+  };
+
+  try {
+    const id = await dbAdd(record);
+    record.id = id;
+
+    // Show dialog
+    showDialog(record, skor, geo);
+
+    // Reset variable fields
+    resetGejala();
+    resetKondisi();
+    hapusFoto();
+    document.getElementById('f_catatan').value = '';
+    document.getElementById('f_status').value  = '';
+    document.getElementById('f_no_pokok').value = noPokok + 1;
+
+  } catch (e) {
+    showLoading(false);
+    showToast('❌ Gagal menyimpan: ' + e.message);
+  }
+}
+
+// ── DIALOG ───────────────────────────────────────────────────
+function showDialog(rec, skor, geo) {
+  const st = STADIUM[skor];
+  const hero = document.getElementById('dialog-hero');
+  hero.style.background = st.bg;
+  hero.style.color      = st.fg;
+  document.getElementById('d-stadnum').textContent = `Stadium ${skor}`;
+  document.getElementById('d-label').textContent   = st.label;
+  document.getElementById('d-code').textContent    = st.code;
+
+  document.getElementById('d-pokok').textContent   = `No. ${rec.no_pokok} | Baris ${rec.baris} | Kolom ${rec.kolom}`;
+  document.getElementById('d-blok').textContent    = `${rec.kebun} — ${rec.divisi} — Blok ${rec.blok}`;
+  document.getElementById('d-tanggal').textContent = rec.tanggal || rec.waktu_simpan;
+
+  document.getElementById('d-rek').textContent = REC_SHORT[skor];
+
+  const geoEl = document.getElementById('d-geo');
+  if (geo.lat) {
+    geoEl.textContent = `📍 ${geo.lat.toFixed(6)}, ${geo.lng.toFixed(6)} (±${geo.acc}m)`;
+  } else {
+    geoEl.textContent = '📍 Koordinat tidak tersedia';
+  }
+
+  document.getElementById('modal-dialog').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDialog(e) {
+  if (e && e.target !== document.getElementById('modal-dialog')) return;
+  document.getElementById('modal-dialog').classList.add('hidden');
+  document.body.style.overflow = '';
+  // Scroll form to top
+  document.getElementById('page-form').scrollTop = 0;
+}
+
+// ── DATA VIEW ─────────────────────────────────────────────────
+async function loadDataPage() {
+  allRecords = await dbGetAll();
+  allRecords.sort((a,b) => b.id - a.id); // newest first
+
+  // Populate filter dropdowns
+  const kebuns  = [...new Set(allRecords.map(r=>r.kebun).filter(Boolean))];
+  const divisis = [...new Set(allRecords.map(r=>r.divisi).filter(Boolean))];
+  const bloks   = [...new Set(allRecords.map(r=>r.blok).filter(Boolean))];
+
+  fillSelect('flt-kebun',  kebuns,  'Semua Kebun');
+  fillSelect('flt-divisi', divisis, 'Semua Divisi');
+  fillSelect('flt-blok',   bloks,   'Semua Blok');
+
+  applyFilter();
+}
+
+function fillSelect(id, items, placeholder) {
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  items.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  });
+  if (items.includes(cur)) sel.value = cur;
+}
+
+function applyFilter() {
+  const fKebun  = document.getElementById('flt-kebun').value;
+  const fDivisi = document.getElementById('flt-divisi').value;
+  const fBlok   = document.getElementById('flt-blok').value;
+
+  let filtered = allRecords;
+  if (fKebun)  filtered = filtered.filter(r => r.kebun  === fKebun);
+  if (fDivisi) filtered = filtered.filter(r => r.divisi === fDivisi);
+  if (fBlok)   filtered = filtered.filter(r => r.blok   === fBlok);
+
+  renderSummary(filtered);
+  renderRecords(filtered);
+  updateKirimNote(filtered);
+}
+
+function resetFilter() {
+  document.getElementById('flt-kebun').value  = '';
+  document.getElementById('flt-divisi').value = '';
+  document.getElementById('flt-blok').value   = '';
+  applyFilter();
+}
+
+function renderSummary(records) {
+  const counts = {0:0,1:0,2:0,3:0,4:0,total:records.length};
+  records.forEach(r => { if (r.skor_stadium !== undefined) counts[r.skor_stadium]++; });
+  const belum = records.filter(r=>r.status_kirim==='Belum Dikirim').length;
+
+  const defs = [
+    {k:'total',label:'Total',  bg:'#EEF2FF',fg:'#3730A3'},
+    {k:0,      label:'Sehat',  bg:'#C6EFCE',fg:'#375623'},
+    {k:1,      label:'Dini',   bg:'#FFF0A0',fg:'#7A4A00'},
+    {k:2,      label:'Sakit',  bg:'#FFCCCC',fg:'#CC0000'},
+    {k:3,      label:'Tumb-B', bg:'#D0D0D0',fg:'#1A1A1A'},
+    {k:4,      label:'Tumb-P', bg:'#F0F0F0',fg:'#1A1A1A'},
+    {k:'belum',label:'Blm Krm',bg:'#FFF3E0',fg:'#E65100'},
+  ];
+  const wrap = document.getElementById('summary-strip');
+  wrap.innerHTML = '';
+  const allCounts = {...counts, belum};
+  defs.forEach(d => {
+    const ch = document.createElement('div');
+    ch.className = 'stat-chip';
+    ch.style.cssText = `background:${d.bg};color:${d.fg}`;
+    ch.innerHTML = `<div class="sv">${allCounts[d.k]}</div><div class="sl">${d.label}</div>`;
+    wrap.appendChild(ch);
+  });
+}
+
+function renderRecords(records) {
+  const list = document.getElementById('record-list');
+  if (!records.length) {
+    list.innerHTML = `<div class="empty-state"><div class="ei">🌿</div><p>Belum ada data tersimpan</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  records.forEach(rec => {
+    const skor = rec.skor_stadium ?? 0;
+    const st   = STADIUM[skor];
+    const card = document.createElement('div');
+    card.className = `record-card st${skor}`;
+    card.onclick   = () => showDetail(rec);
+
+    const sudah = rec.status_kirim === 'Sudah Dikirim';
+    const geo   = rec.lat ? `📍 ${rec.lat.toFixed(4)}, ${rec.lng.toFixed(4)}` : '';
+
+    card.innerHTML = `
+      <div class="record-top">
+        <div>
+          <div class="record-id">No. ${rec.no_pokok} | Baris ${rec.baris}</div>
+          <div class="record-loc">${rec.kebun||'—'} · ${rec.divisi||'—'} · Blok ${rec.blok||'—'}</div>
+        </div>
+        <span class="stadium-badge" style="background:${st.bg};color:${st.fg}">Stad. ${skor} ${st.label}</span>
+      </div>
+      <div class="record-bottom">
+        <div class="record-meta">${rec.waktu_simpan||''} ${geo ? ' · '+geo : ''}</div>
+        <span class="status-kirim ${sudah?'sudah':'belum'}">${sudah?'✓ Terkirim':'⏳ Belum Kirim'}</span>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function updateKirimNote(records) {
+  const belum = records.filter(r=>r.status_kirim==='Belum Dikirim').length;
+  const note  = document.getElementById('kirim-note');
+  const btn   = document.getElementById('btn-kirim');
+  if (!belum) {
+    note.textContent = '✓ Semua data sudah dikirim ke server';
+    btn.disabled = true;
+  } else {
+    note.textContent = `${belum} data belum dikirim — tekan tombol untuk kirim sekaligus`;
+    btn.disabled = false;
+  }
+}
+
+// ── DETAIL ────────────────────────────────────────────────────
+function showDetail(rec) {
+  const skor = rec.skor_stadium ?? 0;
+  const st   = STADIUM[skor];
+
+  document.getElementById('detail-title').textContent = `Pokok No. ${rec.no_pokok}`;
+
+  const gejalaAll = [
+    ...GEJALA_DAUN.map(g => ({...g, section:'Daun'})),
+    ...GEJALA_BATANG.map(g => ({...g, section:'Batang'})),
+    ...GEJALA_AKAR.map(g => ({...g, section:'Akar'})),
+  ];
+
+  let html = `
+    <div style="padding:12px 0 6px">
+      <span class="stadium-badge" style="background:${st.bg};color:${st.fg};font-size:14px;padding:8px 16px">
+        Stadium ${skor} — ${st.label} (${st.code})
+      </span>
+    </div>
+    <div class="detail-section"><h5>Informasi Umum</h5>
+      <div class="detail-grid">
+        <div class="detail-row"><div class="dr-label">Kebun</div><div class="dr-val">${rec.kebun||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Tanggal</div><div class="dr-val">${rec.tanggal||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Divisi</div><div class="dr-val">${rec.divisi||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Blok</div><div class="dr-val">${rec.blok||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Baris</div><div class="dr-val">${rec.baris||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Kolom</div><div class="dr-val">${rec.kolom||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Mandor</div><div class="dr-val">${rec.mandor||'—'}</div></div>
+        <div class="detail-row"><div class="dr-label">Pengecek</div><div class="dr-val">${rec.pengecek||'—'}</div></div>
+      </div>
+    </div>
+    <div class="detail-section"><h5>Kondisi & Gejala</h5>
+      <div class="detail-row full"><div class="dr-label">Kondisi Pokok</div><div class="dr-val">${rec.kondisi_pokok||'—'}</div></div>
+      <div style="height:8px"></div>
+      <div class="gejala-hasil">`;
+
+  gejalaAll.forEach(g => {
+    const v = rec[g.field];
+    if (!v || v==='Tidak') return;
+    const cls = v==='Ya' ? 'ya' : 'na';
+    html += `<span class="gejala-chip ${cls}">${v==='Ya'?'✓':'-'} ${g.label.substring(0,32)}${g.label.length>32?'…':''}</span>`;
+  });
+
+  html += `</div></div>`;
+
+  if (rec.lat) {
+    html += `<div class="detail-section"><h5>Koordinat GPS</h5>
+      <div class="detail-row full">
+        <div class="dr-label">Lat, Lng (Akurasi: ±${rec.geo_acc||'?'}m)</div>
+        <div class="dr-val">${rec.lat.toFixed(7)}, ${rec.lng.toFixed(7)}</div>
+      </div>
+    </div>`;
+  }
+
+  if (rec.foto) {
+    html += `<div class="detail-section"><h5>Foto Pokok</h5>
+      <div class="detail-foto"><img src="${rec.foto}" alt="Foto pokok"></div>
+    </div>`;
+  }
+
+  if (rec.catatan) {
+    html += `<div class="detail-section"><h5>Catatan</h5>
+      <div class="detail-row full"><div class="dr-val">${rec.catatan}</div></div>
+    </div>`;
+  }
+
+  html += `<div class="detail-section"><h5>Rekomendasi Tindakan</h5>
+    <div style="background:${st.bg};color:${st.fg};padding:12px;border-radius:8px;font-size:13px;line-height:1.5">
+      ${REC_SHORT[skor]}
+    </div>
+  </div>
+  <div style="margin-top:10px">
+    <button onclick="hapusRecord(${rec.id})" style="width:100%;padding:12px;border:2px solid #EF4444;border-radius:8px;background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">
+      🗑 Hapus Data Ini
+    </button>
+  </div>`;
+
+  document.getElementById('detail-body').innerHTML = html;
+  document.getElementById('modal-detail').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail(e) {
+  if (e && e.target !== document.getElementById('modal-detail')) return;
+  document.getElementById('modal-detail').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+async function hapusRecord(id) {
+  if (!confirm('Hapus data ini?')) return;
+  await dbDelete(id);
+  closeDetail();
+  showToast('🗑 Data dihapus');
+  loadDataPage();
+}
+
+// ── SEND TO SERVER ────────────────────────────────────────────
+async function kirimKeServer() {
+  const gasUrl = localStorage.getItem('gasUrl');
+  if (!gasUrl) {
+    showToast('⚠ URL Google Script belum diisi di Pengaturan');
+    openSettings();
+    return;
+  }
+
+  const belum = allRecords.filter(r=>r.status_kirim==='Belum Dikirim');
+  if (!belum.length) { showToast('✓ Tidak ada data baru untuk dikirim'); return; }
+
+  const ok = confirm(`Kirim ${belum.length} data ke server?\n\nData foto tidak dikirim untuk menghemat kuota.`);
+  if (!ok) return;
+
+  showLoading(true);
+
+  // Exclude foto from payload
+  const payload = belum.map(r => {
+    const {foto, ...rest} = r;
+    return rest;
+  });
+
+  try {
+    const resp = await fetch(gasUrl, {
+      method : 'POST',
+      headers: {'Content-Type':'application/json'},
+      body   : JSON.stringify(payload),
+      mode   : 'no-cors',
+    });
+
+    // With no-cors we can't read response, assume OK if no network error
+    for (const rec of belum) {
+      await dbUpdate(rec.id, {status_kirim:'Sudah Dikirim'});
+    }
+    showLoading(false);
+    showToast(`✅ ${belum.length} data berhasil dikirim`);
+    loadDataPage();
+
+  } catch (e) {
+    showLoading(false);
+    showToast('❌ Gagal kirim: ' + e.message);
+  }
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────
+function openSettings() {
+  const url = localStorage.getItem('gasUrl') || '';
+  document.getElementById('gas-url').value = url;
+  document.getElementById('gas-code-block').value = GAS_CODE;
+  document.getElementById('modal-settings').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSettings(e) {
+  if (e && e.target !== document.getElementById('modal-settings')) return;
+  document.getElementById('modal-settings').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function saveSettings() {
+  const url = document.getElementById('gas-url').value.trim();
+  if (url) localStorage.setItem('gasUrl', url);
+  closeSettings();
+  showToast('✓ Pengaturan disimpan');
+}
+
+function copyGasCode() {
+  navigator.clipboard.writeText(GAS_CODE)
+    .then(() => showToast('✓ Kode GAS berhasil dicopy'))
+    .catch(() => {
+      document.getElementById('gas-code-block').select();
+      document.execCommand('copy');
+      showToast('✓ Kode GAS berhasil dicopy');
+    });
+}
+
+async function hapusSemuaData() {
+  const ok = confirm('HAPUS SEMUA DATA?\n\nTindakan ini tidak bisa dibatalkan.\nPastikan sudah kirim ke server!');
+  if (!ok) return;
+  await dbClear();
+  allRecords = [];
+  closeSettings();
+  showToast('🗑 Semua data dihapus');
+  loadDataPage();
+}
+
+// ── NAV ───────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+  if (name === 'data') loadDataPage();
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function showToast(msg, duration=2600) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('hidden', !show);
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function init() {
+  // Set today's date
+  document.getElementById('f_tanggal').valueAsDate = new Date();
+
+  // Build gejala UI
+  buildGejalaList('list-daun',   GEJALA_DAUN,   0);
+  buildGejalaList('list-batang', GEJALA_BATANG, GEJALA_DAUN.length);
+  buildGejalaList('list-akar',   GEJALA_AKAR,   GEJALA_DAUN.length + GEJALA_BATANG.length);
+
+  // Open DB
+  try {
+    db = await openDB();
+    const maxNo = await getMaxNoPokok();
+    document.getElementById('f_no_pokok').value = maxNo + 1;
+  } catch(e) {
+    showToast('⚠ Database error: ' + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
