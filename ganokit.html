@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GanoKit</title>
+<title>Sensus Ganoderma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -35,7 +35,7 @@
   --st4-bg:#ADADAD; --st4-fg:#1A1A1A; --st4-dark:#6B6B6B;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:15px}
+html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:15px}
 /* ── APP SHELL ──────────────────────────────────────────── */
 .app-header{
   position:sticky;top:0;z-index:100;
@@ -43,6 +43,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   padding:14px 16px 10px;
   display:flex;align-items:center;justify-content:space-between;
   box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  width:100%;box-sizing:border-box;
 }
 .header-left{display:flex;align-items:center;gap:10px}
 .header-logo{font-size:22px}
@@ -53,6 +54,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .tab-nav{
   display:flex;background:var(--green-800);
   border-bottom:3px solid var(--green-700);
+  width:100%;overflow:hidden;
 }
 .tab-btn{
   flex:1;padding:12px 8px;border:none;background:transparent;
@@ -62,7 +64,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 }
 .tab-btn.active{color:#FFFFFF;border-bottom-color:#6BE88A}
 /* ── PAGES ──────────────────────────────────────────────── */
-.page{display:none;padding:12px 12px 120px;max-width:640px;margin:0 auto}
+.page{display:none;padding:12px 12px 120px;width:100%;box-sizing:border-box;}
 .page.active{display:block}
 /* ── CARDS ──────────────────────────────────────────────── */
 .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
@@ -70,10 +72,10 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .card-title{font-size:14px;font-weight:700;color:var(--green-800);display:flex;align-items:center;gap:7px}
 .card-title .icon{font-size:16px}
 .card-note{font-size:11px;color:var(--text-muted);margin-top:3px;padding-left:23px}
-.card-body{padding:14px 16px}
+.card-body{padding:14px 16px;width:100%;box-sizing:border-box}
 /* ── FORM GRID ───────────────────────────────────────────── */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%}
 .field-group{display:flex;flex-direction:column;gap:4px}
 .field-group.full{grid-column:1/-1}
 .field-group label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
@@ -113,7 +115,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   color:var(--green-700);font-size:11px;font-weight:700;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.gejala-label{flex:1;font-size:13px;line-height:1.35;color:var(--text)}
+.gejala-label{flex:1;font-size:12px;line-height:1.35;color:var(--text);min-width:0;word-break:break-word}
 .toggle-row{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--gray-200);flex-shrink:0}
 .tog-btn{
   padding:8px 10px;border:none;cursor:pointer;font-family:inherit;
@@ -144,7 +146,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .sticky-bottom{
   position:fixed;bottom:0;left:0;right:0;z-index:50;
   background:var(--white);border-top:1px solid var(--gray-200);
-  padding:12px 16px;max-width:640px;margin:0 auto;
+  padding:12px 16px;box-sizing:border-box;
 }
 .btn-simpan{
   width:100%;padding:16px;border-radius:var(--radius);border:none;
@@ -159,10 +161,11 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .filter-bar{
   background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
   padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;
+  width:100%;box-sizing:border-box;
 }
 .filter-bar h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
-.filter-row{display:flex;gap:8px}
-.filter-row select{flex:1;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 10px;font-family:inherit;font-size:13px;background:#FFF;outline:none}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap}
+.filter-row select{flex:1;min-width:0;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 8px;font-family:inherit;font-size:12px;background:#FFF;outline:none;max-width:100%}
 .filter-row select:focus{border-color:var(--green-600)}
 .btn-reset-filter{padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:#FFF;font-family:inherit;font-size:13px;cursor:pointer;color:var(--text-muted)}
 .summary-strip{
@@ -189,9 +192,9 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .record-card.st2{border-left-color:var(--st2-dark)}
 .record-card.st3{border-left-color:#1A1A1A}
 .record-card.st4{border-left-color:#888}
-.record-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
-.record-id{font-size:15px;font-weight:800}
-.record-loc{font-size:12px;color:var(--text-muted);margin-top:2px}
+.record-top{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px 8px;gap:8px}
+.record-id{font-size:14px;font-weight:800;word-break:break-word}
+.record-loc{font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-word}
 .stadium-badge{
   padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;
   white-space:nowrap;
@@ -208,7 +211,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .empty-state .ei{font-size:48px;margin-bottom:12px}
 .empty-state p{font-size:14px}
 /* ── KIRIM BUTTON ────────────────────────────────────────── */
-.btn-kirim-wrap{padding:12px}
+.btn-kirim-wrap{padding:12px;width:100%;box-sizing:border-box}
 .btn-kirim{
   width:100%;padding:15px;border-radius:var(--radius);border:none;
   background:#1A56B0;color:#FFF;font-family:inherit;font-size:15px;
@@ -223,10 +226,10 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   position:fixed;inset:0;z-index:200;display:flex;align-items:flex-end;
   background:rgba(0,0,0,.6);backdrop-filter:blur(3px);
 }
-.modal-overlay.center{align-items:center}
+.modal-overlay.center{align-items:center;padding:12px}
 .modal-overlay.hidden{display:none}
 .modal-sheet{
-  width:100%;max-width:640px;margin:0 auto;
+  width:100%;margin:0 auto;
   background:var(--white);border-radius:var(--radius) var(--radius) 0 0;
   max-height:92vh;overflow-y:auto;
   animation:slideUp .28s cubic-bezier(.25,.46,.45,.94);
@@ -266,14 +269,14 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 .settings-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px}
 .settings-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .settings-section input,.settings-section textarea{
-  width:100%;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
+  width:100%;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
   padding:10px 12px;font-family:inherit;font-size:13px;outline:none;
 }
 .settings-section input:focus{border-color:var(--green-600)}
 .gas-code{
   background:#1A1A1A;color:#7BC98A;font-family:'Courier New',monospace;font-size:10px;
   padding:12px;border-radius:var(--radius-sm);overflow-x:auto;white-space:pre;
-  border:none;width:100%;max-height:200px;overflow-y:auto;
+  border:none;width:100%;box-sizing:border-box;max-height:200px;overflow-y:auto;
 }
 .btn-copy{
   margin-top:6px;padding:8px 14px;border-radius:var(--radius-sm);
@@ -293,7 +296,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 /* ── DETAIL MODAL ────────────────────────────────────────── */
 .detail-body{padding:14px 20px 32px;display:flex;flex-direction:column;gap:10px}
 .detail-section h5{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:6px}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
 .detail-row{display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border-radius:6px;padding:8px 10px}
 .detail-row.full{grid-column:1/-1}
 .dr-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
@@ -323,6 +326,22 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+@media (max-width: 380px) {
+  .form-grid{grid-template-columns:1fr}
+  .form-grid .field-group.full{grid-column:1}
+  .form-grid-3{grid-template-columns:1fr 1fr}
+  .tog-btn{padding:8px 7px;font-size:11px;min-width:32px}
+  .header-title{font-size:15px}
+  .header-sub{font-size:10px}
+  .tab-btn{font-size:12px;padding:11px 6px}
+  .stat-chip{min-width:60px;padding:7px 10px}
+  .stat-chip .sv{font-size:18px}
+}
+@media (max-width: 340px) {
+  .form-grid-3{grid-template-columns:1fr 1fr}
+  .tog-btn{padding:7px 5px;min-width:28px}
+}
 </style>
 </head>
 <body>
@@ -332,8 +351,8 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
   <div class="header-left">
     <div class="header-logo">🌿</div>
     <div>
-      <div class="header-title">GanoKit</div>
-      <div class="header-sub">SISTEM DETEKSI GANODERMA</div>
+      <div class="header-title">Sensus Ganoderma</div>
+      <div class="header-sub">SISTEM PPKS — DETEKSI LAPANGAN</div>
     </div>
   </div>
   <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
@@ -570,7 +589,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 <!-- MODAL: DETAIL RECORD -->
 <!-- ════════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden center" id="modal-detail" onclick="closeDetail(event)">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);max-width:500px">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:500px">
     <div class="modal-header">
       <div class="modal-title" id="detail-title">Detail Pokok</div>
       <button class="btn-close" onclick="closeDetail()">✕</button>
@@ -583,7 +602,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif;backg
 <!-- MODAL: SETTINGS -->
 <!-- ════════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden center" id="modal-settings" onclick="closeSettings(event)">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);max-width:540px">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:540px">
     <div class="modal-header">
       <div class="modal-title">⚙️ Pengaturan</div>
       <button class="btn-close" onclick="closeSettings()">✕</button>
