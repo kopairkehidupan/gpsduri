@@ -1907,6 +1907,12 @@ async function testKoneksiGAS() {
       res.className = 'test-err';
       res.innerHTML = `❌ ${err.message} — GAS menolak request.<br>` +
         'Cek deployment: Execute as: Me | Who has access: <b>Anyone</b> (bukan "with Google account")';
+    } else if (err.message.includes('/u/') || err.message.includes('redirect')) {
+      res.className = 'test-err';
+      res.innerHTML = '❌ <b>Google Multi-Account Redirect</b><br>' +
+        'Browser kamu login ke beberapa akun Google sekaligus.<br><br>' +
+        '<b>Solusi 1 (Terbaik):</b> Deploy ulang GAS — <em>Who has access: Anyone</em> (bukan "with Google account")<br>' +
+        '<b>Solusi 2 (Cepat):</b> Buka app di tab <b>Incognito</b> (Ctrl+Shift+N)';
     } else {
       res.className = 'test-err';
       res.innerHTML = `❌ ${err.message}`;
@@ -2025,7 +2031,11 @@ function jsonpFetch(gasUrl, params) {
     script.src = `${cleanUrl}?${qs}`;
     script.onerror = () => {
       cleanup();
-      reject(new Error('GAS tidak merespons — pastikan deploy sudah benar'));
+      // Cek apakah URL redirect ke /u/N/ (multi-account Google)
+      const hint = script.src.includes('/u/') 
+        ? 'Google mengalihkan ke URL /u/N/ — deploy ulang GAS atau buka app di Incognito'
+        : 'GAS tidak merespons — pastikan deploy sudah benar';
+      reject(new Error(hint));
     };
     document.head.appendChild(script);
   });
