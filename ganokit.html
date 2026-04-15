@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sensus Ganoderma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -405,6 +406,59 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
   transition:background .15s;
 }
 .konfirm-hapus:active{background:#FFF0F0}
+
+/* ── PETA TAB ─────────────────────────────────────────────── */
+#peta-map{height:52vh;min-height:300px;border-radius:var(--radius);
+  overflow:hidden;margin-bottom:10px;border:2px solid var(--gray-200);
+  background:#C8D8C8}
+.peta-filter-card{background:var(--white);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px;margin-bottom:10px;
+  border:1px solid rgba(0,0,0,0.04)}
+.peta-filter-title{font-size:12px;font-weight:800;color:var(--green-700);
+  margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.peta-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.peta-input{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);
+  padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);
+  background:var(--white);width:100%;box-sizing:border-box;outline:none;transition:border-color .15s}
+.peta-input:focus{border-color:var(--green-500);box-shadow:0 0 0 3px rgba(36,138,61,.15)}
+.peta-input.full{grid-column:1/-1}
+.btn-ambil{width:100%;padding:14px;border-radius:var(--radius);border:none;
+  background:linear-gradient(135deg,var(--green-700),var(--green-500));
+  color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 16px rgba(27,107,48,.35);transition:all .2s;margin-bottom:8px}
+.btn-ambil:hover{transform:translateY(-1px)}
+.btn-ambil:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
+.peta-status{font-size:12px;text-align:center;padding:9px 12px;
+  border-radius:var(--radius-sm);font-weight:600;line-height:1.4}
+.peta-status.idle{background:var(--gray-100);color:var(--text-muted)}
+.peta-status.loading{background:#E3F2FD;color:#1565C0}
+.peta-status.ok{background:#E8F5E9;color:#1B5E20}
+.peta-status.err{background:#FFEBEE;color:#B71C1C}
+.peta-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+  padding:5px 10px;border-radius:20px;border:1px solid rgba(0,0,0,0.08)}
+.btn-dl-excel{width:100%;padding:14px;border-radius:var(--radius);border:none;
+  background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#FFF;
+  font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(27,94,32,.3);transition:all .2s;margin-top:8px}
+.btn-dl-excel:hover{transform:translateY(-1px)}
+.btn-dl-excel:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
+.btn-dl-excel-local{width:100%;padding:13px;border-radius:var(--radius);border:none;
+  background:linear-gradient(135deg,#004D40,#00796B);color:#FFF;
+  font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(0,77,64,.3);transition:all .2s;margin-top:8px}
+.btn-dl-excel-local:hover{transform:translateY(-1px)}
+.leaflet-popup-content{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;line-height:1.5;max-width:220px}
+.leaflet-popup-content img{width:100%;border-radius:6px;margin-top:6px;display:block}
+.popup-badge{display:inline-block;padding:3px 8px;border-radius:12px;
+  font-size:11px;font-weight:700;margin-bottom:4px}
+@media (max-width:380px){
+  .peta-inputs{grid-template-columns:1fr}
+  .peta-input.full{grid-column:1}
+}
 </style>
 </head>
 <body>
@@ -423,6 +477,7 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
 <nav class="tab-nav">
   <button class="tab-btn active" id="tab-form" onclick="showPage('form')">📝 Form Sensus</button>
   <button class="tab-btn" id="tab-data" onclick="showPage('data')">📋 Data Tersimpan</button>
+  <button class="tab-btn" id="tab-peta" onclick="showPage('peta')">🗺️ Peta</button>
 </nav>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -580,7 +635,50 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
       📡&nbsp;Kirim ke Server (Google Script)
     </button>
     <div class="kirim-note" id="kirim-note">Memuat data...</div>
+    <button class="btn-dl-excel-local" onclick="downloadExcelLocal()">
+      📊&nbsp;&nbsp;Download Excel — Data Lokal
+    </button>
   </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PAGE: PETA LAPORAN -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="page" id="page-peta">
+
+  <div class="peta-filter-card">
+    <div class="peta-filter-title">📡 Ambil Data dari Google Sheet</div>
+    <div class="peta-inputs">
+      <input class="peta-input" id="peta-kebun" placeholder="Nama Kebun (kosong = semua)"
+        autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+      <input class="peta-input" id="peta-divisi" placeholder="Divisi (opsional)"
+        autocapitalize="words">
+      <input class="peta-input full" id="peta-blok" placeholder="Blok / Petak (kosong = semua blok)"
+        autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <button class="btn-ambil" id="btn-ambil" onclick="ambilDataServer()">
+      📡&nbsp;&nbsp;Ambil Data dari Server
+    </button>
+    <div class="peta-status idle" id="peta-status">
+      Masukkan filter lalu tekan tombol untuk mengambil data dari Google Sheets.
+    </div>
+  </div>
+
+  <div class="peta-legend">
+    <div class="legend-item" style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
+    <div class="legend-item" style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
+    <div class="legend-item" style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
+    <div class="legend-item" style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
+    <div class="legend-item" style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
+    <div class="legend-item" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
+  </div>
+
+  <div id="peta-map"></div>
+
+  <button class="btn-dl-excel" id="btn-dl-server" onclick="downloadExcelServer()" disabled>
+    📊&nbsp;&nbsp;Download Excel — Data Server
+  </button>
+
 </div>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -645,8 +743,11 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
       <div class="settings-section">
         <h4>URL Google Apps Script</h4>
         <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-          URL yang didapat setelah deploy Google Apps Script sebagai web app.
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.5">
+          URL setelah deploy GAS sebagai Web App.<br>
+          <strong style="color:#E65100">Jika error 401:</strong> Deploy ulang GAS →
+          <em>Execute as: Me</em> &amp; <em>Who has access: <strong>Anyone</strong></em>
+          (bukan "Anyone with Google account").
         </div>
       </div>
       <div class="settings-section">
@@ -691,6 +792,10 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- LIBRARIES -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- ════════════════════════════════════════════════════════ -->
 <!-- JAVASCRIPT -->
 <!-- ════════════════════════════════════════════════════════ -->
@@ -793,10 +898,18 @@ const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
 // Nama folder Google Drive untuk penyimpanan foto
 var FOLDER_NAME = 'SensusGanoderma_Foto';
 
+// ─── PENTING: PENGATURAN DEPLOYMENT ───────────────────────
+// Jika muncul error 401 Unauthorized:
+//   → Buka script.google.com > Deploy > Manage deployments
+//   → Edit deployment yang aktif
+//   → Pastikan: Execute as = Me (akun Google Anda)
+//   → Pastikan: Who has access = Anyone  ← BUKAN "Anyone with Google account"
+//   → Klik Update / Deploy ulang → salin URL baru
+//
 // CATATAN CORS:
-// GAS tidak bisa mengirim header 'Access-Control-Allow-Origin' untuk POST.
-// App menggunakan fetch mode:'no-cors' sehingga data tetap terkirim ke GAS,
-// hanya response yang tidak bisa dibaca oleh browser.
+// App menggunakan fetch mode:'no-cors' + Content-Type:'text/plain'
+// agar memenuhi syarat "simple request" (tidak trigger preflight).
+// Data tetap terkirim & diproses GAS secara penuh.
 // Link foto tersimpan di kolom Z Google Sheets.
 
 function doPost(e) {
@@ -919,7 +1032,70 @@ function getOrCreateFolder(name) {
 function getOrCreateSubFolder(parent, name) {
   var subs = parent.getFoldersByName(name);
   return subs.hasNext() ? subs.next() : parent.createFolder(name);
-}`;
+}
+
+// ─── doGet — Ambil Data untuk Peta (JSONP) ───────────────────
+// Dipanggil oleh tab Peta di aplikasi.
+// Param: action=getData, kebun, divisi, blok, callback
+function doGet(e) {
+  var params   = e.parameter;
+  var callback = params.callback || '';
+  var action   = params.action  || '';
+
+  if (action !== 'getData') {
+    return returnJsonp(callback, {status:'error', msg:'Unknown action'});
+  }
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName('SensusGanoderma');
+    if (!sh) {
+      return returnJsonp(callback, {status:'error', msg:'Sheet SensusGanoderma belum ada. Kirim data dulu.'});
+    }
+
+    var allVals = sh.getDataRange().getValues();
+    if (allVals.length < 2) {
+      return returnJsonp(callback, {status:'ok', data:[]});
+    }
+
+    var headers = allVals[0];
+    var fKebun  = (params.kebun  || '').toString().trim().toUpperCase();
+    var fDivisi = (params.divisi || '').toString().trim();
+    var fBlok   = (params.blok   || '').toString().trim().toUpperCase();
+
+    var rows = [];
+    for (var i = 1; i < allVals.length; i++) {
+      var row = {};
+      for (var j = 0; j < headers.length; j++) {
+        row[headers[j]] = allVals[i][j];
+      }
+      // Filter
+      if (fKebun  && String(row['Kebun']  ||'').toUpperCase() !== fKebun)  continue;
+      if (fDivisi && String(row['Divisi'] ||'').toLowerCase() !== fDivisi.toLowerCase()) continue;
+      if (fBlok   && String(row['Blok']   ||'').toUpperCase() !== fBlok)   continue;
+      rows.push(row);
+    }
+
+    return returnJsonp(callback, {status:'ok', data:rows});
+
+  } catch(err) {
+    return returnJsonp(callback, {status:'error', msg:err.toString()});
+  }
+}
+
+function returnJsonp(callback, obj) {
+  var json = JSON.stringify(obj);
+  if (callback) {
+    return ContentService
+      .createTextResponse(callback + '(' + json + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextResponse(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+`;
 
 // ── STATE ─────────────────────────────────────────────────────
 let db = null;
@@ -1540,8 +1716,10 @@ async function kirimKeServer() {
 
       await fetch(gasUrl, {
         method : 'POST',
-        mode   : 'no-cors',           // ← wajib untuk GAS dari domain luar
-        headers: {'Content-Type':'application/json'},
+        mode   : 'no-cors',
+        // JANGAN set Content-Type: application/json — bukan simple request!
+        // text/plain = simple request, tidak trigger preflight, diterima GAS
+        headers: {'Content-Type':'text/plain'},
         body   : JSON.stringify([data]),
       });
 
@@ -1618,6 +1796,7 @@ function showPage(name) {
   document.getElementById(`page-${name}`).classList.add('active');
   document.getElementById(`tab-${name}`).classList.add('active');
   if (name === 'data') loadDataPage();
+  if (name === 'peta') initPetaMap();
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────
@@ -1656,6 +1835,283 @@ async function init() {
   } catch(e) {
     showToast('⚠ Database error: ' + e.message);
   }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// ── PETA & EXCEL FUNCTIONS ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+
+let petaMap         = null;
+let petaMarkerGroup = null;
+let serverData      = [];   // Data fetched from GAS for map/excel
+
+// ── INIT LEAFLET MAP ──────────────────────────────────────────
+function initPetaMap() {
+  if (petaMap) { setTimeout(() => petaMap.invalidateSize(), 200); return; }
+  setTimeout(() => {
+    petaMap = L.map('peta-map', {
+      center: [0.5, 101.4], // Default: Riau
+      zoom: 13,
+      attributionControl: true,
+      zoomControl: true,
+    });
+    // Satellite only — ESRI WorldImagery (free, no API key)
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: '© Esri | Sensus Ganoderma', maxZoom: 20 }
+    ).addTo(petaMap);
+
+    petaMarkerGroup = L.layerGroup().addTo(petaMap);
+  }, 150);
+}
+
+// ── AMBIL DATA DARI SERVER (JSONP) ────────────────────────────
+async function ambilDataServer() {
+  const gasUrl = localStorage.getItem('gasUrl');
+  if (!gasUrl) {
+    showToast('⚠ URL Google Script belum diisi di Pengaturan');
+    openSettings();
+    return;
+  }
+
+  const kebun  = document.getElementById('peta-kebun').value.trim();
+  const divisi = document.getElementById('peta-divisi').value.trim();
+  const blok   = document.getElementById('peta-blok').value.trim();
+
+  const statusEl = document.getElementById('peta-status');
+  const btnEl    = document.getElementById('btn-ambil');
+  const dlBtn    = document.getElementById('btn-dl-server');
+
+  statusEl.className  = 'peta-status loading';
+  statusEl.textContent = '⏳ Mengambil data dari server…';
+  btnEl.disabled = true;
+
+  try {
+    const data = await jsonpFetch(gasUrl, {
+      action: 'getData',
+      kebun, divisi, blok,
+    });
+
+    serverData = data;
+    const dgps = data.filter(r => r['Latitude'] && r['Longitude'] && r['Latitude'] !== '').length;
+
+    statusEl.className  = 'peta-status ok';
+    statusEl.textContent = `✓ ${data.length} data berhasil dimuat (${dgps} memiliki koordinat GPS)`;
+
+    renderPetaMarkers(data);
+    dlBtn.disabled = (data.length === 0);
+
+  } catch (err) {
+    statusEl.className  = 'peta-status err';
+    statusEl.textContent = `❌ Gagal: ${err.message}. Pastikan GAS sudah di-update dengan fungsi doGet.`;
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+// ── JSONP HELPER ──────────────────────────────────────────────
+function jsonpFetch(gasUrl, params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'gasJsonpCb_' + Date.now();
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      reject(new Error('Timeout 15 detik'));
+    }, 15000);
+
+    window[cbName] = function(result) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      script.remove();
+      if (result && result.status === 'ok') resolve(result.data || []);
+      else reject(new Error((result && result.msg) || 'Unknown error'));
+    };
+
+    const qs = Object.entries({...params, callback: cbName})
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v||'')}`)
+      .join('&');
+
+    const script = document.createElement('script');
+    script.src     = `${gasUrl}?${qs}`;
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error('Gagal load script — periksa URL & koneksi'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// ── RENDER MARKERS ON MAP ─────────────────────────────────────
+function renderPetaMarkers(data) {
+  if (!petaMap) initPetaMap();
+  setTimeout(() => {
+    petaMarkerGroup.clearLayers();
+    const markers = [];
+
+    data.forEach(r => {
+      const lat = parseFloat(r['Latitude']);
+      const lng = parseFloat(r['Longitude']);
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+
+      const skor     = parseInt(r['Skor Stadium']) || 0;
+      const stInfo   = STADIUM[skor] || STADIUM[0];
+      const noPokok  = r['No Pokok'] || '?';
+      const hasFoto  = !!(r['Link Foto'] && r['Link Foto'].startsWith('http'));
+      const fotoUrl  = hasFoto ? driveToImgUrl(r['Link Foto']) : null;
+
+      // Custom circle marker with pokok number
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+          background:${stInfo.bg};color:${stInfo.fg};
+          border:2.5px solid ${stInfo.dark};border-radius:50%;
+          width:32px;height:32px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:9px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;
+          box-shadow:0 2px 8px rgba(0,0,0,0.35);
+          ${hasFoto ? 'outline:3px solid #FF9800;outline-offset:2px;' : ''}
+        ">${noPokok}</div>`,
+        iconSize:    [32, 32],
+        iconAnchor:  [16, 16],
+        popupAnchor: [0, -20],
+      });
+
+      // Build popup HTML
+      let popup = `
+        <div>
+          <span class="popup-badge" style="background:${stInfo.bg};color:${stInfo.fg}">
+            Stadium ${skor} — ${stInfo.label}
+          </span>
+          <div style="margin-top:4px"><strong>Pokok No. ${noPokok}</strong></div>
+          <div>Baris: ${r['Baris'] || '—'} | Blok: ${r['Blok'] || '—'}</div>
+          <div style="font-size:11px;color:#637063;margin-top:2px">${r['Kebun']||''} · ${r['Divisi']||''}</div>
+          <div style="font-size:11px;margin-top:4px">${r['Keparahan']||''}</div>`;
+
+      if (fotoUrl) {
+        popup += `<img src="${fotoUrl}" alt="Foto Pokok" loading="lazy"
+          onerror="this.style.display='none'">`;
+      }
+      popup += `</div>`;
+
+      const marker = L.marker([lat, lng], { icon });
+      marker.bindPopup(popup, { maxWidth: 230 });
+      petaMarkerGroup.addLayer(marker);
+      markers.push(marker);
+    });
+
+    // Fit map to markers
+    if (markers.length > 0) {
+      const group = L.featureGroup(markers);
+      petaMap.fitBounds(group.getBounds().pad(0.15));
+    }
+    petaMap.invalidateSize();
+  }, 200);
+}
+
+// Convert Google Drive share URL → direct image URL
+function driveToImgUrl(url) {
+  const m = url && url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? `https://drive.google.com/uc?export=view&id=${m[1]}` : null;
+}
+
+// ── EXCEL COLUMN DEFINITIONS ──────────────────────────────────
+const XL_COLS = [
+  'Kebun','Divisi','Blok','Tanggal','No Pokok','Baris','Kondisi Pokok',
+  'Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk',
+  'Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia',
+  'Skor Stadium','Keparahan','Latitude','Longitude','Foto'
+];
+
+// ── BUILD ROWS FROM LOCAL (IndexedDB) ─────────────────────────
+function buildLocalRows(records) {
+  return records.map(r => {
+    let foto = '-';
+    if (r.link_foto && r.link_foto.startsWith('http')) foto = r.link_foto;
+    else if (r.foto) foto = 'Ada (tersimpan lokal — kirim ke server utk link)';
+    return [
+      r.kebun||'', r.divisi||'', r.blok||'', r.tanggal||'',
+      r.no_pokok||'', r.baris||'', r.kondisi_pokok||'',
+      r.daun_tombak||'Tidak', r.daun_klorosis||'Tidak',
+      r.daun_sengkleh||'Tidak', r.daun_skirting||'Tidak', r.daun_tajuk||'Tidak',
+      r.batang_miselia||'Tidak', r.batang_tubuh_buah||'Tidak', r.batang_lunak||'Tidak',
+      r.akar_busuk||'Tidak', r.akar_miselia||'Tidak',
+      r.skor_stadium ?? '', r.keparahan||'',
+      r.lat||'', r.lng||'', foto,
+    ];
+  });
+}
+
+// ── BUILD ROWS FROM SERVER DATA ───────────────────────────────
+function buildServerRows(data) {
+  return data.map(r => [
+    r['Kebun']||'', r['Divisi']||'', r['Blok']||'', r['Tanggal']||'',
+    r['No Pokok']||'', r['Baris']||'', r['Kondisi Pokok']||'',
+    r['Daun Tombak']||'', r['Klorosis']||'', r['Sengkleh']||'',
+    r['Skirting']||'', r['Tajuk']||'',
+    r['Miselia Awal']||'', r['Tubuh Buah']||'', r['Batang Lunak']||'',
+    r['Akar Busuk']||'', r['Akar Miselia']||'',
+    r['Skor Stadium']||'', r['Keparahan']||'',
+    r['Latitude']||'', r['Longitude']||'',
+    r['Link Foto'] || '-',
+  ]);
+}
+
+// ── CORE EXCEL GENERATOR ──────────────────────────────────────
+function generateExcel(rows, sheetName, filename) {
+  if (!rows || rows.length === 0) {
+    showToast('⚠ Tidak ada data untuk didownload'); return;
+  }
+
+  const aoaData = [XL_COLS, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(aoaData);
+
+  // Column widths
+  ws['!cols'] = XL_COLS.map((h, i) => {
+    const maxLen = Math.max(h.length, ...rows.map(r => String(r[i]||'').length).slice(0,50));
+    return { wch: Math.min(Math.max(maxLen, 10), 50) };
+  });
+
+  // Freeze header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+  showToast(`✅ File ${filename} berhasil didownload`);
+}
+
+// ── DOWNLOAD EXCEL LOCAL (dari IndexedDB) ─────────────────────
+function downloadExcelLocal() {
+  if (!allRecords || allRecords.length === 0) {
+    showToast('⚠ Belum ada data lokal tersimpan'); return;
+  }
+  // Use currently filtered records if filter active, else all
+  const kebun  = document.getElementById('flt-kebun').value;
+  const divisi = document.getElementById('flt-divisi').value;
+  const blok   = document.getElementById('flt-blok').value;
+  let filtered = allRecords;
+  if (kebun)  filtered = filtered.filter(r => r.kebun  === kebun);
+  if (divisi) filtered = filtered.filter(r => r.divisi === divisi);
+  if (blok)   filtered = filtered.filter(r => r.blok   === blok);
+
+  const rows     = buildLocalRows(filtered);
+  const now      = new Date();
+  const dateStr  = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const label    = kebun ? `_${kebun}` : '';
+  generateExcel(rows, 'SensusGanoderma', `Sensus_Ganoderma${label}_${dateStr}.xlsx`);
+}
+
+// ── DOWNLOAD EXCEL SERVER (dari data map) ─────────────────────
+function downloadExcelServer() {
+  if (!serverData || serverData.length === 0) {
+    showToast('⚠ Ambil data dari server dulu'); return;
+  }
+  const rows    = buildServerRows(serverData);
+  const now     = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const kebun   = document.getElementById('peta-kebun').value || 'Semua';
+  generateExcel(rows, 'SensusGanoderma', `Laporan_Ganoderma_${kebun}_${dateStr}.xlsx`);
 }
 
 document.addEventListener('DOMContentLoaded', init);
