@@ -1054,28 +1054,29 @@ function getOrCreateSubFolder(parent, name) {
   return subs.hasNext() ? subs.next() : parent.createFolder(name);
 }
 
-// ─── doGet — Ambil Data untuk Peta ───────────────────────────
-// Menggunakan fetch() + CORS (bukan JSONP).
-// GAS "Anyone" access otomatis menambahkan CORS header untuk GET.
-// Param: action=getData, kebun, divisi, blok
+// ─── doGet — Ambil Data untuk Peta (JSONP) ───────────────────
+// JSONP: mengembalikan callback(json) dengan MimeType.JAVASCRIPT
+// sehingga dapat dibaca via <script> tag tanpa CORS.
+// Param: action=getData, kebun, divisi, blok, callback
 function doGet(e) {
-  var params = e.parameter;
-  var action = params.action || '';
+  var params   = e.parameter;
+  var callback = params.callback || 'cb';
+  var action   = params.action   || '';
 
   if (action !== 'getData') {
-    return buildJsonResponse({status:'error', msg:'Unknown action'});
+    return wrapJsonp(callback, {status:'error', msg:'Unknown action'});
   }
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName('SensusGanoderma');
     if (!sh) {
-      return buildJsonResponse({status:'error', msg:'Sheet SensusGanoderma belum ada. Kirim data dulu.'});
+      return wrapJsonp(callback, {status:'error', msg:'Sheet belum ada. Kirim data dulu.'});
     }
 
     var allVals = sh.getDataRange().getValues();
     if (allVals.length < 2) {
-      return buildJsonResponse({status:'ok', data:[]});
+      return wrapJsonp(callback, {status:'ok', data:[]});
     }
 
     var headers = allVals[0];
@@ -1095,18 +1096,18 @@ function doGet(e) {
       rows.push(row);
     }
 
-    return buildJsonResponse({status:'ok', data:rows});
+    return wrapJsonp(callback, {status:'ok', data:rows});
 
   } catch(err) {
-    return buildJsonResponse({status:'error', msg:err.toString()});
+    return wrapJsonp(callback, {status:'error', msg:err.toString()});
   }
 }
 
-// Respons JSON dengan CORS header otomatis dari GAS
-function buildJsonResponse(obj) {
+function wrapJsonp(callback, obj) {
+  var body = callback + '(' + JSON.stringify(obj) + ');';
   return ContentService
-    .createTextResponse(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+    .createTextResponse(body)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 `;
@@ -1990,39 +1991,44 @@ async function ambilDataServer() {
   }
 }
 
-// ── GET HELPER — fetch() dengan CORS (lebih andal dari JSONP) ─
-// GAS "Execute as: Me" + "Who has access: Anyone" otomatis
-// menambahkan header Access-Control-Allow-Origin: * pada GET
-async function jsonpFetch(gasUrl, params) {
+// ── JSONP HELPER — script tag, bypass CORS sepenuhnya ─────────
+// GAS sudah terbukti merespons (HTTP 200). JSONP via <script>
+// tag tidak memerlukan CORS header — browser mengizinkan
+// pemuatan script dari domain manapun.
+function jsonpFetch(gasUrl, params) {
   const cleanUrl = normalizeGasUrl(gasUrl);
-  const qs = Object.entries(params)
-    .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v||'')}`)
-    .join('&');
-  const fullUrl = `${cleanUrl}?${qs}`;
+  return new Promise((resolve, reject) => {
+    const cbName  = 'gCb_' + Date.now();
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout 15 detik — GAS tidak merespons'));
+    }, 15000);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+    const script = document.createElement('script');
 
-  try {
-    const resp = await fetch(fullUrl, {
-      method : 'GET',
-      signal : controller.signal,
-    });
-    clearTimeout(timer);
-
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const result = await resp.json();
-    if (result && result.status === 'ok') return result.data || [];
-    throw new Error((result && result.msg) || 'Unknown error dari GAS');
-
-  } catch (e) {
-    clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('Timeout 15 detik — GAS tidak merespons');
-    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-      throw new Error('Gagal terhubung — periksa koneksi internet');
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
-    throw e;
-  }
+
+    window[cbName] = function(result) {
+      cleanup();
+      if (result && result.status === 'ok') resolve(result.data || []);
+      else reject(new Error((result && result.msg) || 'Unknown error'));
+    };
+
+    const qs = Object.entries({...params, callback: cbName})
+      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v||'')}`)
+      .join('&');
+
+    script.src = `${cleanUrl}?${qs}`;
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('GAS tidak merespons — pastikan deploy sudah benar'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 // ── RENDER MARKERS ON MAP ─────────────────────────────────────
