@@ -301,6 +301,9 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
   background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;
   font-weight:700;cursor:pointer;margin-top:4px;
 }
+.test-ok{background:#E8F5E9;color:#1B5E20;border:1px solid #C8E6C9}
+.test-err{background:#FFEBEE;color:#B71C1C;border:1px solid #FFCDD2}
+.test-loading{background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB}
 .btn-hapus-data{
   width:100%;padding:12px;border-radius:var(--radius);border:2px solid #EF4444;
   background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;
@@ -748,9 +751,17 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
           <strong style="color:#E65100">Jika error 401:</strong> Deploy ulang GAS →
           <em>Execute as: Me</em> &amp; <em>Who has access: <strong>Anyone</strong></em>
           (bukan "Anyone with Google account").<br>
-          <strong style="color:#1565C0">Jika URL mengandung /u/8/ atau /u/N/ :</strong>
-          App otomatis memperbaikinya — tidak perlu ubah manual.
+          <strong style="color:#1565C0">URL /u/N/ diperbaiki otomatis.</strong>
         </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="saveSettings()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+            💾 Simpan URL
+          </button>
+          <button onclick="testKoneksiGAS()" id="btn-test-gas" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">
+            🔌 Test Koneksi
+          </button>
+        </div>
+        <div id="test-result" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;line-height:1.5"></div>
       </div>
       <div class="settings-section">
         <h4>Kode Google Apps Script</h4>
@@ -1858,6 +1869,59 @@ async function init() {
 
 
 // ══════════════════════════════════════════════════════════════
+
+// ── TEST KONEKSI GAS ──────────────────────────────────────────
+async function testKoneksiGAS() {
+  // Simpan URL dulu sebelum test
+  const rawUrl = document.getElementById('gas-url').value.trim();
+  if (!rawUrl) { showToast('⚠ Isi URL dulu'); return; }
+  const url = normalizeGasUrl(rawUrl);
+  localStorage.setItem('gasUrl', url);
+  document.getElementById('gas-url').value = url;
+
+  const btn = document.getElementById('btn-test-gas');
+  const res = document.getElementById('test-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Testing...';
+  res.style.display = 'block';
+  res.className = 'test-loading';
+  res.textContent = '⏳ Menghubungi server GAS...';
+
+  try {
+    // Test 1: doPost (selalu ada di GAS lama maupun baru)
+    // Test lewat JSONP GET dengan action=ping — GAS baru akan respon, lama tidak
+    const data = await Promise.race([
+      jsonpFetch(url, { action: 'ping' }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 10 detik')), 10000))
+    ]);
+    // Jika sampai sini, doGet ada tapi action=ping → error "Unknown action" dari GAS
+    // Itu justru menandakan doGet SUDAH ADA dan berjalan
+    res.className = 'test-ok';
+    res.textContent = '✅ GAS terkoneksi & doGet aktif! Tab Peta siap digunakan.';
+
+  } catch (err) {
+    if (err.message === 'Unknown action') {
+      // doGet ada tapi action ping tidak dikenal — berarti GAS baru sudah terpasang
+      res.className = 'test-ok';
+      res.textContent = '✅ GAS terkoneksi & doGet aktif! Tab Peta siap digunakan.';
+    } else if (err.message.includes('Timeout')) {
+      res.className = 'test-err';
+      res.innerHTML = '❌ <b>Timeout</b> — GAS tidak merespons.<br>Kemungkinan: doGet belum ada di GAS, atau URL salah.';
+    } else if (err.message.includes('Gagal load script')) {
+      res.className = 'test-err';
+      res.innerHTML = '❌ <b>Script gagal dimuat</b> — GAS belum punya fungsi doGet.<br>' +
+        '<b>Langkah:</b> Buka script.google.com → Paste kode GAS baru → ' +
+        'Deploy > Manage deployments > Edit > Update → Salin URL baru.';
+    } else {
+      res.className = 'test-err';
+      res.innerHTML = `❌ Gagal: ${err.message}`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔌 Test Koneksi';
+  }
+}
+
 // ── PETA & EXCEL FUNCTIONS ────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
 
