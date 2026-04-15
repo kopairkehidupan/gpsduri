@@ -793,11 +793,11 @@ const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
 // Nama folder Google Drive untuk penyimpanan foto
 var FOLDER_NAME = 'SensusGanoderma_Foto';
 
-function doOptions(e) {
-  // Handle CORS preflight
-  return ContentService.createTextResponse('')
-    .setMimeType(ContentService.MimeType.TEXT);
-}
+// CATATAN CORS:
+// GAS tidak bisa mengirim header 'Access-Control-Allow-Origin' untuk POST.
+// App menggunakan fetch mode:'no-cors' sehingga data tetap terkirim ke GAS,
+// hanya response yang tidak bisa dibaca oleh browser.
+// Link foto tersimpan di kolom Z Google Sheets.
 
 function doPost(e) {
   try {
@@ -1515,55 +1515,57 @@ async function kirimKeServer() {
     return;
   }
 
-  const belum = allRecords.filter(r=>r.status_kirim==='Belum Dikirim');
+  const belum = allRecords.filter(r => r.status_kirim === 'Belum Dikirim');
   if (!belum.length) { showToast('✓ Tidak ada data baru untuk dikirim'); return; }
 
   const totalFoto = belum.filter(r => r.foto).length;
-  const ok = confirm(`Kirim ${belum.length} data ke server?\n${totalFoto > 0 ? `📷 ${totalFoto} foto akan disimpan ke Google Drive.` : 'Tidak ada foto.'}`);
+  const ok = confirm(
+    `Kirim ${belum.length} data ke server?` +
+    (totalFoto > 0 ? `\n📷 ${totalFoto} foto akan disimpan ke Google Drive.` : '')
+  );
   if (!ok) return;
 
   showLoading(true);
   let berhasil = 0, gagal = 0;
 
-  // Kirim satu per satu agar foto per-record bisa ditangani
+  // ── Kirim satu per satu menggunakan no-cors ──────────────
+  // GAS tidak mendukung CORS header untuk POST dari domain luar.
+  // Dengan no-cors, request TETAP terkirim & diproses GAS,
+  // tapi response body tidak bisa dibaca (opaque).
+  // Link foto tersimpan di Google Sheets kolom Z, tidak balik ke app.
   for (const rec of belum) {
     try {
-      // Payload: semua field + foto (base64) jika ada, hapus field internal
       const {catatan, status_pengecek, status_kirim, link_foto, ...data} = rec;
-      // Sertakan foto jika ada
-      if (rec.foto) data.foto = rec.foto;
+      if (rec.foto) data.foto = rec.foto; // sertakan foto base64
 
-      const resp = await fetch(gasUrl, {
+      await fetch(gasUrl, {
         method : 'POST',
+        mode   : 'no-cors',           // ← wajib untuk GAS dari domain luar
         headers: {'Content-Type':'application/json'},
-        body   : JSON.stringify([data]),  // kirim array satu record
+        body   : JSON.stringify([data]),
       });
 
-      if (resp.ok) {
-        const hasil = await resp.json();
-        const updates = {status_kirim:'Sudah Dikirim'};
-        // Simpan link foto ke IndexedDB jika GAS kembalikan linknya
-        if (hasil.links && hasil.links[0]) {
-          updates.link_foto = hasil.links[0];
-        }
-        await dbUpdate(rec.id, updates);
-        berhasil++;
-      } else {
-        gagal++;
-      }
+      // no-cors → response opaque, tidak bisa cek status
+      // Anggap berhasil jika tidak ada exception (tidak offline)
+      await dbUpdate(rec.id, {status_kirim: 'Sudah Dikirim'});
+      berhasil++;
+
     } catch(e) {
-      // Jika fetch gagal total (offline), hentikan loop
-      gagal = belum.length - berhasil;
-      break;
+      // Exception hanya terjadi jika benar-benar tidak ada koneksi
+      console.error('Kirim gagal:', e);
+      gagal++;
     }
+
+    // Jeda kecil agar tidak membanjiri GAS
+    await new Promise(r => setTimeout(r, 300));
   }
 
   showLoading(false);
   if (berhasil > 0) {
-    showToast(`✅ ${berhasil} data terkirim${gagal > 0 ? ` | ❌ ${gagal} gagal` : ''}`);
+    showToast(`✅ ${berhasil} data terkirim ke server${gagal > 0 ? ` | ❌ ${gagal} gagal` : ''}`);
     loadDataPage();
   } else {
-    showToast(`❌ Gagal kirim — periksa koneksi & URL GAS`);
+    showToast('❌ Gagal kirim — periksa koneksi internet');
   }
 }
 
