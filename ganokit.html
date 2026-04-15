@@ -804,6 +804,13 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
 <script>
 'use strict';
 
+// ── URL HELPER (letakkan di atas agar selalu tersedia) ────────
+function normalizeGasUrl(url) {
+  // Hapus /u/N/ dari URL GAS yang muncul saat multi-login Google
+  // Contoh: /macros/u/8/s/ABC/exec → /macros/s/ABC/exec
+  return (url || '').replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
+}
+
 // ── CONSTANTS ────────────────────────────────────────────────
 const DB_NAME = 'GanodermaDB';
 const DB_VER  = 1;
@@ -1752,7 +1759,10 @@ async function kirimKeServer() {
 
 // ── SETTINGS ─────────────────────────────────────────────────
 function openSettings() {
-  const url = localStorage.getItem('gasUrl') || '';
+  const raw = localStorage.getItem('gasUrl') || '';
+  const url = normalizeGasUrl(raw);
+  // Simpan ulang URL bersih jika berbeda
+  if (url !== raw && url) localStorage.setItem('gasUrl', url);
   document.getElementById('gas-url').value = url;
   document.getElementById('gas-code-block').value = GAS_CODE;
   document.getElementById('modal-settings').classList.remove('hidden');
@@ -1766,10 +1776,16 @@ function closeSettings(e) {
 }
 
 function saveSettings() {
-  const url = document.getElementById('gas-url').value.trim();
-  if (url) localStorage.setItem('gasUrl', url);
+  const rawUrl = document.getElementById('gas-url').value.trim();
+  // Normalisasi: hapus /u/N/ sebelum disimpan
+  const url = normalizeGasUrl(rawUrl);
+  if (url) {
+    localStorage.setItem('gasUrl', url);
+    // Update input field dengan URL bersih
+    document.getElementById('gas-url').value = url;
+  }
   closeSettings();
-  showToast('✓ Pengaturan disimpan');
+  showToast('✓ Pengaturan disimpan' + (url !== rawUrl ? ' (URL diperbaiki otomatis)' : ''));
 }
 
 function copyGasCode() {
@@ -1915,12 +1931,6 @@ async function ambilDataServer() {
 }
 
 // ── JSONP HELPER ──────────────────────────────────────────────
-// Normalisasi URL GAS — hapus /u/N/ yang muncul saat multi-login Google
-// Contoh: /macros/u/8/s/ABC/exec → /macros/s/ABC/exec
-function normalizeGasUrl(url) {
-  return (url || '').replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
-}
-
 function jsonpFetch(gasUrl, params) {
   const cleanUrl = normalizeGasUrl(gasUrl); // ← fix /u/N/ issue
   return new Promise((resolve, reject) => {
