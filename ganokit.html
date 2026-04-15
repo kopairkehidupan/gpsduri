@@ -1054,28 +1054,28 @@ function getOrCreateSubFolder(parent, name) {
   return subs.hasNext() ? subs.next() : parent.createFolder(name);
 }
 
-// ─── doGet — Ambil Data untuk Peta (JSONP) ───────────────────
-// Dipanggil oleh tab Peta di aplikasi.
-// Param: action=getData, kebun, divisi, blok, callback
+// ─── doGet — Ambil Data untuk Peta ───────────────────────────
+// Menggunakan fetch() + CORS (bukan JSONP).
+// GAS "Anyone" access otomatis menambahkan CORS header untuk GET.
+// Param: action=getData, kebun, divisi, blok
 function doGet(e) {
-  var params   = e.parameter;
-  var callback = params.callback || '';
-  var action   = params.action  || '';
+  var params = e.parameter;
+  var action = params.action || '';
 
   if (action !== 'getData') {
-    return returnJsonp(callback, {status:'error', msg:'Unknown action'});
+    return buildJsonResponse({status:'error', msg:'Unknown action'});
   }
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sh = ss.getSheetByName('SensusGanoderma');
     if (!sh) {
-      return returnJsonp(callback, {status:'error', msg:'Sheet SensusGanoderma belum ada. Kirim data dulu.'});
+      return buildJsonResponse({status:'error', msg:'Sheet SensusGanoderma belum ada. Kirim data dulu.'});
     }
 
     var allVals = sh.getDataRange().getValues();
     if (allVals.length < 2) {
-      return returnJsonp(callback, {status:'ok', data:[]});
+      return buildJsonResponse({status:'ok', data:[]});
     }
 
     var headers = allVals[0];
@@ -1089,29 +1089,23 @@ function doGet(e) {
       for (var j = 0; j < headers.length; j++) {
         row[headers[j]] = allVals[i][j];
       }
-      // Filter
       if (fKebun  && String(row['Kebun']  ||'').toUpperCase() !== fKebun)  continue;
       if (fDivisi && String(row['Divisi'] ||'').toLowerCase() !== fDivisi.toLowerCase()) continue;
       if (fBlok   && String(row['Blok']   ||'').toUpperCase() !== fBlok)   continue;
       rows.push(row);
     }
 
-    return returnJsonp(callback, {status:'ok', data:rows});
+    return buildJsonResponse({status:'ok', data:rows});
 
   } catch(err) {
-    return returnJsonp(callback, {status:'error', msg:err.toString()});
+    return buildJsonResponse({status:'error', msg:err.toString()});
   }
 }
 
-function returnJsonp(callback, obj) {
-  var json = JSON.stringify(obj);
-  if (callback) {
-    return ContentService
-      .createTextResponse(callback + '(' + json + ');')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
+// Respons JSON dengan CORS header otomatis dari GAS
+function buildJsonResponse(obj) {
   return ContentService
-    .createTextResponse(json)
+    .createTextResponse(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1890,31 +1884,31 @@ async function testKoneksiGAS() {
   try {
     // Test 1: doPost (selalu ada di GAS lama maupun baru)
     // Test lewat JSONP GET dengan action=ping — GAS baru akan respon, lama tidak
-    const data = await Promise.race([
-      jsonpFetch(url, { action: 'ping' }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 10 detik')), 10000))
-    ]);
-    // Jika sampai sini, doGet ada tapi action=ping → error "Unknown action" dari GAS
-    // Itu justru menandakan doGet SUDAH ADA dan berjalan
+    const data = await jsonpFetch(url, { action: 'ping' });
+    // Jika resolve → doGet OK, data kosong tapi terhubung
     res.className = 'test-ok';
-    res.textContent = '✅ GAS terkoneksi & doGet aktif! Tab Peta siap digunakan.';
+    res.textContent = '✅ GAS terkoneksi! Tab Peta siap digunakan.';
 
   } catch (err) {
     if (err.message === 'Unknown action') {
-      // doGet ada tapi action ping tidak dikenal — berarti GAS baru sudah terpasang
+      // doGet ada & merespons — ini jawaban yang benar untuk action=ping
       res.className = 'test-ok';
       res.textContent = '✅ GAS terkoneksi & doGet aktif! Tab Peta siap digunakan.';
     } else if (err.message.includes('Timeout')) {
       res.className = 'test-err';
-      res.innerHTML = '❌ <b>Timeout</b> — GAS tidak merespons.<br>Kemungkinan: doGet belum ada di GAS, atau URL salah.';
-    } else if (err.message.includes('Gagal load script')) {
+      res.innerHTML = '❌ <b>Timeout</b> — GAS tidak merespons dalam 15 detik.';
+    } else if (err.message.includes('CORS') || err.message.includes('NetworkError') || err.message.includes('Failed to fetch')) {
       res.className = 'test-err';
-      res.innerHTML = '❌ <b>Script gagal dimuat</b> — GAS belum punya fungsi doGet.<br>' +
-        '<b>Langkah:</b> Buka script.google.com → Paste kode GAS baru → ' +
-        'Deploy > Manage deployments > Edit > Update → Salin URL baru.';
+      res.innerHTML = '❌ <b>CORS / Network error</b><br>' +
+        'Pastikan GAS di-deploy ulang dengan kode terbaru (yang ada doGet).<br>' +
+        'Execute as: Me | Who has access: Anyone';
+    } else if (err.message.includes('HTTP')) {
+      res.className = 'test-err';
+      res.innerHTML = `❌ ${err.message} — GAS menolak request.<br>` +
+        'Cek deployment: Execute as: Me | Who has access: <b>Anyone</b> (bukan "with Google account")';
     } else {
       res.className = 'test-err';
-      res.innerHTML = `❌ Gagal: ${err.message}`;
+      res.innerHTML = `❌ ${err.message}`;
     }
   } finally {
     btn.disabled = false;
@@ -1988,43 +1982,47 @@ async function ambilDataServer() {
   } catch (err) {
     statusEl.className  = 'peta-status err';
     const cleanForMsg = normalizeGasUrl(gasUrl);
-    statusEl.textContent = `❌ Gagal: ${err.message}\nURL: ${cleanForMsg.substring(0,60)}...\nPastikan GAS sudah deploy ulang dengan doGet.`;
+    statusEl.innerHTML = `❌ Gagal: <b>${err.message}</b><br>` +
+      `Pastikan GAS sudah di-deploy ulang dengan kode terbaru.<br>` +
+      `Gunakan tombol 🔌 Test Koneksi di ⚙️ Pengaturan untuk diagnosis.`;
   } finally {
     btnEl.disabled = false;
   }
 }
 
-// ── JSONP HELPER ──────────────────────────────────────────────
-function jsonpFetch(gasUrl, params) {
-  const cleanUrl = normalizeGasUrl(gasUrl); // ← fix /u/N/ issue
-  return new Promise((resolve, reject) => {
-    const cbName = 'gasJsonpCb_' + Date.now();
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      reject(new Error('Timeout 15 detik'));
-    }, 15000);
+// ── GET HELPER — fetch() dengan CORS (lebih andal dari JSONP) ─
+// GAS "Execute as: Me" + "Who has access: Anyone" otomatis
+// menambahkan header Access-Control-Allow-Origin: * pada GET
+async function jsonpFetch(gasUrl, params) {
+  const cleanUrl = normalizeGasUrl(gasUrl);
+  const qs = Object.entries(params)
+    .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v||'')}`)
+    .join('&');
+  const fullUrl = `${cleanUrl}?${qs}`;
 
-    window[cbName] = function(result) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      script.remove();
-      if (result && result.status === 'ok') resolve(result.data || []);
-      else reject(new Error((result && result.msg) || 'Unknown error'));
-    };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
 
-    const qs = Object.entries({...params, callback: cbName})
-      .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v||'')}`)
-      .join('&');
+  try {
+    const resp = await fetch(fullUrl, {
+      method : 'GET',
+      signal : controller.signal,
+    });
+    clearTimeout(timer);
 
-    const script = document.createElement('script');
-    script.src     = `${cleanUrl}?${qs}`;
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      reject(new Error('Gagal load script — periksa URL & koneksi'));
-    };
-    document.head.appendChild(script);
-  });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const result = await resp.json();
+    if (result && result.status === 'ok') return result.data || [];
+    throw new Error((result && result.msg) || 'Unknown error dari GAS');
+
+  } catch (e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Timeout 15 detik — GAS tidak merespons');
+    if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+      throw new Error('Gagal terhubung — periksa koneksi internet');
+    }
+    throw e;
+  }
 }
 
 // ── RENDER MARKERS ON MAP ─────────────────────────────────────
