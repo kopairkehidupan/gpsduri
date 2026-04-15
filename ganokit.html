@@ -549,31 +549,6 @@ html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'
     </div>
   </div>
 
-  <!-- Catatan & Status -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><span class="icon">✏️</span>Catatan & Status Pengecek (Opsional)</div>
-    </div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="field-group full">
-          <label>Catatan Tambahan</label>
-          <textarea id="f_catatan" placeholder="Tuliskan catatan tambahan jika ada..."></textarea>
-        </div>
-        <div class="field-group full">
-          <label>Status Pengecekan</label>
-          <select id="f_status">
-            <option value="">— Pilih Status —</option>
-            <option>Belum Dicek</option>
-            <option>Sudah Dicek - Mandor</option>
-            <option>Sudah Dicek - Kerani</option>
-            <option>Sudah Dicek - Asisten</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Sticky Save -->
   <div class="sticky-bottom">
     <button class="btn-simpan" onclick="simpanData()">
@@ -798,49 +773,152 @@ const GEJALA_AKAR = [
 ];
 
 const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
-// 1. Buka script.google.com
-// 2. Paste kode ini di editor
-// 3. Deploy > New deployment > Web app
-// 4. Execute as: Me | Who has access: Anyone
-// 5. Copy URL deployment ke Pengaturan aplikasi
+// LANGKAH DEPLOY:
+// 1. Buka script.google.com → buat project baru
+// 2. Paste seluruh kode ini
+// 3. Klik Deploy > New deployment
+// 4. Pilih type: Web app
+// 5. Execute as: Me
+// 6. Who has access: Anyone
+// 7. Klik Deploy → salin URL → paste ke Pengaturan aplikasi
+//
+// KOLOM GOOGLE SHEETS (A–Z, 26 kolom):
+// A=ID  B=Waktu Simpan  C=Kebun  D=Tanggal  E=Divisi  F=Blok
+// G=Mandor  H=Pengecek  I=No Pokok  J=Baris  K=Kondisi Pokok
+// L=Daun Tombak  M=Klorosis  N=Sengkleh  O=Skirting  P=Tajuk
+// Q=Miselia Awal  R=Tubuh Buah  S=Batang Lunak  T=Akar Busuk
+// U=Akar Miselia  V=Skor Stadium  W=Keparahan
+// X=Latitude  Y=Longitude  Z=Link Foto
+
+// Nama folder Google Drive untuk penyimpanan foto
+var FOLDER_NAME = 'SensusGanoderma_Foto';
+
+function doOptions(e) {
+  // Handle CORS preflight
+  return ContentService.createTextResponse('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
 
 function doPost(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sh = ss.getSheetByName('SensusGanoderma');
+    var data = JSON.parse(e.postData.contents);
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var sh   = ss.getSheetByName('SensusGanoderma');
+
+    // Buat sheet & header jika belum ada
     if (!sh) {
       sh = ss.insertSheet('SensusGanoderma');
-      sh.appendRow(['ID','Timestamp','Kebun','Tanggal','Divisi',
-        'Blok','Mandor','Pengecek','No Pokok','Baris',
-        'Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh',
-        'Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak',
-        'Akar Busuk','Akar Miselia','Skor Stadium','Keparahan',
-        'Latitude','Longitude','Catatan','Status Pengecek',
-        'Waktu Simpan']);
-      sh.getRange(1,1,1,28).setFontWeight('bold');
+      var header = [
+        'ID','Waktu Simpan','Kebun','Tanggal','Divisi','Blok',
+        'Mandor','Pengecek','No Pokok','Baris','Kondisi Pokok',
+        'Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk',
+        'Miselia Awal','Tubuh Buah','Batang Lunak',
+        'Akar Busuk','Akar Miselia',
+        'Skor Stadium','Keparahan',
+        'Latitude','Longitude','Link Foto'
+      ];
+      sh.getRange(1,1,1,header.length).setValues([header]).setFontWeight('bold');
+      sh.setFrozenRows(1);
     }
-    const data = JSON.parse(e.postData.contents);
-    const rows = data.map(r => [
-      r.id, r.timestamp, r.kebun, r.tanggal, r.divisi, r.blok,
-      r.mandor, r.pengecek, r.no_pokok, r.baris,
-      r.kondisi_pokok, r.daun_tombak, r.daun_klorosis,
-      r.daun_sengkleh, r.daun_skirting, r.daun_tajuk,
-      r.batang_miselia, r.batang_tubuh_buah, r.batang_lunak,
-      r.akar_busuk, r.akar_miselia, r.skor_stadium, r.keparahan,
-      r.lat||'', r.lng||'', r.catatan||'', r.status_pengecek||'',
-      r.waktu_simpan
-    ]);
-    if (rows.length > 0)
-      sh.getRange(sh.getLastRow()+1,1,rows.length,rows[0].length)
-        .setValues(rows);
-    return ContentService
-      .createTextResponse(JSON.stringify({status:'ok',n:rows.length}))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    // Dapatkan / buat folder Drive untuk foto
+    var folder = getOrCreateFolder(FOLDER_NAME);
+    var links  = [];
+
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+
+      // Upload foto ke Google Drive jika ada
+      var linkFoto = '';
+      if (r.foto && r.foto.indexOf('data:image') === 0) {
+        try {
+          // Ekstrak base64
+          var base64 = r.foto.split(',')[1];
+          var ext    = r.foto.indexOf('jpeg') > -1 ? 'jpg' : 'png';
+          var fname  = 'Pokok' + (r.no_pokok||'') +
+                       '_Baris' + (r.baris||'') +
+                       '_Blok'  + (r.blok||'') +
+                       '_'      + new Date().getTime() + '.' + ext;
+
+          // Sub-folder per kebun
+          var subFolder = getOrCreateSubFolder(folder, r.kebun || 'Lainnya');
+
+          // Simpan file
+          var blob = Utilities.newBlob(
+            Utilities.base64Decode(base64),
+            'image/' + (ext === 'jpg' ? 'jpeg' : 'png'),
+            fname
+          );
+          var file = subFolder.createFile(blob);
+
+          // Set permission: siapa pun bisa lihat (view only)
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          linkFoto = file.getUrl();
+        } catch(fotoErr) {
+          linkFoto = 'Gagal upload: ' + fotoErr.message;
+        }
+      }
+      links.push(linkFoto);
+
+      // Tulis baris data ke Sheet
+      sh.appendRow([
+        r.id            || '',
+        r.waktu_simpan  || new Date().toLocaleString('id'),
+        r.kebun         || '',
+        r.tanggal       || '',
+        r.divisi        || '',
+        r.blok          || '',
+        r.mandor        || '',
+        r.pengecek      || '',
+        r.no_pokok      || '',
+        r.baris         || '',
+        r.kondisi_pokok || '',
+        r.daun_tombak        || 'Tidak',
+        r.daun_klorosis      || 'Tidak',
+        r.daun_sengkleh      || 'Tidak',
+        r.daun_skirting      || 'Tidak',
+        r.daun_tajuk         || 'Tidak',
+        r.batang_miselia     || 'Tidak',
+        r.batang_tubuh_buah  || 'Tidak',
+        r.batang_lunak       || 'Tidak',
+        r.akar_busuk         || 'Tidak',
+        r.akar_miselia       || 'Tidak',
+        r.skor_stadium !== undefined ? r.skor_stadium : '',
+        r.keparahan     || '',
+        r.lat           || '',
+        r.lng           || '',
+        linkFoto
+      ]);
+    }
+
+    // Format kolom Skor Stadium (V) sebagai angka
+    var lastRow = sh.getLastRow();
+    if (lastRow > 1) {
+      sh.getRange(2, 22, lastRow-1, 1).setNumberFormat('0');
+    }
+
+    return buildResponse({status:'ok', n:data.length, links:links});
+
   } catch(err) {
-    return ContentService
-      .createTextResponse(JSON.stringify({status:'error',msg:err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+    return buildResponse({status:'error', msg:err.toString()});
   }
+}
+
+function buildResponse(obj) {
+  var output = ContentService
+    .createTextResponse(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+
+function getOrCreateFolder(name) {
+  var folders = DriveApp.getFoldersByName(name);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
+function getOrCreateSubFolder(parent, name) {
+  var subs = parent.getFoldersByName(name);
+  return subs.hasNext() ? subs.next() : parent.createFolder(name);
 }`;
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -1078,8 +1156,7 @@ async function simpanData() {
   const st   = STADIUM[skor];
 
   const record = {
-    timestamp    : new Date().toISOString(),
-    waktu_simpan : new Date().toLocaleString('id-ID'),
+    waktu_simpan : new Date().toLocaleString('id-ID', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}),
     kebun        : kebun,
     tanggal      : document.getElementById('f_tanggal').value,
     divisi       : document.getElementById('f_divisi').value.trim(),
@@ -1096,9 +1173,8 @@ async function simpanData() {
     lng          : geo.lng,
     geo_acc      : geo.acc,
     foto         : fotoBase64 || null,
-    catatan      : document.getElementById('f_catatan').value.trim(),
-    status_pengecek: document.getElementById('f_status').value,
     status_kirim : 'Belum Dikirim',
+    link_foto    : null,
   };
 
   try {
@@ -1112,8 +1188,6 @@ async function simpanData() {
     resetGejala();
     resetKondisi();
     hapusFoto();
-    document.getElementById('f_catatan').value = '';
-    document.getElementById('f_status').value  = '';
     document.getElementById('f_no_pokok').value = noPokok + 1;
 
   } catch (e) {
@@ -1349,16 +1423,22 @@ function showDetail(rec) {
     </div>`;
   }
 
-  if (rec.foto) {
-    html += `<div class="detail-section"><h5>Foto Pokok</h5>
-      <div class="detail-foto"><img src="${rec.foto}" alt="Foto pokok"></div>
-    </div>`;
-  }
-
-  if (rec.catatan) {
-    html += `<div class="detail-section"><h5>Catatan</h5>
-      <div class="detail-row full"><div class="dr-val">${rec.catatan}</div></div>
-    </div>`;
+  if (rec.foto || rec.link_foto) {
+    html += `<div class="detail-section"><h5>Foto Pokok</h5>`;
+    if (rec.foto) {
+      html += `<div class="detail-foto"><img src="${rec.foto}" alt="Foto pokok"></div>`;
+    }
+    if (rec.link_foto) {
+      html += `<div style="margin-top:8px">
+        <a href="${rec.link_foto}" target="_blank"
+           style="display:flex;align-items:center;gap:6px;padding:10px 14px;
+             background:#E8F0FE;border-radius:8px;text-decoration:none;
+             color:#1A56B0;font-size:13px;font-weight:700;border:1px solid #C5D4F0">
+          📎&nbsp; Lihat Foto di Google Drive
+        </a>
+      </div>`;
+    }
+    html += `</div>`;
   }
 
   const recC = {
@@ -1438,36 +1518,52 @@ async function kirimKeServer() {
   const belum = allRecords.filter(r=>r.status_kirim==='Belum Dikirim');
   if (!belum.length) { showToast('✓ Tidak ada data baru untuk dikirim'); return; }
 
-  const ok = confirm(`Kirim ${belum.length} data ke server?\n\nData foto tidak dikirim untuk menghemat kuota.`);
+  const totalFoto = belum.filter(r => r.foto).length;
+  const ok = confirm(`Kirim ${belum.length} data ke server?\n${totalFoto > 0 ? `📷 ${totalFoto} foto akan disimpan ke Google Drive.` : 'Tidak ada foto.'}`);
   if (!ok) return;
 
   showLoading(true);
+  let berhasil = 0, gagal = 0;
 
-  // Exclude foto from payload
-  const payload = belum.map(r => {
-    const {foto, ...rest} = r;
-    return rest;
-  });
+  // Kirim satu per satu agar foto per-record bisa ditangani
+  for (const rec of belum) {
+    try {
+      // Payload: semua field + foto (base64) jika ada, hapus field internal
+      const {catatan, status_pengecek, status_kirim, link_foto, ...data} = rec;
+      // Sertakan foto jika ada
+      if (rec.foto) data.foto = rec.foto;
 
-  try {
-    const resp = await fetch(gasUrl, {
-      method : 'POST',
-      headers: {'Content-Type':'application/json'},
-      body   : JSON.stringify(payload),
-      mode   : 'no-cors',
-    });
+      const resp = await fetch(gasUrl, {
+        method : 'POST',
+        headers: {'Content-Type':'application/json'},
+        body   : JSON.stringify([data]),  // kirim array satu record
+      });
 
-    // With no-cors we can't read response, assume OK if no network error
-    for (const rec of belum) {
-      await dbUpdate(rec.id, {status_kirim:'Sudah Dikirim'});
+      if (resp.ok) {
+        const hasil = await resp.json();
+        const updates = {status_kirim:'Sudah Dikirim'};
+        // Simpan link foto ke IndexedDB jika GAS kembalikan linknya
+        if (hasil.links && hasil.links[0]) {
+          updates.link_foto = hasil.links[0];
+        }
+        await dbUpdate(rec.id, updates);
+        berhasil++;
+      } else {
+        gagal++;
+      }
+    } catch(e) {
+      // Jika fetch gagal total (offline), hentikan loop
+      gagal = belum.length - berhasil;
+      break;
     }
-    showLoading(false);
-    showToast(`✅ ${belum.length} data berhasil dikirim`);
-    loadDataPage();
+  }
 
-  } catch (e) {
-    showLoading(false);
-    showToast('❌ Gagal kirim: ' + e.message);
+  showLoading(false);
+  if (berhasil > 0) {
+    showToast(`✅ ${berhasil} data terkirim${gagal > 0 ? ` | ❌ ${gagal} gagal` : ''}`);
+    loadDataPage();
+  } else {
+    showToast(`❌ Gagal kirim — periksa koneksi & URL GAS`);
   }
 }
 
