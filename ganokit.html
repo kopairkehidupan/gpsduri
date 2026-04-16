@@ -631,27 +631,21 @@ function getOrCreateSubFolder(p,n) { var s=p.getFoldersByName(n); return s.hasNe
 function doGet(e) {
   var params=e.parameter, callback=params.callback||'cb', action=params.action||'';
 
-  // ─── BARU: Proxy gambar dari Drive → base64 ───────────────
-  // Dipanggil dari app dengan fetch credentials:'omit' (tanpa cookie)
-  // sehingga tidak ada redirect /u/N/ dan CORS header GAS bisa dibaca.
+  // ─── Proxy gambar dari Drive → base64 via JSONP ───────────
+  // Dikembalikan sebagai JSONP (MimeType.JAVASCRIPT) karena GAS
+  // menambahkan Access-Control-Allow-Origin untuk tipe ini.
+  // App memanggil via <script> tag agar tidak diblokir CORS/SW.
   if (action === 'getImage') {
     try {
       var fileId = params.fileId || '';
-      if (!fileId) {
-        return ContentService.createTextResponse(JSON.stringify({status:'error',msg:'No fileId'}))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-      var file   = DriveApp.getFileById(fileId);
-      var blob   = file.getBlob();
-      var mime   = blob.getContentType() || 'image/jpeg';
-      var b64    = Utilities.base64Encode(blob.getBytes());
-      return ContentService.createTextResponse(
-        JSON.stringify({status:'ok', data:'data:'+mime+';base64,'+b64})
-      ).setMimeType(ContentService.MimeType.JSON);
+      if (!fileId) return wrapJsonp(callback, {status:'error', msg:'No fileId'});
+      var file = DriveApp.getFileById(fileId);
+      var blob = file.getBlob();
+      var mime = blob.getContentType() || 'image/jpeg';
+      var b64  = Utilities.base64Encode(blob.getBytes());
+      return wrapJsonp(callback, {status:'ok', data:'data:'+mime+';base64,'+b64});
     } catch(err) {
-      return ContentService.createTextResponse(
-        JSON.stringify({status:'error', msg:err.toString()})
-      ).setMimeType(ContentService.MimeType.JSON);
+      return wrapJsonp(callback, {status:'error', msg:err.toString()});
     }
   }
 
@@ -1316,48 +1310,61 @@ async function generatePDF(tableRows, fotoArr, meta, filename) {
   }
 }
 
-// ── Helper: load URL gambar Drive → base64 via GAS proxy ──────
-// Masalah: Google Drive CORS memblokir semua fetch langsung dari
-// origin eksternal (thumbnail, lh3, uc — semuanya blocked).
-// Solusi: gunakan GAS sebagai proxy.
-//   • fetch ke GAS dengan credentials:'omit' → tidak kirim cookie
-//     → tidak ada redirect /u/N/ → tidak 404
-//   • GAS ambil file dari Drive (GAS punya akses sebagai pemilik)
-//   • GAS kembalikan base64 JSON dengan CORS header
-// WAJIB: deploy ulang GAS dengan kode terbaru (ada action=getImage)
-async function loadImageBase64(url) {
-  if (!url) return null;
-  if (url.startsWith('data:image')) return url;
+// ── Helper: load URL gambar Drive → base64 via GAS JSONP ──────
+// Kenapa JSONP bukan fetch:
+//   • fetch cors → diblokir (GAS tidak kirim Access-Control-Allow-Origin)
+//   • fetch no-cors → opaque, tidak bisa baca body
+//   • Script tag (JSONP) → tidak ada CORS check, tidak diblokir SW
+// Sama persis seperti gvizFetch yang sudah berhasil.
+// Timeout 30 detik per foto (foto bisa besar → GAS perlu waktu encode).
+function loadImageBase64(url) {
+  if (!url) return Promise.resolve(null);
+  if (url.startsWith('data:image')) return Promise.resolve(url);
 
   const driveId = (
     url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
     url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
   )?.[1];
 
-  if (!driveId) return null;
+  if (!driveId) return Promise.resolve(null);
 
   const gasUrl = localStorage.getItem('gasUrl');
-  if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return null; }
+  if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return Promise.resolve(null); }
 
   const cleanUrl = normalizeGasUrl(gasUrl);
-  const proxyUrl = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}`;
 
-  try {
-    // credentials:'omit' = tidak kirim cookie → tidak ada redirect /u/N/
-    const resp = await fetch(proxyUrl, {
-      mode       : 'cors',
-      credentials: 'omit',
-      cache      : 'no-store',
-    });
-    if (!resp.ok) { console.warn('GAS proxy response', resp.status); return null; }
-    const json = await resp.json();
-    if (json.status === 'ok' && json.data) return json.data;
-    console.warn('GAS proxy error:', json.msg);
-    return null;
-  } catch(e) {
-    console.warn('loadImageBase64 via GAS failed:', e.message);
-    return null;
-  }
+  return new Promise(resolve => {
+    // Nama callback unik per request
+    const cbName = 'imgCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    const timeout = setTimeout(() => {
+      cleanup();
+      console.warn('loadImageBase64 timeout:', driveId);
+      resolve(null);
+    }, 30000);
+
+    const script = document.createElement('script');
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(result) {
+      cleanup();
+      if (result && result.status === 'ok' && result.data) {
+        resolve(result.data);
+      } else {
+        console.warn('loadImageBase64 GAS error:', result && result.msg);
+        resolve(null);
+      }
+    };
+
+    // GAS returns: cbName({"status":"ok","data":"data:image/jpeg;base64,..."})
+    script.src = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}&callback=${cbName}`;
+    script.onerror = () => { cleanup(); resolve(null); };
+    document.head.appendChild(script);
+  });
 }
 
 // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
