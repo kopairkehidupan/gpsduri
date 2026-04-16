@@ -1156,20 +1156,23 @@ async function generatePDF(tableRows, fotoArr, meta, filename) {
     y += 4;
 
     // ── CHECK FOTO ──────────────────────────────────────────
+    // fotoArr sudah berisi base64 semua (Drive sudah di-convert sebelumnya)
     const hasFoto  = fotoArr && fotoArr.some(f => f && f.startsWith('data:image'));
-    const cellH    = hasFoto ? 20 : 7;
-    const fotoColW = hasFoto ? 30 : 16;
+    const cellH    = hasFoto ? 22 : 7;
+    const fotoColW = hasFoto ? 32 : 16;
 
     // ── TABLE ───────────────────────────────────────────────
     const head = [['No.','No. Pokok','Baris','Skor\nStadium','Tingkat Keparahan','Latitude','Longitude','Foto']];
 
+    // rows format: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+    //              index:  0        1       2              3          4    5
     const body = tableRows.map((r, i) => {
-      const skor     = String(r[3] !== undefined ? r[3] : (r.skor_stadium ?? '')).trim();
-      const keparahan= String(r[4] || r.keparahan || '');
-      const lat      = r[5] !== undefined ? r[5] : (r.lat || '');
-      const lng      = r[6] !== undefined ? r[6] : (r.lng || '');
-      const latStr   = lat  ? parseFloat(lat).toFixed(6)  : '—';
-      const lngStr   = lng  ? parseFloat(lng).toFixed(6)  : '—';
+      const skor      = String(r[2] ?? '').trim();           // ← FIX: index 2
+      const keparahan = String(r[3] || '');                  // ← FIX: index 3
+      const lat       = String(r[4] || '');                  // ← FIX: index 4
+      const lng       = String(r[5] || '');                  // ← FIX: index 5
+      const latStr    = lat ? parseFloat(lat).toFixed(6) : '—';
+      const lngStr    = lng ? parseFloat(lng).toFixed(6) : '—';
       return [i + 1, r[0], r[1], skor, keparahan, latStr, lngStr, ''];
     });
 
@@ -1237,33 +1240,25 @@ async function generatePDF(tableRows, fotoArr, meta, filename) {
       didDrawCell: function(data) {
         if (data.section !== 'body' || data.column.index !== 7) return;
         const foto = fotoArr ? fotoArr[data.row.index] : null;
-        if (!foto) {
-          // Tidak ada foto
+        if (!foto || !foto.startsWith('data:image')) {
           doc.setFontSize(6.5);
-          doc.setTextColor(180,180,180);
+          doc.setTextColor(190, 190, 190);
           doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
           return;
         }
-        if (foto.startsWith('data:image')) {
-          try {
-            const imgType = foto.toLowerCase().includes('jpeg')||foto.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
-            const pad = 1.5;
-            doc.addImage(foto, imgType,
-              data.cell.x + pad,
-              data.cell.y + pad,
-              data.cell.width  - pad*2,
-              data.cell.height - pad*2,
-            );
-          } catch(e) {
-            doc.setFontSize(6);
-            doc.setTextColor(180,100,100);
-            doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
-          }
-        } else {
-          // URL (dari server) — tidak bisa embed, tampilkan ikon
-          doc.setFontSize(7);
-          doc.setTextColor(80, 120, 200);
-          doc.text('📷 Ada', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+        try {
+          const imgType = foto.toLowerCase().includes('jpeg')||foto.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
+          const pad = 1.5;
+          doc.addImage(foto, imgType,
+            data.cell.x + pad,
+            data.cell.y + pad,
+            data.cell.width  - pad*2,
+            data.cell.height - pad*2,
+          );
+        } catch(e) {
+          doc.setFontSize(6);
+          doc.setTextColor(180,100,100);
+          doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
         }
       },
     });
@@ -1296,8 +1291,45 @@ async function generatePDF(tableRows, fotoArr, meta, filename) {
   }
 }
 
+// ── Helper: load URL gambar → base64 ──────────────────────────
+// Google Drive thumbnail endpoint mendukung CORS, sehingga
+// gambar bisa dimuat ke canvas dan diconvert ke base64.
+function loadImageBase64(url) {
+  if (!url) return Promise.resolve(null);
+  if (url.startsWith('data:image')) return Promise.resolve(url);
+
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const MAX = 500;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { resolve(null); return; }
+        if (w > MAX || h > MAX) {
+          if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+          else        { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.8));
+      } catch(e) { resolve(null); } // CORS tainted
+    };
+    img.onerror = () => resolve(null);
+
+    // Google Drive: gunakan thumbnail endpoint (ada CORS header)
+    // Format: /file/d/FILE_ID/view atau /uc?id=FILE_ID
+    const driveId = (url.match(/\/d\/([a-zA-Z0-9_-]{10,})/)||url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/))?.[1];
+    img.src = driveId
+      ? `https://drive.google.com/thumbnail?id=${driveId}&sz=w400`
+      : url;
+  });
+}
+
 // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
-function downloadPdfLocal() {
+async function downloadPdfLocal() {
   if (!allRecords || !allRecords.length) { showToast('⚠ Belum ada data lokal'); return; }
 
   const kebun  = document.getElementById('flt-kebun').value;
@@ -1311,19 +1343,16 @@ function downloadPdfLocal() {
 
   if (!filtered.length) { showToast('⚠ Tidak ada data setelah filter'); return; }
 
-  // Ambil data pokok pertama untuk metadata
   const first = filtered[0];
-  const meta  = {
-    kebun  : kebun  || first.kebun  || '—',
-    divisi : divisi || first.divisi || '—',
-    blok   : blok   || first.blok   || '—',
-    tanggal: first.tanggal || '',
-  };
+  const meta  = { kebun: kebun||first.kebun||'—', divisi: divisi||first.divisi||'—', blok: blok||first.blok||'—', tanggal: first.tanggal||'' };
 
-  // Susun rows: [no_pokok, baris, skor, keparahan, lat, lng]
-  const rows   = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
-  // Foto: base64 dari IndexedDB, atau link jika sudah dikirim
-  const fotos  = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
+  // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+  const rows = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
+
+  // Foto: base64 lokal sudah siap, drive URL perlu di-load
+  showToast('⏳ Memuat foto…');
+  const rawFotos = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
+  const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
 
   const now     = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
@@ -1332,17 +1361,22 @@ function downloadPdfLocal() {
 }
 
 // ── DOWNLOAD PDF SERVER (dari data peta) ─────────────────────
-function downloadPdfServer() {
+async function downloadPdfServer() {
   if (!serverData || !serverData.length) { showToast('⚠ Ambil data dari server dulu'); return; }
 
   const kebun  = document.getElementById('peta-kebun').value  || serverData[0]?.['Kebun']  || '—';
   const divisi = document.getElementById('peta-divisi').value || serverData[0]?.['Divisi'] || '—';
   const blok   = document.getElementById('peta-blok').value   || serverData[0]?.['Blok']   || '—';
 
-  const meta  = { kebun, divisi, blok, tanggal:'' };
-  const rows  = serverData.map(r => [r['No Pokok']||'', r['Baris']||'', r['Skor Stadium']||'', r['Keparahan']||'', r['Latitude']||'', r['Longitude']||'']);
-  // Foto server = Drive URL (tidak bisa embed, hanya tampil ikon)
-  const fotos = serverData.map(r => { const lf=r['Link Foto']; return (lf&&lf.startsWith('http')) ? lf : null; });
+  const meta = { kebun, divisi, blok, tanggal:'' };
+
+  // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+  const rows = serverData.map(r => [r['No Pokok']||'', r['Baris']||'', r['Skor Stadium']||'', r['Keparahan']||'', r['Latitude']||'', r['Longitude']||'']);
+
+  // Load foto Drive → base64
+  showToast('⏳ Memuat foto dari Google Drive…');
+  const rawFotos = serverData.map(r => { const lf = r['Link Foto']; return (lf && lf.startsWith('http')) ? lf : null; });
+  const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
 
   const now     = new Date();
   const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
