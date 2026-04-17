@@ -1,1325 +1,1328 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Sensus Ganoderma</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root {
-  --green-900: #0B2614;
-  --green-800: #144D23;
-  --green-700: #1B6B30;
-  --green-600: #248A3D;
-  --green-500: #2EA84A;
-  --green-100: #E6F4EA;
-  --green-50:  #F0FAF2;
-  --cream:     #F4F6F4;
-  --white:     #FFFFFF;
-  --gray-50:   #F8F9F8;
-  --gray-100:  #EDEEED;
-  --gray-200:  #D8DAD8;
-  --gray-400:  #9AA39A;
-  --gray-600:  #637063;
-  --gray-800:  #2A322A;
-  --text:      #1A201A;
-  --text-muted:#637063;
-  --radius:    14px;
-  --radius-sm: 10px;
-  --shadow:    0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
-  --st0-bg:#D4EDDA; --st0-fg:#1A5C2A; --st0-dark:#1A5C2A;
-  --st1-bg:#FFF3B0; --st1-fg:#7A5500; --st1-dark:#B87D00;
-  --st2-bg:#FFE0B2; --st2-fg:#7A3A00; --st2-dark:#E65100;
-  --st3-bg:#FFCDD2; --st3-fg:#8B0000; --st3-dark:#C62828;
-  --st4-bg:#FF8A80; --st4-fg:#FFFFFF; --st4-dark:#B71C1C;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:15px}
-.app-header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#0B2614 0%,#1B6B30 100%);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 16px rgba(0,0,0,0.35);width:100%;box-sizing:border-box}
-.header-left{display:flex;align-items:center;gap:10px}
-.header-logo{font-size:22px}
-.header-title{color:#FFFFFF;font-size:18px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
-.header-sub{color:#86EFAC;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase}
-.btn-settings{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:#FFF;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px)}
-.btn-settings:hover{background:rgba(255,255,255,0.2)}
-.tab-nav{display:flex;background:var(--green-900);border-bottom:none;width:100%;overflow:hidden;padding:0 8px;gap:4px}
-.tab-btn{flex:1;padding:10px 8px 12px;border:none;background:transparent;color:rgba(255,255,255,0.55);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;letter-spacing:.1px}
-.tab-btn.active{color:#FFFFFF;border-bottom-color:#4ADE80}
-.page{display:none;padding:14px 14px 120px;width:100%;box-sizing:border-box;max-width:100vw;overflow-x:hidden}
-.page.active{display:block}
-.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.04)}
-.card-header{padding:13px 15px 10px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
-.card-title{font-size:13px;font-weight:800;color:var(--green-700);display:flex;align-items:center;gap:7px;letter-spacing:-.1px}
-.card-title .icon{font-size:16px}
-.card-note{font-size:11px;color:var(--text-muted);margin-top:2px;padding-left:24px;line-height:1.4}
-.card-body{padding:13px 14px;width:100%;box-sizing:border-box}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;min-width:0}
-.form-grid-3{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;min-width:0}
-.field-group{display:flex;flex-direction:column;gap:5px;min-width:0}
-.field-group.full{grid-column:1/-1}
-.field-group label{font-size:10px;font-weight:700;color:var(--green-700);text-transform:uppercase;letter-spacing:.7px}
-.field-group input,.field-group select,.field-group textarea{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:11px 12px;font-family:inherit;font-size:15px;color:var(--text);background:var(--white);transition:border-color .15s,box-shadow .15s;outline:none;width:100%;box-sizing:border-box;min-width:0}
-.field-group input:focus,.field-group select:focus,.field-group textarea:focus{border-color:var(--green-500);box-shadow:0 0 0 3px rgba(36,138,61,.15);background:#fff}
-.field-group textarea{resize:vertical;min-height:72px}
-.kondisi-group{display:flex;flex-direction:column;gap:8px;padding:10px 14px 14px;width:100%;box-sizing:border-box}
-.kondisi-btn{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);cursor:pointer;font-family:inherit;text-align:left;transition:all .2s;font-size:13px;font-weight:600;color:var(--text);width:100%;box-sizing:border-box}
-.kondisi-btn .ki{font-size:20px;flex-shrink:0}
-.kondisi-btn .kt{flex:1}
-.kondisi-btn .kt small{display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:1px}
-.kondisi-btn.active-normal{border-color:var(--green-500);background:var(--green-50);color:var(--green-700);box-shadow:0 0 0 3px rgba(36,138,61,.12)}
-.kondisi-btn.active-st3{border-color:#C62828;background:#FFCDD2;color:#7B0000}
-.kondisi-btn.active-st3 .kt small{color:#B71C1C}
-.kondisi-btn.active-st4{border-color:#B71C1C;background:#FF8A80;color:#FFFFFF}
-.gejala-list{padding:0 14px 10px;display:flex;flex-direction:column;gap:0;width:100%;box-sizing:border-box}
-.gejala-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--gray-100)}
-.gejala-item:last-child{border-bottom:none}
-.gejala-num{width:24px;height:24px;border-radius:50%;background:var(--green-700);color:#FFF;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.gejala-label{flex:1;font-size:12px;line-height:1.35;color:var(--text);min-width:0;word-break:break-word}
-.toggle-row{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--gray-200);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-.tog-btn{padding:9px 11px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;background:var(--gray-100);color:var(--gray-400);transition:all .15s;min-width:40px;letter-spacing:.1px}
-.tog-btn:not(:last-child){border-right:1px solid var(--gray-200)}
-.tog-btn.active-ya{background:#22803A;color:#FFF}
-.tog-btn.active-tidak{background:#757575;color:#FFF}
-.tog-btn.active-na{background:#EAA100;color:#FFF}
-.foto-area{padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box}
-.btn-camera{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:var(--radius-sm);border:2px dashed var(--green-600);background:var(--green-100);color:var(--green-700);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
-.btn-camera:hover{background:var(--green-100);border-style:solid}
-.foto-preview{position:relative;border-radius:var(--radius-sm);overflow:hidden}
-.foto-preview img{width:100%;max-height:200px;object-fit:cover;display:block}
-.btn-hapus-foto{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.sticky-bottom{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(255,255,255,0.97);border-top:1px solid var(--gray-100);padding:12px 14px;box-sizing:border-box;backdrop-filter:blur(12px)}
-.btn-simpan{width:100%;padding:16px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,var(--green-700) 0%,var(--green-500) 100%);color:#FFF;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(27,107,48,.45)}
-.btn-simpan:hover{background:var(--green-800);transform:translateY(-1px);box-shadow:0 6px 18px rgba(34,98,43,.45)}
-.btn-simpan:active{transform:translateY(0);box-shadow:0 2px 8px rgba(34,98,43,.3)}
-.filter-bar{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.04)}
-.filter-bar h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
-.filter-row{display:flex;gap:6px;flex-wrap:wrap}
-.filter-row select{flex:1;min-width:0;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 8px;font-family:inherit;font-size:12px;background:#FFF;outline:none;max-width:100%}
-.filter-row select:focus{border-color:var(--green-600)}
-.btn-reset-filter{padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:#FFF;font-family:inherit;font-size:13px;cursor:pointer;color:var(--text-muted)}
-.summary-strip{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
-.summary-strip::-webkit-scrollbar{display:none}
-.stat-chip{display:flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:var(--radius-sm);flex-shrink:0;min-width:70px;border:1px solid rgba(0,0,0,0.06)}
-.stat-chip .sv{font-size:22px;font-weight:800;line-height:1}
-.stat-chip .sl{font-size:10px;font-weight:600;margin-top:2px;opacity:.85}
-.record-list{display:flex;flex-direction:column;gap:8px}
-.record-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:all .2s;border:1px solid rgba(0,0,0,0.05);border-left:5px solid var(--gray-200)}
-.record-card:hover{box-shadow:var(--shadow-lg)}
-.record-card.st0{border-left-color:#1A5C2A}
-.record-card.st1{border-left-color:#B87D00}
-.record-card.st2{border-left-color:#E65100}
-.record-card.st3{border-left-color:#C62828}
-.record-card.st4{border-left-color:#B71C1C}
-.record-top{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px 8px;gap:8px}
-.record-id{font-size:14px;font-weight:800;word-break:break-word}
-.record-loc{font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-word}
-.stadium-badge{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
-.record-bottom{display:flex;align-items:center;justify-content:space-between;padding:0 14px 12px}
-.record-meta{font-size:11px;color:var(--text-muted)}
-.status-kirim{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:600}
-.status-kirim.belum{background:#FFF3E0;color:#E65100}
-.status-kirim.sudah{background:#E8F5E9;color:#1B5E20}
-.empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
-.empty-state .ei{font-size:48px;margin-bottom:12px}
-.empty-state p{font-size:14px}
-.btn-kirim-wrap{padding:12px;width:100%;box-sizing:border-box}
-.btn-kirim{width:100%;padding:15px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1A56B0 0%,#2563EB 100%);color:#FFF;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(26,86,176,.35);transition:all .2s}
-.btn-kirim:hover{background:#1A3F8F;transform:translateY(-1px)}
-.btn-kirim:disabled{background:var(--gray-400);cursor:not-allowed;transform:none;box-shadow:none}
-.kirim-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px}
-.modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
-.modal-overlay.center{align-items:center;padding:12px}
-.modal-overlay.hidden{display:none}
-.modal-sheet{width:100%;margin:0 auto;background:var(--white);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.25,.46,.45,.94)}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-handle{width:40px;height:4px;background:var(--gray-200);border-radius:2px;margin:10px auto 0}
-.modal-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-size:16px;font-weight:800}
-.btn-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-600);padding:4px;border-radius:50%}
-.dialog-hero{padding:28px 20px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
-.dialog-stadium-num{font-size:13px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px}
-.dialog-stadium-label{font-size:28px;font-weight:800;line-height:1}
-.dialog-code{font-size:13px;font-weight:600;opacity:.75;margin-top:2px}
-.dialog-info-card{margin:0 16px;background:var(--gray-50);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--gray-200)}
-.dialog-info-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.dialog-info-row:last-child{margin-bottom:0}
-.dialog-info-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;min-width:80px}
-.dialog-info-val{font-size:14px;font-weight:600}
-.dialog-rec{margin:12px 16px;padding:14px 16px;border-radius:var(--radius-sm);border-left:4px solid var(--green-600);background:var(--green-100);max-height:300px;overflow-y:auto}
-.dialog-rec-label{font-size:11px;font-weight:700;color:var(--green-800);text-transform:uppercase;margin-bottom:4px}
-.dialog-rec-text{font-size:13px;color:var(--green-800);line-height:1.65;white-space:pre-line}
-.dialog-geo{text-align:center;padding:8px;font-size:11px;color:var(--text-muted)}
-.dialog-footer{padding:14px 16px 24px}
-.btn-lanjut{width:100%;padding:15px;border-radius:var(--radius);border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer}
-.settings-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px}
-.settings-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.settings-section input,.settings-section textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:13px;outline:none}
-.settings-section input:focus{border-color:var(--green-600)}
-.gas-code{background:#1A1A1A;color:#7BC98A;font-family:'Courier New',monospace;font-size:10px;padding:12px;border-radius:var(--radius-sm);overflow-x:auto;white-space:pre;border:none;width:100%;box-sizing:border-box;max-height:200px;overflow-y:auto}
-.btn-copy{margin-top:6px;padding:8px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.btn-save-settings{width:100%;padding:14px;border-radius:var(--radius);border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
-.test-ok{background:#E8F5E9;color:#1B5E20;border:1px solid #C8E6C9}
-.test-err{background:#FFEBEE;color:#B71C1C;border:1px solid #FFCDD2}
-.test-warn{background:#FFF9E0;color:#7A5500;border:1px solid #FFE082}
-.test-loading{background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB}
-.btn-hapus-data{width:100%;padding:12px;border-radius:var(--radius);border:2px solid #EF4444;background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
-.detail-body{padding:14px 20px 32px;display:flex;flex-direction:column;gap:10px}
-.detail-section h5{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:6px}
-.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
-.detail-row{display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border-radius:6px;padding:8px 10px}
-.detail-row.full{grid-column:1/-1}
-.dr-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
-.dr-val{font-size:13px;font-weight:600;color:var(--text)}
-.gejala-hasil{display:flex;flex-wrap:wrap;gap:5px}
-.gejala-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.gejala-chip.ya{background:#E8F5E9;color:#1B5E20}
-.gejala-chip.tidak{background:#F5F5F5;color:#9E9E9E}
-.gejala-chip.na{background:#FFF9E6;color:#795548}
-.detail-foto img{width:100%;border-radius:var(--radius-sm);max-height:220px;object-fit:cover}
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--gray-800);color:#FFF;padding:12px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
-.toast.show{opacity:1}
-.loading-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
-.loading-overlay.hidden{display:none}
-.spinner{width:48px;height:48px;border:5px solid rgba(255,255,255,.2);border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media (max-width: 380px) {
-  .form-grid{grid-template-columns:1fr}
-  .form-grid .field-group.full{grid-column:1}
-  .tog-btn{padding:8px 7px;font-size:11px;min-width:32px}
-  .header-title{font-size:15px}
-  .header-sub{font-size:10px}
-  .tab-btn{font-size:12px;padding:11px 6px}
-  .stat-chip{min-width:60px;padding:7px 10px}
-  .stat-chip .sv{font-size:18px}
-}
-@media (max-width: 340px) {
-  .form-grid-3{grid-template-columns:1fr 1fr}
-  .tog-btn{padding:7px 5px;min-width:28px}
-}
-.konfirm-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
-.konfirm-overlay.hidden{display:none}
-.konfirm-box{background:#FFF;border-radius:18px;padding:0;width:100%;max-width:320px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:popIn .2s cubic-bezier(.34,1.56,.64,1)}
-@keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-.konfirm-icon{text-align:center;padding:28px 20px 16px;font-size:44px;line-height:1}
-.konfirm-title{text-align:center;font-size:18px;font-weight:800;color:#1A201A;padding:0 24px 8px}
-.konfirm-msg{text-align:center;font-size:13px;color:#637063;padding:0 24px 24px;line-height:1.5}
-.konfirm-info{background:#FFF8F0;border-top:1px solid #FFE0B2;padding:12px 20px;text-align:center;font-size:12px;font-weight:600;color:#E65100;margin-bottom:0}
-.konfirm-actions{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #EDEEED}
-.konfirm-batal{padding:16px;border:none;background:#FFF;font-family:inherit;font-size:15px;font-weight:600;color:#637063;cursor:pointer;border-right:1px solid #EDEEED;transition:background .15s}
-.konfirm-batal:active{background:#F4F6F4}
-.konfirm-hapus{padding:16px;border:none;background:#FFF;font-family:inherit;font-size:15px;font-weight:800;color:#EF4444;cursor:pointer;transition:background .15s}
-.konfirm-hapus:active{background:#FFF0F0}
-#peta-map{height:52vh;min-height:300px;border-radius:var(--radius);overflow:hidden;margin-bottom:10px;border:2px solid var(--gray-200);background:#C8D8C8}
-.peta-filter-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:10px;border:1px solid rgba(0,0,0,0.04)}
-.peta-filter-title{font-size:12px;font-weight:800;color:var(--green-700);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
-.peta-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.peta-input{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);background:var(--white);width:100%;box-sizing:border-box;outline:none;transition:border-color .15s}
-.peta-input:focus{border-color:var(--green-500);box-shadow:0 0 0 3px rgba(36,138,61,.15)}
-.peta-input.full{grid-column:1/-1}
-.btn-ambil{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,var(--green-700),var(--green-500));color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(27,107,48,.35);transition:all .2s;margin-bottom:8px}
-.btn-ambil:hover{transform:translateY(-1px)}
-.btn-ambil:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
-.peta-status{font-size:12px;text-align:center;padding:9px 12px;border-radius:var(--radius-sm);font-weight:600;line-height:1.4}
-.peta-status.idle{background:var(--gray-100);color:var(--text-muted)}
-.peta-status.loading{background:#E3F2FD;color:#1565C0}
-.peta-status.ok{background:#E8F5E9;color:#1B5E20}
-.peta-status.err{background:#FFEBEE;color:#B71C1C}
-.peta-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid rgba(0,0,0,0.08)}
-.btn-dl-excel{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(27,94,32,.3);transition:all .2s;margin-top:8px}
-.btn-dl-excel:hover{transform:translateY(-1px)}
-.btn-dl-excel:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
-.btn-dl-excel-local{width:100%;padding:13px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#004D40,#00796B);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,77,64,.3);transition:all .2s;margin-top:8px}
-.btn-dl-excel-local:hover{transform:translateY(-1px)}
-/* ── PDF BUTTONS ─────────────────────────────────────────────── */
-.btn-dl-pdf{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(123,31,162,.3);transition:all .2s;margin-top:8px}
-.btn-dl-pdf:hover{transform:translateY(-1px)}
-.btn-dl-pdf:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
-.btn-dl-pdf-local{width:100%;padding:13px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#4A148C,#6A1B9A);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(74,20,140,.3);transition:all .2s;margin-top:8px}
-.btn-dl-pdf-local:hover{transform:translateY(-1px)}
-.leaflet-popup-content{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;line-height:1.5;max-width:220px}
-.leaflet-popup-content img{width:100%;border-radius:6px;margin-top:6px;display:block}
-.popup-badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:4px}
-@media (max-width:380px){
-  .peta-inputs{grid-template-columns:1fr}
-  .peta-input.full{grid-column:1}
-}
-</style>
-</head>
-<body>
-
-<div class="app-header">
-  <div class="header-left">
-    <div class="header-logo">🌿</div>
-    <div>
-      <div class="header-title">Sensus Ganoderma</div>
-      <div class="header-sub">SISTEM PPKS — DETEKSI LAPANGAN</div>
-    </div>
-  </div>
-  <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
-</div>
-<nav class="tab-nav">
-  <button class="tab-btn active" id="tab-form" onclick="showPage('form')">📝 Form Sensus</button>
-  <button class="tab-btn" id="tab-data" onclick="showPage('data')">📋 Data Tersimpan</button>
-  <button class="tab-btn" id="tab-peta" onclick="showPage('peta')">🗺️ Peta</button>
-</nav>
-
-<!-- PAGE: FORM SENSUS -->
-<div class="page active" id="page-form">
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><span class="icon">📌</span>Informasi Sensus</div>
-      <div class="card-note">Diisi sekali — otomatis tetap ada saat simpan, hilang bila refresh</div>
-    </div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="field-group full"><label>Kebun / Perusahaan</label><input type="text" id="f_kebun" placeholder="Nama Kebun Atau Perusahaan" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field-group"><label>Divisi / Afdeling</label><input type="text" id="f_divisi" placeholder="Nama Divisi" autocapitalize="words" oninput="toTitleCase(this)"></div>
-        <div class="field-group"><label>Blok / Petak</label><input type="text" id="f_blok" placeholder="Contoh: H1" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field-group"><label>Tanggal Sensus</label><input type="date" id="f_tanggal"></div>
-        <div class="field-group"><label>Nama Mandor</label><input type="text" id="f_mandor" placeholder="Nama Mandor" autocapitalize="words" oninput="toTitleCase(this)"></div>
-        <div class="field-group full"><label>Nama Pengecek</label><input type="text" id="f_pengecek" placeholder="Nama Pengecek" autocapitalize="words" oninput="toTitleCase(this)"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><span class="icon">🌴</span>Identitas Pokok</div>
-      <div class="card-note">No. pokok otomatis naik setiap simpan. Baris tetap tersimpan, hilang bila refresh</div>
-    </div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="field-group"><label>No. Pokok</label><input type="number" id="f_no_pokok" min="1" value="1"></div>
-        <div class="field-group"><label>Baris</label><input type="text" id="f_baris" placeholder="Contoh: 5" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><span class="icon">🔎</span>Kondisi Pokok</div>
-      <div class="card-note">Pilih kondisi fisik pohon yang sedang diperiksa</div>
-    </div>
-    <div class="kondisi-group" id="kondisi-group">
-      <button class="kondisi-btn active-normal" data-val="Normal/Berdiri" onclick="setKondisi(this)">
-        <span class="ki">🌿</span>
-        <div class="kt">Masih Berdiri Normal<small>Periksa gejala daun, batang, dan akar di bawah</small></div>
-      </button>
-      <button class="kondisi-btn" data-val="Tumbang - Bonggol Ada" onclick="setKondisi(this)">
-        <span class="ki">⬛</span>
-        <div class="kt"><strong>Tumbang — Ada Sisa Bonggol di Tanah</strong><small>Stadium 3 (Hitam) — Eradikasi dengan excavator</small></div>
-      </button>
-      <button class="kondisi-btn" data-val="Tumbang - Bonggol Tidak Ada" onclick="setKondisi(this)">
-        <span class="ki">⬜</span>
-        <div class="kt"><strong>Tumbang — Tidak Ada Sisa Bonggol</strong><small>Stadium 4 (Putih) — Sanitasi lanjutan & replanting</small></div>
-      </button>
-    </div>
-  </div>
-  <div class="card" id="card-gejala">
-    <div class="card-header"><div class="card-title"><span class="icon">🍃</span>Gejala pada Daun</div><div class="card-note">Amati kondisi daun dari bawah ke pucuk</div></div>
-    <div class="gejala-list" id="list-daun"></div>
-    <div class="card-header" style="margin-top:4px"><div class="card-title"><span class="icon">🪵</span>Gejala pada Batang</div><div class="card-note">Periksa bagian pangkal batang dekat tanah</div></div>
-    <div class="gejala-list" id="list-batang"></div>
-    <div class="card-header" style="margin-top:4px"><div class="card-title"><span class="icon">🪱</span>Gejala pada Akar</div><div class="card-note">Gali sedikit tanah di piringan untuk periksa akar</div></div>
-    <div class="gejala-list" id="list-akar"></div>
-  </div>
-  <div class="card" id="card-foto" style="display:none">
-    <div class="card-header"><div class="card-title"><span class="icon">📷</span>Foto Pokok (Opsional)</div><div class="card-note">Foto bonggol/kondisi tumbang untuk Stadium 3 & 4</div></div>
-    <div class="foto-area">
-      <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none">
-      <button class="btn-camera" onclick="document.getElementById('foto-input').click()">📷 &nbsp;Ambil Foto Pokok</button>
-      <div id="foto-preview" style="display:none" class="foto-preview">
-        <img id="foto-img" src="">
-        <button class="btn-hapus-foto" onclick="hapusFoto()">✕</button>
-      </div>
-    </div>
-  </div>
-  <div class="sticky-bottom">
-    <button class="btn-simpan" onclick="simpanData()">💾&nbsp;&nbsp;SIMPAN DATA POKOK</button>
-  </div>
-</div>
-
-<!-- PAGE: DATA TERSIMPAN -->
-<div class="page" id="page-data">
-  <div class="filter-bar">
-    <h4>🔍 Filter Data</h4>
-    <div class="filter-row">
-      <select id="flt-kebun" onchange="applyFilter()"><option value="">Semua Kebun</option></select>
-      <select id="flt-divisi" onchange="applyFilter()"><option value="">Semua Divisi</option></select>
-      <select id="flt-blok" onchange="applyFilter()"><option value="">Semua Blok</option></select>
-      <button class="btn-reset-filter" onclick="resetFilter()">✕</button>
-    </div>
-  </div>
-  <div class="summary-strip" id="summary-strip"></div>
-  <div class="record-list" id="record-list"></div>
-  <div class="btn-kirim-wrap">
-    <button class="btn-kirim" id="btn-kirim" onclick="kirimKeServer()">📡&nbsp;Kirim ke Server (Google Script)</button>
-    <div class="kirim-note" id="kirim-note">Memuat data...</div>
-    <button class="btn-dl-pdf-local" onclick="downloadPdfLocal()">📄&nbsp;&nbsp;Download PDF — Data Lokal</button>
-  </div>
-</div>
-
-<!-- PAGE: PETA LAPORAN -->
-<div class="page" id="page-peta">
-  <div class="peta-filter-card">
-    <div class="peta-filter-title">📡 Ambil Data dari Google Sheet</div>
-    <div class="peta-inputs">
-      <input class="peta-input" id="peta-kebun" placeholder="Nama Kebun (kosong = semua)" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
-      <input class="peta-input" id="peta-divisi" placeholder="Divisi (opsional)" autocapitalize="words">
-      <input class="peta-input full" id="peta-blok" placeholder="Blok / Petak (kosong = semua blok)" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
-    </div>
-    <button class="btn-ambil" id="btn-ambil" onclick="ambilDataServer()">📡&nbsp;&nbsp;Ambil Data dari Server</button>
-    <div class="peta-status idle" id="peta-status">Masukkan filter lalu tekan tombol untuk mengambil data dari Google Sheets.</div>
-  </div>
-  <div class="peta-legend">
-    <div class="legend-item" style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
-    <div class="legend-item" style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
-    <div class="legend-item" style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
-    <div class="legend-item" style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
-    <div class="legend-item" style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
-    <div class="legend-item" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
-  </div>
-  <div id="peta-map"></div>
-  <button class="btn-dl-pdf" id="btn-dl-server" onclick="downloadPdfServer()" disabled>📄&nbsp;&nbsp;Download PDF — Data Server</button>
-</div>
-
-<!-- MODAL: HASIL SIMPAN -->
-<div class="modal-overlay hidden" id="modal-dialog" onclick="closeDialog(event)">
-  <div class="modal-sheet" id="dialog-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="dialog-hero" id="dialog-hero">
-      <div class="dialog-stadium-num" id="d-stadnum"></div>
-      <div class="dialog-stadium-label" id="d-label"></div>
-      <div class="dialog-code" id="d-code"></div>
-    </div>
-    <div class="dialog-info-card">
-      <div class="dialog-info-row"><div class="dialog-info-label">📍 Pokok</div><div class="dialog-info-val" id="d-pokok"></div></div>
-      <div class="dialog-info-row"><div class="dialog-info-label">🔲 Blok</div><div class="dialog-info-val" id="d-blok"></div></div>
-      <div class="dialog-info-row"><div class="dialog-info-label">📅 Tanggal</div><div class="dialog-info-val" id="d-tanggal"></div></div>
-    </div>
-    <div class="dialog-rec">
-      <div class="dialog-rec-label">🛠 Rekomendasi Tindakan</div>
-      <div class="dialog-rec-text" id="d-rek"></div>
-    </div>
-    <div class="dialog-geo" id="d-geo"></div>
-    <div class="dialog-footer">
-      <button class="btn-lanjut" onclick="closeDialog()">✓&nbsp;&nbsp;Lanjut Isi Data Berikutnya</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: DETAIL RECORD -->
-<div class="modal-overlay hidden center" id="modal-detail" onclick="closeDetail(event)">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:500px">
-    <div class="modal-header">
-      <div class="modal-title" id="detail-title">Detail Pokok</div>
-      <button class="btn-close" onclick="closeDetail()">✕</button>
-    </div>
-    <div class="detail-body" id="detail-body"></div>
-  </div>
-</div>
-
-<!-- MODAL: SETTINGS -->
-<div class="modal-overlay hidden center" id="modal-settings" onclick="closeSettings(event)">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:540px">
-    <div class="modal-header">
-      <div class="modal-title">⚙️ Pengaturan</div>
-      <button class="btn-close" onclick="closeSettings()">✕</button>
-    </div>
-    <div class="settings-body">
-
-      <!-- GAS URL — tidak berubah -->
-      <div class="settings-section">
-        <h4>URL Google Apps Script</h4>
-        <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.5">
-          Digunakan untuk <strong>mengirim (POST)</strong> data ke Google Sheets.<br>
-          Deploy GAS: <em>Execute as: Me</em> &amp; <em>Who has access: <strong>Anyone</strong></em>.
-        </div>
-      </div>
-
-      <!-- [PATCH 1] Sheet ID — BARU untuk Tab Peta -->
-      <div class="settings-section">
-        <h4>🗂 Google Sheet ID (untuk Tab Peta)</h4>
-        <input type="text" id="sheet-id-input" placeholder="Paste URL Sheet atau ID-nya..." style="font-size:12px">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.65;background:#F0FAF2;padding:10px 12px;border-radius:8px;border-left:3px solid var(--green-500)">
-          <strong style="color:var(--green-700)">Kenapa perlu ini?</strong>
-          Tab Peta baca data <strong>langsung dari Sheet</strong> (bukan GAS), sehingga masalah <code>/u/N/</code> &amp; CORB tidak terjadi.<br><br>
-          <strong>Setup sekali:</strong> Buka Sheet → <em>Share → Anyone with link → Viewer</em> → copy URL → paste di sini.
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <button onclick="saveSettings()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 Simpan</button>
-        <button onclick="testKoneksiGAS()" id="btn-test-gas" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔌 Test Koneksi</button>
-      </div>
-      <div id="test-result" style="display:none;margin-top:0;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;line-height:1.65"></div>
-
-      <div class="settings-section">
-        <h4>Kode Google Apps Script</h4>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Copy kode → paste di script.google.com → deploy sebagai Web App (Who has access: Anyone).</div>
-        <textarea class="gas-code" id="gas-code-block" readonly></textarea>
-        <button class="btn-copy" onclick="copyGasCode()">📋 Copy Kode GAS</button>
-      </div>
-
-      <div class="settings-section">
-        <h4>Data Lokal</h4>
-        <button class="btn-hapus-data" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
-        <div style="font-size:11px;color:#EF4444;margin-top:4px">⚠ Tidak bisa dibatalkan. Pastikan sudah kirim ke server.</div>
-      </div>
-      <button class="btn-save-settings" onclick="saveSettings()">💾 Simpan Pengaturan</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: KONFIRMASI HAPUS -->
-<div class="konfirm-overlay hidden" id="konfirm-overlay">
-  <div class="konfirm-box">
-    <div class="konfirm-icon">🗑️</div>
-    <div class="konfirm-title">Hapus Data Ini?</div>
-    <div class="konfirm-msg">Data pokok yang dihapus <strong>tidak bisa dikembalikan</strong>.</div>
-    <div class="konfirm-info" id="konfirm-info">No. Pokok —</div>
-    <div class="konfirm-actions">
-      <button class="konfirm-batal" onclick="tutupKonfirm()">Batal</button>
-      <button class="konfirm-hapus" id="konfirm-ya" onclick="eksekusiHapus()">Hapus</button>
-    </div>
-  </div>
-</div>
-
-<div class="loading-overlay hidden" id="loading"><div class="spinner"></div></div>
-<div class="toast" id="toast"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script>
-'use strict';
-
-// ── URL HELPER ────────────────────────────────────────────────
-function normalizeGasUrl(url) {
-  return (url || '').replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
-}
-
-// ── [PATCH 2] parseSheetId — ekstrak Sheet ID dari URL/ID langsung
-function parseSheetId(input) {
-  input = (input || '').trim();
-  const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (m) return m[1];
-  if (/^[a-zA-Z0-9_-]{20,}$/.test(input)) return input;
-  return null;
-}
-
-// ── CONSTANTS ─────────────────────────────────────────────────
-const DB_NAME = 'GanodermaDB';
-const DB_VER  = 1;
-const STORE   = 'sensus';
-
-const STADIUM = {
-  0:{label:'SEHAT',   code:'H (Hijau)',  bg:'#D4EDDA',fg:'#1A5C2A',dark:'#1A5C2A'},
-  1:{label:'DINI',    code:'K (Kuning)', bg:'#FFF3B0',fg:'#7A5500',dark:'#B87D00'},
-  2:{label:'SAKIT',   code:'M (Orange)', bg:'#FFE0B2',fg:'#7A3A00',dark:'#E65100'},
-  3:{label:'TUMBANG', code:'B (Merah)',  bg:'#FFCDD2',fg:'#7B0000',dark:'#C62828'},
-  4:{label:'TUMBANG', code:'P (Merah)',  bg:'#FF8A80',fg:'#FFFFFF', dark:'#B71C1C'},
-};
-
-const REC_SHORT = {
-  0:`SEHAT — PEMELIHARAAN RUTIN:
-1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.
-2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.
-3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.
-4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.
-5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
-  1:`STADIUM 1 — TINDAKAN PREVENTIF DINI:
-1. Konfirmasi ulang & survei lebih detail dalam 2–4 minggu ke depan.
-2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.
-3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.
-4. Periksa & perbaiki drainase — lahan tidak boleh tergenang air.
-5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.
-6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
-  2:`STADIUM 2 — TINDAKAN KURATIF (SURGERY):
-1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.
-2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.
-3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.
-4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.
-5. Monitor kondisi pokok intensif setiap 2 minggu.
-6. Jika dalam 2 bulan tidak membaik atau gejala memburuk ⇒ eskalasi ke ERADIKASI.`,
-  3:`STADIUM 3 — ERADIKASI SEGERA (SANITASI TOTAL):
-1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.
-2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.
-   ⚠ JANGAN hanya tebang dengan Chainsaw — bonggol yang tersisa = sumber penularan ke pokok baru!
-3. Gali lubang min. kedalaman 1 m, luas 1,5 m × 1,5 m. Balik tanah agar spora terpapar sinar UV matahari.
-4. Cincang batang ketebalan 5–10 cm, sebar MERATA di permukaan — jangan ditumpuk.
-5. Tabur Dolomit + Trichoderma spp. 200–400 gr ke lubang, campur dengan tanah galian.
-6. Biarkan lubang BERA 6–12 bulan hingga dekomposisi selesai & inokulum jamur mati.
-7. Buat parit isolasi di sekeliling pokok sehat terdekat.
-8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
-  4:`STADIUM 4 — SANITASI LANJUTAN & PERSIAPAN REPLANTING:
-1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.
-2. Gali area bekas bonggol sedalam 80–100 cm — ambil sisa akar besar yang masih ada secara manual.
-3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.
-4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.
-5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.
-6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.
-7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
-};
-
-const GEJALA_DAUN = [
-  {field:'daun_tombak',  label:'Ada 3+ daun muda menguncup di pucuk (belum mekar)'},
-  {field:'daun_klorosis',label:'Daun tampak kuning, pucat, atau tidak hijau segar'},
-  {field:'daun_sengkleh',label:'Pelepah bawah jatuh/sengkleh sebelum waktunya (masih hijau)'},
-  {field:'daun_skirting',label:'Banyak pelepah kering menggantung di batang seperti "rok"'},
-  {field:'daun_tajuk',   label:'Pucuk pohon kerdil, daun ujung kecil-kecil dan tidak mekar'},
-];
-const GEJALA_BATANG = [
-  {field:'batang_miselia',   label:'Ada bercak atau benang putih kecil di pangkal batang (tanda awal — Stadium 1)'},
-  {field:'batang_tubuh_buah',label:'Ada jamur bentuk kipas coklat-putih tumbuh di pangkal batang'},
-  {field:'batang_lunak',     label:'Tekan pangkal batang pakai ibu jari: terasa empuk atau lembek'},
-];
-const GEJALA_AKAR = [
-  {field:'akar_busuk',  label:'Gali sedikit tanah di piringan: akar warna hitam/coklat gelap, lembek, bau busuk'},
-  {field:'akar_miselia',label:'Ada benang-benang putih jamur di pangkal batang atau di antara akar'},
-];
-
-const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
-// Deploy: Execute as: Me | Who has access: Anyone
-// Tidak ada perubahan pada GAS — kode ini sama seperti sebelumnya.
-
-var FOLDER_NAME = 'SensusGanoderma_Foto';
-
-function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss   = SpreadsheetApp.getActiveSpreadsheet();
-    var sh   = ss.getSheetByName('SensusGanoderma');
-    if (!sh) {
-      sh = ss.insertSheet('SensusGanoderma');
-      var header = ['ID','Waktu Simpan','Kebun','Tanggal','Divisi','Blok','Mandor','Pengecek','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Link Foto'];
-      sh.getRange(1,1,1,header.length).setValues([header]).setFontWeight('bold');
-      sh.setFrozenRows(1);
-    }
-    var folder = getOrCreateFolder(FOLDER_NAME);
-    var links  = [];
-    for (var i = 0; i < data.length; i++) {
-      var r = data[i];
-      var linkFoto = '';
-      if (r.foto && r.foto.indexOf('data:image') === 0) {
-        try {
-          var base64 = r.foto.split(',')[1];
-          var ext    = r.foto.indexOf('jpeg') > -1 ? 'jpg' : 'png';
-          var fname  = 'Pokok' + (r.no_pokok||'') + '_Baris' + (r.baris||'') + '_Blok' + (r.blok||'') + '_' + new Date().getTime() + '.' + ext;
-          var subFolder = getOrCreateSubFolder(folder, r.kebun || 'Lainnya');
-          var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/' + (ext==='jpg'?'jpeg':'png'), fname);
-          var file = subFolder.createFile(blob);
-          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-          linkFoto = file.getUrl();
-        } catch(fotoErr) { linkFoto = 'Gagal: ' + fotoErr.message; }
-      }
-      links.push(linkFoto);
-      sh.appendRow([r.id||'',r.waktu_simpan||new Date().toLocaleString('id'),r.kebun||'',r.tanggal||'',r.divisi||'',r.blok||'',r.mandor||'',r.pengecek||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium!==undefined?r.skor_stadium:'',r.keparahan||'',r.lat||'',r.lng||'',linkFoto]);
-    }
-    var lastRow = sh.getLastRow();
-    if (lastRow > 1) sh.getRange(2,22,lastRow-1,1).setNumberFormat('0');
-    return buildResponse({status:'ok', n:data.length, links:links});
-  } catch(err) { return buildResponse({status:'error', msg:err.toString()}); }
-}
-function buildResponse(obj) { return ContentService.createTextResponse(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
-function getOrCreateFolder(name) { var f=DriveApp.getFoldersByName(name); return f.hasNext()?f.next():DriveApp.createFolder(name); }
-function getOrCreateSubFolder(p,n) { var s=p.getFoldersByName(n); return s.hasNext()?s.next():p.createFolder(n); }
-function doGet(e) {
-  var params=e.parameter, callback=params.callback||'cb', action=params.action||'';
-
-  // ─── Proxy gambar dari Drive → base64 via JSONP ───────────
-  // Dikembalikan sebagai JSONP (MimeType.JAVASCRIPT) karena GAS
-  // menambahkan Access-Control-Allow-Origin untuk tipe ini.
-  // App memanggil via <script> tag agar tidak diblokir CORS/SW.
-  if (action === 'getImage') {
-    try {
-      var fileId = params.fileId || '';
-      if (!fileId) return wrapJsonp(callback, {status:'error', msg:'No fileId'});
-      var file = DriveApp.getFileById(fileId);
-      var blob = file.getBlob();
-      var mime = blob.getContentType() || 'image/jpeg';
-      var b64  = Utilities.base64Encode(blob.getBytes());
-      return wrapJsonp(callback, {status:'ok', data:'data:'+mime+';base64,'+b64});
-    } catch(err) {
-      return wrapJsonp(callback, {status:'error', msg:err.toString()});
-    }
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sensus Ganoderma</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+  :root {
+    --green-900: #0B2614;
+    --green-800: #144D23;
+    --green-700: #1B6B30;
+    --green-600: #248A3D;
+    --green-500: #2EA84A;
+    --green-100: #E6F4EA;
+    --green-50:  #F0FAF2;
+    --cream:     #F4F6F4;
+    --white:     #FFFFFF;
+    --gray-50:   #F8F9F8;
+    --gray-100:  #EDEEED;
+    --gray-200:  #D8DAD8;
+    --gray-400:  #9AA39A;
+    --gray-600:  #637063;
+    --gray-800:  #2A322A;
+    --text:      #1A201A;
+    --text-muted:#637063;
+    --radius:    14px;
+    --radius-sm: 10px;
+    --shadow:    0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    --st0-bg:#D4EDDA; --st0-fg:#1A5C2A; --st0-dark:#1A5C2A;
+    --st1-bg:#FFF3B0; --st1-fg:#7A5500; --st1-dark:#B87D00;
+    --st2-bg:#FFE0B2; --st2-fg:#7A3A00; --st2-dark:#E65100;
+    --st3-bg:#FFCDD2; --st3-fg:#8B0000; --st3-dark:#C62828;
+    --st4-bg:#FF8A80; --st4-fg:#FFFFFF; --st4-dark:#B71C1C;
   }
-
-  if (action!=='getData') return wrapJsonp(callback,{status:'error',msg:'Unknown action'});
-  try {
-    var ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName('SensusGanoderma');
-    if (!sh) return wrapJsonp(callback,{status:'error',msg:'Sheet belum ada.'});
-    var allVals=sh.getDataRange().getValues();
-    if (allVals.length<2) return wrapJsonp(callback,{status:'ok',data:[]});
-    var headers=allVals[0], fKebun=(params.kebun||'').toString().trim().toUpperCase(), fDivisi=(params.divisi||'').toString().trim(), fBlok=(params.blok||'').toString().trim().toUpperCase();
-    var rows=[];
-    for (var i=1;i<allVals.length;i++) { var row={}; for (var j=0;j<headers.length;j++) row[headers[j]]=allVals[i][j]; if(fKebun&&String(row['Kebun']||'').toUpperCase()!==fKebun)continue; if(fDivisi&&String(row['Divisi']||'').toLowerCase()!==fDivisi.toLowerCase())continue; if(fBlok&&String(row['Blok']||'').toUpperCase()!==fBlok)continue; rows.push(row); }
-    return wrapJsonp(callback,{status:'ok',data:rows});
-  } catch(err) { return wrapJsonp(callback,{status:'error',msg:err.toString()}); }
-}
-function wrapJsonp(callback,obj) { return ContentService.createTextResponse(callback+'('+JSON.stringify(obj)+');').setMimeType(ContentService.MimeType.JAVASCRIPT); }
-`;
-
-// ── STATE ─────────────────────────────────────────────────────
-let db = null;
-let currentKondisi = 'Normal/Berdiri';
-let gejalaState = {};
-let fotoBase64 = null;
-let allRecords = [];
-
-// ── DB (tidak berubah) ────────────────────────────────────────
-function openDB() {
-  return new Promise((res,rej) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains(STORE)) {
-        const s = d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
-        s.createIndex('kebun','kebun',{unique:false});
-        s.createIndex('divisi','divisi',{unique:false});
-        s.createIndex('blok','blok',{unique:false});
-        s.createIndex('status_kirim','status_kirim',{unique:false});
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--cream);color:var(--text);font-size:15px}
+  .app-header{position:sticky;top:0;z-index:100;background:linear-gradient(135deg,#0B2614 0%,#1B6B30 100%);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 16px rgba(0,0,0,0.35);width:100%;box-sizing:border-box}
+  .header-left{display:flex;align-items:center;gap:10px}
+  .header-logo{font-size:22px}
+  .header-title{color:#FFFFFF;font-size:18px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+  .header-sub{color:#86EFAC;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase}
+  .btn-settings{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:#FFF;width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;backdrop-filter:blur(8px)}
+  .btn-settings:hover{background:rgba(255,255,255,0.2)}
+  .tab-nav{display:flex;background:var(--green-900);border-bottom:none;width:100%;overflow:hidden;padding:0 8px;gap:4px}
+  .tab-btn{flex:1;padding:10px 8px 12px;border:none;background:transparent;color:rgba(255,255,255,0.55);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;border-bottom:3px solid transparent;display:flex;align-items:center;justify-content:center;gap:5px;letter-spacing:.1px}
+  .tab-btn.active{color:#FFFFFF;border-bottom-color:#4ADE80}
+  .page{display:none;padding:14px 14px 120px;width:100%;box-sizing:border-box;max-width:100vw;overflow-x:hidden}
+  .page.active{display:block}
+  .card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.04)}
+  .card-header{padding:13px 15px 10px;border-bottom:1px solid var(--gray-100);background:var(--gray-50)}
+  .card-title{font-size:13px;font-weight:800;color:var(--green-700);display:flex;align-items:center;gap:7px;letter-spacing:-.1px}
+  .card-title .icon{font-size:16px}
+  .card-note{font-size:11px;color:var(--text-muted);margin-top:2px;padding-left:24px;line-height:1.4}
+  .card-body{padding:13px 14px;width:100%;box-sizing:border-box}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;min-width:0}
+  .form-grid-3{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;min-width:0}
+  .field-group{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .field-group.full{grid-column:1/-1}
+  .field-group label{font-size:10px;font-weight:700;color:var(--green-700);text-transform:uppercase;letter-spacing:.7px}
+  .field-group input,.field-group select,.field-group textarea{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:11px 12px;font-family:inherit;font-size:15px;color:var(--text);background:var(--white);transition:border-color .15s,box-shadow .15s;outline:none;width:100%;box-sizing:border-box;min-width:0}
+  .field-group input:focus,.field-group select:focus,.field-group textarea:focus{border-color:var(--green-500);box-shadow:0 0 0 3px rgba(36,138,61,.15);background:#fff}
+  .field-group textarea{resize:vertical;min-height:72px}
+  .kondisi-group{display:flex;flex-direction:column;gap:8px;padding:10px 14px 14px;width:100%;box-sizing:border-box}
+  .kondisi-btn{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:var(--white);cursor:pointer;font-family:inherit;text-align:left;transition:all .2s;font-size:13px;font-weight:600;color:var(--text);width:100%;box-sizing:border-box}
+  .kondisi-btn .ki{font-size:20px;flex-shrink:0}
+  .kondisi-btn .kt{flex:1}
+  .kondisi-btn .kt small{display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:1px}
+  .kondisi-btn.active-normal{border-color:var(--green-500);background:var(--green-50);color:var(--green-700);box-shadow:0 0 0 3px rgba(36,138,61,.12)}
+  .kondisi-btn.active-st3{border-color:#C62828;background:#FFCDD2;color:#7B0000}
+  .kondisi-btn.active-st3 .kt small{color:#B71C1C}
+  .kondisi-btn.active-st4{border-color:#B71C1C;background:#FF8A80;color:#FFFFFF}
+  .gejala-list{padding:0 14px 10px;display:flex;flex-direction:column;gap:0;width:100%;box-sizing:border-box}
+  .gejala-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--gray-100)}
+  .gejala-item:last-child{border-bottom:none}
+  .gejala-num{width:24px;height:24px;border-radius:50%;background:var(--green-700);color:#FFF;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .gejala-label{flex:1;font-size:12px;line-height:1.35;color:var(--text);min-width:0;word-break:break-word}
+  .toggle-row{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--gray-200);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+  .tog-btn{padding:9px 11px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;background:var(--gray-100);color:var(--gray-400);transition:all .15s;min-width:40px;letter-spacing:.1px}
+  .tog-btn:not(:last-child){border-right:1px solid var(--gray-200)}
+  .tog-btn.active-ya{background:#22803A;color:#FFF}
+  .tog-btn.active-tidak{background:#757575;color:#FFF}
+  .tog-btn.active-na{background:#EAA100;color:#FFF}
+  .foto-area{padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px;width:100%;box-sizing:border-box}
+  .btn-camera{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border-radius:var(--radius-sm);border:2px dashed var(--green-600);background:var(--green-100);color:var(--green-700);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
+  .btn-camera:hover{background:var(--green-100);border-style:solid}
+  .foto-preview{position:relative;border-radius:var(--radius-sm);overflow:hidden}
+  .foto-preview img{width:100%;max-height:200px;object-fit:cover;display:block}
+  .btn-hapus-foto{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .sticky-bottom{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(255,255,255,0.97);border-top:1px solid var(--gray-100);padding:12px 14px;box-sizing:border-box;backdrop-filter:blur(12px)}
+  .btn-simpan{width:100%;padding:16px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,var(--green-700) 0%,var(--green-500) 100%);color:#FFF;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(27,107,48,.45)}
+  .btn-simpan:hover{background:var(--green-800);transform:translateY(-1px);box-shadow:0 6px 18px rgba(34,98,43,.45)}
+  .btn-simpan:active{transform:translateY(0);box-shadow:0 2px 8px rgba(34,98,43,.3)}
+  .filter-bar{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;border:1px solid rgba(0,0,0,0.04)}
+  .filter-bar h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px}
+  .filter-row{display:flex;gap:6px;flex-wrap:wrap}
+  .filter-row select{flex:1;min-width:0;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:9px 8px;font-family:inherit;font-size:12px;background:#FFF;outline:none;max-width:100%}
+  .filter-row select:focus{border-color:var(--green-600)}
+  .btn-reset-filter{padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:#FFF;font-family:inherit;font-size:13px;cursor:pointer;color:var(--text-muted)}
+  .summary-strip{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .summary-strip::-webkit-scrollbar{display:none}
+  .stat-chip{display:flex;flex-direction:column;align-items:center;padding:10px 14px;border-radius:var(--radius-sm);flex-shrink:0;min-width:70px;border:1px solid rgba(0,0,0,0.06)}
+  .stat-chip .sv{font-size:22px;font-weight:800;line-height:1}
+  .stat-chip .sl{font-size:10px;font-weight:600;margin-top:2px;opacity:.85}
+  .record-list{display:flex;flex-direction:column;gap:8px}
+  .record-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:all .2s;border:1px solid rgba(0,0,0,0.05);border-left:5px solid var(--gray-200)}
+  .record-card:hover{box-shadow:var(--shadow-lg)}
+  .record-card.st0{border-left-color:#1A5C2A}
+  .record-card.st1{border-left-color:#B87D00}
+  .record-card.st2{border-left-color:#E65100}
+  .record-card.st3{border-left-color:#C62828}
+  .record-card.st4{border-left-color:#B71C1C}
+  .record-top{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px 8px;gap:8px}
+  .record-id{font-size:14px;font-weight:800;word-break:break-word}
+  .record-loc{font-size:11px;color:var(--text-muted);margin-top:2px;word-break:break-word}
+  .stadium-badge{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .record-bottom{display:flex;align-items:center;justify-content:space-between;padding:0 14px 12px}
+  .record-meta{font-size:11px;color:var(--text-muted)}
+  .status-kirim{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .status-kirim.belum{background:#FFF3E0;color:#E65100}
+  .status-kirim.sudah{background:#E8F5E9;color:#1B5E20}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
+  .empty-state .ei{font-size:48px;margin-bottom:12px}
+  .empty-state p{font-size:14px}
+  .btn-kirim-wrap{padding:12px;width:100%;box-sizing:border-box}
+  .btn-kirim{width:100%;padding:15px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1A56B0 0%,#2563EB 100%);color:#FFF;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(26,86,176,.35);transition:all .2s}
+  .btn-kirim:hover{background:#1A3F8F;transform:translateY(-1px)}
+  .btn-kirim:disabled{background:var(--gray-400);cursor:not-allowed;transform:none;box-shadow:none}
+  .kirim-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px}
+  .modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+  .modal-overlay.center{align-items:center;padding:12px}
+  .modal-overlay.hidden{display:none}
+  .modal-sheet{width:100%;margin:0 auto;background:var(--white);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.25,.46,.45,.94)}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-handle{width:40px;height:4px;background:var(--gray-200);border-radius:2px;margin:10px auto 0}
+  .modal-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+  .modal-title{font-size:16px;font-weight:800}
+  .btn-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-600);padding:4px;border-radius:50%}
+  .dialog-hero{padding:28px 20px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+  .dialog-stadium-num{font-size:13px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:1px}
+  .dialog-stadium-label{font-size:28px;font-weight:800;line-height:1}
+  .dialog-code{font-size:13px;font-weight:600;opacity:.75;margin-top:2px}
+  .dialog-info-card{margin:0 16px;background:var(--gray-50);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--gray-200)}
+  .dialog-info-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .dialog-info-row:last-child{margin-bottom:0}
+  .dialog-info-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;min-width:80px}
+  .dialog-info-val{font-size:14px;font-weight:600}
+  .dialog-rec{margin:12px 16px;padding:14px 16px;border-radius:var(--radius-sm);border-left:4px solid var(--green-600);background:var(--green-100);max-height:300px;overflow-y:auto}
+  .dialog-rec-label{font-size:11px;font-weight:700;color:var(--green-800);text-transform:uppercase;margin-bottom:4px}
+  .dialog-rec-text{font-size:13px;color:var(--green-800);line-height:1.65;white-space:pre-line}
+  .dialog-geo{text-align:center;padding:8px;font-size:11px;color:var(--text-muted)}
+  .dialog-footer{padding:14px 16px 24px}
+  .btn-lanjut{width:100%;padding:15px;border-radius:var(--radius);border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer}
+  .settings-body{padding:16px 20px 32px;display:flex;flex-direction:column;gap:16px}
+  .settings-section h4{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .settings-section input,.settings-section textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:13px;outline:none}
+  .settings-section input:focus{border-color:var(--green-600)}
+  .gas-code{background:#1A1A1A;color:#7BC98A;font-family:'Courier New',monospace;font-size:10px;padding:12px;border-radius:var(--radius-sm);overflow-x:auto;white-space:pre;border:none;width:100%;box-sizing:border-box;max-height:200px;overflow-y:auto}
+  .btn-copy{margin-top:6px;padding:8px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .btn-save-settings{width:100%;padding:14px;border-radius:var(--radius);border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
+  .test-ok{background:#E8F5E9;color:#1B5E20;border:1px solid #C8E6C9}
+  .test-err{background:#FFEBEE;color:#B71C1C;border:1px solid #FFCDD2}
+  .test-warn{background:#FFF9E0;color:#7A5500;border:1px solid #FFE082}
+  .test-loading{background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB}
+  .btn-hapus-data{width:100%;padding:12px;border-radius:var(--radius);border:2px solid #EF4444;background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .detail-body{padding:14px 20px 32px;display:flex;flex-direction:column;gap:10px}
+  .detail-section h5{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;margin-top:6px}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+  .detail-row{display:flex;flex-direction:column;gap:1px;background:var(--gray-50);border-radius:6px;padding:8px 10px}
+  .detail-row.full{grid-column:1/-1}
+  .dr-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.3px}
+  .dr-val{font-size:13px;font-weight:600;color:var(--text)}
+  .gejala-hasil{display:flex;flex-wrap:wrap;gap:5px}
+  .gejala-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .gejala-chip.ya{background:#E8F5E9;color:#1B5E20}
+  .gejala-chip.tidak{background:#F5F5F5;color:#9E9E9E}
+  .gejala-chip.na{background:#FFF9E6;color:#795548}
+  .detail-foto img{width:100%;border-radius:var(--radius-sm);max-height:220px;object-fit:cover}
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--gray-800);color:#FFF;padding:12px 20px;border-radius:100px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .loading-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+  .loading-overlay.hidden{display:none}
+  .spinner{width:48px;height:48px;border:5px solid rgba(255,255,255,.2);border-top-color:#FFF;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (max-width: 380px) {
+    .form-grid{grid-template-columns:1fr}
+    .form-grid .field-group.full{grid-column:1}
+    .tog-btn{padding:8px 7px;font-size:11px;min-width:32px}
+    .header-title{font-size:15px}
+    .header-sub{font-size:10px}
+    .tab-btn{font-size:12px;padding:11px 6px}
+    .stat-chip{min-width:60px;padding:7px 10px}
+    .stat-chip .sv{font-size:18px}
+  }
+  @media (max-width: 340px) {
+    .form-grid-3{grid-template-columns:1fr 1fr}
+    .tog-btn{padding:7px 5px;min-width:28px}
+  }
+  .konfirm-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
+  .konfirm-overlay.hidden{display:none}
+  .konfirm-box{background:#FFF;border-radius:18px;padding:0;width:100%;max-width:320px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:popIn .2s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes popIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .konfirm-icon{text-align:center;padding:28px 20px 16px;font-size:44px;line-height:1}
+  .konfirm-title{text-align:center;font-size:18px;font-weight:800;color:#1A201A;padding:0 24px 8px}
+  .konfirm-msg{text-align:center;font-size:13px;color:#637063;padding:0 24px 24px;line-height:1.5}
+  .konfirm-info{background:#FFF8F0;border-top:1px solid #FFE0B2;padding:12px 20px;text-align:center;font-size:12px;font-weight:600;color:#E65100;margin-bottom:0}
+  .konfirm-actions{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #EDEEED}
+  .konfirm-batal{padding:16px;border:none;background:#FFF;font-family:inherit;font-size:15px;font-weight:600;color:#637063;cursor:pointer;border-right:1px solid #EDEEED;transition:background .15s}
+  .konfirm-batal:active{background:#F4F6F4}
+  .konfirm-hapus{padding:16px;border:none;background:#FFF;font-family:inherit;font-size:15px;font-weight:800;color:#EF4444;cursor:pointer;transition:background .15s}
+  .konfirm-hapus:active{background:#FFF0F0}
+  #peta-map{height:52vh;min-height:300px;border-radius:var(--radius);overflow:hidden;margin-bottom:10px;border:2px solid var(--gray-200);background:#C8D8C8}
+  .peta-filter-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:10px;border:1px solid rgba(0,0,0,0.04)}
+  .peta-filter-title{font-size:12px;font-weight:800;color:var(--green-700);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+  .peta-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .peta-input{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);background:var(--white);width:100%;box-sizing:border-box;outline:none;transition:border-color .15s}
+  .peta-input:focus{border-color:var(--green-500);box-shadow:0 0 0 3px rgba(36,138,61,.15)}
+  .peta-input.full{grid-column:1/-1}
+  .btn-ambil{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,var(--green-700),var(--green-500));color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(27,107,48,.35);transition:all .2s;margin-bottom:8px}
+  .btn-ambil:hover{transform:translateY(-1px)}
+  .btn-ambil:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
+  .peta-status{font-size:12px;text-align:center;padding:9px 12px;border-radius:var(--radius-sm);font-weight:600;line-height:1.4}
+  .peta-status.idle{background:var(--gray-100);color:var(--text-muted)}
+  .peta-status.loading{background:#E3F2FD;color:#1565C0}
+  .peta-status.ok{background:#E8F5E9;color:#1B5E20}
+  .peta-status.err{background:#FFEBEE;color:#B71C1C}
+  .peta-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid rgba(0,0,0,0.08)}
+  .btn-dl-excel{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(27,94,32,.3);transition:all .2s;margin-top:8px}
+  .btn-dl-excel:hover{transform:translateY(-1px)}
+  .btn-dl-excel:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
+  .btn-dl-excel-local{width:100%;padding:13px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#004D40,#00796B);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,77,64,.3);transition:all .2s;margin-top:8px}
+  .btn-dl-excel-local:hover{transform:translateY(-1px)}
+  /* ── PDF BUTTONS ─────────────────────────────────────────────── */
+  .btn-dl-pdf{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(123,31,162,.3);transition:all .2s;margin-top:8px}
+  .btn-dl-pdf:hover{transform:translateY(-1px)}
+  .btn-dl-pdf:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
+  .btn-dl-pdf-local{width:100%;padding:13px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#4A148C,#6A1B9A);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(74,20,140,.3);transition:all .2s;margin-top:8px}
+  .btn-dl-pdf-local:hover{transform:translateY(-1px)}
+  .leaflet-popup-content{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;line-height:1.5;max-width:220px}
+  .leaflet-popup-content img{width:100%;border-radius:6px;margin-top:6px;display:block}
+  .popup-badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:4px}
+  @media (max-width:380px){
+    .peta-inputs{grid-template-columns:1fr}
+    .peta-input.full{grid-column:1}
+  }
+  </style>
+  </head>
+  <body>
+  
+  <div class="app-header">
+    <div class="header-left">
+      <div class="header-logo">🌿</div>
+      <div>
+        <div class="header-title">Sensus Ganoderma</div>
+        <div class="header-sub">SISTEM PPKS — DETEKSI LAPANGAN</div>
+      </div>
+    </div>
+    <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
+  </div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" id="tab-form" onclick="showPage('form')">📝 Form Sensus</button>
+    <button class="tab-btn" id="tab-data" onclick="showPage('data')">📋 Data Tersimpan</button>
+    <button class="tab-btn" id="tab-peta" onclick="showPage('peta')">🗺️ Peta</button>
+  </nav>
+  
+  <!-- PAGE: FORM SENSUS -->
+  <div class="page active" id="page-form">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">📌</span>Informasi Sensus</div>
+        <div class="card-note">Diisi sekali — otomatis tetap ada saat simpan, hilang bila refresh</div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group full"><label>Kebun / Perusahaan</label><input type="text" id="f_kebun" placeholder="Nama Kebun Atau Perusahaan" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="field-group"><label>Divisi / Afdeling</label><input type="text" id="f_divisi" placeholder="Nama Divisi" autocapitalize="words" oninput="toTitleCase(this)"></div>
+          <div class="field-group"><label>Blok / Petak</label><input type="text" id="f_blok" placeholder="Contoh: H1" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
+          <div class="field-group"><label>Tanggal Sensus</label><input type="date" id="f_tanggal"></div>
+          <div class="field-group"><label>Nama Mandor</label><input type="text" id="f_mandor" placeholder="Nama Mandor" autocapitalize="words" oninput="toTitleCase(this)"></div>
+          <div class="field-group full"><label>Nama Pengecek</label><input type="text" id="f_pengecek" placeholder="Nama Pengecek" autocapitalize="words" oninput="toTitleCase(this)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🌴</span>Identitas Pokok</div>
+        <div class="card-note">No. pokok otomatis naik setiap simpan. Baris tetap tersimpan, hilang bila refresh</div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field-group"><label>No. Pokok</label><input type="number" id="f_no_pokok" min="1" value="1"></div>
+          <div class="field-group"><label>Baris</label><input type="text" id="f_baris" placeholder="Contoh: 5" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="icon">🔎</span>Kondisi Pokok</div>
+        <div class="card-note">Pilih kondisi fisik pohon yang sedang diperiksa</div>
+      </div>
+      <div class="kondisi-group" id="kondisi-group">
+        <button class="kondisi-btn active-normal" data-val="Normal/Berdiri" onclick="setKondisi(this)">
+          <span class="ki">🌿</span>
+          <div class="kt">Masih Berdiri Normal<small>Periksa gejala daun, batang, dan akar di bawah</small></div>
+        </button>
+        <button class="kondisi-btn" data-val="Tumbang - Bonggol Ada" onclick="setKondisi(this)">
+          <span class="ki">⬛</span>
+          <div class="kt"><strong>Tumbang — Ada Sisa Bonggol di Tanah</strong><small>Stadium 3 (Hitam) — Eradikasi dengan excavator</small></div>
+        </button>
+        <button class="kondisi-btn" data-val="Tumbang - Bonggol Tidak Ada" onclick="setKondisi(this)">
+          <span class="ki">⬜</span>
+          <div class="kt"><strong>Tumbang — Tidak Ada Sisa Bonggol</strong><small>Stadium 4 (Putih) — Sanitasi lanjutan & replanting</small></div>
+        </button>
+      </div>
+    </div>
+    <div class="card" id="card-gejala">
+      <div class="card-header"><div class="card-title"><span class="icon">🍃</span>Gejala pada Daun</div><div class="card-note">Amati kondisi daun dari bawah ke pucuk</div></div>
+      <div class="gejala-list" id="list-daun"></div>
+      <div class="card-header" style="margin-top:4px"><div class="card-title"><span class="icon">🪵</span>Gejala pada Batang</div><div class="card-note">Periksa bagian pangkal batang dekat tanah</div></div>
+      <div class="gejala-list" id="list-batang"></div>
+      <div class="card-header" style="margin-top:4px"><div class="card-title"><span class="icon">🪱</span>Gejala pada Akar</div><div class="card-note">Gali sedikit tanah di piringan untuk periksa akar</div></div>
+      <div class="gejala-list" id="list-akar"></div>
+    </div>
+    <div class="card" id="card-foto" style="display:none">
+      <div class="card-header"><div class="card-title"><span class="icon">📷</span>Foto Pokok (Opsional)</div><div class="card-note">Foto bonggol/kondisi tumbang untuk Stadium 3 & 4</div></div>
+      <div class="foto-area">
+        <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none">
+        <button class="btn-camera" onclick="document.getElementById('foto-input').click()">📷 &nbsp;Ambil Foto Pokok</button>
+        <div id="foto-preview" style="display:none" class="foto-preview">
+          <img id="foto-img" src="">
+          <button class="btn-hapus-foto" onclick="hapusFoto()">✕</button>
+        </div>
+      </div>
+    </div>
+    <div class="sticky-bottom">
+      <button class="btn-simpan" onclick="simpanData()">💾&nbsp;&nbsp;SIMPAN DATA POKOK</button>
+    </div>
+  </div>
+  
+  <!-- PAGE: DATA TERSIMPAN -->
+  <div class="page" id="page-data">
+    <div class="filter-bar">
+      <h4>🔍 Filter Data</h4>
+      <div class="filter-row">
+        <select id="flt-kebun" onchange="applyFilter()"><option value="">Semua Kebun</option></select>
+        <select id="flt-divisi" onchange="applyFilter()"><option value="">Semua Divisi</option></select>
+        <select id="flt-blok" onchange="applyFilter()"><option value="">Semua Blok</option></select>
+        <button class="btn-reset-filter" onclick="resetFilter()">✕</button>
+      </div>
+    </div>
+    <div class="summary-strip" id="summary-strip"></div>
+    <div class="record-list" id="record-list"></div>
+    <div class="btn-kirim-wrap">
+      <button class="btn-kirim" id="btn-kirim" onclick="kirimKeServer()">📡&nbsp;Kirim ke Server (Google Script)</button>
+      <div class="kirim-note" id="kirim-note">Memuat data...</div>
+      <button class="btn-dl-pdf-local" onclick="downloadPdfLocal()">📄&nbsp;&nbsp;Download PDF — Data Lokal</button>
+    </div>
+  </div>
+  
+  <!-- PAGE: PETA LAPORAN -->
+  <div class="page" id="page-peta">
+    <div class="peta-filter-card">
+      <div class="peta-filter-title">📡 Ambil Data dari Google Sheet</div>
+      <div class="peta-inputs">
+        <input class="peta-input" id="peta-kebun" placeholder="Nama Kebun (kosong = semua)" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+        <input class="peta-input" id="peta-divisi" placeholder="Divisi (opsional)" autocapitalize="words">
+        <input class="peta-input full" id="peta-blok" placeholder="Blok / Petak (kosong = semua blok)" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <button class="btn-ambil" id="btn-ambil" onclick="ambilDataServer()">📡&nbsp;&nbsp;Ambil Data dari Server</button>
+      <div class="peta-status idle" id="peta-status">Masukkan filter lalu tekan tombol untuk mengambil data dari Google Sheets.</div>
+    </div>
+    <div class="peta-legend">
+      <div class="legend-item" style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
+      <div class="legend-item" style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
+      <div class="legend-item" style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
+      <div class="legend-item" style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
+      <div class="legend-item" style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
+      <div class="legend-item" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
+    </div>
+    <div id="peta-map"></div>
+    <button class="btn-dl-pdf" id="btn-dl-server" onclick="downloadPdfServer()" disabled>📄&nbsp;&nbsp;Download PDF — Data Server</button>
+  </div>
+  
+  <!-- MODAL: HASIL SIMPAN -->
+  <div class="modal-overlay hidden" id="modal-dialog" onclick="closeDialog(event)">
+    <div class="modal-sheet" id="dialog-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div class="dialog-hero" id="dialog-hero">
+        <div class="dialog-stadium-num" id="d-stadnum"></div>
+        <div class="dialog-stadium-label" id="d-label"></div>
+        <div class="dialog-code" id="d-code"></div>
+      </div>
+      <div class="dialog-info-card">
+        <div class="dialog-info-row"><div class="dialog-info-label">📍 Pokok</div><div class="dialog-info-val" id="d-pokok"></div></div>
+        <div class="dialog-info-row"><div class="dialog-info-label">🔲 Blok</div><div class="dialog-info-val" id="d-blok"></div></div>
+        <div class="dialog-info-row"><div class="dialog-info-label">📅 Tanggal</div><div class="dialog-info-val" id="d-tanggal"></div></div>
+      </div>
+      <div class="dialog-rec">
+        <div class="dialog-rec-label">🛠 Rekomendasi Tindakan</div>
+        <div class="dialog-rec-text" id="d-rek"></div>
+      </div>
+      <div class="dialog-geo" id="d-geo"></div>
+      <div class="dialog-footer">
+        <button class="btn-lanjut" onclick="closeDialog()">✓&nbsp;&nbsp;Lanjut Isi Data Berikutnya</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- MODAL: DETAIL RECORD -->
+  <div class="modal-overlay hidden center" id="modal-detail" onclick="closeDetail(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:500px">
+      <div class="modal-header">
+        <div class="modal-title" id="detail-title">Detail Pokok</div>
+        <button class="btn-close" onclick="closeDetail()">✕</button>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </div>
+  </div>
+  
+  <!-- MODAL: SETTINGS -->
+  <div class="modal-overlay hidden center" id="modal-settings" onclick="closeSettings(event)">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="border-radius:var(--radius);width:calc(100vw - 24px);max-width:540px">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Pengaturan</div>
+        <button class="btn-close" onclick="closeSettings()">✕</button>
+      </div>
+      <div class="settings-body">
+  
+        <!-- GAS URL — tidak berubah -->
+        <div class="settings-section">
+          <h4>URL Google Apps Script</h4>
+          <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.5">
+            Digunakan untuk <strong>mengirim (POST)</strong> data ke Google Sheets.<br>
+            Deploy GAS: <em>Execute as: Me</em> &amp; <em>Who has access: <strong>Anyone</strong></em>.
+          </div>
+        </div>
+  
+        <!-- [PATCH 1] Sheet ID — BARU untuk Tab Peta -->
+        <div class="settings-section">
+          <h4>🗂 Google Sheet ID (untuk Tab Peta)</h4>
+          <input type="text" id="sheet-id-input" placeholder="Paste URL Sheet atau ID-nya..." style="font-size:12px">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.65;background:#F0FAF2;padding:10px 12px;border-radius:8px;border-left:3px solid var(--green-500)">
+            <strong style="color:var(--green-700)">Kenapa perlu ini?</strong>
+            Tab Peta baca data <strong>langsung dari Sheet</strong> (bukan GAS), sehingga masalah <code>/u/N/</code> &amp; CORB tidak terjadi.<br><br>
+            <strong>Setup sekali:</strong> Buka Sheet → <em>Share → Anyone with link → Viewer</em> → copy URL → paste di sini.
+          </div>
+        </div>
+  
+        <div style="display:flex;gap:8px">
+          <button onclick="saveSettings()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 Simpan</button>
+          <button onclick="testKoneksiGAS()" id="btn-test-gas" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔌 Test Koneksi</button>
+        </div>
+        <div id="test-result" style="display:none;margin-top:0;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;line-height:1.65"></div>
+  
+        <div class="settings-section">
+          <h4>Kode Google Apps Script</h4>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Copy kode → paste di script.google.com → deploy sebagai Web App (Who has access: Anyone).</div>
+          <textarea class="gas-code" id="gas-code-block" readonly></textarea>
+          <button class="btn-copy" onclick="copyGasCode()">📋 Copy Kode GAS</button>
+        </div>
+  
+        <div class="settings-section">
+          <h4>Data Lokal</h4>
+          <button class="btn-hapus-data" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
+          <div style="font-size:11px;color:#EF4444;margin-top:4px">⚠ Tidak bisa dibatalkan. Pastikan sudah kirim ke server.</div>
+        </div>
+        <button class="btn-save-settings" onclick="saveSettings()">💾 Simpan Pengaturan</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- MODAL: KONFIRMASI HAPUS -->
+  <div class="konfirm-overlay hidden" id="konfirm-overlay">
+    <div class="konfirm-box">
+      <div class="konfirm-icon">🗑️</div>
+      <div class="konfirm-title">Hapus Data Ini?</div>
+      <div class="konfirm-msg">Data pokok yang dihapus <strong>tidak bisa dikembalikan</strong>.</div>
+      <div class="konfirm-info" id="konfirm-info">No. Pokok —</div>
+      <div class="konfirm-actions">
+        <button class="konfirm-batal" onclick="tutupKonfirm()">Batal</button>
+        <button class="konfirm-hapus" id="konfirm-ya" onclick="eksekusiHapus()">Hapus</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="loading-overlay hidden" id="loading"><div class="spinner"></div></div>
+  <div class="toast" id="toast"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script>
+  'use strict';
+  
+  // ── URL HELPER ────────────────────────────────────────────────
+  function normalizeGasUrl(url) {
+    return (url || '').replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
+  }
+  
+  // ── [PATCH 2] parseSheetId — ekstrak Sheet ID dari URL/ID langsung
+  function parseSheetId(input) {
+    input = (input || '').trim();
+    const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) return m[1];
+    if (/^[a-zA-Z0-9_-]{20,}$/.test(input)) return input;
+    return null;
+  }
+  
+  // ── CONSTANTS ─────────────────────────────────────────────────
+  const DB_NAME = 'GanodermaDB';
+  const DB_VER  = 1;
+  const STORE   = 'sensus';
+  
+  const STADIUM = {
+    0:{label:'SEHAT',   code:'H (Hijau)',  bg:'#D4EDDA',fg:'#1A5C2A',dark:'#1A5C2A'},
+    1:{label:'DINI',    code:'K (Kuning)', bg:'#FFF3B0',fg:'#7A5500',dark:'#B87D00'},
+    2:{label:'SAKIT',   code:'M (Orange)', bg:'#FFE0B2',fg:'#7A3A00',dark:'#E65100'},
+    3:{label:'TUMBANG', code:'B (Merah)',  bg:'#FFCDD2',fg:'#7B0000',dark:'#C62828'},
+    4:{label:'TUMBANG', code:'P (Merah)',  bg:'#FF8A80',fg:'#FFFFFF', dark:'#B71C1C'},
+  };
+  
+  const REC_SHORT = {
+    0:`SEHAT — PEMELIHARAAN RUTIN:
+  1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.
+  2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.
+  3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.
+  4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.
+  5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
+    1:`STADIUM 1 — TINDAKAN PREVENTIF DINI:
+  1. Konfirmasi ulang & survei lebih detail dalam 2–4 minggu ke depan.
+  2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.
+  3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.
+  4. Periksa & perbaiki drainase — lahan tidak boleh tergenang air.
+  5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.
+  6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
+    2:`STADIUM 2 — TINDAKAN KURATIF (SURGERY):
+  1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.
+  2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.
+  3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.
+  4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.
+  5. Monitor kondisi pokok intensif setiap 2 minggu.
+  6. Jika dalam 2 bulan tidak membaik atau gejala memburuk ⇒ eskalasi ke ERADIKASI.`,
+    3:`STADIUM 3 — ERADIKASI SEGERA (SANITASI TOTAL):
+  1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.
+  2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.
+     ⚠ JANGAN hanya tebang dengan Chainsaw — bonggol yang tersisa = sumber penularan ke pokok baru!
+  3. Gali lubang min. kedalaman 1 m, luas 1,5 m × 1,5 m. Balik tanah agar spora terpapar sinar UV matahari.
+  4. Cincang batang ketebalan 5–10 cm, sebar MERATA di permukaan — jangan ditumpuk.
+  5. Tabur Dolomit + Trichoderma spp. 200–400 gr ke lubang, campur dengan tanah galian.
+  6. Biarkan lubang BERA 6–12 bulan hingga dekomposisi selesai & inokulum jamur mati.
+  7. Buat parit isolasi di sekeliling pokok sehat terdekat.
+  8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
+    4:`STADIUM 4 — SANITASI LANJUTAN & PERSIAPAN REPLANTING:
+  1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.
+  2. Gali area bekas bonggol sedalam 80–100 cm — ambil sisa akar besar yang masih ada secara manual.
+  3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.
+  4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.
+  5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.
+  6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.
+  7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
+  };
+  
+  const GEJALA_DAUN = [
+    {field:'daun_tombak',  label:'Ada 3+ daun muda menguncup di pucuk (belum mekar)'},
+    {field:'daun_klorosis',label:'Daun tampak kuning, pucat, atau tidak hijau segar'},
+    {field:'daun_sengkleh',label:'Pelepah bawah jatuh/sengkleh sebelum waktunya (masih hijau)'},
+    {field:'daun_skirting',label:'Banyak pelepah kering menggantung di batang seperti "rok"'},
+    {field:'daun_tajuk',   label:'Pucuk pohon kerdil, daun ujung kecil-kecil dan tidak mekar'},
+  ];
+  const GEJALA_BATANG = [
+    {field:'batang_miselia',   label:'Ada bercak atau benang putih kecil di pangkal batang (tanda awal — Stadium 1)'},
+    {field:'batang_tubuh_buah',label:'Ada jamur bentuk kipas coklat-putih tumbuh di pangkal batang'},
+    {field:'batang_lunak',     label:'Tekan pangkal batang pakai ibu jari: terasa empuk atau lembek'},
+  ];
+  const GEJALA_AKAR = [
+    {field:'akar_busuk',  label:'Gali sedikit tanah di piringan: akar warna hitam/coklat gelap, lembek, bau busuk'},
+    {field:'akar_miselia',label:'Ada benang-benang putih jamur di pangkal batang atau di antara akar'},
+  ];
+  
+  const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
+  // Deploy: Execute as: Me | Who has access: Anyone
+  // Tidak ada perubahan pada GAS — kode ini sama seperti sebelumnya.
+  
+  var FOLDER_NAME = 'SensusGanoderma_Foto';
+  
+  function doPost(e) {
+    try {
+      var data = JSON.parse(e.postData.contents);
+      var ss   = SpreadsheetApp.getActiveSpreadsheet();
+      var sh   = ss.getSheetByName('SensusGanoderma');
+      if (!sh) {
+        sh = ss.insertSheet('SensusGanoderma');
+        var header = ['ID','Waktu Simpan','Kebun','Tanggal','Divisi','Blok','Mandor','Pengecek','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Link Foto'];
+        sh.getRange(1,1,1,header.length).setValues([header]).setFontWeight('bold');
+        sh.setFrozenRows(1);
       }
-    };
-    req.onsuccess = e => res(e.target.result);
-    req.onerror   = e => rej(e.target.error);
+      var folder = getOrCreateFolder(FOLDER_NAME);
+      var links  = [];
+      for (var i = 0; i < data.length; i++) {
+        var r = data[i];
+        var linkFoto = '';
+        if (r.foto && r.foto.indexOf('data:image') === 0) {
+          try {
+            var base64 = r.foto.split(',')[1];
+            var ext    = r.foto.indexOf('jpeg') > -1 ? 'jpg' : 'png';
+            var fname  = 'Pokok' + (r.no_pokok||'') + '_Baris' + (r.baris||'') + '_Blok' + (r.blok||'') + '_' + new Date().getTime() + '.' + ext;
+            var subFolder = getOrCreateSubFolder(folder, r.kebun || 'Lainnya');
+            var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/' + (ext==='jpg'?'jpeg':'png'), fname);
+            var file = subFolder.createFile(blob);
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            linkFoto = file.getUrl();
+          } catch(fotoErr) { linkFoto = 'Gagal: ' + fotoErr.message; }
+        }
+        links.push(linkFoto);
+        sh.appendRow([r.id||'',r.waktu_simpan||new Date().toLocaleString('id'),r.kebun||'',r.tanggal||'',r.divisi||'',r.blok||'',r.mandor||'',r.pengecek||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium!==undefined?r.skor_stadium:'',r.keparahan||'',r.lat||'',r.lng||'',linkFoto]);
+      }
+      var lastRow = sh.getLastRow();
+      if (lastRow > 1) sh.getRange(2,22,lastRow-1,1).setNumberFormat('0');
+      return buildResponse({status:'ok', n:data.length, links:links});
+    } catch(err) { return buildResponse({status:'error', msg:err.toString()}); }
+  }
+  function buildResponse(obj) { return ContentService.createTextResponse(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
+  function getOrCreateFolder(name) { var f=DriveApp.getFoldersByName(name); return f.hasNext()?f.next():DriveApp.createFolder(name); }
+  function getOrCreateSubFolder(p,n) { var s=p.getFoldersByName(n); return s.hasNext()?s.next():p.createFolder(n); }
+  function doGet(e) {
+    var params=e.parameter, callback=params.callback||'cb', action=params.action||'';
+  
+    // ─── Proxy gambar dari Drive → base64 via JSONP ───────────
+    // Dikembalikan sebagai JSONP (MimeType.JAVASCRIPT) karena GAS
+    // menambahkan Access-Control-Allow-Origin untuk tipe ini.
+    // App memanggil via <script> tag agar tidak diblokir CORS/SW.
+    if (action === 'getImage') {
+      try {
+        var fileId = params.fileId || '';
+        if (!fileId) return wrapJsonp(callback, {status:'error', msg:'No fileId'});
+        var file = DriveApp.getFileById(fileId);
+        var blob = file.getBlob();
+        var mime = blob.getContentType() || 'image/jpeg';
+        var b64  = Utilities.base64Encode(blob.getBytes());
+        return wrapJsonp(callback, {status:'ok', data:'data:'+mime+';base64,'+b64});
+      } catch(err) {
+        return wrapJsonp(callback, {status:'error', msg:err.toString()});
+      }
+    }
+  
+    if (action!=='getData') return wrapJsonp(callback,{status:'error',msg:'Unknown action'});
+    try {
+      var ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName('SensusGanoderma');
+      if (!sh) return wrapJsonp(callback,{status:'error',msg:'Sheet belum ada.'});
+      var allVals=sh.getDataRange().getValues();
+      if (allVals.length<2) return wrapJsonp(callback,{status:'ok',data:[]});
+      var headers=allVals[0], fKebun=(params.kebun||'').toString().trim().toUpperCase(), fDivisi=(params.divisi||'').toString().trim(), fBlok=(params.blok||'').toString().trim().toUpperCase();
+      var rows=[];
+      for (var i=1;i<allVals.length;i++) { var row={}; for (var j=0;j<headers.length;j++) row[headers[j]]=allVals[i][j]; if(fKebun&&String(row['Kebun']||'').toUpperCase()!==fKebun)continue; if(fDivisi&&String(row['Divisi']||'').toLowerCase()!==fDivisi.toLowerCase())continue; if(fBlok&&String(row['Blok']||'').toUpperCase()!==fBlok)continue; rows.push(row); }
+      return wrapJsonp(callback,{status:'ok',data:rows});
+    } catch(err) { return wrapJsonp(callback,{status:'error',msg:err.toString()}); }
+  }
+  function wrapJsonp(callback,obj) { return ContentService.createTextResponse(callback+'('+JSON.stringify(obj)+');').setMimeType(ContentService.MimeType.JAVASCRIPT); }
+  `;
+  
+  // ── STATE ─────────────────────────────────────────────────────
+  let db = null;
+  let currentKondisi = 'Normal/Berdiri';
+  let gejalaState = {};
+  let fotoBase64 = null;
+  let allRecords = [];
+  
+  // ── DB (tidak berubah) ────────────────────────────────────────
+  function openDB() {
+    return new Promise((res,rej) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(STORE)) {
+          const s = d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});
+          s.createIndex('kebun','kebun',{unique:false});
+          s.createIndex('divisi','divisi',{unique:false});
+          s.createIndex('blok','blok',{unique:false});
+          s.createIndex('status_kirim','status_kirim',{unique:false});
+        }
+      };
+      req.onsuccess = e => res(e.target.result);
+      req.onerror   = e => rej(e.target.error);
+    });
+  }
+  function dbAdd(record) { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).add(record); req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e.target.error); }); }
+  function dbGetAll() { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readonly'); const req=tx.objectStore(STORE).getAll(); req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e.target.error); }); }
+  function dbUpdate(id, updates) {
+    return new Promise((res,rej) => {
+      const tx=db.transaction(STORE,'readwrite'); const s=tx.objectStore(STORE); const rget=s.get(id);
+      rget.onsuccess = e => { const rec=Object.assign(e.target.result,updates); const rput=s.put(rec); rput.onsuccess=()=>res(); rput.onerror=e=>rej(e.target.error); };
+      rget.onerror = e => rej(e.target.error);
+    });
+  }
+  function dbDelete(id) { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).delete(id); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
+  function dbClear() { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).clear(); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
+  async function getMaxNoPokok() { const all=await dbGetAll(); if(!all.length) return 0; return Math.max(...all.map(r=>parseInt(r.no_pokok)||0)); }
+  
+  function hitungStadium(g) {
+    if (g.kondisi_pokok==='Tumbang - Bonggol Tidak Ada') return 4;
+    if (g.kondisi_pokok==='Tumbang - Bonggol Ada')       return 3;
+    const st2=[g.daun_tombak,g.daun_klorosis,g.daun_sengkleh,g.daun_skirting,g.daun_tajuk,g.batang_tubuh_buah,g.batang_lunak,g.akar_busuk,g.akar_miselia].some(v=>v==='Ya');
+    if (st2) return 2;
+    if (g.batang_miselia==='Ya') return 1;
+    return 0;
+  }
+  
+  function buildGejalaList(containerId, items, offset) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    items.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'gejala-item';
+      div.innerHTML = `<div class="gejala-num">${offset+i+1}</div><div class="gejala-label">${item.label}</div><div class="toggle-row" data-field="${item.field}"><button class="tog-btn" data-val="Ya" onclick="setToggle(this)">Ya</button><button class="tog-btn active-tidak" data-val="Tidak" onclick="setToggle(this)">Tidak</button><button class="tog-btn" data-val="-" onclick="setToggle(this)">—</button></div>`;
+      container.appendChild(div);
+      gejalaState[item.field] = 'Tidak';
+    });
+  }
+  function setToggle(btn) {
+    const row = btn.closest('.toggle-row');
+    row.querySelectorAll('.tog-btn').forEach(b=>b.classList.remove('active-ya','active-tidak','active-na'));
+    const val = btn.dataset.val;
+    if (val==='Ya') btn.classList.add('active-ya');
+    else if (val==='-') btn.classList.add('active-na');
+    else btn.classList.add('active-tidak');
+    gejalaState[row.dataset.field] = val;
+  }
+  function resetGejala() {
+    document.querySelectorAll('.toggle-row').forEach(row => {
+      row.querySelectorAll('.tog-btn').forEach(b=>{ b.classList.remove('active-ya','active-tidak','active-na'); if(b.dataset.val==='Tidak') b.classList.add('active-tidak'); });
+      gejalaState[row.dataset.field]='Tidak';
+    });
+  }
+  function setKondisi(btn) {
+    document.querySelectorAll('.kondisi-btn').forEach(b=>b.classList.remove('active-normal','active-st3','active-st4'));
+    currentKondisi = btn.dataset.val;
+    if (currentKondisi==='Normal/Berdiri') { btn.classList.add('active-normal'); document.getElementById('card-gejala').style.display=''; document.getElementById('card-foto').style.display='none'; }
+    else if (currentKondisi==='Tumbang - Bonggol Ada') { btn.classList.add('active-st3'); document.getElementById('card-gejala').style.display='none'; document.getElementById('card-foto').style.display=''; }
+    else { btn.classList.add('active-st4'); document.getElementById('card-gejala').style.display='none'; document.getElementById('card-foto').style.display=''; }
+  }
+  function resetKondisi() {
+    currentKondisi='Normal/Berdiri';
+    document.querySelectorAll('.kondisi-btn').forEach(b=>{ b.classList.remove('active-normal','active-st3','active-st4'); if(b.dataset.val==='Normal/Berdiri') b.classList.add('active-normal'); });
+    document.getElementById('card-gejala').style.display=''; document.getElementById('card-foto').style.display='none';
+  }
+  document.getElementById('foto-input').addEventListener('change', function(e) {
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{ const img=new Image(); img.onload=()=>{ const canvas=document.createElement('canvas'); const MAX=900; let w=img.width,h=img.height; if(w>MAX||h>MAX){if(w>h){h=Math.round(h*(MAX/w));w=MAX;}else{w=Math.round(w*(MAX/h));h=MAX;}} canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h); fotoBase64=canvas.toDataURL('image/jpeg',0.75); document.getElementById('foto-img').src=fotoBase64; document.getElementById('foto-preview').style.display=''; document.querySelector('.btn-camera').style.display='none'; }; img.src=ev.target.result; };
+    reader.readAsDataURL(file);
   });
-}
-function dbAdd(record) { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).add(record); req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e.target.error); }); }
-function dbGetAll() { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readonly'); const req=tx.objectStore(STORE).getAll(); req.onsuccess=e=>res(e.target.result); req.onerror=e=>rej(e.target.error); }); }
-function dbUpdate(id, updates) {
-  return new Promise((res,rej) => {
-    const tx=db.transaction(STORE,'readwrite'); const s=tx.objectStore(STORE); const rget=s.get(id);
-    rget.onsuccess = e => { const rec=Object.assign(e.target.result,updates); const rput=s.put(rec); rput.onsuccess=()=>res(); rput.onerror=e=>rej(e.target.error); };
-    rget.onerror = e => rej(e.target.error);
-  });
-}
-function dbDelete(id) { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).delete(id); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
-function dbClear() { return new Promise((res,rej) => { const tx=db.transaction(STORE,'readwrite'); const req=tx.objectStore(STORE).clear(); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
-async function getMaxNoPokok() { const all=await dbGetAll(); if(!all.length) return 0; return Math.max(...all.map(r=>parseInt(r.no_pokok)||0)); }
-
-function hitungStadium(g) {
-  if (g.kondisi_pokok==='Tumbang - Bonggol Tidak Ada') return 4;
-  if (g.kondisi_pokok==='Tumbang - Bonggol Ada')       return 3;
-  const st2=[g.daun_tombak,g.daun_klorosis,g.daun_sengkleh,g.daun_skirting,g.daun_tajuk,g.batang_tubuh_buah,g.batang_lunak,g.akar_busuk,g.akar_miselia].some(v=>v==='Ya');
-  if (st2) return 2;
-  if (g.batang_miselia==='Ya') return 1;
-  return 0;
-}
-
-function buildGejalaList(containerId, items, offset) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = '';
-  items.forEach((item, i) => {
-    const div = document.createElement('div');
-    div.className = 'gejala-item';
-    div.innerHTML = `<div class="gejala-num">${offset+i+1}</div><div class="gejala-label">${item.label}</div><div class="toggle-row" data-field="${item.field}"><button class="tog-btn" data-val="Ya" onclick="setToggle(this)">Ya</button><button class="tog-btn active-tidak" data-val="Tidak" onclick="setToggle(this)">Tidak</button><button class="tog-btn" data-val="-" onclick="setToggle(this)">—</button></div>`;
-    container.appendChild(div);
-    gejalaState[item.field] = 'Tidak';
-  });
-}
-function setToggle(btn) {
-  const row = btn.closest('.toggle-row');
-  row.querySelectorAll('.tog-btn').forEach(b=>b.classList.remove('active-ya','active-tidak','active-na'));
-  const val = btn.dataset.val;
-  if (val==='Ya') btn.classList.add('active-ya');
-  else if (val==='-') btn.classList.add('active-na');
-  else btn.classList.add('active-tidak');
-  gejalaState[row.dataset.field] = val;
-}
-function resetGejala() {
-  document.querySelectorAll('.toggle-row').forEach(row => {
-    row.querySelectorAll('.tog-btn').forEach(b=>{ b.classList.remove('active-ya','active-tidak','active-na'); if(b.dataset.val==='Tidak') b.classList.add('active-tidak'); });
-    gejalaState[row.dataset.field]='Tidak';
-  });
-}
-function setKondisi(btn) {
-  document.querySelectorAll('.kondisi-btn').forEach(b=>b.classList.remove('active-normal','active-st3','active-st4'));
-  currentKondisi = btn.dataset.val;
-  if (currentKondisi==='Normal/Berdiri') { btn.classList.add('active-normal'); document.getElementById('card-gejala').style.display=''; document.getElementById('card-foto').style.display='none'; }
-  else if (currentKondisi==='Tumbang - Bonggol Ada') { btn.classList.add('active-st3'); document.getElementById('card-gejala').style.display='none'; document.getElementById('card-foto').style.display=''; }
-  else { btn.classList.add('active-st4'); document.getElementById('card-gejala').style.display='none'; document.getElementById('card-foto').style.display=''; }
-}
-function resetKondisi() {
-  currentKondisi='Normal/Berdiri';
-  document.querySelectorAll('.kondisi-btn').forEach(b=>{ b.classList.remove('active-normal','active-st3','active-st4'); if(b.dataset.val==='Normal/Berdiri') b.classList.add('active-normal'); });
-  document.getElementById('card-gejala').style.display=''; document.getElementById('card-foto').style.display='none';
-}
-document.getElementById('foto-input').addEventListener('change', function(e) {
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{ const img=new Image(); img.onload=()=>{ const canvas=document.createElement('canvas'); const MAX=900; let w=img.width,h=img.height; if(w>MAX||h>MAX){if(w>h){h=Math.round(h*(MAX/w));w=MAX;}else{w=Math.round(w*(MAX/h));h=MAX;}} canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h); fotoBase64=canvas.toDataURL('image/jpeg',0.75); document.getElementById('foto-img').src=fotoBase64; document.getElementById('foto-preview').style.display=''; document.querySelector('.btn-camera').style.display='none'; }; img.src=ev.target.result; };
-  reader.readAsDataURL(file);
-});
-function hapusFoto() { fotoBase64=null; document.getElementById('foto-input').value=''; document.getElementById('foto-preview').style.display='none'; document.querySelector('.btn-camera').style.display=''; }
-function getGeo() {
-  return new Promise(res=>{
-    if(!navigator.geolocation){res({lat:null,lng:null,acc:null});return;}
-    navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),()=>res({lat:null,lng:null,acc:null}),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
-  });
-}
-
-async function simpanData() {
-  const kebun=document.getElementById('f_kebun').value.trim(), blok=document.getElementById('f_blok').value.trim(), baris=document.getElementById('f_baris').value.trim(), noPokok=parseInt(document.getElementById('f_no_pokok').value)||1;
-  if(!kebun){showToast('⚠ Isi nama Kebun/Perusahaan dulu');return;}
-  if(!blok){showToast('⚠ Isi Blok/Petak dulu');return;}
-  if(!baris){showToast('⚠ Isi Baris dulu');return;}
-  showLoading(true); const geo=await getGeo(); showLoading(false);
-  const skor=hitungStadium({kondisi_pokok:currentKondisi,...gejalaState}), st=STADIUM[skor];
-  const record={waktu_simpan:new Date().toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}),kebun,tanggal:document.getElementById('f_tanggal').value,divisi:document.getElementById('f_divisi').value.trim(),blok,mandor:document.getElementById('f_mandor').value.trim(),pengecek:document.getElementById('f_pengecek').value.trim(),no_pokok:noPokok,baris,kondisi_pokok:currentKondisi,...gejalaState,skor_stadium:skor,keparahan:`Stadium ${skor} — ${st.label} (${st.code})`,lat:geo.lat,lng:geo.lng,geo_acc:geo.acc,foto:fotoBase64||null,status_kirim:'Belum Dikirim',link_foto:null};
-  try { const id=await dbAdd(record); record.id=id; showDialog(record,skor,geo); resetGejala(); resetKondisi(); hapusFoto(); document.getElementById('f_no_pokok').value=noPokok+1; }
-  catch(e) { showLoading(false); showToast('❌ Gagal menyimpan: '+e.message); }
-}
-
-function showDialog(rec, skor, geo) {
-  const st=STADIUM[skor], hero=document.getElementById('dialog-hero');
-  hero.style.background=st.bg; hero.style.color=st.fg;
-  document.getElementById('d-stadnum').textContent=`Stadium ${skor}`;
-  document.getElementById('d-label').textContent=st.label;
-  document.getElementById('d-code').textContent=st.code;
-  document.getElementById('d-pokok').textContent=`No. ${rec.no_pokok} | Baris ${rec.baris}`;
-  document.getElementById('d-blok').textContent=`${rec.kebun} — ${rec.divisi} — Blok ${rec.blok}`;
-  document.getElementById('d-tanggal').textContent=rec.tanggal||rec.waktu_simpan;
-  const recBox=document.querySelector('.dialog-rec');
-  const recColors={0:{border:'#1A5C2A',bg:'#D4EDDA',fg:'#1A5C2A',label:'🌿 Tindakan Pemeliharaan'},1:{border:'#B87D00',bg:'#FFF9E0',fg:'#7A5500',label:'⚠️ Tindakan Preventif Dini'},2:{border:'#E65100',bg:'#FFF3E0',fg:'#7A3A00',label:'🟠 Tindakan Kuratif (Surgery)'},3:{border:'#C62828',bg:'#FFEBEE',fg:'#7B0000',label:'🔴 Eradikasi Segera'},4:{border:'#B71C1C',bg:'#FFCDD2',fg:'#7B0000',label:'🔴 Sanitasi & Replanting'}};
-  const rc=recColors[skor];
-  recBox.style.borderLeftColor=rc.border; recBox.style.background=rc.bg;
-  document.querySelector('.dialog-rec-label').style.color=rc.fg; document.querySelector('.dialog-rec-label').textContent=rc.label;
-  document.querySelector('.dialog-rec-text').style.color=rc.fg;
-  document.getElementById('d-rek').textContent=REC_SHORT[skor];
-  const geoEl=document.getElementById('d-geo');
-  geoEl.textContent=geo.lat?`📍 ${geo.lat.toFixed(6)}, ${geo.lng.toFixed(6)} (±${geo.acc}m)`:'📍 Koordinat tidak tersedia';
-  document.getElementById('modal-dialog').classList.remove('hidden'); document.body.style.overflow='hidden';
-}
-function closeDialog(e) { if(e&&e.target!==document.getElementById('modal-dialog'))return; document.getElementById('modal-dialog').classList.add('hidden'); document.body.style.overflow=''; document.getElementById('page-form').scrollTop=0; }
-
-async function loadDataPage() {
-  allRecords=await dbGetAll(); allRecords.sort((a,b)=>b.id-a.id);
-  const kebuns=[...new Set(allRecords.map(r=>r.kebun).filter(Boolean))], divisis=[...new Set(allRecords.map(r=>r.divisi).filter(Boolean))], bloks=[...new Set(allRecords.map(r=>r.blok).filter(Boolean))];
-  fillSelect('flt-kebun',kebuns,'Semua Kebun'); fillSelect('flt-divisi',divisis,'Semua Divisi'); fillSelect('flt-blok',bloks,'Semua Blok');
-  applyFilter();
-}
-function fillSelect(id,items,placeholder) { const sel=document.getElementById(id),cur=sel.value; sel.innerHTML=`<option value="">${placeholder}</option>`; items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}); if(items.includes(cur)) sel.value=cur; }
-function applyFilter() {
-  const fKebun=document.getElementById('flt-kebun').value, fDivisi=document.getElementById('flt-divisi').value, fBlok=document.getElementById('flt-blok').value;
-  let filtered=allRecords;
-  if(fKebun) filtered=filtered.filter(r=>r.kebun===fKebun);
-  if(fDivisi) filtered=filtered.filter(r=>r.divisi===fDivisi);
-  if(fBlok) filtered=filtered.filter(r=>r.blok===fBlok);
-  renderSummary(filtered); renderRecords(filtered); updateKirimNote(filtered);
-}
-function resetFilter() { document.getElementById('flt-kebun').value=''; document.getElementById('flt-divisi').value=''; document.getElementById('flt-blok').value=''; applyFilter(); }
-function renderSummary(records) {
-  const counts={0:0,1:0,2:0,3:0,4:0,total:records.length};
-  records.forEach(r=>{if(r.skor_stadium!==undefined) counts[r.skor_stadium]++;});
-  const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length;
-  const defs=[{k:'total',label:'Total',bg:'#EEF2FF',fg:'#3730A3'},{k:0,label:'Sehat',bg:'#D4EDDA',fg:'#1A5C2A'},{k:1,label:'Dini',bg:'#FFF3B0',fg:'#7A5500'},{k:2,label:'Sakit',bg:'#FFE0B2',fg:'#7A3A00'},{k:3,label:'Tumb-B',bg:'#FFCDD2',fg:'#7B0000'},{k:4,label:'Tumb-P',bg:'#FF8A80',fg:'#FFFFFF'},{k:'belum',label:'Blm Krm',bg:'#FFF3E0',fg:'#E65100'}];
-  const wrap=document.getElementById('summary-strip'); wrap.innerHTML='';
-  const allCounts={...counts,belum};
-  defs.forEach(d=>{ const ch=document.createElement('div'); ch.className='stat-chip'; ch.style.cssText=`background:${d.bg};color:${d.fg}`; ch.innerHTML=`<div class="sv">${allCounts[d.k]}</div><div class="sl">${d.label}</div>`; wrap.appendChild(ch); });
-}
-function renderRecords(records) {
-  const list=document.getElementById('record-list');
-  if(!records.length){list.innerHTML=`<div class="empty-state"><div class="ei">🌿</div><p>Belum ada data tersimpan</p></div>`;return;}
-  list.innerHTML='';
-  records.forEach(rec=>{
+  function hapusFoto() { fotoBase64=null; document.getElementById('foto-input').value=''; document.getElementById('foto-preview').style.display='none'; document.querySelector('.btn-camera').style.display=''; }
+  function getGeo() {
+    return new Promise(res=>{
+      if(!navigator.geolocation){res({lat:null,lng:null,acc:null});return;}
+      navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),()=>res({lat:null,lng:null,acc:null}),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+    });
+  }
+  
+  async function simpanData() {
+    const kebun=document.getElementById('f_kebun').value.trim(), blok=document.getElementById('f_blok').value.trim(), baris=document.getElementById('f_baris').value.trim(), noPokok=parseInt(document.getElementById('f_no_pokok').value)||1;
+    if(!kebun){showToast('⚠ Isi nama Kebun/Perusahaan dulu');return;}
+    if(!blok){showToast('⚠ Isi Blok/Petak dulu');return;}
+    if(!baris){showToast('⚠ Isi Baris dulu');return;}
+    showLoading(true); const geo=await getGeo(); showLoading(false);
+    const skor=hitungStadium({kondisi_pokok:currentKondisi,...gejalaState}), st=STADIUM[skor];
+    const record={waktu_simpan:new Date().toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}),kebun,tanggal:document.getElementById('f_tanggal').value,divisi:document.getElementById('f_divisi').value.trim(),blok,mandor:document.getElementById('f_mandor').value.trim(),pengecek:document.getElementById('f_pengecek').value.trim(),no_pokok:noPokok,baris,kondisi_pokok:currentKondisi,...gejalaState,skor_stadium:skor,keparahan:`Stadium ${skor} — ${st.label} (${st.code})`,lat:geo.lat,lng:geo.lng,geo_acc:geo.acc,foto:fotoBase64||null,status_kirim:'Belum Dikirim',link_foto:null};
+    try { const id=await dbAdd(record); record.id=id; showDialog(record,skor,geo); resetGejala(); resetKondisi(); hapusFoto(); document.getElementById('f_no_pokok').value=noPokok+1; }
+    catch(e) { showLoading(false); showToast('❌ Gagal menyimpan: '+e.message); }
+  }
+  
+  function showDialog(rec, skor, geo) {
+    const st=STADIUM[skor], hero=document.getElementById('dialog-hero');
+    hero.style.background=st.bg; hero.style.color=st.fg;
+    document.getElementById('d-stadnum').textContent=`Stadium ${skor}`;
+    document.getElementById('d-label').textContent=st.label;
+    document.getElementById('d-code').textContent=st.code;
+    document.getElementById('d-pokok').textContent=`No. ${rec.no_pokok} | Baris ${rec.baris}`;
+    document.getElementById('d-blok').textContent=`${rec.kebun} — ${rec.divisi} — Blok ${rec.blok}`;
+    document.getElementById('d-tanggal').textContent=rec.tanggal||rec.waktu_simpan;
+    const recBox=document.querySelector('.dialog-rec');
+    const recColors={0:{border:'#1A5C2A',bg:'#D4EDDA',fg:'#1A5C2A',label:'🌿 Tindakan Pemeliharaan'},1:{border:'#B87D00',bg:'#FFF9E0',fg:'#7A5500',label:'⚠️ Tindakan Preventif Dini'},2:{border:'#E65100',bg:'#FFF3E0',fg:'#7A3A00',label:'🟠 Tindakan Kuratif (Surgery)'},3:{border:'#C62828',bg:'#FFEBEE',fg:'#7B0000',label:'🔴 Eradikasi Segera'},4:{border:'#B71C1C',bg:'#FFCDD2',fg:'#7B0000',label:'🔴 Sanitasi & Replanting'}};
+    const rc=recColors[skor];
+    recBox.style.borderLeftColor=rc.border; recBox.style.background=rc.bg;
+    document.querySelector('.dialog-rec-label').style.color=rc.fg; document.querySelector('.dialog-rec-label').textContent=rc.label;
+    document.querySelector('.dialog-rec-text').style.color=rc.fg;
+    document.getElementById('d-rek').textContent=REC_SHORT[skor];
+    const geoEl=document.getElementById('d-geo');
+    geoEl.textContent=geo.lat?`📍 ${geo.lat.toFixed(6)}, ${geo.lng.toFixed(6)} (±${geo.acc}m)`:'📍 Koordinat tidak tersedia';
+    document.getElementById('modal-dialog').classList.remove('hidden'); document.body.style.overflow='hidden';
+  }
+  function closeDialog(e) { if(e&&e.target!==document.getElementById('modal-dialog'))return; document.getElementById('modal-dialog').classList.add('hidden'); document.body.style.overflow=''; document.getElementById('page-form').scrollTop=0; }
+  
+  async function loadDataPage() {
+    allRecords=await dbGetAll(); allRecords.sort((a,b)=>b.id-a.id);
+    const kebuns=[...new Set(allRecords.map(r=>r.kebun).filter(Boolean))], divisis=[...new Set(allRecords.map(r=>r.divisi).filter(Boolean))], bloks=[...new Set(allRecords.map(r=>r.blok).filter(Boolean))];
+    fillSelect('flt-kebun',kebuns,'Semua Kebun'); fillSelect('flt-divisi',divisis,'Semua Divisi'); fillSelect('flt-blok',bloks,'Semua Blok');
+    applyFilter();
+  }
+  function fillSelect(id,items,placeholder) { const sel=document.getElementById(id),cur=sel.value; sel.innerHTML=`<option value="">${placeholder}</option>`; items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}); if(items.includes(cur)) sel.value=cur; }
+  function applyFilter() {
+    const fKebun=document.getElementById('flt-kebun').value, fDivisi=document.getElementById('flt-divisi').value, fBlok=document.getElementById('flt-blok').value;
+    let filtered=allRecords;
+    if(fKebun) filtered=filtered.filter(r=>r.kebun===fKebun);
+    if(fDivisi) filtered=filtered.filter(r=>r.divisi===fDivisi);
+    if(fBlok) filtered=filtered.filter(r=>r.blok===fBlok);
+    renderSummary(filtered); renderRecords(filtered); updateKirimNote(filtered);
+  }
+  function resetFilter() { document.getElementById('flt-kebun').value=''; document.getElementById('flt-divisi').value=''; document.getElementById('flt-blok').value=''; applyFilter(); }
+  function renderSummary(records) {
+    const counts={0:0,1:0,2:0,3:0,4:0,total:records.length};
+    records.forEach(r=>{if(r.skor_stadium!==undefined) counts[r.skor_stadium]++;});
+    const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length;
+    const defs=[{k:'total',label:'Total',bg:'#EEF2FF',fg:'#3730A3'},{k:0,label:'Sehat',bg:'#D4EDDA',fg:'#1A5C2A'},{k:1,label:'Dini',bg:'#FFF3B0',fg:'#7A5500'},{k:2,label:'Sakit',bg:'#FFE0B2',fg:'#7A3A00'},{k:3,label:'Tumb-B',bg:'#FFCDD2',fg:'#7B0000'},{k:4,label:'Tumb-P',bg:'#FF8A80',fg:'#FFFFFF'},{k:'belum',label:'Blm Krm',bg:'#FFF3E0',fg:'#E65100'}];
+    const wrap=document.getElementById('summary-strip'); wrap.innerHTML='';
+    const allCounts={...counts,belum};
+    defs.forEach(d=>{ const ch=document.createElement('div'); ch.className='stat-chip'; ch.style.cssText=`background:${d.bg};color:${d.fg}`; ch.innerHTML=`<div class="sv">${allCounts[d.k]}</div><div class="sl">${d.label}</div>`; wrap.appendChild(ch); });
+  }
+  function renderRecords(records) {
+    const list=document.getElementById('record-list');
+    if(!records.length){list.innerHTML=`<div class="empty-state"><div class="ei">🌿</div><p>Belum ada data tersimpan</p></div>`;return;}
+    list.innerHTML='';
+    records.forEach(rec=>{
+      const skor=rec.skor_stadium??0, st=STADIUM[skor];
+      const card=document.createElement('div'); card.className=`record-card st${skor}`; card.onclick=()=>showDetail(rec);
+      const sudah=rec.status_kirim==='Sudah Dikirim', geo=rec.lat?`📍 ${rec.lat.toFixed(4)}, ${rec.lng.toFixed(4)}`:'';
+      card.innerHTML=`<div class="record-top"><div><div class="record-id">No. ${rec.no_pokok} | Baris ${rec.baris}</div><div class="record-loc">${rec.kebun||'—'} · ${rec.divisi||'—'} · Blok ${rec.blok||'—'}</div></div><span class="stadium-badge" style="background:${st.bg};color:${st.fg}">Stad. ${skor} ${st.label}</span></div><div class="record-bottom"><div class="record-meta">${rec.waktu_simpan||''} ${geo?' · '+geo:''}</div><span class="status-kirim ${sudah?'sudah':'belum'}">${sudah?'✓ Terkirim':'⏳ Belum Kirim'}</span></div>`;
+      list.appendChild(card);
+    });
+  }
+  function updateKirimNote(records) {
+    const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length, note=document.getElementById('kirim-note'), btn=document.getElementById('btn-kirim');
+    if(!belum){note.textContent='✓ Semua data sudah dikirim ke server';btn.disabled=true;}
+    else{note.textContent=`${belum} data belum dikirim — tekan tombol untuk kirim sekaligus`;btn.disabled=false;}
+  }
+  
+  function showDetail(rec) {
+    currentDetailId=rec.id;
     const skor=rec.skor_stadium??0, st=STADIUM[skor];
-    const card=document.createElement('div'); card.className=`record-card st${skor}`; card.onclick=()=>showDetail(rec);
-    const sudah=rec.status_kirim==='Sudah Dikirim', geo=rec.lat?`📍 ${rec.lat.toFixed(4)}, ${rec.lng.toFixed(4)}`:'';
-    card.innerHTML=`<div class="record-top"><div><div class="record-id">No. ${rec.no_pokok} | Baris ${rec.baris}</div><div class="record-loc">${rec.kebun||'—'} · ${rec.divisi||'—'} · Blok ${rec.blok||'—'}</div></div><span class="stadium-badge" style="background:${st.bg};color:${st.fg}">Stad. ${skor} ${st.label}</span></div><div class="record-bottom"><div class="record-meta">${rec.waktu_simpan||''} ${geo?' · '+geo:''}</div><span class="status-kirim ${sudah?'sudah':'belum'}">${sudah?'✓ Terkirim':'⏳ Belum Kirim'}</span></div>`;
-    list.appendChild(card);
-  });
-}
-function updateKirimNote(records) {
-  const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length, note=document.getElementById('kirim-note'), btn=document.getElementById('btn-kirim');
-  if(!belum){note.textContent='✓ Semua data sudah dikirim ke server';btn.disabled=true;}
-  else{note.textContent=`${belum} data belum dikirim — tekan tombol untuk kirim sekaligus`;btn.disabled=false;}
-}
-
-function showDetail(rec) {
-  currentDetailId=rec.id;
-  const skor=rec.skor_stadium??0, st=STADIUM[skor];
-  document.getElementById('detail-title').textContent=`Pokok No. ${rec.no_pokok}`;
-  const gejalaAll=[...GEJALA_DAUN.map(g=>({...g,section:'Daun'})),...GEJALA_BATANG.map(g=>({...g,section:'Batang'})),...GEJALA_AKAR.map(g=>({...g,section:'Akar'}))];
-  let html=`<div style="padding:12px 0 6px"><span class="stadium-badge" style="background:${st.bg};color:${st.fg};font-size:14px;padding:8px 16px">Stadium ${skor} — ${st.label} (${st.code})</span></div>
-  <div class="detail-section"><h5>Informasi Umum</h5><div class="detail-grid">
-    <div class="detail-row"><div class="dr-label">Kebun</div><div class="dr-val">${rec.kebun||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Tanggal</div><div class="dr-val">${rec.tanggal||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Divisi</div><div class="dr-val">${rec.divisi||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Blok</div><div class="dr-val">${rec.blok||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Baris</div><div class="dr-val">${rec.baris||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Mandor</div><div class="dr-val">${rec.mandor||'—'}</div></div>
-    <div class="detail-row"><div class="dr-label">Pengecek</div><div class="dr-val">${rec.pengecek||'—'}</div></div>
-  </div></div>
-  <div class="detail-section"><h5>Kondisi & Gejala</h5>
-    <div class="detail-row full"><div class="dr-label">Kondisi Pokok</div><div class="dr-val">${rec.kondisi_pokok||'—'}</div></div>
-    <div style="height:8px"></div><div class="gejala-hasil">`;
-  gejalaAll.forEach(g=>{const v=rec[g.field];if(!v||v==='Tidak')return;const cls=v==='Ya'?'ya':'na';html+=`<span class="gejala-chip ${cls}">${v==='Ya'?'✓':'-'} ${g.label.substring(0,32)}${g.label.length>32?'…':''}</span>`;});
-  html+=`</div></div>`;
-  if(rec.lat) html+=`<div class="detail-section"><h5>Koordinat GPS</h5><div class="detail-row full"><div class="dr-label">Lat, Lng (±${rec.geo_acc||'?'}m)</div><div class="dr-val">${rec.lat.toFixed(7)}, ${rec.lng.toFixed(7)}</div></div></div>`;
-  if(rec.foto||rec.link_foto){html+=`<div class="detail-section"><h5>Foto Pokok</h5>`;if(rec.foto) html+=`<div class="detail-foto"><img src="${rec.foto}" alt="Foto pokok"></div>`;if(rec.link_foto) html+=`<div style="margin-top:8px"><a href="${rec.link_foto}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#E8F0FE;border-radius:8px;text-decoration:none;color:#1A56B0;font-size:13px;font-weight:700;border:1px solid #C5D4F0">📎&nbsp; Lihat Foto di Google Drive</a></div>`;html+=`</div>`;}
-  const recC={0:{b:'#1A5C2A',bg:'#D4EDDA',fg:'#1A5C2A'},1:{b:'#B87D00',bg:'#FFF9E0',fg:'#7A5500'},2:{b:'#E65100',bg:'#FFF3E0',fg:'#7A3A00'},3:{b:'#C62828',bg:'#FFEBEE',fg:'#7B0000'},4:{b:'#B71C1C',bg:'#FFCDD2',fg:'#7B0000'}}[skor];
-  html+=`<div class="detail-section"><h5>Rekomendasi Tindakan</h5><div style="background:${recC.bg};color:${recC.fg};padding:14px 16px;border-radius:8px;font-size:13px;line-height:1.65;white-space:pre-line;border-left:4px solid ${recC.b}">${REC_SHORT[skor]}</div></div>
-  <div style="margin-top:10px"><button onclick="hapusRecord(currentDetailId)" style="width:100%;padding:14px;border:2px solid #EF4444;border-radius:10px;background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">🗑&nbsp; Hapus Data Ini</button></div>`;
-  document.getElementById('detail-body').innerHTML=html;
-  document.getElementById('modal-detail').classList.remove('hidden'); document.body.style.overflow='hidden';
-}
-function closeDetail(e) { if(e&&e.target!==document.getElementById('modal-detail'))return; document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; }
-
-let _hapusId=null, currentDetailId=null;
-function hapusRecord(id) { const rec=allRecords.find(r=>r.id===id); const info=rec?`No. ${rec.no_pokok} | Baris ${rec.baris} | Blok ${rec.blok||'—'}`:`ID: ${id}`; document.getElementById('konfirm-info').textContent=info; _hapusId=id; document.getElementById('konfirm-overlay').classList.remove('hidden'); document.body.style.overflow='hidden'; }
-function tutupKonfirm() { document.getElementById('konfirm-overlay').classList.add('hidden'); document.body.style.overflow=''; _hapusId=null; }
-async function eksekusiHapus() {
-  if(_hapusId===null) return;
-  const id=_hapusId; tutupKonfirm();
-  try { await dbDelete(id); document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; showToast('🗑 Data berhasil dihapus'); await loadDataPage(); }
-  catch(e) { showToast('❌ Gagal hapus: '+e.message); }
-}
-
-async function kirimKeServer() {
-  const gasUrl=localStorage.getItem('gasUrl');
-  if(!gasUrl){showToast('⚠ URL Google Script belum diisi di Pengaturan');openSettings();return;}
-  const belum=allRecords.filter(r=>r.status_kirim==='Belum Dikirim');
-  if(!belum.length){showToast('✓ Tidak ada data baru untuk dikirim');return;}
-  const totalFoto=belum.filter(r=>r.foto).length;
-  const ok=confirm(`Kirim ${belum.length} data ke server?`+(totalFoto>0?`\n📷 ${totalFoto} foto akan disimpan ke Google Drive.`:''));
-  if(!ok) return;
-  showLoading(true); let berhasil=0,gagal=0;
-  const cleanGasUrl=normalizeGasUrl(gasUrl);
-  for(const rec of belum) {
-    try {
-      const {catatan,status_pengecek,status_kirim,link_foto,...data}=rec;
-      if(rec.foto) data.foto=rec.foto;
-      await fetch(cleanGasUrl,{method:'POST',mode:'no-cors',credentials:'omit',headers:{'Content-Type':'text/plain'},body:JSON.stringify([data])});
-      await dbUpdate(rec.id,{status_kirim:'Sudah Dikirim'}); berhasil++;
-    } catch(e){console.error('Kirim gagal:',e);gagal++;}
-    await new Promise(r=>setTimeout(r,300));
+    document.getElementById('detail-title').textContent=`Pokok No. ${rec.no_pokok}`;
+    const gejalaAll=[...GEJALA_DAUN.map(g=>({...g,section:'Daun'})),...GEJALA_BATANG.map(g=>({...g,section:'Batang'})),...GEJALA_AKAR.map(g=>({...g,section:'Akar'}))];
+    let html=`<div style="padding:12px 0 6px"><span class="stadium-badge" style="background:${st.bg};color:${st.fg};font-size:14px;padding:8px 16px">Stadium ${skor} — ${st.label} (${st.code})</span></div>
+    <div class="detail-section"><h5>Informasi Umum</h5><div class="detail-grid">
+      <div class="detail-row"><div class="dr-label">Kebun</div><div class="dr-val">${rec.kebun||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Tanggal</div><div class="dr-val">${rec.tanggal||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Divisi</div><div class="dr-val">${rec.divisi||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Blok</div><div class="dr-val">${rec.blok||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Baris</div><div class="dr-val">${rec.baris||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Mandor</div><div class="dr-val">${rec.mandor||'—'}</div></div>
+      <div class="detail-row"><div class="dr-label">Pengecek</div><div class="dr-val">${rec.pengecek||'—'}</div></div>
+    </div></div>
+    <div class="detail-section"><h5>Kondisi & Gejala</h5>
+      <div class="detail-row full"><div class="dr-label">Kondisi Pokok</div><div class="dr-val">${rec.kondisi_pokok||'—'}</div></div>
+      <div style="height:8px"></div><div class="gejala-hasil">`;
+    gejalaAll.forEach(g=>{const v=rec[g.field];if(!v||v==='Tidak')return;const cls=v==='Ya'?'ya':'na';html+=`<span class="gejala-chip ${cls}">${v==='Ya'?'✓':'-'} ${g.label.substring(0,32)}${g.label.length>32?'…':''}</span>`;});
+    html+=`</div></div>`;
+    if(rec.lat) html+=`<div class="detail-section"><h5>Koordinat GPS</h5><div class="detail-row full"><div class="dr-label">Lat, Lng (±${rec.geo_acc||'?'}m)</div><div class="dr-val">${rec.lat.toFixed(7)}, ${rec.lng.toFixed(7)}</div></div></div>`;
+    if(rec.foto||rec.link_foto){html+=`<div class="detail-section"><h5>Foto Pokok</h5>`;if(rec.foto) html+=`<div class="detail-foto"><img src="${rec.foto}" alt="Foto pokok"></div>`;if(rec.link_foto) html+=`<div style="margin-top:8px"><a href="${rec.link_foto}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:10px 14px;background:#E8F0FE;border-radius:8px;text-decoration:none;color:#1A56B0;font-size:13px;font-weight:700;border:1px solid #C5D4F0">📎&nbsp; Lihat Foto di Google Drive</a></div>`;html+=`</div>`;}
+    const recC={0:{b:'#1A5C2A',bg:'#D4EDDA',fg:'#1A5C2A'},1:{b:'#B87D00',bg:'#FFF9E0',fg:'#7A5500'},2:{b:'#E65100',bg:'#FFF3E0',fg:'#7A3A00'},3:{b:'#C62828',bg:'#FFEBEE',fg:'#7B0000'},4:{b:'#B71C1C',bg:'#FFCDD2',fg:'#7B0000'}}[skor];
+    html+=`<div class="detail-section"><h5>Rekomendasi Tindakan</h5><div style="background:${recC.bg};color:${recC.fg};padding:14px 16px;border-radius:8px;font-size:13px;line-height:1.65;white-space:pre-line;border-left:4px solid ${recC.b}">${REC_SHORT[skor]}</div></div>
+    <div style="margin-top:10px"><button onclick="hapusRecord(currentDetailId)" style="width:100%;padding:14px;border:2px solid #EF4444;border-radius:10px;background:#FFF;color:#EF4444;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">🗑&nbsp; Hapus Data Ini</button></div>`;
+    document.getElementById('detail-body').innerHTML=html;
+    document.getElementById('modal-detail').classList.remove('hidden'); document.body.style.overflow='hidden';
   }
-  showLoading(false);
-  if(berhasil>0){showToast(`✅ ${berhasil} data terkirim${gagal>0?` | ❌ ${gagal} gagal`:''}`);loadDataPage();}
-  else showToast('❌ Gagal kirim — periksa koneksi internet');
-}
-
-// ── [PATCH 3] openSettings — tambah load sheetId ──────────────
-function openSettings() {
-  const raw=localStorage.getItem('gasUrl')||'', url=normalizeGasUrl(raw);
-  if(url!==raw&&url) localStorage.setItem('gasUrl',url);
-  document.getElementById('gas-url').value=url;
-  document.getElementById('sheet-id-input').value=localStorage.getItem('sheetId')||''; // BARU
-  document.getElementById('gas-code-block').value=GAS_CODE;
-  document.getElementById('modal-settings').classList.remove('hidden');
-  document.body.style.overflow='hidden';
-}
-function closeSettings(e) { if(e&&e.target!==document.getElementById('modal-settings'))return; document.getElementById('modal-settings').classList.add('hidden'); document.body.style.overflow=''; }
-
-// ── [PATCH 4] saveSettings — tambah save sheetId ─────────────
-function saveSettings() {
-  const rawUrl=document.getElementById('gas-url').value.trim(), url=normalizeGasUrl(rawUrl);
-  if(url){localStorage.setItem('gasUrl',url);document.getElementById('gas-url').value=url;}
-  // BARU: parse & simpan Sheet ID
-  const sheetInput=document.getElementById('sheet-id-input').value.trim(), sheetId=parseSheetId(sheetInput);
-  if(sheetId){localStorage.setItem('sheetId',sheetId);document.getElementById('sheet-id-input').value=sheetId;}
-  closeSettings();
-  let msg='✓ Pengaturan disimpan';
-  if(url!==rawUrl&&url) msg+=' (URL GAS diperbaiki)';
-  if(sheetId&&sheetId!==sheetInput) msg+=' (Sheet ID diekstrak)';
-  showToast(msg);
-}
-
-function copyGasCode() { navigator.clipboard.writeText(GAS_CODE).then(()=>showToast('✓ Kode GAS berhasil dicopy')).catch(()=>{document.getElementById('gas-code-block').select();document.execCommand('copy');showToast('✓ Kode GAS berhasil dicopy');}); }
-async function hapusSemuaData() { const ok=confirm('HAPUS SEMUA DATA?\n\nTindakan ini tidak bisa dibatalkan.\nPastikan sudah kirim ke server!'); if(!ok)return; await dbClear(); allRecords=[]; closeSettings(); showToast('🗑 Semua data dihapus'); loadDataPage(); }
-
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById(`page-${name}`).classList.add('active');
-  document.getElementById(`tab-${name}`).classList.add('active');
-  if(name==='data') loadDataPage();
-  if(name==='peta') initPetaMap();
-}
-function showToast(msg,duration=2600) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),duration); }
-function showLoading(show) { document.getElementById('loading').classList.toggle('hidden',!show); }
-function toTitleCase(el) { const pos=el.selectionStart; el.value=el.value.replace(/\b\w/g,ch=>ch.toUpperCase()); el.setSelectionRange(pos,pos); }
-
-async function init() {
-  document.getElementById('f_tanggal').valueAsDate=new Date();
-  buildGejalaList('list-daun',GEJALA_DAUN,0);
-  buildGejalaList('list-batang',GEJALA_BATANG,GEJALA_DAUN.length);
-  buildGejalaList('list-akar',GEJALA_AKAR,GEJALA_DAUN.length+GEJALA_BATANG.length);
-  try { db=await openDB(); const maxNo=await getMaxNoPokok(); document.getElementById('f_no_pokok').value=maxNo+1; }
-  catch(e) { showToast('⚠ Database error: '+e.message); }
-}
-
-// ══════════════════════════════════════════════════════════════
-// PETA FUNCTIONS
-// ══════════════════════════════════════════════════════════════
-
-let petaMap=null, petaMarkerGroup=null, serverData=[];
-
-function initPetaMap() {
-  if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
-  setTimeout(()=>{
-    petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri | Sensus Ganoderma',maxZoom:20}).addTo(petaMap);
-    petaMarkerGroup=L.layerGroup().addTo(petaMap);
-  },150);
-}
-
-// ── [PATCH 5] testKoneksiGAS — ganti JSONP ping → fetch no-cors
-// Alasan: JSONP muat <script> dari script.google.com → Google
-// kembalikan HTML redirect → Chrome CORB memblokir.
-// fetch no-cors tidak baca response, tapi tidak kena CORB.
-async function testKoneksiGAS() {
-  const rawUrl=document.getElementById('gas-url').value.trim();
-  if(!rawUrl){showToast('⚠ Isi URL GAS dulu');return;}
-  const url=normalizeGasUrl(rawUrl);
-  localStorage.setItem('gasUrl',url);
-  document.getElementById('gas-url').value=url;
-
-  const sheetInput=document.getElementById('sheet-id-input').value.trim();
-  const sheetId=parseSheetId(sheetInput);
-  if(sheetId) localStorage.setItem('sheetId',sheetId);
-
-  const btn=document.getElementById('btn-test-gas'), res=document.getElementById('test-result');
-  btn.disabled=true; btn.textContent='⏳ Testing...';
-  res.style.display='block'; res.className='test-loading'; res.textContent='⏳ Menguji koneksi GAS & Google Sheet...';
-
-  let gasOk=false, sheetOk=false, sheetErr='';
-
-  // Test GAS: fetch no-cors + credentials omit → tidak ada /u/N/ redirect
-  try {
-    const controller=new AbortController(), t=setTimeout(()=>controller.abort(),10000);
-    await fetch(url,{mode:'no-cors',credentials:'omit',signal:controller.signal});
-    clearTimeout(t); gasOk=true;
-  } catch(e) { gasOk=(e.name!=='AbortError'&&e.name!=='TypeError'); }
-
-  // Test Sheet: gviz langsung ke docs.google.com
-  if(sheetId) {
-    try { await gvizFetch(sheetId,{}); sheetOk=true; }
-    catch(e) { sheetErr=e.message; }
+  function closeDetail(e) { if(e&&e.target!==document.getElementById('modal-detail'))return; document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; }
+  
+  let _hapusId=null, currentDetailId=null;
+  function hapusRecord(id) { const rec=allRecords.find(r=>r.id===id); const info=rec?`No. ${rec.no_pokok} | Baris ${rec.baris} | Blok ${rec.blok||'—'}`:`ID: ${id}`; document.getElementById('konfirm-info').textContent=info; _hapusId=id; document.getElementById('konfirm-overlay').classList.remove('hidden'); document.body.style.overflow='hidden'; }
+  function tutupKonfirm() { document.getElementById('konfirm-overlay').classList.add('hidden'); document.body.style.overflow=''; _hapusId=null; }
+  async function eksekusiHapus() {
+    if(_hapusId===null) return;
+    const id=_hapusId; tutupKonfirm();
+    try { await dbDelete(id); document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; showToast('🗑 Data berhasil dihapus'); await loadDataPage(); }
+    catch(e) { showToast('❌ Gagal hapus: '+e.message); }
   }
-
-  let html='';
-  html+=gasOk?'✅ <b>GAS terhubung</b> — pengiriman data siap<br>':'❌ <b>GAS tidak terhubung</b> — periksa URL & koneksi<br>';
-  if(sheetId) html+=sheetOk?'✅ <b>Google Sheet terhubung</b> — Tab Peta siap':`❌ <b>Sheet error:</b> ${sheetErr}<br>Pastikan di-share: <em>Anyone with link → Viewer</em>`;
-  else html+='ℹ️ <b>Sheet ID belum diisi</b> — Tab Peta tidak tersedia';
-
-  res.className=(gasOk&&(!sheetId||sheetOk))?'test-ok':(gasOk?'test-warn':'test-err');
-  res.innerHTML=html;
-  btn.disabled=false; btn.textContent='🔌 Test Koneksi';
-}
-
-// ── [PATCH 6] gvizFetch — baca Sheet via docs.google.com ──────
-// Tidak melalui script.google.com → tidak ada /u/N/ & tidak ada CORB
-function gvizFetch(sheetId, params) {
-  return new Promise((resolve, reject) => {
-    const cbName='gvCb_'+Date.now();
-    const timeout=setTimeout(()=>{cleanup();reject(new Error('Timeout 15 detik'));},15000);
-    const script=document.createElement('script');
-
-    function cleanup() { clearTimeout(timeout); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
-
-    window[cbName]=function(result) {
-      cleanup();
-      if(!result||result.status!=='ok') {
-        const errMsg=(result&&result.errors&&result.errors[0])?result.errors[0].detailed_message:'Sheet tidak dapat diakses';
-        reject(new Error(errMsg)); return;
-      }
-      // Parse Google Visualization DataTable
-      const table=result.table||{}, cols=(table.cols||[]).map(c=>c.label||c.id||'');
-      const rows=(table.rows||[]).map(row=>{
-        const obj={};
-        (row.c||[]).forEach((cell,i)=>{ obj[cols[i]]=String((cell&&cell.v!==null&&cell.v!==undefined)?cell.v:''); });
-        return obj;
-      });
-      // Filter client-side
-      let filtered=rows;
-      const fKebun=(params.kebun||'').trim().toUpperCase(), fDivisi=(params.divisi||'').trim().toLowerCase(), fBlok=(params.blok||'').trim().toUpperCase();
-      if(fKebun)  filtered=filtered.filter(r=>(r['Kebun']||'').toUpperCase()===fKebun);
-      if(fDivisi) filtered=filtered.filter(r=>(r['Divisi']||'').toLowerCase()===fDivisi);
-      if(fBlok)   filtered=filtered.filter(r=>(r['Blok']||'').toUpperCase()===fBlok);
-      resolve(filtered);
-    };
-
-    const tqx=`out:json;responseHandler:${cbName}`;
-    script.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=${encodeURIComponent(tqx)}&sheet=SensusGanoderma`;
-    script.onerror=()=>{ cleanup(); reject(new Error('Tidak dapat mengakses Sheet — periksa ID & status sharing')); };
-    document.head.appendChild(script);
-  });
-}
-
-// ── [PATCH 7] ambilDataServer — ganti jsonpFetch → gvizFetch ──
-async function ambilDataServer() {
-  const sheetId=localStorage.getItem('sheetId');
-  if(!sheetId){showToast('⚠ Sheet ID belum diisi di Pengaturan');openSettings();return;}
-
-  const kebun=document.getElementById('peta-kebun').value.trim(), divisi=document.getElementById('peta-divisi').value.trim(), blok=document.getElementById('peta-blok').value.trim();
-  const statusEl=document.getElementById('peta-status'), btnEl=document.getElementById('btn-ambil'), dlBtn=document.getElementById('btn-dl-server');
-
-  statusEl.className='peta-status loading'; statusEl.textContent='⏳ Mengambil data dari Google Sheet…'; btnEl.disabled=true;
-
-  try {
-    const data=await gvizFetch(sheetId,{kebun,divisi,blok});
-    serverData=data;
-    const dgps=data.filter(r=>r['Latitude']&&r['Longitude']&&r['Latitude']!=='').length;
-    statusEl.className='peta-status ok'; statusEl.textContent=`✓ ${data.length} data dimuat (${dgps} dengan GPS)`;
-    renderPetaMarkers(data); dlBtn.disabled=(data.length===0);
-  } catch(err) {
-    statusEl.className='peta-status err';
-    statusEl.innerHTML=`❌ <b>${err.message}</b><br>Pastikan Sheet ID benar & di-share "Anyone with link → Viewer".`;
-  } finally { btnEl.disabled=false; }
-}
-
-function renderPetaMarkers(data) {
-  if(!petaMap) initPetaMap();
-  setTimeout(()=>{
-    petaMarkerGroup.clearLayers(); const markers=[];
-    data.forEach(r=>{
-      const lat=parseFloat(r['Latitude']), lng=parseFloat(r['Longitude']);
-      if(!lat||!lng||isNaN(lat)||isNaN(lng)) return;
-      const skor=parseInt(r['Skor Stadium'])||0, stInfo=STADIUM[skor]||STADIUM[0], noPokok=r['No Pokok']||'?';
-      const hasFoto=!!(r['Link Foto']&&r['Link Foto'].startsWith('http')), fotoUrl=hasFoto?driveToImgUrl(r['Link Foto']):null;
-      const icon=L.divIcon({className:'',html:`<div style="background:${stInfo.bg};color:${stInfo.fg};border:2.5px solid ${stInfo.dark};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.35);${hasFoto?'outline:3px solid #FF9800;outline-offset:2px;':''}">${noPokok}</div>`,iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-20]});
-      let popup=`<div><span class="popup-badge" style="background:${stInfo.bg};color:${stInfo.fg}">Stadium ${skor} — ${stInfo.label}</span><div style="margin-top:4px"><strong>Pokok No. ${noPokok}</strong></div><div>Baris: ${r['Baris']||'—'} | Blok: ${r['Blok']||'—'}</div><div style="font-size:11px;color:#637063;margin-top:2px">${r['Kebun']||''} · ${r['Divisi']||''}</div><div style="font-size:11px;margin-top:4px">${r['Keparahan']||''}</div>`;
-      if(fotoUrl) popup+=`<img src="${fotoUrl}" alt="Foto" loading="lazy" onerror="this.style.display='none'">`;
-      popup+=`</div>`;
-      const marker=L.marker([lat,lng],{icon}); marker.bindPopup(popup,{maxWidth:230}); petaMarkerGroup.addLayer(marker); markers.push(marker);
-    });
-    if(markers.length>0){const group=L.featureGroup(markers);petaMap.fitBounds(group.getBounds().pad(0.15));}
-    petaMap.invalidateSize();
-  },200);
-}
-
-function driveToImgUrl(url) { const m=url&&url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://drive.google.com/uc?export=view&id=${m[1]}`:null; }
-
-const XL_COLS=['Kebun','Divisi','Blok','Tanggal','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Foto'];
-
-// ── Stadium warna (hex → [R,G,B]) ─────────────────────────────
-const ST_COLORS = {
-  '0':{ bg:[212,237,218], fg:[26,92,42]  },
-  '1':{ bg:[255,243,176], fg:[122,85,0]  },
-  '2':{ bg:[255,224,178], fg:[122,58,0]  },
-  '3':{ bg:[255,205,210], fg:[123,0,0]   },
-  '4':{ bg:[255,138,128], fg:[255,255,255]},
-};
-
-// ── CORE PDF GENERATOR ────────────────────────────────────────
-async function generatePDF(tableRows, fotoArr, meta, filename) {
-  if (!tableRows || !tableRows.length) { showToast('⚠ Tidak ada data untuk dicetak'); return; }
-  if (!window.jspdf) { showToast('⚠ Library PDF belum siap, coba lagi'); return; }
-
-  showLoading(true);
-  await new Promise(r => setTimeout(r, 50)); // let UI update
-
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-    const PW = doc.internal.pageSize.getWidth();
-    const PH = doc.internal.pageSize.getHeight();
-    const ML = 12; // margin left
-    const MR = 12; // margin right
-
-    // ── HEADER BAR ──────────────────────────────────────────
-    doc.setFillColor(11, 38, 20);
-    doc.rect(0, 0, PW, 24, 'F');
-
-    // Accent stripe
-    doc.setFillColor(46, 168, 74);
-    doc.rect(0, 24, PW, 1.5, 'F');
-
-    // Title
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('Laporan Hasil Sensus Serangan Ganoderma', ML, 11);
-
-    // Subtitle
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(134, 239, 172);
-    doc.text('GanoKit Ver.1  —  Sistem Deteksi Lapangan PPKS', ML, 18);
-
-    // Date (top right)
-    doc.setTextColor(180, 220, 180);
-    doc.setFontSize(7.5);
-    const tglCetak = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-    doc.text(`Dicetak: ${tglCetak}`, PW - MR, 11, {align:'right'});
-    doc.text(`${tableRows.length} pokok`, PW - MR, 18, {align:'right'});
-
-    // ── INFO BLOCK ──────────────────────────────────────────
-    let y = 31;
-    const infoBox = (label, val, x) => {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      doc.text(label, x, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(20, 20, 20);
-      doc.text(val || '—', x + 18, y);
-    };
-    infoBox('Kebun  :', meta.kebun || '—',  ML);
-    infoBox('Blok     :',  meta.blok  || '—',  165);
-    y += 5.5;
-    infoBox('Divisi  :',   meta.divisi|| '—',  ML);
-    if (meta.tanggal) infoBox('Tanggal :', meta.tanggal, 165);
-
-    // Divider
-    y += 3;
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.4);
-    doc.line(ML, y, PW - MR, y);
-    y += 4;
-
-    // ── CHECK FOTO ──────────────────────────────────────────
-    // fotoArr sudah berisi base64 semua (Drive sudah di-convert sebelumnya)
-    const hasFoto  = fotoArr && fotoArr.some(f => f && f.startsWith('data:image'));
-    const cellH    = hasFoto ? 22 : 7;
-    const fotoColW = hasFoto ? 32 : 16;
-
-    // ── TABLE ───────────────────────────────────────────────
-    const head = [['No.','No. Pokok','Baris','Skor\nStadium','Tingkat Keparahan','Latitude','Longitude','Foto']];
-
-    // rows format: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
-    //              index:  0        1       2              3          4    5
-    const body = tableRows.map((r, i) => {
-      const skor      = String(r[2] ?? '').trim();           // ← FIX: index 2
-      const keparahan = String(r[3] || '');                  // ← FIX: index 3
-      const lat       = String(r[4] || '');                  // ← FIX: index 4
-      const lng       = String(r[5] || '');                  // ← FIX: index 5
-      const latStr    = lat ? parseFloat(lat).toFixed(6) : '—';
-      const lngStr    = lng ? parseFloat(lng).toFixed(6) : '—';
-      return [i + 1, r[0], r[1], skor, keparahan, latStr, lngStr, ''];
-    });
-
-    doc.autoTable({
-      startY : y,
-      head   : head,
-      body   : body,
-      margin : { left: ML, right: MR },
-      theme  : 'grid',
-      styles : {
-        fontSize    : 7.5,
-        cellPadding : { top:2, right:3, bottom:2, left:3 },
-        valign      : 'middle',
-        lineColor   : [210, 215, 210],
-        lineWidth   : 0.25,
-        textColor   : [30, 30, 30],
-        overflow    : 'linebreak',
-      },
-      headStyles : {
-        fillColor  : [27, 107, 48],
-        textColor  : [255, 255, 255],
-        fontStyle  : 'bold',
-        fontSize   : 7.5,
-        halign     : 'center',
-        cellPadding: 3,
-        minCellHeight: 10,
-      },
-      alternateRowStyles: { fillColor: [248, 250, 248] },
-      columnStyles: {
-        0: { cellWidth: 9,         halign:'center'  },  // No.
-        1: { cellWidth: 20,        halign:'center'  },  // No. Pokok
-        2: { cellWidth: 14,        halign:'center'  },  // Baris
-        3: { cellWidth: 18,        halign:'center'  },  // Skor
-        4: { cellWidth: 'auto'                      },  // Keparahan
-        5: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lat
-        6: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lng
-        7: { cellWidth: fotoColW,  halign:'center'  },  // Foto
-      },
-      bodyStyles: { minCellHeight: cellH },
-
-      // Warnai sel Keparahan sesuai stadium
-      didParseCell: function(data) {
-        if (data.section === 'body' && data.column.index === 4) {
-          const skor = String(body[data.row.index]?.[3] ?? '').trim();
-          const c    = ST_COLORS[skor];
-          if (c) {
-            data.cell.styles.fillColor = c.bg;
-            data.cell.styles.textColor = c.fg;
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-        // Skor stadium cell — warnai juga
-        if (data.section === 'body' && data.column.index === 3) {
-          const skor = String(body[data.row.index]?.[3] ?? '').trim();
-          const c    = ST_COLORS[skor];
-          if (c) {
-            data.cell.styles.fillColor = c.bg;
-            data.cell.styles.textColor = c.fg;
-            data.cell.styles.fontStyle = 'bold';
-          }
-        }
-      },
-
-      // Gambar foto di sel Foto
-      didDrawCell: function(data) {
-        if (data.section !== 'body' || data.column.index !== 7) return;
-        const foto = fotoArr ? fotoArr[data.row.index] : null;
-        if (!foto || !foto.startsWith('data:image')) {
-          doc.setFontSize(6.5);
-          doc.setTextColor(190, 190, 190);
-          doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
-          return;
-        }
-        try {
-          const imgType = foto.toLowerCase().includes('jpeg')||foto.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
-          const pad = 1.5;
-          doc.addImage(foto, imgType,
-            data.cell.x + pad,
-            data.cell.y + pad,
-            data.cell.width  - pad*2,
-            data.cell.height - pad*2,
-          );
-        } catch(e) {
-          doc.setFontSize(6);
-          doc.setTextColor(180,100,100);
-          doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
-        }
-      },
-    });
-
-    // ── FOOTER TIAP HALAMAN ──────────────────────────────────
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p);
-      // Footer bar
-      doc.setFillColor(245, 247, 245);
-      doc.rect(0, PH - 8, PW, 8, 'F');
-      doc.setDrawColor(220, 230, 220);
-      doc.setLineWidth(0.3);
-      doc.line(0, PH - 8, PW, PH - 8);
-      // Footer text
-      doc.setFontSize(6.5);
-      doc.setTextColor(120, 130, 120);
-      doc.setFont('helvetica', 'normal');
-      doc.text('GanoKit Ver.1  |  Sistem Sensus Ganoderma — PPKS', ML, PH - 3);
-      doc.text(`Halaman ${p} / ${totalPages}`, PW - MR, PH - 3, {align:'right'});
+  
+  async function kirimKeServer() {
+    const gasUrl=localStorage.getItem('gasUrl');
+    if(!gasUrl){showToast('⚠ URL Google Script belum diisi di Pengaturan');openSettings();return;}
+    const belum=allRecords.filter(r=>r.status_kirim==='Belum Dikirim');
+    if(!belum.length){showToast('✓ Tidak ada data baru untuk dikirim');return;}
+    const totalFoto=belum.filter(r=>r.foto).length;
+    const ok=confirm(`Kirim ${belum.length} data ke server?`+(totalFoto>0?`\n📷 ${totalFoto} foto akan disimpan ke Google Drive.`:''));
+    if(!ok) return;
+    showLoading(true); let berhasil=0,gagal=0;
+    const cleanGasUrl=normalizeGasUrl(gasUrl);
+    for(const rec of belum) {
+      try {
+        const {catatan,status_pengecek,status_kirim,link_foto,...data}=rec;
+        if(rec.foto) data.foto=rec.foto;
+        await fetch(cleanGasUrl,{method:'POST',mode:'no-cors',credentials:'omit',headers:{'Content-Type':'text/plain'},body:JSON.stringify([data])});
+        await dbUpdate(rec.id,{status_kirim:'Sudah Dikirim'}); berhasil++;
+      } catch(e){console.error('Kirim gagal:',e);gagal++;}
+      await new Promise(r=>setTimeout(r,300));
     }
-
     showLoading(false);
-    doc.save(filename);
-    showToast(`✅ PDF berhasil didownload`);
-  } catch(err) {
-    showLoading(false);
-    showToast('❌ Gagal generate PDF: ' + err.message);
-    console.error(err);
+    if(berhasil>0){showToast(`✅ ${berhasil} data terkirim${gagal>0?` | ❌ ${gagal} gagal`:''}`);loadDataPage();}
+    else showToast('❌ Gagal kirim — periksa koneksi internet');
   }
-}
-
-// ── Helper: load URL gambar Drive → base64 ────────────────────
-// Masalah pokok: sw.js di GitHub Pages mengintersep SEMUA request
-// (fetch, script tag, blob iframe) dan gagal → CORS error / timeout.
-//
-// Solusi: unregister SW sementara sebelum fetch ke GAS, kemudian
-// re-register setelah selesai. Tanpa SW, fetch cors credentials:omit
-// ke GAS langsung bisa dibaca responsnya.
-//
-// Catatan: SW di-unregister < 1 detik, lalu langsung di-register ulang.
-// Ini tidak mempengaruhi fungsi lain di luar proses loading foto.
+  
+  // ── [PATCH 3] openSettings — tambah load sheetId ──────────────
+  function openSettings() {
+    const raw=localStorage.getItem('gasUrl')||'', url=normalizeGasUrl(raw);
+    if(url!==raw&&url) localStorage.setItem('gasUrl',url);
+    document.getElementById('gas-url').value=url;
+    document.getElementById('sheet-id-input').value=localStorage.getItem('sheetId')||''; // BARU
+    document.getElementById('gas-code-block').value=GAS_CODE;
+    document.getElementById('modal-settings').classList.remove('hidden');
+    document.body.style.overflow='hidden';
+  }
+  function closeSettings(e) { if(e&&e.target!==document.getElementById('modal-settings'))return; document.getElementById('modal-settings').classList.add('hidden'); document.body.style.overflow=''; }
+  
+  // ── [PATCH 4] saveSettings — tambah save sheetId ─────────────
+  function saveSettings() {
+    const rawUrl=document.getElementById('gas-url').value.trim(), url=normalizeGasUrl(rawUrl);
+    if(url){localStorage.setItem('gasUrl',url);document.getElementById('gas-url').value=url;}
+    // BARU: parse & simpan Sheet ID
+    const sheetInput=document.getElementById('sheet-id-input').value.trim(), sheetId=parseSheetId(sheetInput);
+    if(sheetId){localStorage.setItem('sheetId',sheetId);document.getElementById('sheet-id-input').value=sheetId;}
+    closeSettings();
+    let msg='✓ Pengaturan disimpan';
+    if(url!==rawUrl&&url) msg+=' (URL GAS diperbaiki)';
+    if(sheetId&&sheetId!==sheetInput) msg+=' (Sheet ID diekstrak)';
+    showToast(msg);
+  }
+  
+  function copyGasCode() { navigator.clipboard.writeText(GAS_CODE).then(()=>showToast('✓ Kode GAS berhasil dicopy')).catch(()=>{document.getElementById('gas-code-block').select();document.execCommand('copy');showToast('✓ Kode GAS berhasil dicopy');}); }
+  async function hapusSemuaData() { const ok=confirm('HAPUS SEMUA DATA?\n\nTindakan ini tidak bisa dibatalkan.\nPastikan sudah kirim ke server!'); if(!ok)return; await dbClear(); allRecords=[]; closeSettings(); showToast('🗑 Semua data dihapus'); loadDataPage(); }
+  
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(`page-${name}`).classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+    if(name==='data') loadDataPage();
+    if(name==='peta') initPetaMap();
+  }
+  function showToast(msg,duration=2600) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),duration); }
+  function showLoading(show) { document.getElementById('loading').classList.toggle('hidden',!show); }
+  function toTitleCase(el) { const pos=el.selectionStart; el.value=el.value.replace(/\b\w/g,ch=>ch.toUpperCase()); el.setSelectionRange(pos,pos); }
+  
+  async function init() {
+    document.getElementById('f_tanggal').valueAsDate=new Date();
+    buildGejalaList('list-daun',GEJALA_DAUN,0);
+    buildGejalaList('list-batang',GEJALA_BATANG,GEJALA_DAUN.length);
+    buildGejalaList('list-akar',GEJALA_AKAR,GEJALA_DAUN.length+GEJALA_BATANG.length);
+    try { db=await openDB(); const maxNo=await getMaxNoPokok(); document.getElementById('f_no_pokok').value=maxNo+1; }
+    catch(e) { showToast('⚠ Database error: '+e.message); }
+  }
+  
+  // ══════════════════════════════════════════════════════════════
+  // PETA FUNCTIONS
+  // ══════════════════════════════════════════════════════════════
+  
+  let petaMap=null, petaMarkerGroup=null, serverData=[];
+  
+  function initPetaMap() {
+    if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
+    setTimeout(()=>{
+      petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri | Sensus Ganoderma',maxZoom:20}).addTo(petaMap);
+      petaMarkerGroup=L.layerGroup().addTo(petaMap);
+    },150);
+  }
+  
+  // ── [PATCH 5] testKoneksiGAS — ganti JSONP ping → fetch no-cors
+  // Alasan: JSONP muat <script> dari script.google.com → Google
+  // kembalikan HTML redirect → Chrome CORB memblokir.
+  // fetch no-cors tidak baca response, tapi tidak kena CORB.
+  async function testKoneksiGAS() {
+    const rawUrl=document.getElementById('gas-url').value.trim();
+    if(!rawUrl){showToast('⚠ Isi URL GAS dulu');return;}
+    const url=normalizeGasUrl(rawUrl);
+    localStorage.setItem('gasUrl',url);
+    document.getElementById('gas-url').value=url;
+  
+    const sheetInput=document.getElementById('sheet-id-input').value.trim();
+    const sheetId=parseSheetId(sheetInput);
+    if(sheetId) localStorage.setItem('sheetId',sheetId);
+  
+    const btn=document.getElementById('btn-test-gas'), res=document.getElementById('test-result');
+    btn.disabled=true; btn.textContent='⏳ Testing...';
+    res.style.display='block'; res.className='test-loading'; res.textContent='⏳ Menguji koneksi GAS & Google Sheet...';
+  
+    let gasOk=false, sheetOk=false, sheetErr='';
+  
+    // Test GAS: fetch no-cors + credentials omit → tidak ada /u/N/ redirect
+    try {
+      const controller=new AbortController(), t=setTimeout(()=>controller.abort(),10000);
+      await fetch(url,{mode:'no-cors',credentials:'omit',signal:controller.signal});
+      clearTimeout(t); gasOk=true;
+    } catch(e) { gasOk=(e.name!=='AbortError'&&e.name!=='TypeError'); }
+  
+    // Test Sheet: gviz langsung ke docs.google.com
+    if(sheetId) {
+      try { await gvizFetch(sheetId,{}); sheetOk=true; }
+      catch(e) { sheetErr=e.message; }
+    }
+  
+    let html='';
+    html+=gasOk?'✅ <b>GAS terhubung</b> — pengiriman data siap<br>':'❌ <b>GAS tidak terhubung</b> — periksa URL & koneksi<br>';
+    if(sheetId) html+=sheetOk?'✅ <b>Google Sheet terhubung</b> — Tab Peta siap':`❌ <b>Sheet error:</b> ${sheetErr}<br>Pastikan di-share: <em>Anyone with link → Viewer</em>`;
+    else html+='ℹ️ <b>Sheet ID belum diisi</b> — Tab Peta tidak tersedia';
+  
+    res.className=(gasOk&&(!sheetId||sheetOk))?'test-ok':(gasOk?'test-warn':'test-err');
+    res.innerHTML=html;
+    btn.disabled=false; btn.textContent='🔌 Test Koneksi';
+  }
+  
+  // ── [PATCH 6] gvizFetch — baca Sheet via docs.google.com ──────
+  // Tidak melalui script.google.com → tidak ada /u/N/ & tidak ada CORB
+  function gvizFetch(sheetId, params) {
+    return new Promise((resolve, reject) => {
+      const cbName='gvCb_'+Date.now();
+      const timeout=setTimeout(()=>{cleanup();reject(new Error('Timeout 15 detik'));},15000);
+      const script=document.createElement('script');
+  
+      function cleanup() { clearTimeout(timeout); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+  
+      window[cbName]=function(result) {
+        cleanup();
+        if(!result||result.status!=='ok') {
+          const errMsg=(result&&result.errors&&result.errors[0])?result.errors[0].detailed_message:'Sheet tidak dapat diakses';
+          reject(new Error(errMsg)); return;
+        }
+        // Parse Google Visualization DataTable
+        const table=result.table||{}, cols=(table.cols||[]).map(c=>c.label||c.id||'');
+        const rows=(table.rows||[]).map(row=>{
+          const obj={};
+          (row.c||[]).forEach((cell,i)=>{ obj[cols[i]]=String((cell&&cell.v!==null&&cell.v!==undefined)?cell.v:''); });
+          return obj;
+        });
+        // Filter client-side
+        let filtered=rows;
+        const fKebun=(params.kebun||'').trim().toUpperCase(), fDivisi=(params.divisi||'').trim().toLowerCase(), fBlok=(params.blok||'').trim().toUpperCase();
+        if(fKebun)  filtered=filtered.filter(r=>(r['Kebun']||'').toUpperCase()===fKebun);
+        if(fDivisi) filtered=filtered.filter(r=>(r['Divisi']||'').toLowerCase()===fDivisi);
+        if(fBlok)   filtered=filtered.filter(r=>(r['Blok']||'').toUpperCase()===fBlok);
+        resolve(filtered);
+      };
+  
+      const tqx=`out:json;responseHandler:${cbName}`;
+      script.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=${encodeURIComponent(tqx)}&sheet=SensusGanoderma`;
+      script.onerror=()=>{ cleanup(); reject(new Error('Tidak dapat mengakses Sheet — periksa ID & status sharing')); };
+      document.head.appendChild(script);
+    });
+  }
+  
+  // ── [PATCH 7] ambilDataServer — ganti jsonpFetch → gvizFetch ──
+  async function ambilDataServer() {
+    const sheetId=localStorage.getItem('sheetId');
+    if(!sheetId){showToast('⚠ Sheet ID belum diisi di Pengaturan');openSettings();return;}
+  
+    const kebun=document.getElementById('peta-kebun').value.trim(), divisi=document.getElementById('peta-divisi').value.trim(), blok=document.getElementById('peta-blok').value.trim();
+    const statusEl=document.getElementById('peta-status'), btnEl=document.getElementById('btn-ambil'), dlBtn=document.getElementById('btn-dl-server');
+  
+    statusEl.className='peta-status loading'; statusEl.textContent='⏳ Mengambil data dari Google Sheet…'; btnEl.disabled=true;
+  
+    try {
+      const data=await gvizFetch(sheetId,{kebun,divisi,blok});
+      serverData=data;
+      const dgps=data.filter(r=>r['Latitude']&&r['Longitude']&&r['Latitude']!=='').length;
+      statusEl.className='peta-status ok'; statusEl.textContent=`✓ ${data.length} data dimuat (${dgps} dengan GPS)`;
+      renderPetaMarkers(data); dlBtn.disabled=(data.length===0);
+    } catch(err) {
+      statusEl.className='peta-status err';
+      statusEl.innerHTML=`❌ <b>${err.message}</b><br>Pastikan Sheet ID benar & di-share "Anyone with link → Viewer".`;
+    } finally { btnEl.disabled=false; }
+  }
+  
+  function renderPetaMarkers(data) {
+    if(!petaMap) initPetaMap();
+    setTimeout(()=>{
+      petaMarkerGroup.clearLayers(); const markers=[];
+      data.forEach(r=>{
+        const lat=parseFloat(r['Latitude']), lng=parseFloat(r['Longitude']);
+        if(!lat||!lng||isNaN(lat)||isNaN(lng)) return;
+        const skor=parseInt(r['Skor Stadium'])||0, stInfo=STADIUM[skor]||STADIUM[0], noPokok=r['No Pokok']||'?';
+        const hasFoto=!!(r['Link Foto']&&r['Link Foto'].startsWith('http')), fotoUrl=hasFoto?driveToImgUrl(r['Link Foto']):null;
+        const icon=L.divIcon({className:'',html:`<div style="background:${stInfo.bg};color:${stInfo.fg};border:2.5px solid ${stInfo.dark};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.35);${hasFoto?'outline:3px solid #FF9800;outline-offset:2px;':''}">${noPokok}</div>`,iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-20]});
+        let popup=`<div><span class="popup-badge" style="background:${stInfo.bg};color:${stInfo.fg}">Stadium ${skor} — ${stInfo.label}</span><div style="margin-top:4px"><strong>Pokok No. ${noPokok}</strong></div><div>Baris: ${r['Baris']||'—'} | Blok: ${r['Blok']||'—'}</div><div style="font-size:11px;color:#637063;margin-top:2px">${r['Kebun']||''} · ${r['Divisi']||''}</div><div style="font-size:11px;margin-top:4px">${r['Keparahan']||''}</div>`;
+        if(fotoUrl) popup+=`<img src="${fotoUrl}" alt="Foto" loading="lazy" onerror="this.style.display='none'">`;
+        popup+=`</div>`;
+        const marker=L.marker([lat,lng],{icon}); marker.bindPopup(popup,{maxWidth:230}); petaMarkerGroup.addLayer(marker); markers.push(marker);
+      });
+      if(markers.length>0){const group=L.featureGroup(markers);petaMap.fitBounds(group.getBounds().pad(0.15));}
+      petaMap.invalidateSize();
+    },200);
+  }
+  
+  function driveToImgUrl(url) { const m=url&&url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://drive.google.com/uc?export=view&id=${m[1]}`:null; }
+  
+  const XL_COLS=['Kebun','Divisi','Blok','Tanggal','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Foto'];
+  
+  // ── Stadium warna (hex → [R,G,B]) ─────────────────────────────
+  const ST_COLORS = {
+    '0':{ bg:[212,237,218], fg:[26,92,42]  },
+    '1':{ bg:[255,243,176], fg:[122,85,0]  },
+    '2':{ bg:[255,224,178], fg:[122,58,0]  },
+    '3':{ bg:[255,205,210], fg:[123,0,0]   },
+    '4':{ bg:[255,138,128], fg:[255,255,255]},
+  };
+  
+  // ── CORE PDF GENERATOR ────────────────────────────────────────
+  async function generatePDF(tableRows, fotoArr, meta, filename) {
+    if (!tableRows || !tableRows.length) { showToast('⚠ Tidak ada data untuk dicetak'); return; }
+    if (!window.jspdf) { showToast('⚠ Library PDF belum siap, coba lagi'); return; }
+  
+    showLoading(true);
+    await new Promise(r => setTimeout(r, 50)); // let UI update
+  
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+      const PW = doc.internal.pageSize.getWidth();
+      const PH = doc.internal.pageSize.getHeight();
+      const ML = 12; // margin left
+      const MR = 12; // margin right
+  
+      // ── HEADER BAR ──────────────────────────────────────────
+      doc.setFillColor(11, 38, 20);
+      doc.rect(0, 0, PW, 24, 'F');
+  
+      // Accent stripe
+      doc.setFillColor(46, 168, 74);
+      doc.rect(0, 24, PW, 1.5, 'F');
+  
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('Laporan Hasil Sensus Serangan Ganoderma', ML, 11);
+  
+      // Subtitle
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(134, 239, 172);
+      doc.text('GanoKit Ver.1  —  Sistem Deteksi Lapangan PPKS', ML, 18);
+  
+      // Date (top right)
+      doc.setTextColor(180, 220, 180);
+      doc.setFontSize(7.5);
+      const tglCetak = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+      doc.text(`Dicetak: ${tglCetak}`, PW - MR, 11, {align:'right'});
+      doc.text(`${tableRows.length} pokok`, PW - MR, 18, {align:'right'});
+  
+      // ── INFO BLOCK ──────────────────────────────────────────
+      let y = 31;
+      const infoBox = (label, val, x) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        doc.text(label, x, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(20, 20, 20);
+        doc.text(val || '—', x + 18, y);
+      };
+      infoBox('Kebun  :', meta.kebun || '—',  ML);
+      infoBox('Blok     :',  meta.blok  || '—',  165);
+      y += 5.5;
+      infoBox('Divisi  :',   meta.divisi|| '—',  ML);
+      if (meta.tanggal) infoBox('Tanggal :', meta.tanggal, 165);
+  
+      // Divider
+      y += 3;
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.4);
+      doc.line(ML, y, PW - MR, y);
+      y += 4;
+  
+      // ── CHECK FOTO ──────────────────────────────────────────
+      // fotoArr sudah berisi base64 semua (Drive sudah di-convert sebelumnya)
+      const hasFoto  = fotoArr && fotoArr.some(f => f && f.startsWith('data:image'));
+      const cellH    = hasFoto ? 22 : 7;
+      const fotoColW = hasFoto ? 32 : 16;
+  
+      // ── TABLE ───────────────────────────────────────────────
+      const head = [['No.','No. Pokok','Baris','Skor\nStadium','Tingkat Keparahan','Latitude','Longitude','Foto']];
+  
+      // rows format: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+      //              index:  0        1       2              3          4    5
+      const body = tableRows.map((r, i) => {
+        const skor      = String(r[2] ?? '').trim();           // ← FIX: index 2
+        const keparahan = String(r[3] || '');                  // ← FIX: index 3
+        const lat       = String(r[4] || '');                  // ← FIX: index 4
+        const lng       = String(r[5] || '');                  // ← FIX: index 5
+        const latStr    = lat ? parseFloat(lat).toFixed(6) : '—';
+        const lngStr    = lng ? parseFloat(lng).toFixed(6) : '—';
+        return [i + 1, r[0], r[1], skor, keparahan, latStr, lngStr, ''];
+      });
+  
+      doc.autoTable({
+        startY : y,
+        head   : head,
+        body   : body,
+        margin : { left: ML, right: MR },
+        theme  : 'grid',
+        styles : {
+          fontSize    : 7.5,
+          cellPadding : { top:2, right:3, bottom:2, left:3 },
+          valign      : 'middle',
+          lineColor   : [210, 215, 210],
+          lineWidth   : 0.25,
+          textColor   : [30, 30, 30],
+          overflow    : 'linebreak',
+        },
+        headStyles : {
+          fillColor  : [27, 107, 48],
+          textColor  : [255, 255, 255],
+          fontStyle  : 'bold',
+          fontSize   : 7.5,
+          halign     : 'center',
+          cellPadding: 3,
+          minCellHeight: 10,
+        },
+        alternateRowStyles: { fillColor: [248, 250, 248] },
+        columnStyles: {
+          0: { cellWidth: 9,         halign:'center'  },  // No.
+          1: { cellWidth: 20,        halign:'center'  },  // No. Pokok
+          2: { cellWidth: 14,        halign:'center'  },  // Baris
+          3: { cellWidth: 18,        halign:'center'  },  // Skor
+          4: { cellWidth: 'auto'                      },  // Keparahan
+          5: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lat
+          6: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lng
+          7: { cellWidth: fotoColW,  halign:'center'  },  // Foto
+        },
+        bodyStyles: { minCellHeight: cellH },
+  
+        // Warnai sel Keparahan sesuai stadium
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 4) {
+            const skor = String(body[data.row.index]?.[3] ?? '').trim();
+            const c    = ST_COLORS[skor];
+            if (c) {
+              data.cell.styles.fillColor = c.bg;
+              data.cell.styles.textColor = c.fg;
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+          // Skor stadium cell — warnai juga
+          if (data.section === 'body' && data.column.index === 3) {
+            const skor = String(body[data.row.index]?.[3] ?? '').trim();
+            const c    = ST_COLORS[skor];
+            if (c) {
+              data.cell.styles.fillColor = c.bg;
+              data.cell.styles.textColor = c.fg;
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        },
+  
+        // Gambar foto di sel Foto
+        didDrawCell: function(data) {
+          if (data.section !== 'body' || data.column.index !== 7) return;
+          const foto = fotoArr ? fotoArr[data.row.index] : null;
+          if (!foto || !foto.startsWith('data:image')) {
+            doc.setFontSize(6.5);
+            doc.setTextColor(190, 190, 190);
+            doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+            return;
+          }
+          try {
+            const imgType = foto.toLowerCase().includes('jpeg')||foto.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
+            const pad = 1.5;
+            doc.addImage(foto, imgType,
+              data.cell.x + pad,
+              data.cell.y + pad,
+              data.cell.width  - pad*2,
+              data.cell.height - pad*2,
+            );
+          } catch(e) {
+            doc.setFontSize(6);
+            doc.setTextColor(180,100,100);
+            doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+          }
+        },
+      });
+  
+      // ── FOOTER TIAP HALAMAN ──────────────────────────────────
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        // Footer bar
+        doc.setFillColor(245, 247, 245);
+        doc.rect(0, PH - 8, PW, 8, 'F');
+        doc.setDrawColor(220, 230, 220);
+        doc.setLineWidth(0.3);
+        doc.line(0, PH - 8, PW, PH - 8);
+        // Footer text
+        doc.setFontSize(6.5);
+        doc.setTextColor(120, 130, 120);
+        doc.setFont('helvetica', 'normal');
+        doc.text('GanoKit Ver.1  |  Sistem Sensus Ganoderma — PPKS', ML, PH - 3);
+        doc.text(`Halaman ${p} / ${totalPages}`, PW - MR, PH - 3, {align:'right'});
+      }
+  
+      showLoading(false);
+      doc.save(filename);
+      showToast(`✅ PDF berhasil didownload`);
+    } catch(err) {
+      showLoading(false);
+      showToast('❌ Gagal generate PDF: ' + err.message);
+      console.error(err);
+    }
+  }
+  
+  // ── Helper: load URL gambar Drive → base64 ────────────────────
+  // Masalah pokok: sw.js di GitHub Pages mengintersep SEMUA request
+  // (fetch, script tag, blob iframe) dan gagal → CORS error / timeout.
+  //
+  // Solusi: unregister SW sementara sebelum fetch ke GAS, kemudian
+  // re-register setelah selesai. Tanpa SW, fetch cors credentials:omit
+  // ke GAS langsung bisa dibaca responsnya.
+  //
+  // Catatan: SW di-unregister < 1 detik, lalu langsung di-register ulang.
+  // Ini tidak mempengaruhi fungsi lain di luar proses loading foto.
+  // ── Helper: load URL gambar Drive → base64 (JSONP, bukan fetch) ──
+// GAS mengembalikan MimeType.JAVASCRIPT untuk action=getImage
+// → fetch() diblokir CORS. Script tag melewati CORS & Service Worker.
 async function loadImageBase64(url) {
   if (!url) return null;
   if (url.startsWith('data:image')) return url;
@@ -1333,141 +1336,135 @@ async function loadImageBase64(url) {
   const gasUrl = localStorage.getItem('gasUrl');
   if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return null; }
 
-  const cleanUrl  = normalizeGasUrl(gasUrl);
-  const proxyUrl  = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}`;
+  const cleanUrl = normalizeGasUrl(gasUrl);
 
-  // ── Sementara unregister service worker ──────────────────
-  let swRegs = [];
-  if ('serviceWorker' in navigator) {
-    try {
-      swRegs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of swRegs) await reg.unregister();
-      await new Promise(r => setTimeout(r, 80)); // beri waktu SW deactivate
-    } catch(e) { console.warn('SW unregister error:', e.message); }
-  }
+  return new Promise((resolve) => {
+    const cbName = 'imgCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      cleanup();
+      console.warn('loadImageBase64: timeout untuk', driveId);
+      resolve(null);
+    }, 20000);
 
-  let result = null;
-  try {
-    // Tanpa SW → fetch cors credentials:omit bisa baca response GAS
-    const resp = await fetch(proxyUrl, {
-      mode       : 'cors',
-      credentials: 'omit',
-      cache      : 'no-store',
-    });
-    if (resp.ok) {
-      const json = await resp.json();
-      if (json.status === 'ok' && json.data) result = json.data;
-      else console.warn('GAS getImage error:', json.msg);
-    } else {
-      console.warn('GAS getImage HTTP:', resp.status);
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
-  } catch(e) {
-    console.warn('loadImageBase64 fetch failed:', e.message);
-  }
 
-  // ── Re-register service worker ────────────────────────────
-  if ('serviceWorker' in navigator && swRegs.length) {
-    for (const reg of swRegs) {
-      try {
-        const swUrl = (reg.active || reg.installing || reg.waiting)?.scriptURL;
-        if (swUrl) await navigator.serviceWorker.register(swUrl);
-      } catch(e) { /* ignore */ }
+    window[cbName] = function(result) {
+      cleanup();
+      if (result && result.status === 'ok' && result.data) {
+        resolve(result.data);
+      } else {
+        console.warn('GAS getImage error:', result && result.msg);
+        resolve(null);
+      }
+    };
+
+    script.onerror = () => {
+      cleanup();
+      console.warn('loadImageBase64: script error untuk', driveId);
+      resolve(null);
+    };
+
+    // JSONP: GAS akan memanggil window[cbName](responseObject)
+    script.src = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}&callback=${encodeURIComponent(cbName)}`;
+    document.head.appendChild(script);
+  });
+}
+  
+  // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
+  async function downloadPdfLocal() {
+    if (!allRecords || !allRecords.length) { showToast('⚠ Belum ada data lokal'); return; }
+  
+    const kebun  = document.getElementById('flt-kebun').value;
+    const divisi = document.getElementById('flt-divisi').value;
+    const blok   = document.getElementById('flt-blok').value;
+  
+    let filtered = allRecords;
+    if (kebun)  filtered = filtered.filter(r => r.kebun  === kebun);
+    if (divisi) filtered = filtered.filter(r => r.divisi === divisi);
+    if (blok)   filtered = filtered.filter(r => r.blok   === blok);
+  
+    if (!filtered.length) { showToast('⚠ Tidak ada data setelah filter'); return; }
+  
+    const first = filtered[0];
+    const meta  = { kebun: kebun||first.kebun||'—', divisi: divisi||first.divisi||'—', blok: blok||first.blok||'—', tanggal: first.tanggal||'' };
+  
+    // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+    const rows = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
+  
+    // Foto: base64 lokal sudah siap, drive URL perlu di-load
+    showToast('⏳ Memuat foto…');
+    const rawFotos = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
+    const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
+  
+    const now     = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    const label   = kebun ? `_${kebun}` : '';
+    generatePDF(rows, fotos, meta, `Sensus_Ganoderma${label}_${dateStr}.pdf`);
+  }
+  
+  // ── DOWNLOAD PDF SERVER (dari data peta) ─────────────────────
+  async function downloadPdfServer() {
+    if (!serverData || !serverData.length) { showToast('⚠ Ambil data dari server dulu'); return; }
+  
+    const kebun  = document.getElementById('peta-kebun').value  || serverData[0]?.['Kebun']  || '—';
+    const divisi = document.getElementById('peta-divisi').value || serverData[0]?.['Divisi'] || '—';
+    const blok   = document.getElementById('peta-blok').value   || serverData[0]?.['Blok']   || '—';
+  
+    const meta = { kebun, divisi, blok, tanggal:'' };
+  
+    // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
+    const rows = serverData.map(r => [
+      r['No Pokok']||'', r['Baris']||'',
+      r['Skor Stadium']||'', r['Keparahan']||'',
+      r['Latitude']||'', r['Longitude']||''
+    ]);
+  
+    // Hitung berapa baris yang punya foto
+    const rawFotos  = serverData.map(r => { const lf = r['Link Foto']; return (lf && lf.startsWith('http')) ? lf : null; });
+    const totalFoto = rawFotos.filter(Boolean).length;
+  
+    // Tampilkan loading + info foto
+    showLoading(true);
+    if (totalFoto > 0) {
+      showToast(`⏳ Mengambil ${totalFoto} foto dari Google Drive…`, 8000);
     }
+  
+    // Load foto satu per satu (bukan parallel) agar tidak throttle Drive
+    const fotos = [];
+    for (let i = 0; i < rawFotos.length; i++) {
+      fotos.push(await loadImageBase64(rawFotos[i]));
+    }
+    showLoading(false);
+  
+    const now     = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    generatePDF(rows, fotos, meta, `Laporan_Ganoderma_${kebun}_${dateStr}.pdf`);
   }
-
-  return result;
-}
-
-// ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
-async function downloadPdfLocal() {
-  if (!allRecords || !allRecords.length) { showToast('⚠ Belum ada data lokal'); return; }
-
-  const kebun  = document.getElementById('flt-kebun').value;
-  const divisi = document.getElementById('flt-divisi').value;
-  const blok   = document.getElementById('flt-blok').value;
-
-  let filtered = allRecords;
-  if (kebun)  filtered = filtered.filter(r => r.kebun  === kebun);
-  if (divisi) filtered = filtered.filter(r => r.divisi === divisi);
-  if (blok)   filtered = filtered.filter(r => r.blok   === blok);
-
-  if (!filtered.length) { showToast('⚠ Tidak ada data setelah filter'); return; }
-
-  const first = filtered[0];
-  const meta  = { kebun: kebun||first.kebun||'—', divisi: divisi||first.divisi||'—', blok: blok||first.blok||'—', tanggal: first.tanggal||'' };
-
-  // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
-  const rows = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
-
-  // Foto: base64 lokal sudah siap, drive URL perlu di-load
-  showToast('⏳ Memuat foto…');
-  const rawFotos = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
-  const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
-
-  const now     = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  const label   = kebun ? `_${kebun}` : '';
-  generatePDF(rows, fotos, meta, `Sensus_Ganoderma${label}_${dateStr}.pdf`);
-}
-
-// ── DOWNLOAD PDF SERVER (dari data peta) ─────────────────────
-async function downloadPdfServer() {
-  if (!serverData || !serverData.length) { showToast('⚠ Ambil data dari server dulu'); return; }
-
-  const kebun  = document.getElementById('peta-kebun').value  || serverData[0]?.['Kebun']  || '—';
-  const divisi = document.getElementById('peta-divisi').value || serverData[0]?.['Divisi'] || '—';
-  const blok   = document.getElementById('peta-blok').value   || serverData[0]?.['Blok']   || '—';
-
-  const meta = { kebun, divisi, blok, tanggal:'' };
-
-  // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
-  const rows = serverData.map(r => [
-    r['No Pokok']||'', r['Baris']||'',
-    r['Skor Stadium']||'', r['Keparahan']||'',
-    r['Latitude']||'', r['Longitude']||''
-  ]);
-
-  // Hitung berapa baris yang punya foto
-  const rawFotos  = serverData.map(r => { const lf = r['Link Foto']; return (lf && lf.startsWith('http')) ? lf : null; });
-  const totalFoto = rawFotos.filter(Boolean).length;
-
-  // Tampilkan loading + info foto
-  showLoading(true);
-  if (totalFoto > 0) {
-    showToast(`⏳ Mengambil ${totalFoto} foto dari Google Drive…`, 8000);
+  
+  // ── legacy Excel (tidak lagi dipakai, biarkan ada untuk referensi) ─
+  function buildLocalRows(records) {
+    return records.map(r=>{let foto='-'; if(r.link_foto&&r.link_foto.startsWith('http')) foto=r.link_foto; else if(r.foto) foto='Ada (lokal)'; return [r.kebun||'',r.divisi||'',r.blok||'',r.tanggal||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium??'',r.keparahan||'',r.lat||'',r.lng||'',foto];});
   }
-
-  // Load foto satu per satu (bukan parallel) agar tidak throttle Drive
-  const fotos = [];
-  for (let i = 0; i < rawFotos.length; i++) {
-    fotos.push(await loadImageBase64(rawFotos[i]));
+  function buildServerRows(data) {
+    return data.map(r=>[r['Kebun']||'',r['Divisi']||'',r['Blok']||'',r['Tanggal']||'',r['No Pokok']||'',r['Baris']||'',r['Kondisi Pokok']||'',r['Daun Tombak']||'',r['Klorosis']||'',r['Sengkleh']||'',r['Skirting']||'',r['Tajuk']||'',r['Miselia Awal']||'',r['Tubuh Buah']||'',r['Batang Lunak']||'',r['Akar Busuk']||'',r['Akar Miselia']||'',r['Skor Stadium']||'',r['Keparahan']||'',r['Latitude']||'',r['Longitude']||'',r['Link Foto']||'-']);
   }
-  showLoading(false);
-
-  const now     = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  generatePDF(rows, fotos, meta, `Laporan_Ganoderma_${kebun}_${dateStr}.pdf`);
-}
-
-// ── legacy Excel (tidak lagi dipakai, biarkan ada untuk referensi) ─
-function buildLocalRows(records) {
-  return records.map(r=>{let foto='-'; if(r.link_foto&&r.link_foto.startsWith('http')) foto=r.link_foto; else if(r.foto) foto='Ada (lokal)'; return [r.kebun||'',r.divisi||'',r.blok||'',r.tanggal||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium??'',r.keparahan||'',r.lat||'',r.lng||'',foto];});
-}
-function buildServerRows(data) {
-  return data.map(r=>[r['Kebun']||'',r['Divisi']||'',r['Blok']||'',r['Tanggal']||'',r['No Pokok']||'',r['Baris']||'',r['Kondisi Pokok']||'',r['Daun Tombak']||'',r['Klorosis']||'',r['Sengkleh']||'',r['Skirting']||'',r['Tajuk']||'',r['Miselia Awal']||'',r['Tubuh Buah']||'',r['Batang Lunak']||'',r['Akar Busuk']||'',r['Akar Miselia']||'',r['Skor Stadium']||'',r['Keparahan']||'',r['Latitude']||'',r['Longitude']||'',r['Link Foto']||'-']);
-}
-function generateExcel(rows,sheetName,filename) {
-  if(!rows||!rows.length){showToast('⚠ Tidak ada data');return;}
-  const aoaData=[XL_COLS,...rows], ws=XLSX.utils.aoa_to_sheet(aoaData);
-  ws['!cols']=XL_COLS.map((h,i)=>{const maxLen=Math.max(h.length,...rows.map(r=>String(r[i]||'').length).slice(0,50));return{wch:Math.min(Math.max(maxLen,10),50)};});
-  ws['!freeze']={xSplit:0,ySplit:1};
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheetName); XLSX.writeFile(wb,filename);
-  showToast(`✅ File ${filename} berhasil didownload`);
-}
-function downloadExcelLocal() { downloadPdfLocal(); }
-function downloadExcelServer() { downloadPdfServer(); }
-
-document.addEventListener('DOMContentLoaded', init);
-</script>
-</body>
-</html>
+  function generateExcel(rows,sheetName,filename) {
+    if(!rows||!rows.length){showToast('⚠ Tidak ada data');return;}
+    const aoaData=[XL_COLS,...rows], ws=XLSX.utils.aoa_to_sheet(aoaData);
+    ws['!cols']=XL_COLS.map((h,i)=>{const maxLen=Math.max(h.length,...rows.map(r=>String(r[i]||'').length).slice(0,50));return{wch:Math.min(Math.max(maxLen,10),50)};});
+    ws['!freeze']={xSplit:0,ySplit:1};
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheetName); XLSX.writeFile(wb,filename);
+    showToast(`✅ File ${filename} berhasil didownload`);
+  }
+  function downloadExcelLocal() { downloadPdfLocal(); }
+  function downloadExcelServer() { downloadPdfServer(); }
+  
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+  </body>
+  </html>
