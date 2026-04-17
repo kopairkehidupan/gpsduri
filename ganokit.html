@@ -1311,76 +1311,71 @@ async function generatePDF(tableRows, fotoArr, meta, filename) {
 }
 
 // ── Helper: load URL gambar Drive → base64 ────────────────────
-// Masalah: service worker (sw.js) di GitHub Pages mengintersep SEMUA
-// request dari halaman (baik fetch maupun script tags) ke domain
-// eksternal, lalu gagal menanganinya → fetch error atau timeout.
+// Masalah pokok: sw.js di GitHub Pages mengintersep SEMUA request
+// (fetch, script tag, blob iframe) dan gagal → CORS error / timeout.
 //
-// Solusi: Gunakan blob-URL iframe.
-//   • Iframe dengan src="blob:..." punya null origin
-//   • Service worker TIDAK mengontrol halaman dengan null origin
-//   • Script tag di dalam iframe tidak diintersep SW
-//   • JSONP callback dikirim ke parent via postMessage
+// Solusi: unregister SW sementara sebelum fetch ke GAS, kemudian
+// re-register setelah selesai. Tanpa SW, fetch cors credentials:omit
+// ke GAS langsung bisa dibaca responsnya.
 //
-// Alur: parent → buat iframe blob → iframe load JSONP dari GAS →
-//       GAS kembalikan base64 → callback di iframe → postMessage →
-//       parent resolve promise dengan base64
-function loadImageBase64(url) {
-  if (!url) return Promise.resolve(null);
-  if (url.startsWith('data:image')) return Promise.resolve(url);
+// Catatan: SW di-unregister < 1 detik, lalu langsung di-register ulang.
+// Ini tidak mempengaruhi fungsi lain di luar proses loading foto.
+async function loadImageBase64(url) {
+  if (!url) return null;
+  if (url.startsWith('data:image')) return url;
 
   const driveId = (
     url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
     url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
   )?.[1];
-  if (!driveId) return Promise.resolve(null);
+  if (!driveId) return null;
 
   const gasUrl = localStorage.getItem('gasUrl');
-  if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return Promise.resolve(null); }
+  if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return null; }
 
-  const cleanUrl = normalizeGasUrl(gasUrl);
-  const cbName   = 'imgCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-  const scriptUrl = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}&callback=${cbName}`;
+  const cleanUrl  = normalizeGasUrl(gasUrl);
+  const proxyUrl  = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}`;
 
-  return new Promise(resolve => {
-    let iframe = null;
-    const timer = setTimeout(() => {
-      window.removeEventListener('message', onMsg);
-      if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      console.warn('loadImageBase64 timeout:', driveId);
-      resolve(null);
-    }, 35000);
+  // ── Sementara unregister service worker ──────────────────
+  let swRegs = [];
+  if ('serviceWorker' in navigator) {
+    try {
+      swRegs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of swRegs) await reg.unregister();
+      await new Promise(r => setTimeout(r, 80)); // beri waktu SW deactivate
+    } catch(e) { console.warn('SW unregister error:', e.message); }
+  }
 
-    function onMsg(ev) {
-      if (!ev.data || ev.data.type !== 'imgResult' || ev.data.cb !== cbName) return;
-      clearTimeout(timer);
-      window.removeEventListener('message', onMsg);
-      if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      resolve(ev.data.data || null);
+  let result = null;
+  try {
+    // Tanpa SW → fetch cors credentials:omit bisa baca response GAS
+    const resp = await fetch(proxyUrl, {
+      mode       : 'cors',
+      credentials: 'omit',
+      cache      : 'no-store',
+    });
+    if (resp.ok) {
+      const json = await resp.json();
+      if (json.status === 'ok' && json.data) result = json.data;
+      else console.warn('GAS getImage error:', json.msg);
+    } else {
+      console.warn('GAS getImage HTTP:', resp.status);
     }
-    window.addEventListener('message', onMsg);
+  } catch(e) {
+    console.warn('loadImageBase64 fetch failed:', e.message);
+  }
 
-    // HTML di dalam iframe: null-origin → SW tidak mengintersep
-    const iframeHtml = `<!DOCTYPE html><html><head></head><body><script>
-window.${cbName} = function(result) {
-  var data = (result && result.status === 'ok' && result.data) ? result.data : null;
-  window.parent.postMessage({type:'imgResult', cb:'${cbName}', data: data}, '*');
-};
-var s = document.createElement('script');
-s.onerror = function() {
-  window.parent.postMessage({type:'imgResult', cb:'${cbName}', data: null}, '*');
-};
-s.src = ${JSON.stringify(scriptUrl)};
-document.head.appendChild(s);
-\u003c/script></body></html>`;
+  // ── Re-register service worker ────────────────────────────
+  if ('serviceWorker' in navigator && swRegs.length) {
+    for (const reg of swRegs) {
+      try {
+        const swUrl = (reg.active || reg.installing || reg.waiting)?.scriptURL;
+        if (swUrl) await navigator.serviceWorker.register(swUrl);
+      } catch(e) { /* ignore */ }
+    }
+  }
 
-    const blob    = new Blob([iframeHtml], {type: 'text/html'});
-    const blobUrl = URL.createObjectURL(blob);
-    iframe        = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:1px;height:1px;top:-9999px;left:-9999px;border:none;opacity:0';
-    iframe.onload = () => URL.revokeObjectURL(blobUrl);
-    iframe.src    = blobUrl;
-    document.body.appendChild(iframe);
-  });
+  return result;
 }
 
 // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
