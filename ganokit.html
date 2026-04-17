@@ -1133,37 +1133,50 @@
     if (!window.jspdf) { showToast('⚠ Library PDF belum siap, coba lagi'); return; }
   
     showLoading(true);
-    await new Promise(r => setTimeout(r, 50)); // let UI update
+    await new Promise(r => setTimeout(r, 50));
   
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-      const PW = doc.internal.pageSize.getWidth();
-      const PH = doc.internal.pageSize.getHeight();
-      const ML = 12; // margin left
-      const MR = 12; // margin right
+      const PW = doc.internal.pageSize.getWidth();   // 297
+      const PH = doc.internal.pageSize.getHeight();  // 210
+      const ML = 12, MR = 12;
+      const USABLE = PW - ML - MR; // 273mm
+  
+      // ── Konstanta layout foto ────────────────────────────────
+      const FOTO_COL_W  = 42;  // mm — lebar kolom foto
+      const MAX_FOTO_H  = 60;  // mm — tinggi foto maks
+      const ROW_H_TEXT  = 7;   // mm — tinggi baris tanpa foto
+  
+      // ── Pre-hitung tinggi render tiap baris ──────────────────
+      // fotoArr berisi {data, w, h} atau null
+      const rowRenderH = tableRows.map((_, i) => {
+        const f = fotoArr ? fotoArr[i] : null;
+        if (!f || !f.data) return ROW_H_TEXT;
+        const aspect = f.h / f.w; // rasio tinggi/lebar
+        const h = Math.min(FOTO_COL_W * aspect, MAX_FOTO_H);
+        return Math.max(h + 3, 14); // min 14mm kalau foto ada
+      });
+  
+      const anyFoto = fotoArr && fotoArr.some(f => f && f.data);
+      const fotoColW = anyFoto ? FOTO_COL_W : 14;
   
       // ── HEADER BAR ──────────────────────────────────────────
       doc.setFillColor(11, 38, 20);
       doc.rect(0, 0, PW, 24, 'F');
-  
-      // Accent stripe
       doc.setFillColor(46, 168, 74);
       doc.rect(0, 24, PW, 1.5, 'F');
   
-      // Title
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.text('Laporan Hasil Sensus Serangan Ganoderma', ML, 11);
   
-      // Subtitle
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(134, 239, 172);
       doc.text('GanoKit Ver.1  —  Sistem Deteksi Lapangan PPKS', ML, 18);
   
-      // Date (top right)
       doc.setTextColor(180, 220, 180);
       doc.setFontSize(7.5);
       const tglCetak = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
@@ -1173,46 +1186,34 @@
       // ── INFO BLOCK ──────────────────────────────────────────
       let y = 31;
       const infoBox = (label, val, x) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(80, 80, 80);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(80,80,80);
         doc.text(label, x, y);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(20, 20, 20);
-        doc.text(val || '—', x + 18, y);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(20,20,20);
+        doc.text(val || '—', x + 20, y);
       };
-      infoBox('Kebun  :', meta.kebun || '—',  ML);
-      infoBox('Blok     :',  meta.blok  || '—',  165);
+      infoBox('Kebun   :', meta.kebun  || '—', ML);
+      infoBox('Blok      :', meta.blok   || '—', 160);
       y += 5.5;
-      infoBox('Divisi  :',   meta.divisi|| '—',  ML);
-      if (meta.tanggal) infoBox('Tanggal :', meta.tanggal, 165);
+      infoBox('Divisi   :', meta.divisi || '—', ML);
+      if (meta.tanggal) infoBox('Tanggal :', meta.tanggal, 160);
   
-      // Divider
       y += 3;
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.4);
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.4);
       doc.line(ML, y, PW - MR, y);
       y += 4;
   
-      // ── CHECK FOTO ──────────────────────────────────────────
-      // fotoArr sudah berisi base64 semua (Drive sudah di-convert sebelumnya)
-      const hasFoto  = fotoArr && fotoArr.some(f => f && f.startsWith('data:image'));
-      const cellH    = hasFoto ? 22 : 7;
-      const fotoColW = hasFoto ? 32 : 16;
+      // ── KOLOM — lebar proporsional ───────────────────────────
+      // Total fixed (tanpa keparahan & foto): 8+20+13+20+26+26 = 113
+      // Sisa untuk keparahan: USABLE - 113 - fotoColW
+      const kepW = USABLE - 113 - fotoColW;
   
-      // ── TABLE ───────────────────────────────────────────────
-      const head = [['No.','No. Pokok','Baris','Skor\nStadium','Tingkat Keparahan','Latitude','Longitude','Foto']];
+      const head = [['No.','No.\nPokok','Baris','Skor\nStadium','Tingkat Keparahan','Latitude','Longitude','Foto']];
   
-      // rows format: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
-      //              index:  0        1       2              3          4    5
       const body = tableRows.map((r, i) => {
-        const skor      = String(r[2] ?? '').trim();           // ← FIX: index 2
-        const keparahan = String(r[3] || '');                  // ← FIX: index 3
-        const lat       = String(r[4] || '');                  // ← FIX: index 4
-        const lng       = String(r[5] || '');                  // ← FIX: index 5
-        const latStr    = lat ? parseFloat(lat).toFixed(6) : '—';
-        const lngStr    = lng ? parseFloat(lng).toFixed(6) : '—';
-        return [i + 1, r[0], r[1], skor, keparahan, latStr, lngStr, ''];
+        const skor    = String(r[2] ?? '').trim();
+        const latStr  = r[4] ? parseFloat(r[4]).toFixed(6) : '—';
+        const lngStr  = r[5] ? parseFloat(r[5]).toFixed(6) : '—';
+        return [i + 1, r[0], r[1], skor, String(r[3] || ''), latStr, lngStr, ''];
       });
   
       doc.autoTable({
@@ -1231,42 +1232,38 @@
           overflow    : 'linebreak',
         },
         headStyles : {
-          fillColor  : [27, 107, 48],
-          textColor  : [255, 255, 255],
-          fontStyle  : 'bold',
-          fontSize   : 7.5,
-          halign     : 'center',
-          cellPadding: 3,
-          minCellHeight: 10,
+          fillColor    : [27, 107, 48],
+          textColor    : [255, 255, 255],
+          fontStyle    : 'bold',
+          fontSize     : 7.5,
+          halign       : 'center',
+          cellPadding  : 3,
+          minCellHeight: 11,
         },
         alternateRowStyles: { fillColor: [248, 250, 248] },
         columnStyles: {
-          0: { cellWidth: 9,         halign:'center'  },  // No.
-          1: { cellWidth: 20,        halign:'center'  },  // No. Pokok
-          2: { cellWidth: 14,        halign:'center'  },  // Baris
-          3: { cellWidth: 18,        halign:'center'  },  // Skor
-          4: { cellWidth: 'auto'                      },  // Keparahan
-          5: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lat
-          6: { cellWidth: 28,        halign:'center', fontSize:7 },  // Lng
-          7: { cellWidth: fotoColW,  halign:'center'  },  // Foto
+          0: { cellWidth: 8,        halign:'center' },   // No.
+          1: { cellWidth: 20,       halign:'center' },   // No. Pokok
+          2: { cellWidth: 13,       halign:'center' },   // Baris
+          3: { cellWidth: 20,       halign:'center' },   // Skor
+          4: { cellWidth: kepW                      },   // Keparahan
+          5: { cellWidth: 26,       halign:'center', fontSize:7 }, // Lat
+          6: { cellWidth: 26,       halign:'center', fontSize:7 }, // Lng
+          7: { cellWidth: fotoColW, halign:'center' },   // Foto
         },
-        bodyStyles: { minCellHeight: cellH },
   
-        // Warnai sel Keparahan sesuai stadium
+        // ── Per-baris: tinggi sesuai ada/tidaknya foto ────────
         didParseCell: function(data) {
-          if (data.section === 'body' && data.column.index === 4) {
-            const skor = String(body[data.row.index]?.[3] ?? '').trim();
-            const c    = ST_COLORS[skor];
-            if (c) {
-              data.cell.styles.fillColor = c.bg;
-              data.cell.styles.textColor = c.fg;
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-          // Skor stadium cell — warnai juga
-          if (data.section === 'body' && data.column.index === 3) {
-            const skor = String(body[data.row.index]?.[3] ?? '').trim();
-            const c    = ST_COLORS[skor];
+          if (data.section !== 'body') return;
+          const ri = data.row.index;
+  
+          // Tinggi baris dari pre-kalkulasi
+          data.cell.styles.minCellHeight = rowRenderH[ri];
+  
+          // Warna sel Skor (kol 3) dan Keparahan (kol 4)
+          if (data.column.index === 3 || data.column.index === 4) {
+            const skor = String(body[ri]?.[3] ?? '').trim();
+            const c = ST_COLORS[skor];
             if (c) {
               data.cell.styles.fillColor = c.bg;
               data.cell.styles.textColor = c.fg;
@@ -1275,29 +1272,45 @@
           }
         },
   
-        // Gambar foto di sel Foto
+        // ── Render foto proporsional di sel ──────────────────
         didDrawCell: function(data) {
           if (data.section !== 'body' || data.column.index !== 7) return;
-          const foto = fotoArr ? fotoArr[data.row.index] : null;
-          if (!foto || !foto.startsWith('data:image')) {
+          const f = fotoArr ? fotoArr[data.row.index] : null;
+  
+          if (!f || !f.data) {
+            // baris tanpa foto: tampilkan tanda —
             doc.setFontSize(6.5);
             doc.setTextColor(190, 190, 190);
-            doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+            doc.text('—', data.cell.x + data.cell.width/2,
+                          data.cell.y + data.cell.height/2,
+                          {align:'center', baseline:'middle'});
             return;
           }
+  
           try {
-            const imgType = foto.toLowerCase().includes('jpeg')||foto.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
+            const imgType = f.data.toLowerCase().includes('jpeg') || f.data.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
             const pad = 1.5;
-            doc.addImage(foto, imgType,
-              data.cell.x + pad,
-              data.cell.y + pad,
-              data.cell.width  - pad*2,
-              data.cell.height - pad*2,
-            );
+            const maxW = data.cell.width  - pad * 2;
+            const maxH = data.cell.height - pad * 2;
+  
+            // Hitung dimensi render proporsional
+            const aspect = f.w / f.h; // lebar/tinggi
+            let rW, rH;
+            if (maxW / maxH > aspect) {
+              rH = maxH; rW = maxH * aspect; // dibatasi tinggi
+            } else {
+              rW = maxW; rH = maxW / aspect; // dibatasi lebar
+            }
+  
+            // Posisi tengah di sel
+            const x = data.cell.x + pad + (maxW - rW) / 2;
+            const y = data.cell.y + pad + (maxH - rH) / 2;
+            doc.addImage(f.data, imgType, x, y, rW, rH);
           } catch(e) {
-            doc.setFontSize(6);
-            doc.setTextColor(180,100,100);
-            doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+            doc.setFontSize(6); doc.setTextColor(180,100,100);
+            doc.text('Err', data.cell.x + data.cell.width/2,
+                            data.cell.y + data.cell.height/2,
+                            {align:'center', baseline:'middle'});
           }
         },
       });
@@ -1306,15 +1319,11 @@
       const totalPages = doc.internal.getNumberOfPages();
       for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
-        // Footer bar
         doc.setFillColor(245, 247, 245);
         doc.rect(0, PH - 8, PW, 8, 'F');
-        doc.setDrawColor(220, 230, 220);
-        doc.setLineWidth(0.3);
+        doc.setDrawColor(220, 230, 220); doc.setLineWidth(0.3);
         doc.line(0, PH - 8, PW, PH - 8);
-        // Footer text
-        doc.setFontSize(6.5);
-        doc.setTextColor(120, 130, 120);
+        doc.setFontSize(6.5); doc.setTextColor(120, 130, 120);
         doc.setFont('helvetica', 'normal');
         doc.text('GanoKit Ver.1  |  Sistem Sensus Ganoderma — PPKS', ML, PH - 3);
         doc.text(`Halaman ${p} / ${totalPages}`, PW - MR, PH - 3, {align:'right'});
@@ -1348,7 +1357,16 @@
   // untuk file yang di-share "Anyone with link"
   function loadImageBase64(url) {
     if (!url) return Promise.resolve(null);
-    if (url.startsWith('data:image')) return Promise.resolve(url);
+  
+    // data:image lokal — load ke Image untuk dapat dimensi
+    if (url.startsWith('data:image')) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve({ data: url, w: img.naturalWidth, h: img.naturalHeight });
+        img.onerror = () => resolve({ data: url, w: 4, h: 3 }); // fallback 4:3
+        img.src = url;
+      });
+    }
   
     const driveId = (
       url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
@@ -1356,7 +1374,6 @@
     )?.[1];
     if (!driveId) return Promise.resolve(null);
   
-    // URL kandidat — coba satu per satu
     const candidates = [
       `https://lh3.googleusercontent.com/d/${driveId}`,
       `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`,
@@ -1381,7 +1398,7 @@
         img.onload = () => {
           clearTimeout(timer);
           try {
-            const MAX = 900;
+            const MAX = 1200; // resolusi lebih tinggi agar foto PDF tajam
             let w = img.naturalWidth, h = img.naturalHeight;
             if (w > MAX || h > MAX) {
               if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -1390,10 +1407,9 @@
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            console.log(`[GanoKit] OK URL[${idx}] fileId:`, driveId);
-            resolve(canvas.toDataURL('image/jpeg', 0.82));
+            console.log(`[GanoKit] OK URL[${idx}] ${w}×${h} fileId:`, driveId);
+            resolve({ data: canvas.toDataURL('image/jpeg', 0.85), w, h });
           } catch (e) {
-            // Canvas tainted = CORS header tidak ada di URL ini
             console.warn(`[GanoKit] Canvas tainted URL[${idx}]:`, e.message);
             resolve(tryUrl(idx + 1));
           }
@@ -1401,7 +1417,6 @@
   
         img.onerror = () => {
           clearTimeout(timer);
-          console.warn(`[GanoKit] Error URL[${idx}]:`, candidates[idx]);
           resolve(tryUrl(idx + 1));
         };
   
