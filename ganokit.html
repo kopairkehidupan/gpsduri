@@ -1002,13 +1002,28 @@
       try { await gvizFetch(sheetId,{}); sheetOk=true; }
       catch(e) { sheetErr=e.message; }
     }
+
+    // --- TAMBAHKAN BLOK INI setelah blok "if(sheetId)" ---
+    // Test JSONP getImage (proxy foto Drive)
+    let jsonpOk = false, jsonpMsg = '';
+    const jsonpResult = await testJsonpGetImage(url);
+    jsonpOk = jsonpResult.ok;
+    jsonpMsg = jsonpResult.msg;
+  
+    html += jsonpOk
+      ? `✅ <b>Proxy foto Drive OK</b> — ${jsonpMsg}<br>`
+      : `❌ <b>Proxy foto gagal:</b> ${jsonpMsg}<br><span style="font-size:11px">→ Buka GAS editor → Deploy ulang → pilih <em>New deployment</em></span><br>`;
+    // --- AKHIR BLOK TAMBAHAN ---
   
     let html='';
     html+=gasOk?'✅ <b>GAS terhubung</b> — pengiriman data siap<br>':'❌ <b>GAS tidak terhubung</b> — periksa URL & koneksi<br>';
     if(sheetId) html+=sheetOk?'✅ <b>Google Sheet terhubung</b> — Tab Peta siap':`❌ <b>Sheet error:</b> ${sheetErr}<br>Pastikan di-share: <em>Anyone with link → Viewer</em>`;
     else html+='ℹ️ <b>Sheet ID belum diisi</b> — Tab Peta tidak tersedia';
   
-    res.className=(gasOk&&(!sheetId||sheetOk))?'test-ok':(gasOk?'test-warn':'test-err');
+    res.className = (gasOk && (!sheetId || sheetOk) && jsonpOk) ? 'test-ok'
+               : (gasOk && jsonpOk) ? 'test-warn'
+               : gasOk ? 'test-warn'
+               : 'test-err';
     res.innerHTML=html;
     btn.disabled=false; btn.textContent='🔌 Test Koneksi';
   }
@@ -1321,59 +1336,87 @@
   // Catatan: SW di-unregister < 1 detik, lalu langsung di-register ulang.
   // Ini tidak mempengaruhi fungsi lain di luar proses loading foto.
   // ── Helper: load URL gambar Drive → base64 (JSONP, bukan fetch) ──
-// GAS mengembalikan MimeType.JAVASCRIPT untuk action=getImage
-// → fetch() diblokir CORS. Script tag melewati CORS & Service Worker.
-async function loadImageBase64(url) {
-  if (!url) return null;
-  if (url.startsWith('data:image')) return url;
-
-  const driveId = (
-    url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
-    url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
-  )?.[1];
-  if (!driveId) return null;
-
-  const gasUrl = localStorage.getItem('gasUrl');
-  if (!gasUrl) { console.warn('loadImageBase64: GAS URL belum diisi'); return null; }
-
-  const cleanUrl = normalizeGasUrl(gasUrl);
-
-  return new Promise((resolve) => {
-    const cbName = 'imgCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      cleanup();
-      console.warn('loadImageBase64: timeout untuk', driveId);
-      resolve(null);
-    }, 20000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = function(result) {
-      cleanup();
-      if (result && result.status === 'ok' && result.data) {
-        resolve(result.data);
-      } else {
-        console.warn('GAS getImage error:', result && result.msg);
+  // GAS mengembalikan MimeType.JAVASCRIPT untuk action=getImage
+  // → fetch() diblokir CORS. Script tag melewati CORS & Service Worker.
+  async function loadImageBase64(url) {
+    if (!url) return null;
+    if (url.startsWith('data:image')) return url;
+  
+    const driveId = (
+      url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
+      url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
+    )?.[1];
+    if (!driveId) return null;
+  
+    const gasUrl = localStorage.getItem('gasUrl');
+    if (!gasUrl) { console.warn('[GanoKit] GAS URL belum diisi'); return null; }
+  
+    const cleanUrl = normalizeGasUrl(gasUrl);
+  
+    return new Promise((resolve) => {
+      const cbName = 'imgCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      const TIMEOUT_MS = 50000; // 50 detik — cukup untuk koneksi lambat
+  
+      const timeout = setTimeout(() => {
+        cleanup();
+        console.error(`[GanoKit] TIMEOUT (${TIMEOUT_MS/1000}s) fileId: ${driveId}`);
+        console.error('[GanoKit] Cek: 1) GAS sudah di-redeploy? 2) Buka URL ini di browser baru:');
+        console.error(script.src.replace(cbName, 'testCallback'));
         resolve(null);
+      }, TIMEOUT_MS);
+  
+      function cleanup() {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
       }
-    };
+  
+      window[cbName] = function(result) {
+        cleanup();
+        console.log('[GanoKit] getImage callback OK, fileId:', driveId, '| status:', result?.status);
+        if (result && result.status === 'ok' && result.data) {
+          resolve(result.data);
+        } else {
+          console.warn('[GanoKit] GAS getImage error:', result?.msg);
+          resolve(null);
+        }
+      };
+  
+      script.onerror = () => {
+        cleanup();
+        console.error('[GanoKit] script.onerror — GAS URL tidak dapat diakses. URL:', script.src);
+        resolve(null);
+      };
+  
+      script.src = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}&callback=${encodeURIComponent(cbName)}`;
+      console.log('[GanoKit] Memuat foto fileId:', driveId);
+      document.head.appendChild(script);
+    });
+  }
 
-    script.onerror = () => {
-      cleanup();
-      console.warn('loadImageBase64: script error untuk', driveId);
-      resolve(null);
-    };
-
-    // JSONP: GAS akan memanggil window[cbName](responseObject)
-    script.src = `${cleanUrl}?action=getImage&fileId=${encodeURIComponent(driveId)}&callback=${encodeURIComponent(cbName)}`;
-    document.head.appendChild(script);
-  });
-}
+  // Test apakah JSONP action=getImage bekerja (pakai dummy ID)
+  function testJsonpGetImage(cleanUrl) {
+    return new Promise((resolve) => {
+      const cbName = 'testImgCb_' + Date.now();
+      const script = document.createElement('script');
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve({ ok: false, msg: 'TIMEOUT — GAS belum di-redeploy atau koneksi sangat lambat' });
+      }, 12000);
+      function cleanup() { clearTimeout(timeout); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); }
+      window[cbName] = function(result) {
+        cleanup();
+        // Callback terpanggil = JSONP bekerja! Error "File not found" dari GAS itu NORMAL (dummy ID)
+        const jsonpOk = true;
+        const driveOk = result?.status === 'ok';
+        resolve({ ok: jsonpOk, msg: driveOk ? 'Proxy foto OK' : `JSONP OK (GAS msg: ${result?.msg || result?.status})` });
+      };
+      script.onerror = () => { cleanup(); resolve({ ok: false, msg: 'Script error — URL GAS tidak bisa diakses' }); };
+      script.src = `${cleanUrl}?action=getImage&fileId=DUMMY_TEST_ID_123&callback=${encodeURIComponent(cbName)}`;
+      document.head.appendChild(script);
+    });
+  }
   
   // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
   async function downloadPdfLocal() {
