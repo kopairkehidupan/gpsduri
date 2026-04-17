@@ -814,13 +814,70 @@
   }
   function resetFilter() { document.getElementById('flt-kebun').value=''; document.getElementById('flt-divisi').value=''; document.getElementById('flt-blok').value=''; applyFilter(); }
   function renderSummary(records) {
-    const counts={0:0,1:0,2:0,3:0,4:0,total:records.length};
-    records.forEach(r=>{if(r.skor_stadium!==undefined) counts[r.skor_stadium]++;});
-    const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length;
-    const defs=[{k:'total',label:'Total',bg:'#EEF2FF',fg:'#3730A3'},{k:0,label:'Sehat',bg:'#D4EDDA',fg:'#1A5C2A'},{k:1,label:'Dini',bg:'#FFF3B0',fg:'#7A5500'},{k:2,label:'Sakit',bg:'#FFE0B2',fg:'#7A3A00'},{k:3,label:'Tumb-B',bg:'#FFCDD2',fg:'#7B0000'},{k:4,label:'Tumb-P',bg:'#FF8A80',fg:'#FFFFFF'},{k:'belum',label:'Blm Krm',bg:'#FFF3E0',fg:'#E65100'}];
-    const wrap=document.getElementById('summary-strip'); wrap.innerHTML='';
-    const allCounts={...counts,belum};
-    defs.forEach(d=>{ const ch=document.createElement('div'); ch.className='stat-chip'; ch.style.cssText=`background:${d.bg};color:${d.fg}`; ch.innerHTML=`<div class="sv">${allCounts[d.k]}</div><div class="sl">${d.label}</div>`; wrap.appendChild(ch); });
+    const counts = {0:0, 1:0, 2:0, 3:0, 4:0, total:records.length};
+    records.forEach(r => { if(r.skor_stadium !== undefined) counts[r.skor_stadium]++; });
+    const belum = records.filter(r => r.status_kirim === 'Belum Dikirim').length;
+  
+    const defs = [
+      {k:'total', label:'Total',   bg:'#EEF2FF', fg:'#3730A3'},
+      {k:0,       label:'Sehat',   bg:'#D4EDDA', fg:'#1A5C2A'},
+      {k:1,       label:'Dini',    bg:'#FFF3B0', fg:'#7A5500'},
+      {k:2,       label:'Sakit',   bg:'#FFE0B2', fg:'#7A3A00'},
+      {k:3,       label:'Tumb-B',  bg:'#FFCDD2', fg:'#7B0000'},
+      {k:4,       label:'Tumb-P',  bg:'#FF8A80', fg:'#FFFFFF'},
+      {k:'belum', label:'Blm Krm', bg:'#FFF3E0', fg:'#E65100'},
+    ];
+    const wrap = document.getElementById('summary-strip');
+    wrap.innerHTML = '';
+    const allCounts = {...counts, belum};
+    defs.forEach(d => {
+      const ch = document.createElement('div');
+      ch.className = 'stat-chip';
+      ch.style.cssText = `background:${d.bg};color:${d.fg}`;
+      ch.innerHTML = `<div class="sv">${allCounts[d.k]}</div><div class="sl">${d.label}</div>`;
+      wrap.appendChild(ch);
+    });
+  
+    // ── Disease Incidence & Severity ────────────────────────────
+    const N = records.length;
+    const nSakit = counts[1] + counts[2] + counts[3] + counts[4];
+    const DI  = N > 0 ? nSakit / N * 100 : 0;
+    const DSI = N > 0
+      ? (counts[1]*1 + counts[2]*2 + counts[3]*3 + counts[4]*4) / (N * 4) * 100
+      : 0;
+    const sBg    = DI > 20 ? '#FFEBEE' : DI > 10 ? '#FFF3E0' : '#E8F5E9';
+    const sFg    = DI > 20 ? '#B71C1C' : DI > 10 ? '#E65100' : '#1B5E20';
+    const sBdr   = DI > 20 ? '#FFCDD2' : DI > 10 ? '#FFE0B2' : '#C8E6C9';
+    const sLabel = DI > 20 ? '⚠ ENDEMIK GANODERMA' : DI > 10 ? '⚠ STATUS WASPADA' : '✓ TERKENDALI';
+  
+    // Buat atau reuse elemen stats bar
+    let dsEl = document.getElementById('disease-stats-bar');
+    if (!dsEl) {
+      dsEl = document.createElement('div');
+      dsEl.id = 'disease-stats-bar';
+      wrap.parentNode.insertBefore(dsEl, wrap.nextSibling);
+    }
+  
+    if (N === 0) {
+      dsEl.style.display = 'none';
+      return;
+    }
+  
+    dsEl.style.display = 'flex';
+    dsEl.style.cssText = `
+      display:flex; align-items:center; justify-content:space-between;
+      flex-wrap:wrap; gap:8px;
+      background:${sBg}; color:${sFg};
+      border:1px solid ${sBdr}; border-radius:10px;
+      padding:10px 14px; margin-bottom:10px;
+      font-size:12px; font-weight:700;
+    `;
+    dsEl.innerHTML = `
+      <span>📊 Tingkat Serangan (DI): <strong>${DI.toFixed(1)}%</strong></span>
+      <span>📉 Indeks Keparahan (DSI): <strong>${DSI.toFixed(1)}%</strong></span>
+      <span style="background:${sFg};color:#FFF;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;white-space:nowrap">${sLabel}</span>
+      <span style="font-size:10px;opacity:.7;font-weight:600">Ambang endemik: DI &gt; 20%</span>
+    `;
   }
   function renderRecords(records) {
     const list=document.getElementById('record-list');
@@ -1357,6 +1414,91 @@
           }
         },
       });
+
+      // ── REKOMENDASI TINDAKAN (halaman akhir) ─────────────────
+      const stadiumsPresent = [0,1,2,3,4].filter(s => SC[s] > 0);
+
+      if (stadiumsPresent.length > 0) {
+        let recY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : y) + 10;
+        const LINE_H    = 4.3;   // mm per baris teks 7.5pt
+        const REC_PAD   = 5;
+        const FOOTER_H  = 15;    // ruang untuk footer di bawah
+
+        // Fungsi: tambah halaman baru kalau tidak cukup ruang
+        const ensureSpace = (needed) => {
+          if (recY + needed > PH - FOOTER_H) {
+            doc.addPage();
+            recY = 16;
+          }
+        };
+
+        // Header seksi
+        ensureSpace(18);
+        doc.setFillColor(11, 38, 20);
+        doc.rect(ML, recY, USABLE, 10, 'F');
+        doc.setFillColor(46, 168, 74);
+        doc.rect(ML, recY + 10, USABLE, 1.2, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
+        doc.text('REKOMENDASI TINDAKAN LAPANGAN', ML + USABLE/2, recY + 7, {align:'center'});
+        recY += 14;
+
+        const recBg = {
+          0:[212,237,218], 1:[255,243,176], 2:[255,224,178],
+          3:[255,205,210], 4:[255,138,128],
+        };
+        const recFg = {
+          0:[26,92,42], 1:[122,85,0], 2:[122,58,0],
+          3:[123,0,0],  4:[120,0,0],
+        };
+        const recBorder = {
+          0:[26,92,42], 1:[184,125,0], 2:[230,81,0],
+          3:[198,40,40], 4:[183,28,28],
+        };
+
+        // Teks rekomendasi — versi bersih untuk PDF (tanpa emoji)
+        const REC_PDF = {
+          0: `SEHAT - PEMELIHARAAN RUTIN:\n1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.\n2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.\n3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.\n4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.\n5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
+          1: `STADIUM 1 - TINDAKAN PREVENTIF DINI:\n1. Konfirmasi ulang & survei lebih detail dalam 2-4 minggu ke depan.\n2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.\n3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.\n4. Periksa & perbaiki drainase - lahan tidak boleh tergenang air.\n5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.\n6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
+          2: `STADIUM 2 - TINDAKAN KURATIF (SURGERY):\n1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.\n2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.\n3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.\n4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.\n5. Monitor kondisi pokok intensif setiap 2 minggu.\n6. Jika dalam 2 bulan tidak membaik atau gejala memburuk => eskalasi ke ERADIKASI.`,
+          3: `STADIUM 3 - ERADIKASI SEGERA (SANITASI TOTAL):\n1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.\n2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.\n   JANGAN hanya tebang dengan Chainsaw - bonggol yang tersisa = sumber penularan ke pokok baru!\n3. Gali lubang min. kedalaman 1 m, luas 1.5 m x 1.5 m. Balik tanah agar spora terpapar sinar UV matahari.\n4. Cincang batang ketebalan 5-10 cm, sebar MERATA di permukaan - jangan ditumpuk.\n5. Tabur Dolomit + Trichoderma spp. 200-400 gr ke lubang, campur dengan tanah galian.\n6. Biarkan lubang BERA 6-12 bulan hingga dekomposisi selesai & inokulum jamur mati.\n7. Buat parit isolasi di sekeliling pokok sehat terdekat.\n8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
+          4: `STADIUM 4 - SANITASI LANJUTAN & PERSIAPAN REPLANTING:\n1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.\n2. Gali area bekas bonggol sedalam 80-100 cm - ambil sisa akar besar yang masih ada secara manual.\n3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.\n4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.\n5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.\n6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.\n7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
+        };
+
+        stadiumsPresent.forEach((s, idx) => {
+          const st = STADIUM[s];
+          const txt = REC_PDF[s];
+
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+          const lines = doc.splitTextToSize(txt, USABLE - REC_PAD * 2);
+          const blockH = lines.length * LINE_H + 18;
+
+          ensureSpace(blockH);
+
+          // Stadium header bar
+          doc.setFillColor(...recBg[s]);
+          doc.roundedRect(ML, recY, USABLE, 10, 1.5, 1.5, 'F');
+          doc.setDrawColor(...recBorder[s]); doc.setLineWidth(0.4);
+          doc.roundedRect(ML, recY, USABLE, 10, 1.5, 1.5, 'S');
+
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...recFg[s]);
+          doc.text(`Stadium ${s} - ${st.label} (${st.code})`, ML + REC_PAD, recY + 7);
+          doc.setFontSize(8);
+          doc.text(`${SC[s]} pokok ditemukan`, ML + USABLE - REC_PAD, recY + 7, {align:'right'});
+          recY += 12;
+
+          // Recommendation text
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(25, 25, 25);
+          doc.text(lines, ML + REC_PAD, recY + 1);
+          recY += lines.length * LINE_H + 7;
+
+          // Separator line (kecuali item terakhir)
+          if (idx < stadiumsPresent.length - 1) {
+            doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.25);
+            doc.line(ML + 8, recY - 2, ML + USABLE - 8, recY - 2);
+          }
+        });
+      }
+      // ── AKHIR REKOMENDASI ─────────────────────────────────────
   
       // ── FOOTER TIAP HALAMAN ──────────────────────────────────
       const totalPages = doc.internal.getNumberOfPages();
