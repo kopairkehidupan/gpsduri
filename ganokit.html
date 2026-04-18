@@ -313,7 +313,7 @@
       <div class="header-logo">🌿</div>
       <div>
         <div class="header-title">GenoKit Ver. 1</div>
-        <div class="header-sub">Sensus dan Deteksi Ganoderma</div>
+        <div class="header-sub">Sensus dan Deteksi Ganoderma | By Erik Simarmata</div>
       </div>
     </div>
     <button class="btn-settings" onclick="openSettings()" title="Pengaturan">⚙️</button>
@@ -1084,7 +1084,7 @@
       if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
       setTimeout(()=>{
         petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri | Sensus Ganoderma',maxZoom:20}).addTo(petaMap);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Desaign by Erik Simarmata',maxZoom:20}).addTo(petaMap);
         petaMarkerGroup=L.layerGroup().addTo(petaMap);
       },150);
     }
