@@ -247,6 +247,53 @@
     .peta-inputs{grid-template-columns:1fr}
     .peta-input.full{grid-column:1}
   }
+  /* ── PETA FULLSCREEN ───────────────────────────────────────── */
+  .peta-wrap { position:relative; }
+  .btn-fullscreen-peta {
+    position:absolute; top:10px; right:10px; z-index:1000;
+    background:rgba(255,255,255,0.95); border:1.5px solid rgba(0,0,0,0.15);
+    border-radius:8px; padding:7px 10px; cursor:pointer;
+    font-size:13px; font-weight:700; color:#1A201A;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18); transition:all .2s;
+    display:flex; align-items:center; gap:5px; backdrop-filter:blur(4px);
+  }
+  .btn-fullscreen-peta:hover { background:#FFF; box-shadow:0 4px 14px rgba(0,0,0,0.22); }
+  #peta-map.fullscreen-mode {
+    position:fixed !important; inset:0 !important;
+    width:100vw !important; height:100vh !important;
+    z-index:9000; border-radius:0 !important; border:none !important;
+    margin:0 !important;
+  }
+  .peta-fs-overlay {
+    display:none; position:fixed; inset:0; z-index:8999;
+    background:#000;
+  }
+  .peta-fs-overlay.active { display:block; }
+  .btn-fullscreen-peta.fs-active {
+    position:fixed; top:14px; right:14px; z-index:9001;
+    background:rgba(30,30,30,0.85); color:#FFF;
+    border-color:rgba(255,255,255,0.2);
+  }
+  
+  /* ── MARKER GANODERMA — compact style ─────────────────────── */
+  .gano-marker {
+    position:relative;
+    width:26px; height:26px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:8px; font-weight:800;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    box-shadow:0 1px 4px rgba(0,0,0,0.4), 0 0 0 1.5px rgba(255,255,255,0.6) inset;
+    transition:transform .15s;
+    cursor:pointer;
+  }
+  .gano-marker:hover { transform:scale(1.2); }
+  .gano-marker.has-foto::after {
+    content:'📷';
+    position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
+    font-size:8px; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.5));
+    line-height:1;
+  }
   </style>
   </head>
   <body>
@@ -381,7 +428,13 @@
       <div class="legend-item" style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
       <div class="legend-item" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
     </div>
-    <div id="peta-map"></div>
+    <div class="peta-fs-overlay" id="peta-fs-overlay"></div>
+    <div class="peta-wrap">
+      <div id="peta-map"></div>
+      <button class="btn-fullscreen-peta" id="btn-fs-peta" onclick="toggleFullscreenPeta()">
+        ⛶ Fullscreen
+      </button>
+    </div>
     <button class="btn-dl-pdf" id="btn-dl-server" onclick="downloadPdfServer()" disabled>📄&nbsp;&nbsp;Download PDF — Data Server</button>
   </div>
   
@@ -1018,13 +1071,47 @@
   let petaMap=null, petaMarkerGroup=null, serverData=[];
   
   function initPetaMap() {
-    if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
-    setTimeout(()=>{
-      petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri | Sensus Ganoderma',maxZoom:20}).addTo(petaMap);
-      petaMarkerGroup=L.layerGroup().addTo(petaMap);
-    },150);
+      if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
+      setTimeout(()=>{
+        petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri | Sensus Ganoderma',maxZoom:20}).addTo(petaMap);
+        petaMarkerGroup=L.layerGroup().addTo(petaMap);
+      },150);
+    }
+  
+    function toggleFullscreenPeta() {
+    const mapEl    = document.getElementById('peta-map');
+    const btn      = document.getElementById('btn-fs-peta');
+    const overlay  = document.getElementById('peta-fs-overlay');
+    const isFs     = mapEl.classList.contains('fullscreen-mode');
+  
+    if (!isFs) {
+      // Masuk fullscreen
+      mapEl.classList.add('fullscreen-mode');
+      btn.classList.add('fs-active');
+      overlay.classList.add('active');
+      btn.innerHTML = '✕ Keluar Fullscreen';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Keluar fullscreen
+      mapEl.classList.remove('fullscreen-mode');
+      btn.classList.remove('fs-active');
+      overlay.classList.remove('active');
+      btn.innerHTML = '⛶ Fullscreen';
+      document.body.style.overflow = '';
+    }
+  
+    // Paksa Leaflet hitung ulang ukuran setelah transisi CSS selesai
+    setTimeout(() => petaMap && petaMap.invalidateSize(), 120);
   }
+  
+  // Tekan Escape untuk keluar fullscreen
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      const mapEl = document.getElementById('peta-map');
+      if (mapEl && mapEl.classList.contains('fullscreen-mode')) toggleFullscreenPeta();
+    }
+  });
   
   // ── [PATCH 5] testKoneksiGAS — ganti JSONP ping → fetch no-cors
   // Alasan: JSONP muat <script> dari script.google.com → Google
@@ -1139,23 +1226,87 @@
   }
   
   function renderPetaMarkers(data) {
-    if(!petaMap) initPetaMap();
-    setTimeout(()=>{
-      petaMarkerGroup.clearLayers(); const markers=[];
-      data.forEach(r=>{
-        const lat=parseFloat(r['Latitude']), lng=parseFloat(r['Longitude']);
-        if(!lat||!lng||isNaN(lat)||isNaN(lng)) return;
-        const skor=parseInt(r['Skor Stadium'])||0, stInfo=STADIUM[skor]||STADIUM[0], noPokok=r['No Pokok']||'?';
-        const hasFoto=!!(r['Link Foto']&&r['Link Foto'].startsWith('http')), fotoUrl=hasFoto?driveToImgUrl(r['Link Foto']):null;
-        const icon=L.divIcon({className:'',html:`<div style="background:${stInfo.bg};color:${stInfo.fg};border:2.5px solid ${stInfo.dark};border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.35);${hasFoto?'outline:3px solid #FF9800;outline-offset:2px;':''}">${noPokok}</div>`,iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-20]});
-        let popup=`<div><span class="popup-badge" style="background:${stInfo.bg};color:${stInfo.fg}">Stadium ${skor} — ${stInfo.label}</span><div style="margin-top:4px"><strong>Pokok No. ${noPokok}</strong></div><div>Baris: ${r['Baris']||'—'} | Blok: ${r['Blok']||'—'}</div><div style="font-size:11px;color:#637063;margin-top:2px">${r['Kebun']||''} · ${r['Divisi']||''}</div><div style="font-size:11px;margin-top:4px">${r['Keparahan']||''}</div>`;
-        if(fotoUrl) popup+=`<img src="${fotoUrl}" alt="Foto" loading="lazy" onerror="this.style.display='none'">`;
-        popup+=`</div>`;
-        const marker=L.marker([lat,lng],{icon}); marker.bindPopup(popup,{maxWidth:230}); petaMarkerGroup.addLayer(marker); markers.push(marker);
+    if (!petaMap) initPetaMap();
+    setTimeout(() => {
+      petaMarkerGroup.clearLayers();
+      const markers = [];
+  
+      const ST_STYLE = {
+        0: { bg:'#1A5C2A', fg:'#FFFFFF', border:'#0B2614' }, // Sehat — hijau tua solid
+        1: { bg:'#F5C518', fg:'#4A3500', border:'#B87D00' }, // Dini — kuning
+        2: { bg:'#F4742B', fg:'#FFFFFF', border:'#A84200' }, // Sakit — oranye
+        3: { bg:'#D32F2F', fg:'#FFFFFF', border:'#7B0000' }, // Tumb-B — merah
+        4: { bg:'#FF8A80', fg:'#5A0000', border:'#B71C1C' }, // Tumb-P — merah muda
+      };
+  
+      data.forEach(r => {
+        const lat = parseFloat(r['Latitude']), lng = parseFloat(r['Longitude']);
+        if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+  
+        const skor    = Math.min(4, parseInt(r['Skor Stadium']) || 0);
+        const stInfo  = STADIUM[skor] || STADIUM[0];
+        const stStyle = ST_STYLE[skor];
+        const noPokok = r['No Pokok'] || '?';
+        const hasFoto = !!(r['Link Foto'] && r['Link Foto'].startsWith('http'));
+        const fotoUrl = hasFoto ? driveToImgUrl(r['Link Foto']) : null;
+  
+        // Label — jika > 3 digit tampilkan sebagai titik-titik
+        const labelText = String(noPokok).length > 3 ? '···' : String(noPokok);
+  
+        const iconHtml = `
+          <div class="gano-marker${hasFoto ? ' has-foto' : ''}" style="
+            background:${stStyle.bg};
+            color:${stStyle.fg};
+            border:2px solid ${stStyle.border};
+            ${hasFoto ? 'outline:2px solid #FF9800; outline-offset:2px;' : ''}
+          ">${labelText}</div>
+        `;
+  
+        const icon = L.divIcon({
+          className: '',
+          html: iconHtml,
+          iconSize:   [26, 26],
+          iconAnchor: [13, 13],
+          popupAnchor:[0, -18],
+        });
+  
+        // Popup
+        const barisTxt  = r['Baris']     || '—';
+        const blokTxt   = r['Blok']      || '—';
+        const kebunTxt  = r['Kebun']     || '';
+        const divisiTxt = r['Divisi']    || '';
+        const kepTxt    = r['Keparahan'] || '';
+  
+        let popup = `
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;line-height:1.5;max-width:200px">
+            <div style="
+              background:${stStyle.bg};color:${stStyle.fg};
+              padding:4px 8px;border-radius:6px;
+              font-size:10px;font-weight:800;letter-spacing:.5px;
+              margin-bottom:6px;display:inline-block
+            ">Stadium ${skor} — ${stInfo.label}</div>
+            <div style="font-weight:800;font-size:13px;margin-bottom:2px">Pokok No. ${noPokok}</div>
+            <div style="color:#555;font-size:11px">Baris ${barisTxt} &nbsp;|&nbsp; Blok ${blokTxt}</div>
+            <div style="color:#888;font-size:10px;margin-top:2px">${kebunTxt}${divisiTxt ? ' · '+divisiTxt : ''}</div>
+            ${kepTxt ? `<div style="font-size:10px;margin-top:4px;color:#333">${kepTxt}</div>` : ''}
+            ${fotoUrl ? `<img src="${fotoUrl}" alt="Foto" loading="lazy"
+              onerror="this.style.display='none'"
+              style="width:100%;border-radius:6px;margin-top:6px;display:block;max-height:120px;object-fit:cover">` : ''}
+          </div>
+        `;
+  
+        const marker = L.marker([lat, lng], { icon });
+        marker.bindPopup(popup, { maxWidth: 210, className: '' });
+        petaMarkerGroup.addLayer(marker);
+        markers.push(marker);
       });
-      if(markers.length>0){const group=L.featureGroup(markers);petaMap.fitBounds(group.getBounds().pad(0.15));}
+  
+      if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        petaMap.fitBounds(group.getBounds().pad(0.18));
+      }
       petaMap.invalidateSize();
-    },200);
+    }, 200);
   }
   
   function driveToImgUrl(url) { const m=url&&url.match(/\/d\/([a-zA-Z0-9_-]+)/); return m?`https://drive.google.com/uc?export=view&id=${m[1]}`:null; }
