@@ -130,7 +130,7 @@
   .btn-kirim:hover{background:#1A3F8F;transform:translateY(-1px)}
   .btn-kirim:disabled{background:var(--gray-400);cursor:not-allowed;transform:none;box-shadow:none}
   .kirim-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px}
-  .modal-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
+  .modal-overlay{position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;background:rgba(0,0,0,.6);backdrop-filter:blur(3px)}
   .modal-overlay.center{align-items:center;padding:12px}
   .modal-overlay.hidden{display:none}
   .modal-sheet{width:100%;margin:0 auto;background:var(--white);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.25,.46,.45,.94)}
@@ -294,6 +294,16 @@
     font-size:8px; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.5));
     line-height:1;
   }
+  /* Pastikan Leaflet tidak menembus modal/overlay */
+  .leaflet-pane,
+  .leaflet-top,
+  .leaflet-bottom,
+  .leaflet-control-container {
+    z-index: 400 !important;
+  }
+  .leaflet-overlay-pane { z-index: 410 !important; }
+  .leaflet-marker-pane  { z-index: 420 !important; }
+  .leaflet-popup-pane   { z-index: 430 !important; }
   </style>
   </head>
   <body>
