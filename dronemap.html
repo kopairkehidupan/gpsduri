@@ -694,14 +694,34 @@ function removePhoto(id){
 }
 
 function getPhoto(id){return photos.find(function(p){return p.id===id})||null}
-function showImagePanel(){document.getElementById('imagePanel').style.display='';}
-function hideImagePanel(){document.getElementById('imagePanel').style.display='none';if(map)setTimeout(function(){map.invalidateSize();},50);}
+function showImagePanel(){
+  var el=document.getElementById('imagePanel');
+  if(el)el.style.display='';
+}
+function hideImagePanel(){
+  var el=document.getElementById('imagePanel');
+  if(el)el.style.display='none';
+  if(map)setTimeout(function(){map.invalidateSize();},50);
+}
+
+// Cek apakah sedang dalam mode Split View
+function _inSplitView(){return !!document.getElementById('splitWrap');}
 
 function setCurrentPhoto(id){
   currentPhotoId=id;
   renderPhotoList();
   var p=getPhoto(id);if(!p||!p.src)return;
-  showImagePanel();buildImagePanel(p);renderGCPList();updateGCPStatus();
+  renderGCPList();updateGCPStatus();
+  // Jika Split View aktif, hanya update sidebar (tidak rebuild image panel)
+  if(_inSplitView()){
+    // Tetap switch sidebar ke tab GCP agar user bisa lihat status GCP
+    document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
+    document.querySelectorAll('.tabpane').forEach(function(p2){p2.classList.remove('active')});
+    document.querySelectorAll('.stab')[1].classList.add('active');
+    document.getElementById('tab-gcp').classList.add('active');
+    return;
+  }
+  showImagePanel();buildImagePanel(p);
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p2){p2.classList.remove('active')});
   document.querySelectorAll('.stab')[1].classList.add('active');
@@ -743,11 +763,12 @@ function updateStats(){
 // IMAGE PANEL
 // =====================================================
 function buildImagePanel(photo){
+  var panel=document.getElementById('imagePanel');
+  if(!panel){return;} // Jika dalam split view, panel tidak ada — abaikan
   imgEl=null;canvasEl=null;_drag=false;isDragging=false;
   _panelVersion++;var myVersion=_panelVersion;
   if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}}
   _abortCtrl=new AbortController();var sig=_abortCtrl.signal;
-  var panel=document.getElementById('imagePanel');
   Array.from(panel.childNodes).forEach(function(child){if(!child.id||child.id!=='welcomeMsg')panel.removeChild(child);});
   var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='none';
   panel.classList.remove('hidden');
