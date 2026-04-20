@@ -596,6 +596,7 @@ var _lastPolygonLayer=null;
 
 // BATAS KEBUN STATE
 var _batasKebunId=null;
+var _batasKebunPolygon=null; // Array of {lat,lng} — polygon vertices for crop masking
 
 // =====================================================
 // *** PATCH 1: CONVEX HULL UTILITIES ***
@@ -1177,9 +1178,21 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
+      // === POLYGON CROP MASKING (Batas Kebun) ===
+      // Kalau ada Batas Kebun aktif, clip ke bentuk polygon-nya, bukan ke 4 sudut foto
+      var clipPts;
+      if(_batasKebunPolygon&&_batasKebunPolygon.length>=3){
+        clipPts=_batasKebunPolygon.map(function(v){
+          var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
+          return{x:lp.x-off.x,y:lp.y-off.y};
+        });
+      } else {
+        clipPts=cpts;
+      }
       ctx.save();ctx.globalAlpha=photo.opacity;ctx.globalCompositeOperation=photo.blendMode||'normal';
-      ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
-      ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();ctx.clip();
+      ctx.beginPath();ctx.moveTo(clipPts[0].x,clipPts[0].y);
+      for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
+      ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
     },
     setOpacityVal:function(op){photo.opacity=op;this._update();},
@@ -1496,6 +1509,16 @@ function refreshMeasures(){
     else if(gt==='Point'){var c=gj.geometry.coordinates;measures.push({id:id,type:'marker',lat:c[1],lng:c[0],label:lb})}
   });
   renderMeasures();updateStats();
+  // Update crop mask jika polygon Batas Kebun diedit
+  if(_batasKebunId&&drawnItems){
+    drawnItems.eachLayer(function(layer){
+      if(layer._mid===_batasKebunId&&layer.toGeoJSON){
+        var gj2=layer.toGeoJSON();
+        _batasKebunPolygon=gj2.geometry.coordinates[0].slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
+        photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+      }
+    });
+  }
 }
 
 // =====================================================
@@ -1528,7 +1551,11 @@ function renderMeasures(){
 
 function renameShape(id,val){var m=measures.find(function(m){return m.id===id});if(m)m.label=val}
 function deleteShape(id){
-  if(id===_batasKebunId)_batasKebunId=null;
+  if(id===_batasKebunId){
+    _batasKebunId=null;
+    _batasKebunPolygon=null;
+    photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  }
   drawnItems.eachLayer(function(l){if(l._mid===id)drawnItems.removeLayer(l)});
   measures=measures.filter(function(m){return m.id!==id});renderMeasures();updateStats();updateSensusStats();
 }
@@ -1540,9 +1567,12 @@ function setBatasKebun(id){
   if(_batasKebunId===id){
     measures.forEach(function(m){m.isBatasKebun=false;});
     _batasKebunId=null;
+    _batasKebunPolygon=null; // clear crop mask
+    // Refresh semua overlay agar crop hilang
+    photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
     renderMeasures();updateSensusStats();
     var bi=document.getElementById('batasKebunInfo');if(bi)bi.style.display='none';
-    setStatus('Batas Kebun dinonaktifkan','amber');
+    setStatus('Batas Kebun dinonaktifkan — Crop mask dihapus','amber');
     return;
   }
   measures.forEach(function(m){m.isBatasKebun=(m.id===id);});
@@ -1558,13 +1588,25 @@ function setBatasKebun(id){
       var area=turf.area(gj);
       var density=area>0?(inside/(area/10000)).toFixed(1):'-';
       m.treesInside=inside;m.density=density;
+
+      // *** STORE POLYGON VERTICES untuk crop mask ***
+      // GeoJSON polygon coords = [[lng,lat], [lng,lat], ...]
+      var rawCoords=gj.geometry.coordinates[0];
+      // Hapus titik terakhir jika sama dengan pertama (GeoJSON closed ring)
+      var polyVerts=rawCoords.slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
+      _batasKebunPolygon=polyVerts;
+
+      // Refresh semua overlay dengan crop mask baru
+      photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+
       var bi=document.getElementById('batasKebunInfo');
       if(bi){
         bi.style.display='';
-        bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b>';
+        bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b><br>'+
+          '<span style="font-size:8px;color:var(--mu)">✂ Crop aktif: '+polyVerts.length+' titik sudut polygon</span>';
       }
-      setStatus('Batas Kebun: '+fmtArea(area)+' | 🌴 '+inside+' pokok | '+density+' /ha','green');
-      showToast('🌴 Batas Kebun diset\nLuas: '+fmtArea(area)+'\nPokok di dalam: '+inside+'\nKepadatan: '+density+' pokok/ha');
+      setStatus('✂ Crop aktif: '+fmtArea(area)+' | 🌴 '+inside+' pokok | '+polyVerts.length+' sudut','green');
+      showToast('✂ Crop Batas Kebun aktif!\nLuas: '+fmtArea(area)+'\nPokok di dalam: '+inside+'\nSudut polygon: '+polyVerts.length+'\nKepadatan: '+density+' pokok/ha');
     }
     updateSensusStats();
   }
