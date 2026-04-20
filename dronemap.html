@@ -18,7 +18,7 @@
   --bg:#0d1117;--sf:#161b22;--s2:#21262d;--s3:#2d333b;--bd:#30363d;
   --ac:#f0a500;--ac2:#ffd166;--tx:#e6edf3;--mu:#7d8590;
   --ok:#3fb950;--er:#f85149;--in:#58a6ff;--pu:#bc8cff;
-  --saw:#5a9e35;--saw2:#7dc455;/* Sawit green */
+  --saw:#5a9e35;--saw2:#7dc455;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -46,7 +46,6 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .s-sec{padding:10px 13px;border-bottom:1px solid var(--bd)}
 .s-ttl{font-family:'Space Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--mu);margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .s-ttl::after{content:'';flex:1;height:1px;background:var(--bd)}
-/* Photo items */
 .photo-item{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:9px}
 .photo-item:hover{border-color:var(--saw)}.photo-item.active{border-color:var(--saw);background:rgba(90,158,53,.06)}
 .photo-thumb{width:40px;height:30px;object-fit:cover;border-radius:3px;flex-shrink:0;background:var(--s3)}
@@ -60,7 +59,6 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .badge-ok{background:rgba(63,185,80,.15);color:var(--ok)}
 .badge-warn{background:rgba(240,165,0,.15);color:var(--ac)}
 .badge-gray{background:rgba(125,133,144,.15);color:var(--mu)}
-/* GCP */
 .gcp-item{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:7px 9px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .gcp-num{width:18px;height:18px;background:var(--ac);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
 .gcp-coords{flex:1;min-width:0}
@@ -68,7 +66,6 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .gcp-ll{font-size:9px;font-family:'Space Mono',monospace;color:var(--in);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcp-del{background:none;border:none;color:var(--mu);cursor:pointer;font-size:12px;padding:1px;flex-shrink:0}
 .gcp-del:hover{color:var(--er)}
-/* Measure cards */
 .m-card{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:9px 11px;margin-bottom:7px}
 .m-card-head{display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .m-lbl{flex:1}.m-lbl input{background:transparent;border:none;border-bottom:1px dashed var(--bd);color:var(--tx);font-size:10px;width:100%;outline:none;padding:1px 2px}
@@ -81,7 +78,6 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .m-pts summary:hover{color:var(--tx)}
 .m-pt-list{padding:4px 0 0;list-style:none}
 .m-pt-list li{font-size:9px;font-family:'Space Mono',monospace;color:var(--in);padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
-/* Layer */
 .lay-row{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:8px 10px;margin-bottom:5px}
 .lay-row-head{display:flex;align-items:center;gap:8px;margin-bottom:5px}
 .lay-thumb{width:36px;height:26px;object-fit:cover;border-radius:2px;background:var(--s3);flex-shrink:0}
@@ -96,7 +92,6 @@ header{background:var(--sf);border-bottom:2px solid var(--bd);padding:0 14px;hei
 .slider-row label{font-size:9px;color:var(--mu);white-space:nowrap;min-width:44px}
 input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .slider-val{font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);min-width:28px;text-align:right}
-/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:5px;font-size:10px;font-weight:500;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
 .btn-pr{background:var(--saw);color:#fff}.btn-pr:hover{background:var(--saw2);color:#000}
 .btn-sc{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
@@ -121,7 +116,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .tag-er{background:rgba(248,81,73,.15);color:var(--er)}
 .ibox{font-size:10px;color:var(--mu);background:var(--s2);padding:7px 9px;border-radius:5px;border-left:3px solid var(--saw);line-height:1.6}
 .ibox strong{color:var(--saw2)}
-/* Panels */
 .content{flex:1;position:relative;overflow:hidden}
 #imagePanel{width:100%;height:100%;background:#060a10;position:absolute;top:0;left:0;overflow:hidden;cursor:crosshair;z-index:10}
 #mapPanel{width:100%;height:100%;position:absolute;top:0;left:0;}
@@ -140,7 +134,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .welcome-icon{font-size:46px}
 .welcome h2{font-size:14px;color:var(--tx);font-weight:500}
 .welcome p{font-size:11px;text-align:center;max-width:280px;line-height:1.7}
-/* Modal */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(6px)}
 .modal{background:var(--sf);border:1px solid var(--bd);border-radius:11px;padding:18px;width:310px;max-width:95vw}
 .modal h3{font-size:12px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
@@ -151,13 +144,10 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .fg input:focus,.fg select:focus{border-color:var(--saw)}
 .fg input.err{border-color:var(--er)}
 .modal-acts{display:flex;gap:6px;justify-content:flex-end}
-/* Scrollbar */
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--sf)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
-/* Leaflet popup */
 .leaflet-popup-content-wrapper{background:var(--sf)!important;color:var(--tx)!important;border:1px solid var(--bd)!important;border-radius:7px!important;font-size:11px!important}
 .leaflet-popup-tip{background:var(--sf)!important}
 .leaflet-popup-content{margin:9px 11px!important}
-/* Loading */
 #loadOv{position:fixed;inset:0;background:rgba(13,17,23,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;gap:14px}
 .load-spin{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--saw);border-radius:50%;animation:spin .8s linear infinite}
 .load-txt{font-family:'Space Mono',monospace;font-size:12px;color:var(--saw2)}
@@ -166,11 +156,9 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .load-sub{font-size:10px;color:var(--mu)}
 .load-err{display:none;background:rgba(248,81,73,.12);border:1px solid var(--er);border-radius:7px;padding:10px 16px;color:var(--er);font-size:11px;text-align:center;max-width:320px;line-height:1.8}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Layer controls */
 .georef-prog{height:3px;border-radius:3px;background:var(--saw);margin-top:5px;transition:width .3s}
 .orient-info{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.25);border-radius:5px;padding:7px 10px;margin-top:6px;font-size:9px;color:var(--in);font-family:'Space Mono',monospace;line-height:1.8}
 .orient-info b{color:var(--saw2)}
-/* Split view */
 .split-wrap{display:flex;width:100%;height:100%;overflow:hidden}
 .split-photo{flex:1;position:relative;overflow:hidden;background:#060a10;cursor:crosshair;border-right:2px solid var(--saw)}
 .split-map{flex:1;position:relative;overflow:hidden}
@@ -179,7 +167,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .split-step{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.95);border:1px solid var(--bd);border-radius:8px;padding:7px 14px;font-size:10px;color:var(--tx);z-index:200;text-align:center;white-space:nowrap}
 .split-step strong{color:var(--saw2)}
 .split-photo-marker{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--ac);border:2px solid #000;transform:translate(-50%,-50%);z-index:150;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'Space Mono',monospace;color:#000;pointer-events:none}
-/* Drag + Layer */
 .drag-btn{padding:2px 7px;font-size:9px;border-radius:3px;cursor:pointer;border:1px solid var(--bd);font-family:'Space Mono',monospace;transition:.15s;background:var(--s2);color:var(--mu)}
 .drag-btn.active{background:rgba(90,158,53,.15);border-color:var(--saw);color:var(--saw2)}
 .drag-btn:hover{border-color:var(--saw);color:var(--saw2)}
@@ -189,7 +176,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .lay-offset span{color:var(--in)}
 .blend-sel{flex:1;background:var(--s2);border:1px solid var(--bd);border-radius:3px;color:var(--tx);font-size:9px;padding:2px 4px;font-family:'Space Mono',monospace;outline:none;cursor:pointer}
 .blend-sel:focus{border-color:var(--saw)}
-/* === SENSUS POKOK === */
 .tree-item{background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:7px 10px;margin-bottom:4px;display:flex;align-items:center;gap:7px;transition:.15s}
 .tree-item:hover{border-color:var(--saw)}
 .tree-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;font-family:'Space Mono',monospace;flex-shrink:0}
@@ -214,10 +200,14 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 .mode-btn{flex:1;padding:5px 6px;font-size:9px;border-radius:4px;cursor:pointer;border:1px solid var(--bd);background:var(--s2);color:var(--mu);text-align:center;transition:.15s}
 .mode-btn.active{background:rgba(90,158,53,.15);border-color:var(--saw);color:var(--saw2);font-weight:500}
 .mode-btn:hover{border-color:var(--saw);color:var(--saw2)}
-/* Normalize badge */
 .norm-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:9px;font-family:'Space Mono',monospace;background:rgba(88,166,255,.12);color:var(--in);border:1px solid rgba(88,166,255,.25)}
-/* Color adjust row */
 .adj-lbl{font-size:9px;color:var(--mu);min-width:56px;white-space:nowrap}
+/* === BATAS KEBUN HIGHLIGHT === */
+.batas-kebun-card{border-left:3px solid var(--saw)!important;background:rgba(90,158,53,.04)!important}
+.coverage-warn{background:rgba(248,81,73,.10);border:1px solid rgba(248,81,73,.35);border-radius:4px;padding:5px 8px;margin-top:5px;font-size:9px;color:var(--er);font-family:'Space Mono',monospace;line-height:1.6}
+/* === GCP HULL LEGEND === */
+.hull-legend{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;margin-top:5px;padding:4px 8px;background:var(--s2);border-radius:4px;border:1px solid var(--bd)}
+.hull-legend-line{width:22px;height:2px;background:var(--saw);opacity:.6;border-radius:1px;border:1px dashed var(--saw)}
 </style>
 </head>
 <body>
@@ -272,14 +262,12 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         </div>
         <input type="file" id="fileInputMulti" accept="image/*" multiple style="display:none">
         <div class="ibox" style="margin-top:8px">
-          Upload foto drone UAV, tandai <strong>min. 4 GCP</strong> di <strong>4 sudut</strong> yang berbeda. Foto akan tampil di peta dengan rotasi &amp; blending otomatis.
+          Upload foto drone UAV, tandai <strong>min. 4 GCP</strong> yang <strong>mengapit area ukur</strong>. GCP tidak harus di sudut foto — yang penting <strong>mengelilingi area kebun kamu</strong>.
         </div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Normalisasi Warna <span class="norm-badge" style="margin-left:4px">BARU</span></div>
-        <div class="ibox" style="margin-bottom:7px">
-          Samakan kecerahan &amp; warna antar foto agar <strong>tampilan mosaik seragam</strong> seperti Google Maps.
-        </div>
+        <div class="ibox" style="margin-bottom:7px">Samakan kecerahan &amp; warna antar foto agar <strong>tampilan mosaik seragam</strong>.</div>
         <div class="btn-row">
           <button class="btn btn-saw btn-sm" onclick="autoNormalizeColors()">🎨 Auto Normalize</button>
           <button class="btn btn-sc btn-sm" onclick="resetAllColorAdj()">↺ Reset</button>
@@ -288,9 +276,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
       </div>
       <div class="s-sec" style="padding-bottom:8px">
         <div class="s-ttl">Daftar Foto <span class="tag tag-a" id="photoCountBadge" style="margin-left:4px">0</span></div>
-        <div id="photoList">
-          <div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto" untuk mulai.</div>
-        </div>
+        <div id="photoList"><div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto" untuk mulai.</div></div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Statistik</div>
@@ -313,11 +299,13 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         <button class="btn btn-full" id="btnSplitView" onclick="enterSplitView()" style="background:rgba(88,166,255,.15);color:var(--in);border:1px solid rgba(88,166,255,.3);margin-bottom:4px" disabled>
           ⚙ Pilih GCP dari Peta Satelit
         </button>
+        <!-- PATCH: Legend for hull visualization -->
+        <div class="hull-legend"><div class="hull-legend-line"></div><span>Area hijau = coverage GCP (zona akurat)</span></div>
         <div class="orient-info">
           <b>⚠️ Tips GCP akurat:</b><br>
-          Sebar GCP di <b>4 SUDUT BERBEDA</b> foto.<br>
-          Min. 4 GCP = hasil makin presisi.<br>
-          Gunakan objek tetap: tugu, pojok bangunan.
+          GCP harus <b>mengapit/mengelilingi area yang kamu ukur</b>.<br>
+          Tidak harus di sudut foto — gunakan objek tetap yang kamu kenali persis di kedua tampilan: pojok bangunan, pertigaan, tiang, dsb.<br>
+          <b>Indikator "Coverage %"</b> di foto menunjukkan seberapa luas zona akuratnya.
         </div>
         <input type="file" id="csvInput" accept=".csv,.txt" style="display:none">
         <div id="csvPreview" style="font-size:9px;color:var(--mu);margin-top:6px;font-family:'Space Mono',monospace"></div>
@@ -348,16 +336,12 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
       </div>
       <div class="s-sec">
         <div class="s-ttl">Mode Geser Foto</div>
-        <button class="btn btn-full drag-btn" id="btnDragMode" onclick="toggleDragMode(this)" style="margin-bottom:5px">
-          ✋ Aktifkan Mode Geser Foto
-        </button>
+        <button class="btn btn-full drag-btn" id="btnDragMode" onclick="toggleDragMode(this)" style="margin-bottom:5px">✋ Aktifkan Mode Geser Foto</button>
         <div style="font-size:9px;color:var(--mu);line-height:1.7">Saat aktif: klik &amp; drag foto di peta untuk menyesuaikan posisi.</div>
       </div>
       <div class="s-sec" style="padding-bottom:8px">
         <div class="s-ttl">Overlay Foto &amp; Z-Order</div>
-        <div id="layerList">
-          <div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div>
-        </div>
+        <div id="layerList"><div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div></div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Visibilitas Layer</div>
@@ -426,6 +410,8 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <div class="stat-box"><div class="stat-num" id="stMati" style="color:var(--er)">0</div><div class="stat-lbl">Mati/Kosong</div></div>
         </div>
         <div style="margin-top:7px;font-size:9px;font-family:'Space Mono',monospace;color:var(--mu);line-height:2" id="sensusDensity">Kepadatan: — pokok/ha</div>
+        <!-- PATCH: Batas Kebun info -->
+        <div id="batasKebunInfo" style="display:none;margin-top:5px;background:rgba(90,158,53,.08);border:1px solid rgba(90,158,53,.3);border-radius:5px;padding:7px 9px;font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);line-height:1.8"></div>
         <button class="btn btn-saw btn-sm btn-full" onclick="countTreesInLastPolygon()" style="margin-top:6px">🔢 Hitung Pokok dalam Polygon</button>
       </div>
       <div class="s-sec">
@@ -435,9 +421,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <button class="btn btn-sc btn-sm" onclick="exportTreeCSV()">💾 Export CSV</button>
           <button class="btn btn-sc btn-sm" onclick="exportTreeGeoJSON()">🗺 GeoJSON</button>
         </div>
-        <div id="treeList">
-          <div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div>
-        </div>
+        <div id="treeList"><div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div></div>
       </div>
     </div>
   </div>
@@ -449,6 +433,8 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         <span class="s-ttl" style="margin-bottom:0">Hasil Pengukuran</span>
         <span class="tag tag-a" id="shapeCount">0</span>
       </div>
+      <!-- PATCH: GCP coverage info box -->
+      <div id="gcpCoverageBox" style="display:none;margin-bottom:8px;background:rgba(90,158,53,.07);border:1px solid rgba(90,158,53,.3);border-radius:5px;padding:7px 9px;font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);line-height:1.8"></div>
       <div id="measureResults">
         <div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Gunakan toolbar di peta<br>untuk menggambar polygon,<br>polyline, atau titik.</div>
       </div>
@@ -460,9 +446,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
     <div class="sbody">
       <div class="s-sec">
         <div class="s-ttl">GeoJSON Gabungan</div>
-        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">
-          Semua pengukuran + batas foto + GCP + data sensus pokok dari <strong style="color:var(--tx)" id="exportPhotoCount">0</strong> foto.
-        </p>
+        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Semua pengukuran + batas foto + GCP + data sensus pokok dari <strong style="color:var(--tx)" id="exportPhotoCount">0</strong> foto.</p>
         <button class="btn btn-ok btn-full" onclick="exportGeoJSON()" style="margin-bottom:5px">📥 Download GeoJSON</button>
         <button class="btn btn-sc btn-full" id="btnCopy" onclick="copyGeoJSON()">📋 Copy Clipboard</button>
       </div>
@@ -486,7 +470,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
       </div>
     </div>
   </div>
-</div><!-- /sidebar -->
+</div>
 
 <div class="content">
   <div id="mapPanel"></div>
@@ -494,11 +478,11 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
     <div class="welcome" id="welcomeMsg">
       <div class="welcome-icon">🌴</div>
       <h2>DroneMap v3 Pro — Sawit Edition</h2>
-      <p>Upload foto drone, tandai GCP, lakukan georeferencing, lalu <strong style="color:var(--saw2)">sensus pokok sawit</strong> langsung di peta dengan normalisasi warna otomatis.</p>
+      <p>Upload foto drone, tandai GCP di objek yang kamu kenali, lakukan georeferencing, lalu <strong style="color:var(--saw2)">sensus &amp; ukur kebun kamu</strong> dengan polygon Batas Kebun.</p>
     </div>
   </div>
 </div>
-</div><!-- /main -->
+</div>
 
 <div class="status-bar">
   <span><span class="s-dot dot-saw" id="statusDot"></span><span id="statusText">Menunggu foto...</span></span>
@@ -601,7 +585,7 @@ var _panelVersion=0,_abortCtrl=null;
 var _dragModeActive=false,_dragPhoto=null,_dragStartLatLng=null,_dragStartOffset=null;
 var _showPhotoOutlines=false;
 
-// === SENSUS STATE ===
+// SENSUS STATE
 var trees=[];
 var treeId=0;
 var _treeMode='none';
@@ -609,6 +593,45 @@ var _defaultStatus='normal';
 var _treeLayer=null;
 var _editingTreeId=null;
 var _lastPolygonLayer=null;
+
+// BATAS KEBUN STATE
+var _batasKebunId=null;
+
+// =====================================================
+// *** PATCH 1: CONVEX HULL UTILITIES ***
+// =====================================================
+function convexHull(pts){
+  if(pts.length<3)return pts.slice();
+  var n=pts.length,start=0;
+  for(var i=1;i<n;i++)if(pts[i].x<pts[start].x||(pts[i].x===pts[start].x&&pts[i].y<pts[start].y))start=i;
+  var hull=[],cur=start,limit=0;
+  do{
+    hull.push(pts[cur]);var nxt=(cur+1)%n;
+    for(var j=0;j<n;j++){
+      var cr=(pts[nxt].x-pts[cur].x)*(pts[j].y-pts[cur].y)-(pts[nxt].y-pts[cur].y)*(pts[j].x-pts[cur].x);
+      if(cr<0)nxt=j;
+    }
+    cur=nxt;limit++;
+  }while(cur!==start&&limit<=n+1);
+  return hull;
+}
+function hullArea(hull){
+  var a=0,n=hull.length;
+  for(var i=0;i<n;i++){var j=(i+1)%n;a+=hull[i].x*hull[j].y-hull[j].x*hull[i].y;}
+  return Math.abs(a)/2;
+}
+// Returns array of corner direction names that are not covered by GCPs
+function gcpCoverageDir(gcps,W,H){
+  if(!gcps||gcps.length===0)return['kiri-atas','kanan-atas','kiri-bawah','kanan-bawah'];
+  var m=0.28;
+  var corners=[
+    {n:'kiri-atas',x:0,y:0},{n:'kanan-atas',x:W,y:0},
+    {n:'kiri-bawah',x:0,y:H},{n:'kanan-bawah',x:W,y:H}
+  ];
+  return corners.filter(function(c){
+    return !gcps.some(function(g){return Math.abs(g.px-c.x)<W*m&&Math.abs(g.py-c.y)<H*m;});
+  }).map(function(c){return c.n;});
+}
 
 // =====================================================
 // TABS
@@ -636,7 +659,6 @@ function addPhoto(file){
     visible:true,opacity:0.9,gcpLayer:null,corners:null,
     feather:0.12,blendMode:'normal',
     offsetLat:0,offsetLng:0,zOrder:photos.length,
-    // Color adjust
     brightness:100,contrast:100,saturation:100,hue:0,
     colorNormApplied:false
   };
@@ -856,14 +878,25 @@ function clearPhotoGCP(){
   var p=getPhoto(currentPhotoId);if(!p)return;
   p.gcps=[];renderGCPList();redrawCanvas(p);updateGCPStatus();renderPhotoList();updateStats();
 }
+
+// =====================================================
+// *** PATCH 2: gcpSpreadScore — hull-area ratio ***
+// =====================================================
 function gcpSpreadScore(gcps){
   if(!gcps||gcps.length<2)return 0;
-  var xs=gcps.map(function(g){return g.px}),ys=gcps.map(function(g){return g.py});
-  var rangeX=Math.max.apply(null,xs)-Math.min.apply(null,xs);
-  var rangeY=Math.max.apply(null,ys)-Math.min.apply(null,ys);
-  var p=getPhoto(currentPhotoId);if(!p||!p.w)return 1;
-  return Math.min(rangeX/p.w,rangeY/p.h);
+  var p=getPhoto(currentPhotoId);if(!p||!p.w)return 0;
+  if(gcps.length<3){
+    var xs=gcps.map(function(g){return g.px}),ys=gcps.map(function(g){return g.py});
+    return Math.min((Math.max.apply(null,xs)-Math.min.apply(null,xs))/p.w,(Math.max.apply(null,ys)-Math.min.apply(null,ys))/p.h);
+  }
+  var hull=convexHull(gcps.map(function(g){return{x:g.px,y:g.py}}));
+  var ha=hullArea(hull);
+  return Math.sqrt(ha/(p.w*p.h));
 }
+
+// =====================================================
+// *** PATCH 3: updateGCPStatus — directional hints + coverage % ***
+// =====================================================
 function updateGCPStatus(){
   var p=getPhoto(currentPhotoId);var n=p?p.gcps.length:0;
   document.getElementById('gcpCount').textContent=n;
@@ -872,11 +905,19 @@ function updateGCPStatus(){
   var btn=document.getElementById('btnApply'),warn=document.getElementById('gcpWarn');
   if(p&&n>=3){
     var spread=gcpSpreadScore(p.gcps);var spreadPct=Math.round(spread*100);
-    var spreadColor=spread<0.2?'var(--er)':spread<0.4?'var(--ac)':'var(--ok)';
-    var spreadMsg=spread<0.2?'⚠️ GCP terlalu berdekatan!':spread<0.4?'⚡ Spread cukup':'✓ Spread GCP baik ('+spreadPct+'%)';
+    var spreadColor=spread<0.25?'var(--er)':spread<0.45?'var(--ac)':'var(--ok)';
+    var spreadMsg=spread<0.25?'⚠️ Coverage terlalu sempit!':spread<0.45?'⚡ Coverage cukup ('+spreadPct+'%)':'✓ Coverage GCP baik ('+spreadPct+'%)';
     btn.disabled=false;
+    // Directional hints
+    var missing=p.w?gcpCoverageDir(p.gcps,p.w,p.h):[];
+    var dirHtml='';
+    if(missing.length>0&&spread<0.55){
+      dirHtml='<div style="margin-top:4px;font-size:9px;color:var(--ac);font-family:\'Space Mono\',monospace;background:rgba(240,165,0,.07);border-radius:3px;padding:4px 6px">'+
+        '💡 Tambah GCP di area: <b style="color:var(--ac2)">'+missing.join(', ')+'</b><br>'+
+        'agar area ukur lebih terlindungi coverage.</div>';
+    }
     warn.innerHTML='<span style="color:var(--ok)">✓ Siap georef ('+n+' GCP)</span>'+
-      '<div style="margin-top:4px;font-size:9px;color:'+spreadColor+';font-family:\'Space Mono\',monospace">'+spreadMsg+'</div>';
+      '<div style="margin-top:4px;font-size:9px;color:'+spreadColor+';font-family:\'Space Mono\',monospace">'+spreadMsg+'</div>'+dirHtml;
   } else{btn.disabled=true;warn.textContent=p?'Perlu '+(3-n)+' GCP lagi':'Pilih foto terlebih dahulu'}
   var info=document.getElementById('gcpPhotoInfo');
   if(p){
@@ -890,6 +931,7 @@ function updateGCPStatus(){
     info.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">Pilih foto dari tab Foto.</div>';
   }
 }
+
 function renderGCPList(){
   var list=document.getElementById('gcpList');
   var p=getPhoto(currentPhotoId);
@@ -901,6 +943,7 @@ function renderGCPList(){
       '<button class="gcp-del" onclick="deleteGCP('+p.id+','+g.id+')">✕</button></div>';
   }).join('');
 }
+
 document.getElementById('csvInput').addEventListener('change',function(e){
   var f=e.target.files[0];if(!f)return;
   var p=getPhoto(currentPhotoId);if(!p){e.target.value='';return}
@@ -923,13 +966,37 @@ document.getElementById('csvInput').addEventListener('change',function(e){
 });
 
 // =====================================================
-// CANVAS GCP
+// *** PATCH 4: redrawCanvas — convex hull coverage overlay ***
 // =====================================================
 function redrawCanvas(photo){
   if(!canvasEl||!photo)return;
   var ctx=canvasEl.getContext('2d');
   ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
   var r=Math.max(8,18/scale),lw=Math.max(1,2/scale),fs=Math.max(7,12/scale);
+
+  // === DRAW GCP CONVEX HULL COVERAGE ZONE ===
+  if(photo.gcps.length>=3){
+    var hPts=convexHull(photo.gcps.map(function(g){return{x:g.px,y:g.py}}));
+    ctx.beginPath();ctx.moveTo(hPts[0].x,hPts[0].y);
+    hPts.forEach(function(p){ctx.lineTo(p.x,p.y)});ctx.closePath();
+    // Shaded fill
+    ctx.fillStyle='rgba(90,158,53,0.09)';ctx.fill();
+    // Dashed border
+    ctx.strokeStyle='rgba(90,158,53,0.6)';ctx.lineWidth=lw*1.5;
+    ctx.setLineDash([Math.max(6,10/scale),Math.max(3,5/scale)]);ctx.stroke();ctx.setLineDash([]);
+    // Coverage % label at centroid
+    var cx2=hPts.reduce(function(s,p){return s+p.x},0)/hPts.length;
+    var cy2=hPts.reduce(function(s,p){return s+p.y},0)/hPts.length;
+    var photoArea=photo.w*photo.h;var ha=hullArea(hPts);
+    var pct=Math.min(100,Math.round(ha/photoArea*100));
+    var lblText='Coverage: '+pct+'%';
+    var lfz=Math.max(9,13/scale);
+    ctx.font='bold '+lfz+'px monospace';
+    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=lw*3.5;ctx.strokeText(lblText,cx2,cy2);
+    ctx.fillStyle='#7dc455';ctx.fillText(lblText,cx2,cy2);
+  }
+
+  // === DRAW GCP MARKERS ===
   photo.gcps.forEach(function(g,i){
     var x=g.px,y=g.py;
     ctx.beginPath();ctx.arc(x,y,r*1.8,0,Math.PI*2);ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=lw*2;ctx.stroke();
@@ -946,15 +1013,13 @@ function redrawCanvas(photo){
 // =====================================================
 // COLOR NORMALIZATION
 // =====================================================
-function sampleImageAvgColor(imgSrc, callback){
-  var img=new Image();
-  img.crossOrigin='anonymous';
+function sampleImageAvgColor(imgSrc,callback){
+  var img=new Image();img.crossOrigin='anonymous';
   img.onload=function(){
     var ofc=document.createElement('canvas');
     var sw=Math.min(img.naturalWidth,200),sh=Math.min(img.naturalHeight,200);
     ofc.width=sw;ofc.height=sh;
-    var ctx=ofc.getContext('2d');
-    ctx.drawImage(img,0,0,sw,sh);
+    var ctx=ofc.getContext('2d');ctx.drawImage(img,0,0,sw,sh);
     var d=ctx.getImageData(0,0,sw,sh).data;
     var rSum=0,gSum=0,bSum=0,count=0;
     for(var i=0;i<d.length;i+=4){rSum+=d[i];gSum+=d[i+1];bSum+=d[i+2];count++;}
@@ -965,16 +1030,13 @@ function sampleImageAvgColor(imgSrc, callback){
 
 function autoNormalizeColors(){
   var georefPhotos=photos.filter(function(p){return p.georef&&p.src});
-  if(georefPhotos.length<2){
-    document.getElementById('colorNormStatus').textContent='Perlu ≥2 foto georef untuk normalisasi.';return;
-  }
+  if(georefPhotos.length<2){document.getElementById('colorNormStatus').textContent='Perlu ≥2 foto georef untuk normalisasi.';return;}
   document.getElementById('colorNormStatus').textContent='Menganalisis warna foto...';
   var avgColors=[];var done=0;
   georefPhotos.forEach(function(p,i){
     sampleImageAvgColor(p.src,function(avg){
       avgColors[i]={photo:p,avg:avg};done++;
       if(done===georefPhotos.length){
-        // Reference = average of all photos
         var refR=avgColors.reduce(function(s,x){return s+x.avg.r},0)/avgColors.length;
         var refG=avgColors.reduce(function(s,x){return s+x.avg.g},0)/avgColors.length;
         var refB=avgColors.reduce(function(s,x){return s+x.avg.b},0)/avgColors.length;
@@ -983,16 +1045,14 @@ function autoNormalizeColors(){
           var p=item.photo,avg=item.avg;
           var luma=0.299*avg.r+0.587*avg.g+0.114*avg.b;
           var brightFactor=refLuma/Math.max(luma,1);
-          // Clamp brightness correction between 0.7 and 1.4
           brightFactor=Math.max(0.7,Math.min(1.4,brightFactor));
-          p.brightness=Math.round(brightFactor*100);
-          p.colorNormApplied=true;
+          p.brightness=Math.round(brightFactor*100);p.colorNormApplied=true;
           if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
           else if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();
         });
         document.getElementById('colorNormStatus').textContent='✓ Normalisasi selesai ('+georefPhotos.length+' foto, ref luma: '+Math.round(refLuma)+')';
         renderPhotoList();renderLayerList();
-        setStatus('Normalisasi warna selesai — tampilan mosaik lebih seragam','green');
+        setStatus('Normalisasi warna selesai','green');
       }
     });
   });
@@ -1016,26 +1076,16 @@ function buildAffine(gcps){
   var ATb_lat=[0,0,0],ATb_lng=[0,0,0];
   gcps.forEach(function(g){
     var row=[1,g.px,g.py];
-    for(var i=0;i<3;i++){
-      for(var j=0;j<3;j++)ATA[i][j]+=row[i]*row[j];
-      ATb_lat[i]+=row[i]*g.lat;ATb_lng[i]+=row[i]*g.lng;
-    }
+    for(var i=0;i<3;i++){for(var j=0;j<3;j++)ATA[i][j]+=row[i]*row[j];ATb_lat[i]+=row[i]*g.lat;ATb_lng[i]+=row[i]*g.lng;}
   });
   function solve3x3(M,b){
     var A=M.map(function(r){return r.slice()});var rhs=b.slice();
     for(var c=0;c<3;c++){
-      var mr=c;
-      for(var r=c+1;r<3;r++)if(Math.abs(A[r][c])>Math.abs(A[mr][c]))mr=r;
+      var mr=c;for(var r=c+1;r<3;r++)if(Math.abs(A[r][c])>Math.abs(A[mr][c]))mr=r;
       var tmp=A[c];A[c]=A[mr];A[mr]=tmp;var t2=rhs[c];rhs[c]=rhs[mr];rhs[mr]=t2;
-      for(var r2=c+1;r2<3;r2++){
-        if(Math.abs(A[c][c])<1e-15)continue;
-        var f=A[r2][c]/A[c][c];
-        for(var j=c;j<3;j++)A[r2][j]-=f*A[c][j];
-        rhs[r2]-=f*rhs[c];
-      }
+      for(var r2=c+1;r2<3;r2++){if(Math.abs(A[c][c])<1e-15)continue;var f=A[r2][c]/A[c][c];for(var j=c;j<3;j++)A[r2][j]-=f*A[c][j];rhs[r2]-=f*rhs[c];}
     }
-    var x=[0,0,0];
-    for(var i=2;i>=0;i--){x[i]=rhs[i]/A[i][i];for(var j=i+1;j<3;j++)x[i]-=A[i][j]*x[j]/A[i][i];}
+    var x=[0,0,0];for(var i=2;i>=0;i--){x[i]=rhs[i]/A[i][i];for(var j=i+1;j<3;j++)x[i]-=A[i][j]*x[j]/A[i][i];}
     return x;
   }
   var aLat=solve3x3(ATA,ATb_lat),aLng=solve3x3(ATA,ATb_lng);
@@ -1043,45 +1093,24 @@ function buildAffine(gcps){
 }
 
 // =====================================================
-// IMPROVED FEATHERED CANVAS
-// Uses center-weighted (elliptical gradient) blending
-// instead of simple edge feathering — better for mosaics
+// FEATHERED CANVAS OVERLAY
 // =====================================================
 function buildFeatheredCanvas(imgSrc,w,h,featherAmt,brightness,contrast,saturation,callback){
   var img=new Image();
   img.onload=function(){
-    var ofc=document.createElement('canvas');
-    ofc.width=w;ofc.height=h;
+    var ofc=document.createElement('canvas');ofc.width=w;ofc.height=h;
     var ctx=ofc.getContext('2d');
-
-    // Apply CSS filter for color adjustment
     var br=brightness||100,ct=contrast||100,sat=saturation||100;
     ctx.filter='brightness('+br+'%) contrast('+ct+'%) saturate('+sat+'%)';
-    ctx.drawImage(img,0,0,w,h);
-    ctx.filter='none';
-
-    // === CENTER-WEIGHTED ALPHA BLENDING ===
-    // This creates a smooth gradient from center (opaque) to edges (transparent)
-    // which blends much better than linear edge feathering in overlapping areas
+    ctx.drawImage(img,0,0,w,h);ctx.filter='none';
     if(featherAmt>0){
-      var mask=document.createElement('canvas');
-      mask.width=w;mask.height=h;
+      var mask=document.createElement('canvas');mask.width=w;mask.height=h;
       var mctx=mask.getContext('2d');
-
-      var cx=w/2,cy=h/2;
-      // Elliptical radial gradient centered on the photo
-      var edgeBlend=featherAmt; // 0..1, how much of the photo fades at edge
-
-      // We use composite with radial gradient for smooth falloff
-      var grad=mctx.createRadialGradient(cx,cy,Math.min(cx,cy)*(1-edgeBlend*1.5),cx,cy,Math.max(cx,cy)*1.05);
-      grad.addColorStop(0,'rgba(0,0,0,1)');
-      grad.addColorStop(1,'rgba(0,0,0,0)');
+      var cx=w/2,cy=h/2,eb=featherAmt;
+      var grad=mctx.createRadialGradient(cx,cy,Math.min(cx,cy)*(1-eb*1.5),cx,cy,Math.max(cx,cy)*1.05);
+      grad.addColorStop(0,'rgba(0,0,0,1)');grad.addColorStop(1,'rgba(0,0,0,0)');
       mctx.fillStyle=grad;mctx.fillRect(0,0,w,h);
-
-      // Apply the gradient as alpha mask
-      ctx.globalCompositeOperation='destination-in';
-      ctx.drawImage(mask,0,0);
-      ctx.globalCompositeOperation='source-over';
+      ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0);ctx.globalCompositeOperation='source-over';
     }
     callback(ofc,img);
   };
@@ -1089,29 +1118,22 @@ function buildFeatheredCanvas(imgSrc,w,h,featherAmt,brightness,contrast,saturati
 }
 
 function createRotatedOverlay(photo,toGeo){
-  var tl=toGeo(0,0),tr=toGeo(photo.w,0);
-  var br=toGeo(photo.w,photo.h),bl=toGeo(0,photo.h);
+  var tl=toGeo(0,0),tr=toGeo(photo.w,0),br=toGeo(photo.w,photo.h),bl=toGeo(0,photo.h);
   photo.corners={tl:tl,tr:tr,br:br,bl:bl};
   var lats=[tl.lat,tr.lat,br.lat,bl.lat],lngs=[tl.lng,tr.lng,br.lng,bl.lng];
   photo.bounds=[[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
   if(photo.offsetLat===undefined)photo.offsetLat=0;if(photo.offsetLng===undefined)photo.offsetLng=0;
   if(photo.feather===undefined)photo.feather=0.12;if(photo.blendMode===undefined)photo.blendMode='normal';
-
   var RotatedLayer=L.Layer.extend({
     _ofc:null,_ofcImg:null,_canvas:null,
-
     onAdd:function(map){
-      this._map=map;
-      this._canvas=document.createElement('canvas');
+      this._map=map;this._canvas=document.createElement('canvas');
       this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
       map.getPanes().overlayPane.appendChild(this._canvas);
       var self=this;
-      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){
-        self._ofc=ofc;self._ofcImg=rawImg;self._update();
-      });
+      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
       this._canvas.addEventListener('mousedown',function(e){
-        if(!_dragModeActive)return;
-        e.stopPropagation();
+        if(!_dragModeActive)return;e.stopPropagation();
         var r=map.getContainer().getBoundingClientRect();
         var cp=map.containerPointToLatLng([e.clientX-r.left,e.clientY-r.top]);
         _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
@@ -1119,24 +1141,17 @@ function createRotatedOverlay(photo,toGeo){
       });
       map.on('zoom viewreset move zoomend moveend resize',this._update,this);
     },
-
     onRemove:function(map){
       if(this._canvas&&this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
       map.off('zoom viewreset move zoomend moveend resize',this._update,this);
       this._ofc=null;this._ofcImg=null;
     },
-
     _rebuildOfc:function(){
-      if(!this._ofcImg)return;
-      var self=this;
-      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){
-        self._ofc=ofc;self._ofcImg=rawImg;self._update();
-      });
+      if(!this._ofcImg)return;var self=this;
+      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
     },
-
     _update:function(){
-      if(!this._ofc)return;
-      var map=this._map;if(!map)return;
+      if(!this._ofc)return;var map=this._map;if(!map)return;
       var mapSize=map.getSize();var topLeft=map.containerPointToLayerPoint([0,0]);
       this._canvas.style.width=mapSize.x+'px';this._canvas.style.height=mapSize.y+'px';
       this._canvas.style.left=topLeft.x+'px';this._canvas.style.top=topLeft.y+'px';
@@ -1150,10 +1165,8 @@ function createRotatedOverlay(photo,toGeo){
         map.latLngToLayerPoint(L.latLng(br.lat+oLat,br.lng+oLng)),
         map.latLngToLayerPoint(L.latLng(bl.lat+oLat,bl.lng+oLng))
       ];
-      var off=topLeft;
-      var cpts=pts.map(function(p){return{x:p.x-off.x,y:p.y-off.y}});
-      var ctx=this._canvas.getContext('2d');
-      ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
+      var off=topLeft;var cpts=pts.map(function(p){return{x:p.x-off.x,y:p.y-off.y}});
+      var ctx=this._canvas.getContext('2d');ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
       var W2=photo.w,H2=photo.h;
       var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
       var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
@@ -1164,20 +1177,15 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-      ctx.save();ctx.globalAlpha=photo.opacity;
-      ctx.globalCompositeOperation=photo.blendMode||'normal';
+      ctx.save();ctx.globalAlpha=photo.opacity;ctx.globalCompositeOperation=photo.blendMode||'normal';
       ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
       ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
     },
-
     setOpacityVal:function(op){photo.opacity=op;this._update();},
     setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
     setBlendMode:function(m){photo.blendMode=m;this._update();},
-    setColorAdj:function(br,ct,sat){
-      photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;
-      this._rebuildOfc();
-    },
+    setColorAdj:function(br,ct,sat){photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;this._rebuildOfc();},
     forceUpdate:function(){this._update();}
   });
   return new RotatedLayer();
@@ -1186,31 +1194,12 @@ function createRotatedOverlay(photo,toGeo){
 // =====================================================
 // LAYER VISUAL CONTROLS
 // =====================================================
-function setPhotoFeather(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;p.feather=parseFloat(val)/100;
-  if(p.overlay&&p.overlay.setFeatherVal)p.overlay.setFeatherVal(p.feather);
-  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=Math.round(val)+'%';}
-}
+function setPhotoFeather(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.feather=parseFloat(val)/100;if(p.overlay&&p.overlay.setFeatherVal)p.overlay.setFeatherVal(p.feather);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=Math.round(val)+'%';}}
 function setPhotoBlend(pid,val){var p=getPhoto(pid);if(!p)return;p.blendMode=val;if(p.overlay&&p.overlay.setBlendMode)p.overlay.setBlendMode(val);}
-function setPhotoBrightness(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;p.brightness=parseInt(val);
-  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
-  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
-}
-function setPhotoContrast(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;p.contrast=parseInt(val);
-  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
-  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
-}
-function setPhotoSaturation(pid,val,inputEl){
-  var p=getPhoto(pid);if(!p)return;p.saturation=parseInt(val);
-  if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);
-  if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}
-}
-function toggleOutlines(checked){
-  _showPhotoOutlines=!!checked;
-  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
-}
+function setPhotoBrightness(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.brightness=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
+function setPhotoContrast(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.contrast=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
+function setPhotoSaturation(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.saturation=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
+function toggleOutlines(checked){_showPhotoOutlines=!!checked;photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});}
 
 // =====================================================
 // GEOREFERENCE
@@ -1273,16 +1262,39 @@ function georefPhoto(photo){
       resHtml+='<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:'+rc+'">GCP '+(i+1)+': '+r.toFixed(2)+'m</div>';
     });
     resHtml+='<div style="margin-top:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--tx)">Avg: '+avgRes.toFixed(2)+'m | Max: '+maxRes.toFixed(2)+'m</div></div>';
-    if(!spreadOk)resHtml+='<div style="margin-top:5px;color:var(--er);font-size:9px">⚠️ GCP kurang menyebar!</div>';
+    if(!spreadOk)resHtml+='<div style="margin-top:5px;color:var(--ac);font-size:9px">💡 Coverage GCP kurang menyebar — pertimbangkan tambah GCP di area yang diukur.</div>';
     gcpWarnEl.innerHTML='<span style="color:var(--ok)">✓ Georef selesai ('+photo.gcps.length+' GCP)</span>'+resHtml;
   }
   hideImagePanel();
   setStatus('✓ "'+photo.name+'" | Rot: '+rotDeg.toFixed(1)+'° | Error avg: '+avgRes.toFixed(2)+'m',spreadOk&&maxRes<5?'green':'amber');
   updateStep(3);
+  // Auto-switch to measure tab so user can draw batas kebun
   document.querySelectorAll('.stab').forEach(function(t){t.classList.remove('active')});
   document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('active')});
-  document.querySelectorAll('.stab')[3].classList.add('active');
-  document.getElementById('tab-sensus').classList.add('active');
+  document.querySelectorAll('.stab')[4].classList.add('active');
+  document.getElementById('tab-measure').classList.add('active');
+  updateGcpCoverageBox();
+}
+
+// *** PATCH: Update measure tab coverage info box ***
+function updateGcpCoverageBox(){
+  var box=document.getElementById('gcpCoverageBox');if(!box)return;
+  var georefPhotos=photos.filter(function(p){return p.georef&&p.gcps.length>=3});
+  if(georefPhotos.length===0){box.style.display='none';return;}
+  var totalGcp=georefPhotos.reduce(function(s,p){return s+p.gcps.length},0);
+  var avgSpread=georefPhotos.reduce(function(s,p){return s+gcpSpreadScoreForPhoto(p)},0)/georefPhotos.length;
+  var pct=Math.min(100,Math.round(avgSpread*100));
+  var col=pct<25?'var(--er)':pct<45?'var(--ac)':'var(--saw2)';
+  box.style.display='';
+  box.innerHTML='📐 GCP Network: <b style="color:'+col+'">'+pct+'% coverage</b> dari '+totalGcp+' titik GCP<br>'+
+    '<span style="font-size:8px;color:var(--mu)">Polygon yang digambar di dalam coverage GCP → akurat &nbsp;|&nbsp; Di luar → extrapolasi</span>';
+}
+
+function gcpSpreadScoreForPhoto(photo){
+  if(!photo||photo.gcps.length<3)return 0;
+  var hull=convexHull(photo.gcps.map(function(g){return{x:g.px,y:g.py}}));
+  var ha=hullArea(hull);
+  return Math.sqrt(ha/(photo.w*photo.h));
 }
 
 // =====================================================
@@ -1316,16 +1328,14 @@ function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.
 // Z-ORDER
 // =====================================================
 function movePhotoUp(pid){
-  var idx=photos.findIndex(function(p){return p.id===pid});
-  if(idx<0||idx>=photos.length-1)return;
+  var idx=photos.findIndex(function(p){return p.id===pid});if(idx<0||idx>=photos.length-1)return;
   var tmp=photos[idx].zOrder;photos[idx].zOrder=photos[idx+1].zOrder;photos[idx+1].zOrder=tmp;
   photos[idx].overlay&&photos[idx].overlay.forceUpdate&&photos[idx].overlay.forceUpdate();
   photos[idx+1].overlay&&photos[idx+1].overlay.forceUpdate&&photos[idx+1].overlay.forceUpdate();
   renderLayerList();
 }
 function movePhotoDown(pid){
-  var idx=photos.findIndex(function(p){return p.id===pid});
-  if(idx<=0)return;
+  var idx=photos.findIndex(function(p){return p.id===pid});if(idx<=0)return;
   var tmp=photos[idx].zOrder;photos[idx].zOrder=photos[idx-1].zOrder;photos[idx-1].zOrder=tmp;
   photos[idx].overlay&&photos[idx].overlay.forceUpdate&&photos[idx].overlay.forceUpdate();
   photos[idx-1].overlay&&photos[idx-1].overlay.forceUpdate&&photos[idx-1].overlay.forceUpdate();
@@ -1349,21 +1359,14 @@ function initMap(refPhoto){
     }
   });
   map.addControl(drawCtrl);
-  map.on(L.Draw.Event.CREATED,function(e){
-    onDrawCreated(e);
-    _lastPolygonLayer=e.layer;
-  });
+  map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
   map.on(L.Draw.Event.EDITED,refreshMeasures);
   map.on(L.Draw.Event.DELETED,function(e){
     e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});
     renderMeasures();updateStats();
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-  // Tree click handler
-  map.on('click',function(e){
-    if(_treeMode!=='add')return;
-    addTree(e.latlng.lat,e.latlng.lng);
-  });
+  map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
 }
 
 // =====================================================
@@ -1400,7 +1403,9 @@ function renderLayerList(){
           blendOpts.map(function(m){return '<option value="'+m+'"'+((p.blendMode||'normal')===m?' selected':'')+'>'+m+'</option>';}).join('')+
         '</select>'+
       '</div>'+
-      (hasOffset?'<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">'+p.offsetLat.toFixed(6)+' / '+p.offsetLng.toFixed(6)+'</span> <button onclick="resetPhotoOffset('+p.id+')" style="font-size:8px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">↺ Reset</button></div>':'<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">0 / 0</span></div>')+
+      '<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">'+(hasOffset?p.offsetLat.toFixed(6)+' / '+p.offsetLng.toFixed(6):'0 / 0')+'</span>'+
+      (hasOffset?' <button onclick="resetPhotoOffset('+p.id+')" style="font-size:8px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">↺ Reset</button>':'')+
+      '</div>'+
     '</div>';
   }).join('');
 }
@@ -1432,7 +1437,7 @@ function setBasemap(key,el){
 }
 
 // =====================================================
-// DRAW & MEASURE
+// *** PATCH 5: DRAW & MEASURE — GCP coverage warning ***
 // =====================================================
 function onDrawCreated(e){
   var layer=e.layer,type=e.layerType;shapeId++;var id=shapeId;var m=null;
@@ -1440,8 +1445,34 @@ function onDrawCreated(e){
     var gj=layer.toGeoJSON(),area=turf.area(gj),perim=turf.length(turf.polygonToLine(gj),{units:'meters'});
     var treesInside=countTreesInPolygon(gj);
     var density=area>0?(treesInside/(area/10000)).toFixed(1):'-';
-    m={id:id,type:'polygon',area:area,perim:perim,coords:gj.geometry.coordinates[0].slice(0,-1),label:'Blok #'+id,treesInside:treesInside,density:density};
-    layer.bindPopup('<b>Blok #'+id+'</b><br>Luas: <b>'+fmtArea(area)+'</b><br>Keliling: <b>'+fmtLen(perim)+'</b><br>🌴 Pokok: <b>'+treesInside+'</b><br>Kepadatan: <b>'+density+' pokok/ha</b>');
+
+    // === CHECK: apakah polygon di luar coverage GCP? ===
+    var outsideWarning='';
+    var georefPhotos=photos.filter(function(p){return p.georef&&p.gcps.length>=3});
+    if(georefPhotos.length>0&&typeof turf!=='undefined'){
+      var allGcpLatLng=[];
+      georefPhotos.forEach(function(ph){ph.gcps.forEach(function(g){allGcpLatLng.push([g.lng,g.lat]);});});
+      if(allGcpLatLng.length>=3){
+        try{
+          var hullFeature=turf.convex(turf.featureCollection(allGcpLatLng.map(function(c){return turf.point(c);})));
+          if(hullFeature){
+            var polyCoords=gj.geometry.coordinates[0];
+            var outsidePts=polyCoords.filter(function(c){
+              try{return !turf.booleanPointInPolygon(turf.point(c),hullFeature);}catch(e){return false;}
+            });
+            if(outsidePts.length>0){
+              outsideWarning='<div class="coverage-warn">'+
+                '⚠️ '+outsidePts.length+' sudut polygon <b>di luar coverage GCP</b>.<br>'+
+                'Tambah GCP di area tersebut untuk akurasi pengukuran yang lebih baik.</div>';
+            }
+          }
+        }catch(ex){}
+      }
+    }
+
+    m={id:id,type:'polygon',area:area,perim:perim,coords:gj.geometry.coordinates[0].slice(0,-1),label:'Blok #'+id,treesInside:treesInside,density:density,outsideWarning:outsideWarning,isBatasKebun:false};
+    var popupExtra=outsideWarning?'<br><span style="color:var(--er);font-size:9px">⚠️ Sebagian di luar coverage GCP</span>':'';
+    layer.bindPopup('<b>Blok #'+id+'</b><br>Luas: <b>'+fmtArea(area)+'</b><br>Keliling: <b>'+fmtLen(perim)+'</b><br>🌴 Pokok: <b>'+treesInside+'</b><br>Kepadatan: <b>'+density+' pokok/ha</b>'+popupExtra);
   }else if(type==='polyline'){
     var gj2=layer.toGeoJSON(),len=turf.length(gj2,{units:'meters'});
     m={id:id,type:'line',len:len,coords:gj2.geometry.coordinates,label:'Line #'+id};
@@ -1454,17 +1485,22 @@ function onDrawCreated(e){
   layer._mid=id;drawnItems.addLayer(layer);
   if(m){measures.push(m);renderMeasures();updateStats()}
 }
+
 function refreshMeasures(){
   var lbl={};measures.forEach(function(m){lbl[m.id]=m.label});measures=[];
   drawnItems.eachLayer(function(layer){
     if(!layer.toGeoJSON)return;
     var gj=layer.toGeoJSON(),id=layer._mid||0,gt=gj.geometry.type,lb=lbl[id]||'Shape #'+id;
-    if(gt==='Polygon'){var a=turf.area(gj),pe=turf.length(turf.polygonToLine(gj),{units:'meters'}),co=gj.geometry.coordinates[0].slice(0,-1);measures.push({id:id,type:'polygon',area:a,perim:pe,coords:co,label:lb})}
+    if(gt==='Polygon'){var a=turf.area(gj),pe=turf.length(turf.polygonToLine(gj),{units:'meters'}),co=gj.geometry.coordinates[0].slice(0,-1);measures.push({id:id,type:'polygon',area:a,perim:pe,coords:co,label:lb,isBatasKebun:(_batasKebunId===id)})}
     else if(gt==='LineString'){var ln=turf.length(gj,{units:'meters'}),co2=gj.geometry.coordinates;measures.push({id:id,type:'line',len:ln,coords:co2,label:lb})}
     else if(gt==='Point'){var c=gj.geometry.coordinates;measures.push({id:id,type:'marker',lat:c[1],lng:c[0],label:lb})}
   });
   renderMeasures();updateStats();
 }
+
+// =====================================================
+// *** PATCH 6: renderMeasures — Batas Kebun button + warning ***
+// =====================================================
 function renderMeasures(){
   var el=document.getElementById('measureResults');
   document.getElementById('shapeCount').textContent=measures.length;
@@ -1473,7 +1509,11 @@ function renderMeasures(){
     if(m.type==='polygon'){
       var pts=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
       var treeInfo=m.treesInside!==undefined?'<div style="font-size:9px;color:var(--saw2);font-family:\'Space Mono\',monospace;margin-top:3px">🌴 '+m.treesInside+' pokok | '+m.density+' pokok/ha</div>':'';
-      return '<div class="m-card"><div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)"></div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
+      var warnHtml=m.outsideWarning||'';
+      var isBK=m.isBatasKebun;
+      var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(90,158,53,.25);color:var(--saw2);font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid rgba(90,158,53,.4)">🌴 KEBUN</span>':'';
+      var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?'var(--saw)':'var(--bd)')+';background:'+(isBK?'rgba(90,158,53,.2)':'var(--s3)')+';color:'+(isBK?'var(--saw2)':'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Batas Kebun Aktif — Klik untuk nonaktif':'🌴 Set sebagai Batas Kebun')+'</button>';
+      return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
     }
     if(m.type==='line'){
       var pts2=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
@@ -1485,10 +1525,49 @@ function renderMeasures(){
     return '';
   }).join('');
 }
+
 function renameShape(id,val){var m=measures.find(function(m){return m.id===id});if(m)m.label=val}
 function deleteShape(id){
+  if(id===_batasKebunId)_batasKebunId=null;
   drawnItems.eachLayer(function(l){if(l._mid===id)drawnItems.removeLayer(l)});
-  measures=measures.filter(function(m){return m.id!==id});renderMeasures();updateStats();
+  measures=measures.filter(function(m){return m.id!==id});renderMeasures();updateStats();updateSensusStats();
+}
+
+// =====================================================
+// *** PATCH 7: BATAS KEBUN ***
+// =====================================================
+function setBatasKebun(id){
+  if(_batasKebunId===id){
+    measures.forEach(function(m){m.isBatasKebun=false;});
+    _batasKebunId=null;
+    renderMeasures();updateSensusStats();
+    var bi=document.getElementById('batasKebunInfo');if(bi)bi.style.display='none';
+    setStatus('Batas Kebun dinonaktifkan','amber');
+    return;
+  }
+  measures.forEach(function(m){m.isBatasKebun=(m.id===id);});
+  _batasKebunId=id;
+  var m=measures.find(function(m){return m.id===id});
+  if(m){
+    renderMeasures();
+    // Find the layer and recalculate
+    var layer=null;drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
+    if(layer&&typeof turf!=='undefined'){
+      var gj=layer.toGeoJSON();
+      var inside=countTreesInPolygon(gj);
+      var area=turf.area(gj);
+      var density=area>0?(inside/(area/10000)).toFixed(1):'-';
+      m.treesInside=inside;m.density=density;
+      var bi=document.getElementById('batasKebunInfo');
+      if(bi){
+        bi.style.display='';
+        bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b>';
+      }
+      setStatus('Batas Kebun: '+fmtArea(area)+' | 🌴 '+inside+' pokok | '+density+' /ha','green');
+      showToast('🌴 Batas Kebun diset\nLuas: '+fmtArea(area)+'\nPokok di dalam: '+inside+'\nKepadatan: '+density+' pokok/ha');
+    }
+    updateSensusStats();
+  }
 }
 
 // =====================================================
@@ -1499,17 +1578,9 @@ function setTreeMode(mode,el){
   document.querySelectorAll('.mode-btn[id^="mode"]').forEach(function(b){b.classList.remove('active')});
   el.classList.add('active');
   var hint=document.getElementById('treeModeHint');
-  if(mode==='add'){
-    hint.textContent='Mode AKTIF: Klik di peta untuk menandai pokok sawit.';
-    hint.style.color='var(--saw2)';
-    if(map)map.getContainer().style.cursor='crosshair';
-  } else {
-    hint.textContent='Klik "Tandai Pokok" lalu klik di peta untuk menandai pohon sawit.';
-    hint.style.color='';
-    if(map)map.getContainer().style.cursor='';
-  }
+  if(mode==='add'){hint.textContent='Mode AKTIF: Klik di peta untuk menandai pokok sawit.';hint.style.color='var(--saw2)';if(map)map.getContainer().style.cursor='crosshair';}
+  else{hint.textContent='Klik "Tandai Pokok" lalu klik di peta.';hint.style.color='';if(map)map.getContainer().style.cursor='';}
 }
-
 function setDefaultStatus(status,el){
   _defaultStatus=status;
   document.querySelectorAll('.mode-btn[id^="status"]').forEach(function(b){b.classList.remove('active')});
@@ -1518,12 +1589,7 @@ function setDefaultStatus(status,el){
 
 function addTree(lat,lng){
   treeId++;
-  var tree={
-    id:treeId,lat:lat,lng:lng,
-    no:'P-'+String(treeId).padStart(3,'0'),
-    block:'',status:_defaultStatus,note:'',
-    marker:null
-  };
+  var tree={id:treeId,lat:lat,lng:lng,no:'P-'+String(treeId).padStart(3,'0'),block:'',status:_defaultStatus,note:'',marker:null};
   trees.push(tree);
   addTreeMarker(tree);
   renderTreeList();updateSensusStats();updateStats();
@@ -1533,11 +1599,7 @@ function addTree(lat,lng){
 function getTreeIcon(status){
   var colors={normal:'#5a9e35',sakit:'#f0a500',mati:'#f85149',kosong:'#7d8590'};
   var c=colors[status]||'#5a9e35';
-  return L.divIcon({
-    className:'',
-    html:'<div style="width:14px;height:14px;background:'+c+';border:2px solid rgba(0,0,0,.5);border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>',
-    iconSize:[14,14],iconAnchor:[7,7]
-  });
+  return L.divIcon({className:'',html:'<div style="width:14px;height:14px;background:'+c+';border:2px solid rgba(0,0,0,.5);border-radius:50%;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>',iconSize:[14,14],iconAnchor:[7,7]});
 }
 
 function addTreeMarker(tree){
@@ -1545,8 +1607,7 @@ function addTreeMarker(tree){
   if(tree.marker)_treeLayer.removeLayer(tree.marker);
   var marker=L.marker([tree.lat,tree.lng],{icon:getTreeIcon(tree.status),zIndexOffset:500});
   marker.bindPopup('<b>'+tree.no+'</b>'+(tree.block?' | Blok '+tree.block:'')+'<br>Status: <b>'+tree.status+'</b>'+(tree.note?'<br>Catatan: '+tree.note:'')+'<br><small style="color:#7d8590">'+tree.lat.toFixed(7)+', '+tree.lng.toFixed(7)+'</small><br><button onclick="openTreeEdit('+tree.id+')" style="margin-top:5px;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">✏ Edit</button>');
-  marker.addTo(_treeLayer);
-  tree.marker=marker;
+  marker.addTo(_treeLayer);tree.marker=marker;
 }
 
 function openTreeEdit(id){
@@ -1567,13 +1628,10 @@ function saveTreeData(){
   t.block=document.getElementById('treeBlockInput').value;
   t.status=document.getElementById('treeStatusInput').value;
   t.note=document.getElementById('treeNoteInput').value;
-  addTreeMarker(t);// rebuild marker with new status color
-  closeTreeModal();renderTreeList();updateSensusStats();
+  addTreeMarker(t);closeTreeModal();renderTreeList();updateSensusStats();
 }
 document.addEventListener('keydown',function(e){
-  if(!document.getElementById('treeModal').classList.contains('hidden')){
-    if(e.key==='Escape')closeTreeModal();
-  }
+  if(!document.getElementById('treeModal').classList.contains('hidden')){if(e.key==='Escape')closeTreeModal();}
 });
 
 function deleteTree(id){
@@ -1583,7 +1641,6 @@ function deleteTree(id){
   renderTreeList();updateSensusStats();updateStats();
   document.getElementById('hdrTreeCount').textContent='🌴 '+trees.length+' pokok';
 }
-
 function clearAllTrees(){
   showConfirm('Hapus semua data pokok sawit? ('+trees.length+' pokok)',function(){
     trees.forEach(function(t){if(t.marker&&_treeLayer)_treeLayer.removeLayer(t.marker)});
@@ -1597,23 +1654,18 @@ function renderTreeList(){
   var el=document.getElementById('treeList');
   document.getElementById('treeCountBadge').textContent=trees.length;
   if(trees.length===0){el.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div>';return;}
-  // Show last 20 for performance
   var shown=trees.slice(-20).reverse();
   el.innerHTML=(trees.length>20?'<div style="font-size:9px;color:var(--mu);text-align:center;padding:4px 0">Menampilkan 20 terbaru dari '+trees.length+'</div>':'')+
   shown.map(function(t){
-    var cls='tree-'+t.status;
-    var pillCls='pill-'+t.status;
+    var cls='tree-'+t.status,pillCls='pill-'+t.status;
     var labels={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
     return '<div class="tree-item">'+
       '<div class="tree-num '+cls+'">🌴</div>'+
-      '<div class="tree-info">'+
-        '<div class="tree-id">'+t.no+(t.block?' <span style="color:var(--mu);font-size:9px">| '+t.block+'</span>':'')+'</div>'+
-        '<div class="tree-coord">'+t.lat.toFixed(6)+', '+t.lng.toFixed(6)+'</div>'+
-        '<div style="margin-top:2px"><span class="status-pill '+pillCls+'">'+labels[t.status]+'</span>'+(t.note?'<span style="font-size:9px;color:var(--mu);margin-left:5px">'+t.note+'</span>':'')+'</div>'+
-      '</div>'+
+      '<div class="tree-info"><div class="tree-id">'+t.no+(t.block?' <span style="color:var(--mu);font-size:9px">| '+t.block+'</span>':'')+'</div>'+
+      '<div class="tree-coord">'+t.lat.toFixed(6)+', '+t.lng.toFixed(6)+'</div>'+
+      '<div style="margin-top:2px"><span class="status-pill '+pillCls+'">'+labels[t.status]+'</span>'+(t.note?'<span style="font-size:9px;color:var(--mu);margin-left:5px">'+t.note+'</span>':'')+'</div></div>'+
       '<button class="btn btn-sc btn-sm" onclick="openTreeEdit('+t.id+')" style="font-size:9px;padding:2px 5px;margin-right:3px">✏</button>'+
-      '<button class="tree-del" onclick="deleteTree('+t.id+')">✕</button>'+
-    '</div>';
+      '<button class="tree-del" onclick="deleteTree('+t.id+')">✕</button></div>';
   }).join('');
 }
 
@@ -1626,16 +1678,30 @@ function updateSensusStats(){
   document.getElementById('stNormal').textContent=normal;
   document.getElementById('stSakit').textContent=sakit;
   document.getElementById('stMati').textContent=mati;
-  // Estimate density from last polygon
+  // Update Batas Kebun info if active
+  var bi=document.getElementById('batasKebunInfo');
+  if(_batasKebunId&&bi){
+    var bkM=measures.find(function(m){return m.id===_batasKebunId});
+    var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===_batasKebunId)layer=l;});
+    if(bkM&&layer&&typeof turf!=='undefined'){
+      var gj=layer.toGeoJSON();
+      var inside=countTreesInPolygon(gj);
+      var area=turf.area(gj);
+      var density=area>0?(inside/(area/10000)).toFixed(1):'-';
+      bi.style.display='';
+      bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b>';
+    }
+  }
   var densityEl=document.getElementById('sensusDensity');
-  if(measures.length>0){
+  if(!_batasKebunId&&measures.length>0){
     var polys=measures.filter(function(m){return m.type==='polygon'});
     if(polys.length>0){
       var lastPoly=polys[polys.length-1];
       var d=lastPoly.area>0?(total/(lastPoly.area/10000)).toFixed(1):'-';
       densityEl.innerHTML='Kepadatan: <span style="color:var(--saw2)">'+d+'</span> pokok/ha<br><span style="font-size:8px">Dari polygon terakhir: '+fmtArea(lastPoly.area)+'</span>';
     }
-  } else {densityEl.textContent='Kepadatan: — pokok/ha';}
+  } else if(!_batasKebunId){densityEl.textContent='Kepadatan: — pokok/ha';}
+  else{densityEl.style.display='none';}
 }
 
 function countTreesInPolygon(geojson){
@@ -1661,19 +1727,13 @@ function countTreesInLastPolygon(){
 function exportTreeCSV(){
   if(trees.length===0){showToast('Belum ada data pokok.');return;}
   var rows=['no_pokok,blok,status,catatan,latitude,longitude'];
-  trees.forEach(function(t){
-    rows.push('"'+t.no+'","'+(t.block||'')+'","'+t.status+'","'+(t.note||'')+'",' +t.lat.toFixed(8)+','+t.lng.toFixed(8));
-  });
+  trees.forEach(function(t){rows.push('"'+t.no+'","'+(t.block||'')+'","'+t.status+'","'+(t.note||'')+'",'+t.lat.toFixed(8)+','+t.lng.toFixed(8));});
   safeDownload(rows.join('\n'),'text/csv','sensus_sawit.csv');
 }
 function exportTreeGeoJSON(){
   if(trees.length===0){showToast('Belum ada data pokok.');return;}
-  var features=trees.map(function(t){
-    return{type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},
-      properties:{no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note,id:t.id}};
-  });
-  var gj={type:'FeatureCollection',features:features,
-    properties:{generated:new Date().toISOString(),total:trees.length,tool:'DroneMap v3 Pro'}};
+  var features=trees.map(function(t){return{type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},properties:{no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note,id:t.id}};});
+  var gj={type:'FeatureCollection',features:features,properties:{generated:new Date().toISOString(),total:trees.length,tool:'DroneMap v3 Pro'}};
   safeDownload(JSON.stringify(gj,null,2),'application/geo+json','pokok_sawit.geojson');
 }
 
@@ -1691,17 +1751,18 @@ function fmtLen(m){if(lenUnit==='m')return m.toFixed(2)+' m';if(lenUnit==='km')r
 function buildGeoJSON(){
   var features=[];
   photos.filter(function(p){return p.georef}).forEach(function(photo){
-    if(photo.corners){
-      var c=photo.corners;
-      features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[c.tl.lng,c.tl.lat],[c.tr.lng,c.tr.lat],[c.br.lng,c.br.lat],[c.bl.lng,c.bl.lat],[c.tl.lng,c.tl.lat]]]},properties:{feature_type:'photo_bounds',photo_name:photo.name,gcp_count:photo.gcps.length}});
-    }
-    photo.gcps.forEach(function(g,i){
-      features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',photo_name:photo.name,gcp_index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});
+    if(photo.corners){var c=photo.corners;features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[[c.tl.lng,c.tl.lat],[c.tr.lng,c.tr.lat],[c.br.lng,c.br.lat],[c.bl.lng,c.bl.lat],[c.tl.lng,c.tl.lat]]]},properties:{feature_type:'photo_bounds',photo_name:photo.name,gcp_count:photo.gcps.length}});}
+    photo.gcps.forEach(function(g,i){features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',photo_name:photo.name,gcp_index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});});
+  });
+  trees.forEach(function(t){features.push({type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},properties:{feature_type:'palm_tree',no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note}});});
+  // Include Batas Kebun polygon if set
+  if(_batasKebunId&&drawnItems){
+    drawnItems.eachLayer(function(layer){
+      if(layer._mid===_batasKebunId&&layer.toGeoJSON){
+        var f=layer.toGeoJSON();f.properties={feature_type:'batas_kebun',label:'Batas Kebun'};features.push(f);
+      }
     });
-  });
-  trees.forEach(function(t){
-    features.push({type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},properties:{feature_type:'palm_tree',no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note}});
-  });
+  }
   if(drawnItems){
     drawnItems.eachLayer(function(layer){
       if(!layer.toGeoJSON)return;
@@ -1713,12 +1774,9 @@ function buildGeoJSON(){
       features.push(f);
     });
   }
-  return{type:'FeatureCollection',features:features,properties:{generated:new Date().toISOString(),tool:'DroneMap v3 Pro',total_photos:photos.length,georef_photos:photos.filter(function(p){return p.georef}).length,total_measurements:measures.length,total_trees:trees.length}};
+  return{type:'FeatureCollection',features:features,properties:{generated:new Date().toISOString(),tool:'DroneMap v3 Pro',total_photos:photos.length,georef_photos:photos.filter(function(p){return p.georef}).length,total_measurements:measures.length,total_trees:trees.length,batas_kebun_set:!!_batasKebunId}};
 }
-function exportGeoJSON(){
-  var gj=buildGeoJSON();
-  safeDownload(JSON.stringify(gj,null,2),'application/geo+json','dronemap_sawit.geojson');
-}
+function exportGeoJSON(){safeDownload(JSON.stringify(buildGeoJSON(),null,2),'application/geo+json','dronemap_sawit.geojson');}
 function copyGeoJSON(){
   var gj=buildGeoJSON();var btn=document.getElementById('btnCopy');
   navigator.clipboard.writeText(JSON.stringify(gj,null,2)).then(function(){btn.textContent='✓ Tersalin!';setTimeout(function(){btn.textContent='📋 Copy Clipboard'},2500);}).catch(function(){btn.textContent='Gagal copy';});
@@ -1737,110 +1795,54 @@ function buildPhotoGeoJSON(photo){
   photo.gcps.forEach(function(g,i){features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});});
   return{type:'FeatureCollection',features:features,properties:{photo_name:photo.name,generated:new Date().toISOString()}};
 }
-function exportPhotoGeoJSON(pid){
-  var p=getPhoto(pid);if(!p)return;
-  var gj=buildPhotoGeoJSON(p);
-  safeDownload(JSON.stringify(gj,null,2),'application/geo+json',p.name.replace(/\.[^.]+$/,'')+'.geojson');
-}
+function exportPhotoGeoJSON(pid){var p=getPhoto(pid);if(!p)return;safeDownload(JSON.stringify(buildPhotoGeoJSON(p),null,2),'application/geo+json',p.name.replace(/\.[^.]+$/,'')+'.geojson');}
 function updateExportPerPhoto(){
   var el=document.getElementById('exportPerPhoto');
   var gp=photos.filter(function(p){return p.georef});
   if(gp.length===0){el.innerHTML='<div style="font-size:10px;color:var(--mu)">Belum ada foto georef.</div>';return}
-  el.innerHTML=gp.map(function(p){
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<div style="flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)">'+p.name+'</div>'+
-      '<button class="btn btn-sc btn-sm" onclick="exportPhotoGeoJSON('+p.id+')">📥 GeoJSON</button></div>';
-  }).join('');
+  el.innerHTML=gp.map(function(p){return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="flex:1;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)">'+p.name+'</div><button class="btn btn-sc btn-sm" onclick="exportPhotoGeoJSON('+p.id+')">📥 GeoJSON</button></div>';}).join('');
 }
 
 // =====================================================
-// SANDBOX-SAFE HELPERS
+// HELPERS
 // =====================================================
-
-// Toast notification (replaces alert())
 function showToast(msg){
   var t=document.getElementById('_toast');
-  if(!t){
-    t=document.createElement('div');t.id='_toast';
-    t.style.cssText='position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:var(--sf);border:1px solid var(--saw);border-radius:8px;padding:10px 18px;font-size:11px;color:var(--tx);z-index:99999;max-width:340px;text-align:center;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:pre-line;font-family:\'Space Mono\',monospace;';
-    document.body.appendChild(t);
-  }
+  if(!t){t=document.createElement('div');t.id='_toast';t.style.cssText='position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:var(--sf);border:1px solid var(--saw);border-radius:8px;padding:10px 18px;font-size:11px;color:var(--tx);z-index:99999;max-width:340px;text-align:center;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:pre-line;font-family:\'Space Mono\',monospace;';document.body.appendChild(t);}
   t.textContent=msg;t.style.display='block';t.style.opacity='1';
-  clearTimeout(t._tid);
-  t._tid=setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.style.display='none'},400);},4000);
+  clearTimeout(t._tid);t._tid=setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.style.display='none'},400);},4000);
 }
-
-// Custom confirm dialog (replaces confirm())
 function showConfirm(msg,onYes){
-  var bg=document.createElement('div');
-  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(4px)';
-  var box=document.createElement('div');
-  box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;width:300px;max-width:90vw;font-family:\'DM Sans\',sans-serif';
-  box.innerHTML='<div style="font-size:13px;color:var(--tx);margin-bottom:14px;line-height:1.6">'+msg+'</div>'+
-    '<div style="display:flex;gap:8px;justify-content:flex-end">'+
-    '<button id="_cfNo" style="padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Batal</button>'+
-    '<button id="_cfYes" style="padding:6px 14px;border-radius:5px;border:none;background:var(--er);color:#fff;cursor:pointer;font-size:11px;font-weight:600">Hapus</button>'+
-    '</div>';
+  var bg=document.createElement('div');bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(4px)';
+  var box=document.createElement('div');box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;width:300px;max-width:90vw;font-family:\'DM Sans\',sans-serif';
+  box.innerHTML='<div style="font-size:13px;color:var(--tx);margin-bottom:14px;line-height:1.6">'+msg+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="_cfNo" style="padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Batal</button><button id="_cfYes" style="padding:6px 14px;border-radius:5px;border:none;background:var(--er);color:#fff;cursor:pointer;font-size:11px;font-weight:600">Hapus</button></div>';
   bg.appendChild(box);document.body.appendChild(bg);
   box.querySelector('#_cfNo').onclick=function(){document.body.removeChild(bg)};
   box.querySelector('#_cfYes').onclick=function(){document.body.removeChild(bg);onYes();};
 }
-
-// Safe download — tries blob href, falls back to data: URI, fallback to new tab
 function safeDownload(content,mimeType,filename){
-  try{
-    var blob=new Blob([content],{type:mimeType});
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement('a');
-    a.href=url;a.download=filename;a.style.display='none';
-    document.body.appendChild(a);a.click();
-    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
-  }catch(e1){
-    // Fallback: open data URI in new tab
-    try{
-      var enc=encodeURIComponent(content);
-      window.open('data:'+mimeType+';charset=utf-8,'+enc,'_blank');
-    }catch(e2){
-      // Last resort: show copy modal
-      showCopyModal(content,filename);
-    }
-  }
+  try{var blob=new Blob([content],{type:mimeType});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);}
+  catch(e1){try{window.open('data:'+mimeType+';charset=utf-8,'+encodeURIComponent(content),'_blank');}catch(e2){showCopyModal(content,filename);}}
 }
-
-// Copy modal for sandboxed environments that block all downloads
 function showCopyModal(content,filename){
-  var bg=document.createElement('div');
-  bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;';
-  var box=document.createElement('div');
-  box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;width:480px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;';
-  var ta=document.createElement('textarea');
-  ta.value=content;
-  ta.style.cssText='flex:1;min-height:200px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:\'Space Mono\',monospace;font-size:10px;padding:8px;resize:vertical;';
-  ta.readOnly=true;
-  box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:var(--tx);font-weight:600">📋 '+filename+'</span><span style="font-size:9px;color:var(--mu)">Buka file HTML langsung di browser untuk download otomatis</span></div>';
-  box.appendChild(ta);
-  var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
-  var btnCopy=document.createElement('button');
-  btnCopy.textContent='📋 Copy Semua';btnCopy.style.cssText='padding:6px 14px;border-radius:5px;border:none;background:var(--saw);color:#fff;cursor:pointer;font-size:11px';
+  var bg=document.createElement('div');bg.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;';
+  var box=document.createElement('div');box.style.cssText='background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:16px;width:480px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;';
+  var ta=document.createElement('textarea');ta.value=content;ta.style.cssText='flex:1;min-height:200px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:\'Space Mono\',monospace;font-size:10px;padding:8px;resize:vertical;';ta.readOnly=true;
+  box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:var(--tx);font-weight:600">📋 '+filename+'</span></div>';
+  box.appendChild(ta);var btnRow=document.createElement('div');btnRow.style.cssText='display:flex;gap:8px;justify-content:flex-end';
+  var btnCopy=document.createElement('button');btnCopy.textContent='📋 Copy Semua';btnCopy.style.cssText='padding:6px 14px;border-radius:5px;border:none;background:var(--saw);color:#fff;cursor:pointer;font-size:11px';
   btnCopy.onclick=function(){ta.select();navigator.clipboard.writeText(content).then(function(){btnCopy.textContent='✓ Tersalin!';}).catch(function(){document.execCommand('copy');btnCopy.textContent='✓ Tersalin!';});};
-  var btnClose=document.createElement('button');
-  btnClose.textContent='Tutup';btnClose.style.cssText='padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px';
+  var btnClose=document.createElement('button');btnClose.textContent='Tutup';btnClose.style.cssText='padding:6px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px';
   btnClose.onclick=function(){document.body.removeChild(bg)};
-  btnRow.appendChild(btnCopy);btnRow.appendChild(btnClose);
-  box.appendChild(btnRow);bg.appendChild(box);document.body.appendChild(bg);
+  btnRow.appendChild(btnCopy);btnRow.appendChild(btnClose);box.appendChild(btnRow);bg.appendChild(box);document.body.appendChild(bg);
   setTimeout(function(){ta.select();},100);
 }
-
-
 function setStatus(msg,color){
   document.getElementById('statusText').textContent=msg;
   document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
 }
 function updateStep(n){
-  [1,2,3].forEach(function(i){
-    var el=document.getElementById('step'+i);el.classList.remove('active','done');
-    if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');
-  });
+  [1,2,3].forEach(function(i){var el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');});
 }
 
 // =====================================================
@@ -1851,52 +1853,26 @@ var _splitMap=null,_splitPhotoClick=null,_splitStep='photo',_splitGcpNum=1;
 function enterSplitView(){
   var p=getPhoto(currentPhotoId);if(!p||!p.src)return;
   if(typeof L==='undefined'){setStatus('Library belum siap...','amber');onReady(enterSplitView);return}
-  var content=document.querySelector('.content');
-  var oldMap=map;
-  content.innerHTML=
-    '<div class="split-wrap" id="splitWrap">'+
-      '<div class="split-photo" id="splitPhotoPane">'+
-        '<span class="split-label">1→ Klik titik di FOTO</span>'+
-        '<div class="split-step" id="splitStepMsg"><strong>Langkah 1:</strong> Klik titik pada foto drone yang mudah dikenali</div>'+
-      '</div>'+
-      '<div class="split-map" id="splitMapPane">'+
-        '<span class="split-label" style="border-color:var(--in);color:var(--in)">2→ Klik lokasi yang sama di PETA</span>'+
-      '</div>'+
-    '</div>';
+  var content=document.querySelector('.content');var oldMap=map;
+  content.innerHTML='<div class="split-wrap" id="splitWrap"><div class="split-photo" id="splitPhotoPane"><span class="split-label">1→ Klik titik di FOTO</span><div class="split-step" id="splitStepMsg"><strong>Langkah 1:</strong> Klik objek yang kamu kenali di foto</div></div><div class="split-map" id="splitMapPane"><span class="split-label" style="border-color:var(--in);color:var(--in)">2→ Klik lokasi yang sama di PETA</span></div></div>';
   if(oldMap){try{oldMap.remove();}catch(ex){}map=null;}
   var photoPane=document.getElementById('splitPhotoPane');
-  var img=document.createElement('img');img.src=p.src;
-  img.style.cssText='position:absolute;transform-origin:0 0;max-width:none;user-select:none;';
-  img.draggable=false;
+  var img=document.createElement('img');img.src=p.src;img.style.cssText='position:absolute;transform-origin:0 0;max-width:none;user-select:none;';img.draggable=false;
   var sScale=1,sOffX=0,sOffY=0;
-  img.onload=function(){
-    var pw=photoPane.clientWidth,ph=photoPane.clientHeight;
-    sScale=Math.min(pw/p.w,ph/p.h)*0.92;
-    sOffX=(pw-p.w*sScale)/2;sOffY=(ph-p.h*sScale)/2;
-    img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
-  };
+  img.onload=function(){var pw=photoPane.clientWidth,ph=photoPane.clientHeight;sScale=Math.min(pw/p.w,ph/p.h)*0.92;sOffX=(pw-p.w*sScale)/2;sOffY=(ph-p.h*sScale)/2;img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';};
   photoPane.appendChild(img);
   var sDrag=false,sDragStart={x:0,y:0};
-  photoPane.addEventListener('wheel',function(e){
-    e.preventDefault();var r=photoPane.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;
-    var f=e.deltaY<0?1.13:0.885;var ns=Math.max(0.04,Math.min(sScale*f,24));
-    sOffX=mx-(mx-sOffX)*(ns/sScale);sOffY=my-(my-sOffY)*(ns/sScale);sScale=ns;
-    img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
-  },{passive:false});
+  photoPane.addEventListener('wheel',function(e){e.preventDefault();var r=photoPane.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var f=e.deltaY<0?1.13:0.885;var ns=Math.max(0.04,Math.min(sScale*f,24));sOffX=mx-(mx-sOffX)*(ns/sScale);sOffY=my-(my-sOffY)*(ns/sScale);sScale=ns;img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';},{passive:false});
   photoPane.addEventListener('mousedown',function(e){if(e.button===0){sDrag=true;sDragStart={x:e.clientX-sOffX,y:e.clientY-sOffY}}});
   photoPane.addEventListener('mousemove',function(e){if(sDrag){sOffX=e.clientX-sDragStart.x;sOffY=e.clientY-sDragStart.y;img.style.transform='translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')'}});
   photoPane.addEventListener('mouseup',function(){sDrag=false});
   photoPane.addEventListener('click',function(e){
     if(_splitStep!=='photo')return;
-    var r=photoPane.getBoundingClientRect();
-    var px=(e.clientX-r.left-sOffX)/sScale,py=(e.clientY-r.top-sOffY)/sScale;
+    var r=photoPane.getBoundingClientRect();var px=(e.clientX-r.left-sOffX)/sScale,py=(e.clientY-r.top-sOffY)/sScale;
     if(px<0||px>p.w||py<0||py>p.h)return;
     _splitPhotoClick={px:px,py:py,screenX:e.clientX-r.left,screenY:e.clientY-r.top};
-    var mk=document.createElement('div');mk.className='split-photo-marker';mk.textContent=_splitGcpNum;
-    mk.style.left=_splitPhotoClick.screenX+'px';mk.style.top=_splitPhotoClick.screenY+'px';mk.id='splitMk'+_splitGcpNum;
-    photoPane.appendChild(mk);
-    _splitStep='map';
-    document.getElementById('splitStepMsg').innerHTML='<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta';
+    var mk=document.createElement('div');mk.className='split-photo-marker';mk.textContent=_splitGcpNum;mk.style.left=_splitPhotoClick.screenX+'px';mk.style.top=_splitPhotoClick.screenY+'px';mk.id='splitMk'+_splitGcpNum;photoPane.appendChild(mk);
+    _splitStep='map';document.getElementById('splitStepMsg').innerHTML='<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta';
     if(_splitMap)_splitMap.getContainer().style.cursor='crosshair';
   });
   var mapPane=document.getElementById('splitMapPane');
@@ -1905,10 +1881,7 @@ function enterSplitView(){
   if(gp){initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2;initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2;}
   _splitMap=L.map(mapPane,{zoomControl:true}).setView([initLat,initLng],18);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(_splitMap);
-  if(p.gcps.length>0){
-    p.gcps.forEach(function(g,i){L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+(i+1));});
-    _splitMap.setView([p.gcps[0].lat,p.gcps[0].lng],18);
-  }
+  if(p.gcps.length>0){p.gcps.forEach(function(g,i){L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+(i+1));});_splitMap.setView([p.gcps[0].lat,p.gcps[0].lng],18);}
   _splitMap.on('click',function(e){
     if(_splitStep!=='map'||!_splitPhotoClick)return;
     var lat=e.latlng.lat,lng=e.latlng.lng;
@@ -1917,40 +1890,28 @@ function enterSplitView(){
     L.circleMarker([lat,lng],{radius:7,fillColor:'#58a6ff',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+_splitGcpNum);
     var mk=document.getElementById('splitMk'+_splitGcpNum);if(mk)mk.style.background='var(--ok)';
     _splitGcpNum++;_splitStep='photo';_splitPhotoClick=null;if(_splitMap)_splitMap.getContainer().style.cursor='';
-    var n=p.gcps.length;
-    var badge=document.getElementById('splitGcpBadge');if(badge)badge.textContent=n+' GCP';
+    var n=p.gcps.length;var badge=document.getElementById('splitGcpBadge');if(badge)badge.textContent=n+' GCP';
     var applyBtn=document.getElementById('btnSplitApply');if(applyBtn)applyBtn.disabled=n<3;
     document.getElementById('splitStepMsg').innerHTML='<strong>GCP '+n+' tersimpan!</strong> '+(n>=3?'<span style="color:var(--ok)">Siap georeference ✓</span>':'Klik titik berikutnya di foto');
   });
   var toolbar=document.createElement('div');
   toolbar.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(13,17,23,.95);border-top:1px solid var(--bd);padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:9999;flex-wrap:wrap';
-  toolbar.innerHTML='<span style="font-size:10px;color:var(--mu);font-family:monospace"><span id="splitGcpBadge" style="color:var(--saw2)">'+p.gcps.length+' GCP</span></span>'+
-    '<div style="flex:1"></div>'+
-    '<button class="btn btn-sc btn-sm" onclick="resetSplitStep()">↺ Ulangi</button>'+
-    '<button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">🗑 Reset</button>'+
-    '<button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" '+(p.gcps.length<3?'disabled':'')+'>🗺 Georeference</button>'+
-    '<button class="btn btn-sc btn-sm" onclick="exitSplitView()">✕ Tutup</button>';
+  toolbar.innerHTML='<span style="font-size:10px;color:var(--mu);font-family:monospace"><span id="splitGcpBadge" style="color:var(--saw2)">'+p.gcps.length+' GCP</span></span><div style="flex:1"></div><button class="btn btn-sc btn-sm" onclick="resetSplitStep()">↺ Ulangi</button><button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">🗑 Reset</button><button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" '+(p.gcps.length<3?'disabled':'')+'>🗺 Georeference</button><button class="btn btn-sc btn-sm" onclick="exitSplitView()">✕ Tutup</button>';
   document.getElementById('splitWrap').appendChild(toolbar);
 }
 
-function resetSplitStep(){_splitStep='photo';_splitPhotoClick=null;if(_splitMap)_splitMap.getContainer().style.cursor='';var msg=document.getElementById('splitStepMsg');if(msg)msg.innerHTML='<strong>Ulangi:</strong> Klik titik pada foto drone';}
+function resetSplitStep(){_splitStep='photo';_splitPhotoClick=null;if(_splitMap)_splitMap.getContainer().style.cursor='';var msg=document.getElementById('splitStepMsg');if(msg)msg.innerHTML='<strong>Ulangi:</strong> Klik titik pada foto';}
 function clearSplitGCPs(){
-  var p=getPhoto(currentPhotoId);if(!p)return;
-  p.gcps=[];renderGCPList();updateGCPStatus();renderPhotoList();updateStats();resetSplitStep();_splitGcpNum=1;
+  var p=getPhoto(currentPhotoId);if(!p)return;p.gcps=[];renderGCPList();updateGCPStatus();renderPhotoList();updateStats();resetSplitStep();_splitGcpNum=1;
   document.querySelectorAll('.split-photo-marker').forEach(function(el){el.remove()});
   var badge=document.getElementById('splitGcpBadge');if(badge)badge.textContent='0 GCP';
   var applyBtn=document.getElementById('btnSplitApply');if(applyBtn)applyBtn.disabled=true;
 }
-function applySplitGeoref(){
-  var p=getPhoto(currentPhotoId);if(!p||p.gcps.length<3)return;
-  exitSplitView();
-  if(typeof L==='undefined'||typeof turf==='undefined'){onReady(function(){georefPhoto(p);});return}
-  georefPhoto(p);
-}
+function applySplitGeoref(){var p=getPhoto(currentPhotoId);if(!p||p.gcps.length<3)return;exitSplitView();if(typeof L==='undefined'||typeof turf==='undefined'){onReady(function(){georefPhoto(p);});return}georefPhoto(p);}
 function exitSplitView(){
   if(_splitMap){try{_splitMap.remove();}catch(ex){}}_splitMap=null;_splitStep='photo';_splitPhotoClick=null;_splitGcpNum=1;
   var content=document.querySelector('.content');
-  content.innerHTML='<div id="mapPanel"></div><div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;"><div class="welcome" id="welcomeMsg"><div class="welcome-icon">🌴</div><h2>DroneMap v3 Pro</h2><p>Upload foto drone, tandai GCP, lakukan georeferencing, lalu sensus pokok sawit.</p></div></div>';
+  content.innerHTML='<div id="mapPanel"></div><div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;"><div class="welcome" id="welcomeMsg"><div class="welcome-icon">🌴</div><h2>DroneMap v3 Pro</h2><p>Upload foto drone, tandai GCP di objek yang kamu kenali, lakukan georeferencing.</p></div></div>';
   map=null;
   var hasGeoref=photos.some(function(ph){return ph.georef});
   if(hasGeoref){
@@ -1959,8 +1920,7 @@ function exitSplitView(){
       var toGeo=buildAffine(firstGeoref.gcps);var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
       map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
       baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
-      drawnItems=new L.FeatureGroup().addTo(map);
-      _treeLayer=L.featureGroup().addTo(map);
+      drawnItems=new L.FeatureGroup().addTo(map);_treeLayer=L.featureGroup().addTo(map);
       var drawCtrl=new L.Control.Draw({position:'topright',edit:{featureGroup:drawnItems,remove:true},draw:{polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},polyline:{shapeOptions:{color:'#58a6ff',weight:3}},rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},circle:false,circlemarker:false,marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}}});
       map.addControl(drawCtrl);
       map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
@@ -1977,10 +1937,10 @@ function exitSplitView(){
           var togGCP=document.getElementById('togGCP');if(togGCP&&togGCP.checked)ph.gcpLayer.addTo(map);
         }
       });
-      // Re-add trees
       trees.forEach(function(t){addTreeMarker(t);});
       var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
       if(allBounds.length>0){var allLats=[],allLngs=[];allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});}
+      updateGcpCoverageBox();
     }
   }
   var p=getPhoto(currentPhotoId);
