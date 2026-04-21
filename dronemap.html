@@ -350,6 +350,11 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         </div>
       </div>
       <div class="s-sec">
+        <div class="s-ttl">Mode Nadir <span class="norm-badge" style="margin-left:4px">BARU</span></div>
+        <button class="btn btn-full drag-btn" id="btnNadirMode" onclick="toggleNadirMode(this)" style="margin-bottom:5px;background:rgba(88,166,255,.10);color:var(--in);border:1px solid rgba(88,166,255,.3)">🎯 Mode Nadir (Smart Photo)</button>
+        <div style="font-size:9px;color:var(--mu);line-height:1.8">Saat aktif: geser kursor di peta → hanya foto yang <b style="color:var(--in)">pusat kameranya paling dekat</b> kursor yang ditampilkan. Foto lain di-fade. Mirip Google Maps.</div>
+      </div>
+      <div class="s-sec">
         <div class="s-ttl">Mode Geser Foto</div>
         <button class="btn btn-full drag-btn" id="btnDragMode" onclick="toggleDragMode(this)" style="margin-bottom:5px">✋ Aktifkan Mode Geser Foto</button>
         <div style="font-size:9px;color:var(--mu);line-height:1.7">Saat aktif: klik &amp; drag foto di peta untuk menyesuaikan posisi.</div>
@@ -612,6 +617,10 @@ var _lastPolygonLayer=null;
 // BATAS KEBUN STATE
 var _batasKebunId=null;
 var _batasKebunPolygon=null; // Array of {lat,lng} — polygon vertices for crop masking
+
+// NADIR MODE STATE
+var _nadirMode=false;
+var _nadirMoveHandler=null;
 
 // =====================================================
 // *** PATCH 1: CONVEX HULL UTILITIES ***
@@ -1225,14 +1234,23 @@ function createRotatedOverlay(photo,toGeo){
       } else {
         clipPts=cpts;
       }
-      this._canvas.style.opacity=photo.opacity;
+      this._canvas.style.opacity=this._nadirOp!==undefined?this._nadirOp:photo.opacity;
       ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation=photo.blendMode||'normal';
       ctx.beginPath();ctx.moveTo(clipPts[0].x,clipPts[0].y);
       for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
       ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
     },
-    setOpacityVal:function(op){photo.opacity=op;if(this._canvas)this._canvas.style.opacity=op;},
+    setOpacityVal:function(op){photo.opacity=op;if(this._canvas&&this._nadirOp===undefined)this._canvas.style.opacity=op;},
+    setNadirOpacity:function(op){
+      // Temporary opacity for nadir mode — tidak mengubah photo.opacity yang tersimpan
+      this._nadirOp=op;
+      if(this._canvas)this._canvas.style.opacity=op;
+    },
+    clearNadirOpacity:function(){
+      this._nadirOp=undefined;
+      if(this._canvas)this._canvas.style.opacity=photo.opacity;
+    },
     setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
     setBlendMode:function(m){photo.blendMode=m;this._update();},
     setColorAdj:function(br,ct,sat){photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;this._rebuildOfc();},
@@ -2029,6 +2047,73 @@ function _smartViewReattach(){
   }
 }
 
+// =====================================================
+// *** NADIR MODE — Smart Photo Switching ***
+// =====================================================
+function toggleNadirMode(btn){
+  _nadirMode=!_nadirMode;
+  btn.classList.toggle('active',_nadirMode);
+  btn.textContent=_nadirMode?'🎯 Mode Nadir AKTIF — Geser kursor':'🎯 Mode Nadir (Smart Photo)';
+
+  if(_nadirMode){
+    if(map){
+      _nadirMoveHandler=function(e){_updateNadirPhoto(e.latlng);};
+      map.on('mousemove',_nadirMoveHandler);
+      // Juga saat kursor keluar dari peta, restore semua
+      map.on('mouseout',_restoreNadirOpacity);
+      setStatus('Mode Nadir aktif — geser kursor di peta untuk melihat foto terdekat','info');
+    }
+  } else {
+    _exitNadirMode();
+    setStatus('Mode Nadir dinonaktifkan','amber');
+  }
+}
+
+function _exitNadirMode(){
+  if(map){
+    if(_nadirMoveHandler){map.off('mousemove',_nadirMoveHandler);_nadirMoveHandler=null;}
+    map.off('mouseout',_restoreNadirOpacity);
+  }
+  _restoreNadirOpacity();
+}
+
+function _restoreNadirOpacity(){
+  photos.forEach(function(p){
+    if(p.overlay&&p.overlay.clearNadirOpacity)p.overlay.clearNadirOpacity();
+  });
+}
+
+function _updateNadirPhoto(latlng){
+  var georefPhotos=photos.filter(function(p){return p.georef&&p.corners&&p.visible;});
+  if(georefPhotos.length===0)return;
+
+  // Hitung jarak kursor ke pusat masing-masing foto (pusat nadir kamera)
+  var best=null,minDist=Infinity;
+  georefPhotos.forEach(function(p){
+    var c=p.corners;
+    // Pusat foto = rata-rata 4 sudut
+    var cLat=(c.tl.lat+c.tr.lat+c.br.lat+c.bl.lat)/4;
+    var cLng=(c.tl.lng+c.tr.lng+c.br.lng+c.bl.lng)/4;
+    // Normalisasi dengan cos(lat) agar tidak bias ns vs ew
+    var dLat=(latlng.lat-cLat)*111320;
+    var dLng=(latlng.lng-cLng)*111320*Math.cos(latlng.lat*Math.PI/180);
+    var dist=Math.sqrt(dLat*dLat+dLng*dLng);
+    if(dist<minDist){minDist=dist;best=p;}
+  });
+
+  // Foto terdekat = tampil penuh, lainnya hampir transparan
+  georefPhotos.forEach(function(p){
+    var op=(p===best)?p.opacity:0.06;
+    if(p.overlay&&p.overlay.setNadirOpacity)p.overlay.setNadirOpacity(op);
+  });
+
+  // Update badge nama foto aktif di status bar
+  if(best){
+    document.getElementById('statusText').textContent=
+      '🎯 Nadir: '+best.name+' | Geser kursor untuk pindah foto';
+  }
+}
+
 function setStatus(msg,color){
   document.getElementById('statusText').textContent=msg;
   document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
@@ -2105,6 +2190,8 @@ function exitSplitView(){
   var content=document.querySelector('.content');
   content.innerHTML='<div id="mapPanel"></div><div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;"><div class="welcome" id="welcomeMsg"><div class="welcome-icon">🌴</div><h2>DroneMap v3 Pro</h2><p>Upload foto drone, tandai GCP di objek yang kamu kenali, lakukan georeferencing.</p></div></div>';
   map=null;
+  // Reset nadir mode karena map lama sudah dihapus
+  if(_nadirMode){_nadirMode=false;_nadirMoveHandler=null;var nb=document.getElementById('btnNadirMode');if(nb){nb.classList.remove('active');nb.textContent='🎯 Mode Nadir (Smart Photo)';}}
   var hasGeoref=photos.some(function(ph){return ph.georef});
   if(hasGeoref){
     var firstGeoref=photos.find(function(ph){return ph.georef&&ph.bounds});
