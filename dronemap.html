@@ -605,7 +605,7 @@ var currentPhotoId=null;
 var map=null,drawnItems=null,baseTile=null;
 var measures=[],shapeId=0;
 var areaUnit='auto',lenUnit='auto';
-var imgEl=null,canvasEl=null,scale=1,offX=0,offY=0;
+var imgEl=null,canvasEl=null,gcpOverlayEl=null,scale=1,offX=0,offY=0;
 var isDragging=false,_drag=false,dragStart={x:0,y:0},_mx=0,_my=0;
 var pendingPx=null;
 var _panelVersion=0,_abortCtrl=null;
@@ -718,8 +718,7 @@ function removePhoto(id){
     currentPhotoId=null;
     if(!photos.some(function(ph){return ph.georef})){showImagePanel();var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='';}
     else hideImagePanel();
-    imgEl=null;canvasEl=null;
-    if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}_abortCtrl=null;}
+    imgEl=null;canvasEl=null;gcpOverlayEl=null;}
   }
   renderPhotoList();updateStats();renderLayerList();
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
@@ -798,7 +797,7 @@ function updateStats(){
 function buildImagePanel(photo){
   var panel=document.getElementById('imagePanel');
   if(!panel){return;} // Jika dalam split view, panel tidak ada — abaikan
-  imgEl=null;canvasEl=null;_drag=false;isDragging=false;
+  imgEl=null;canvasEl=null;gcpOverlayEl=null;_drag=false;isDragging=false;
   _panelVersion++;var myVersion=_panelVersion;
   if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}}
   _abortCtrl=new AbortController();var sig=_abortCtrl.signal;
@@ -816,12 +815,15 @@ function buildImagePanel(photo){
     scale=Math.min(pw/photo.w,ph/photo.h)*0.88;
     offX=(pw-photo.w*scale)/2;offY=(ph-photo.h*scale)/2;
     imgEl.style.transform='translate('+offX+'px,'+offY+'px) scale('+scale+')';
+    // Canvas untuk hull visualization saja
     var cv=document.createElement('canvas');
     cv.width=panel.clientWidth||photo.w;cv.height=panel.clientHeight||photo.h;
     cv.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
-    // Canvas menutupi seluruh panel — marker digambar di koordinat layar, bukan canvas-pixel
     canvasEl=cv;panel.appendChild(canvasEl);
-    // Tidak perlu CSS transform — posisi marker dihitung langsung dari offX/offY/scale
+    // Div container untuk marker GCP — posisi via CSS left/top, selalu sinkron dengan foto
+    var ov=document.createElement('div');
+    ov.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;';
+    gcpOverlayEl=ov;panel.appendChild(gcpOverlayEl);
     redrawCanvas(photo);
     setStatus('Foto: '+photo.name+' | Klik untuk GCP','amber');
   };
@@ -1023,71 +1025,77 @@ document.getElementById('csvInput').addEventListener('change',function(e){
 });
 
 // =====================================================
-// *** PATCH 4: redrawCanvas — gambar di koordinat LAYAR (bukan canvas-pixel) ***
+// *** PATCH 4: redrawCanvas — canvas untuk hull, DIV ELEMENTS untuk marker GCP ***
+// Marker GCP sebagai HTML div: posisi via CSS left/top, SELALU mengikuti foto
 // =====================================================
 function redrawCanvas(photo){
-  if(!canvasEl||!photo)return;
+  if(!photo)return;
   var panel=document.getElementById('imagePanel');if(!panel)return;
 
-  // Pastikan canvas selalu menutupi seluruh panel
-  var pw=panel.clientWidth,ph=panel.clientHeight;
-  if(canvasEl.width!==pw)canvasEl.width=pw;
-  if(canvasEl.height!==ph)canvasEl.height=ph;
-
-  var ctx=canvasEl.getContext('2d');
-  ctx.clearRect(0,0,pw,ph);
-
   // Konversi pixel foto → koordinat layar
-  // offX/offY/scale adalah state global yang selalu ter-update saat zoom/pan
   function toScr(px,py){return{x:offX+px*scale,y:offY+py*scale};}
 
-  // Ukuran marker tetap di layar (pixels), tidak terpengaruh zoom
-  var r=14,lw=1.5,fs=11;
-
-  // === DRAW GCP CONVEX HULL COVERAGE ZONE ===
-  if(photo.gcps.length>=3){
-    var hPts=convexHull(photo.gcps.map(function(g){return{x:g.px,y:g.py}}));
-    var hScr=hPts.map(function(p){return toScr(p.x,p.y);});
-    ctx.beginPath();ctx.moveTo(hScr[0].x,hScr[0].y);
-    hScr.forEach(function(p){ctx.lineTo(p.x,p.y)});ctx.closePath();
-    ctx.fillStyle='rgba(90,158,53,0.09)';ctx.fill();
-    ctx.strokeStyle='rgba(90,158,53,0.6)';ctx.lineWidth=2;
-    ctx.setLineDash([8,4]);ctx.stroke();ctx.setLineDash([]);
-    // Label coverage di centroid
-    var cx2=hScr.reduce(function(s,p){return s+p.x},0)/hScr.length;
-    var cy2=hScr.reduce(function(s,p){return s+p.y},0)/hScr.length;
-    var photoArea=photo.w*photo.h;
-    var ha=hullArea(hPts);
-    var pct=Math.min(100,Math.round(ha/photoArea*100));
-    var lblText='Coverage: '+pct+'%';
-    ctx.font='bold 12px monospace';
-    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=3;ctx.strokeText(lblText,cx2,cy2);
-    ctx.fillStyle='#7dc455';ctx.fillText(lblText,cx2,cy2);
+  // === 1. CANVAS: hanya untuk visualisasi convex hull coverage ===
+  if(canvasEl){
+    var pw=panel.clientWidth,ph=panel.clientHeight;
+    if(canvasEl.width!==pw||canvasEl.width===0)canvasEl.width=pw||1;
+    if(canvasEl.height!==ph||canvasEl.height===0)canvasEl.height=ph||1;
+    var ctx=canvasEl.getContext('2d');
+    ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
+    if(photo.gcps.length>=3){
+      var hPts=convexHull(photo.gcps.map(function(g){return{x:g.px,y:g.py}}));
+      var hScr=hPts.map(function(p){return toScr(p.x,p.y);});
+      ctx.beginPath();ctx.moveTo(hScr[0].x,hScr[0].y);
+      hScr.forEach(function(p){ctx.lineTo(p.x,p.y)});ctx.closePath();
+      ctx.fillStyle='rgba(90,158,53,0.09)';ctx.fill();
+      ctx.strokeStyle='rgba(90,158,53,0.6)';ctx.lineWidth=2;
+      ctx.setLineDash([8,4]);ctx.stroke();ctx.setLineDash([]);
+      var cx2=hScr.reduce(function(s,p){return s+p.x},0)/hScr.length;
+      var cy2=hScr.reduce(function(s,p){return s+p.y},0)/hScr.length;
+      var ha=hullArea(hPts);
+      var pct=Math.min(100,Math.round(ha/(photo.w*photo.h)*100));
+      ctx.font='bold 12px monospace';
+      ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=3;ctx.strokeText('Coverage: '+pct+'%',cx2,cy2);
+      ctx.fillStyle='#7dc455';ctx.fillText('Coverage: '+pct+'%',cx2,cy2);
+    }
   }
 
-  // === DRAW GCP MARKERS (di koordinat layar) ===
+  // === 2. DIV ELEMENTS: marker GCP — posisi CSS left/top, pasti mengikuti foto ===
+  if(!gcpOverlayEl)return;
+  gcpOverlayEl.innerHTML=''; // clear semua marker lama
   photo.gcps.forEach(function(g,i){
     var s=toScr(g.px,g.py);var x=s.x,y=s.y;
-    // Shadow ring
-    ctx.beginPath();ctx.arc(x,y,r+3,0,Math.PI*2);
-    ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=3;ctx.stroke();
-    // Outer ring kuning
-    ctx.beginPath();ctx.arc(x,y,r+3,0,Math.PI*2);
-    ctx.strokeStyle='#f0a500';ctx.lineWidth=1.5;ctx.stroke();
-    // Fill kuning
-    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
-    ctx.fillStyle='#f0a500';ctx.fill();
-    // Nomor
-    ctx.fillStyle='#000';ctx.font='bold 10px monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(i+1,x,y);
+    // Lingkaran kuning
+    var dot=document.createElement('div');
+    dot.style.cssText=[
+      'position:absolute',
+      'width:28px','height:28px','border-radius:50%',
+      'background:#f0a500',
+      'border:2px solid rgba(0,0,0,.55)',
+      'box-shadow:0 0 0 1.5px #f0a500,0 1px 4px rgba(0,0,0,.5)',
+      'display:flex','align-items:center','justify-content:center',
+      'font:bold 11px monospace','color:#000',
+      'transform:translate(-50%,-50%)',
+      'box-sizing:border-box'
+    ].join(';');
+    dot.style.left=Math.round(x)+'px';
+    dot.style.top=Math.round(y)+'px';
+    dot.textContent=i+1;
+    gcpOverlayEl.appendChild(dot);
     // Label koordinat
-    var lbl=g.lat.toFixed(5)+', '+g.lng.toFixed(5);
-    ctx.font='9px monospace';
-    ctx.strokeStyle='rgba(0,0,0,.85)';ctx.lineWidth=2.5;
-    ctx.strokeText(lbl,x+r+4,y-4);
-    ctx.fillStyle='#f0a500';
-    ctx.fillText(lbl,x+r+4,y-4);
+    var lbl=document.createElement('div');
+    lbl.style.cssText=[
+      'position:absolute',
+      'font:9px monospace',
+      'color:#f0a500',
+      'text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000',
+      'white-space:nowrap',
+      'line-height:1'
+    ].join(';');
+    lbl.style.left=Math.round(x+16)+'px';
+    lbl.style.top=Math.round(y-6)+'px';
+    lbl.textContent=g.lat.toFixed(5)+', '+g.lng.toFixed(5);
+    gcpOverlayEl.appendChild(lbl);
   });
 }
 
