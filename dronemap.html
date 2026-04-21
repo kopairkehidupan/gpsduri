@@ -381,6 +381,13 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <span style="font-size:10px;color:var(--tx)">Tampilkan Batas Foto</span>
           <label class="toggle"><input type="checkbox" id="togOutlines" onchange="toggleOutlines(this.checked)"><span class="toggle-sl"></span></label>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;margin-top:2px">
+          <div>
+            <span style="font-size:10px;color:var(--tx)">✂ Seamline Otomatis</span>
+            <div style="font-size:9px;color:var(--mu);line-height:1.5;max-width:190px">Potong tiap foto ke area terdekat kameranya — hilangkan bayangan tumpang tindih</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="togSeamline" onchange="toggleSeamline(this.checked)"><span class="toggle-sl"></span></label>
+        </div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Satuan</div>
@@ -604,6 +611,7 @@ var pendingPx=null;
 var _panelVersion=0,_abortCtrl=null;
 var _dragModeActive=false,_dragPhoto=null,_dragStartLatLng=null,_dragStartOffset=null;
 var _showPhotoOutlines=false;
+var _seamlineMode=false; // Voronoi seamline aktif
 
 // SENSUS STATE
 var trees=[];
@@ -715,6 +723,7 @@ function removePhoto(id){
   }
   renderPhotoList();updateStats();renderLayerList();
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
+  if(_seamlineMode)computeAllVoronoi();
 }
 
 function getPhoto(id){return photos.find(function(p){return p.id===id})||null}
@@ -1223,15 +1232,22 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-      // === POLYGON CROP MASKING (Batas Kebun) ===
-      // Kalau ada Batas Kebun aktif, clip ke bentuk polygon-nya, bukan ke 4 sudut foto
+      // === CLIP PATH: Batas Kebun > Voronoi Seamline > 4 sudut foto ===
       var clipPts;
       if(_batasKebunPolygon&&_batasKebunPolygon.length>=3){
+        // Mode crop Batas Kebun
         clipPts=_batasKebunPolygon.map(function(v){
           var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
           return{x:lp.x-off.x,y:lp.y-off.y};
         });
+      } else if(_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
+        // Mode Seamline Voronoi: clip ke sel Voronoi foto ini
+        clipPts=photo.voronoiCell.map(function(v){
+          var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
+          return{x:lp.x-off.x,y:lp.y-off.y};
+        });
       } else {
+        // Default: 4 sudut foto
         clipPts=cpts;
       }
       this._canvas.style.opacity=this._nadirOp!==undefined?this._nadirOp:photo.opacity;
@@ -1268,6 +1284,92 @@ function setPhotoBrightness(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.
 function setPhotoContrast(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.contrast=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
 function setPhotoSaturation(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.saturation=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
 function toggleOutlines(checked){_showPhotoOutlines=!!checked;photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});}
+
+// =====================================================
+// VORONOI SEAMLINE (auto-seamline dari center foto)
+// =====================================================
+function toggleSeamline(checked){
+  _seamlineMode=!!checked;
+  if(_seamlineMode){
+    computeAllVoronoi();
+    setStatus('✂ Seamline otomatis aktif — setiap foto hanya tampil di area terdekat kameranya','green');
+  } else {
+    photos.forEach(function(p){p.voronoiCell=null;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+    setStatus('Seamline dinonaktifkan — foto tampil penuh','amber');
+  }
+}
+
+// Sutherland-Hodgman clip polygon ke half-plane yang lebih dekat ke 'mine' dari 'other'
+function _clipPolyHalfPlane(poly,mine,other){
+  if(!poly||poly.length===0)return[];
+  var mx=(mine.x+other.x)/2,my=(mine.y+other.y)/2;
+  var nx=mine.x-other.x,ny=mine.y-other.y;
+  function inside(p){return(p.x-mx)*nx+(p.y-my)*ny>=0;}
+  function intersect(a,b){
+    var dx=b.x-a.x,dy=b.y-a.y,denom=dx*nx+dy*ny;
+    if(Math.abs(denom)<1e-12)return null;
+    var t=((mx-a.x)*nx+(my-a.y)*ny)/denom;
+    return{x:a.x+t*dx,y:a.y+t*dy};
+  }
+  var out=[];
+  for(var i=0;i<poly.length;i++){
+    var cur=poly[i],prev=poly[(i-1+poly.length)%poly.length];
+    var ci=inside(cur),pi=inside(prev);
+    if(ci){if(!pi){var ix=intersect(prev,cur);if(ix)out.push(ix);}out.push(cur);}
+    else if(pi){var ix2=intersect(prev,cur);if(ix2)out.push(ix2);}
+  }
+  return out;
+}
+
+function computePhotoVoronoiCell(photo,allPhotos){
+  if(!photo.georef||!photo.corners)return null;
+  // Hitung center foto
+  var refLat=(photo.corners.tl.lat+photo.corners.tr.lat+photo.corners.br.lat+photo.corners.bl.lat)/4;
+  var refLng=(photo.corners.tl.lng+photo.corners.tr.lng+photo.corners.br.lng+photo.corners.bl.lng)/4;
+  // Average lat untuk proyeksi equirectangular
+  var sumLat=0,cnt=0;
+  allPhotos.forEach(function(p){if(p.corners){sumLat+=(p.corners.tl.lat+p.corners.br.lat)/2;cnt++;}});
+  var avgLat=cnt>0?sumLat/cnt:refLat;
+  var cosLat=Math.cos(avgLat*Math.PI/180);
+  function toXY(lat,lng){return{x:lng*111320*cosLat,y:lat*111320};}
+  function fromXY(x,y){return{lat:y/111320,lng:x/(111320*cosLat)};}
+  // Bounding box semua foto + margin
+  var minLat=Infinity,maxLat=-Infinity,minLng=Infinity,maxLng=-Infinity;
+  allPhotos.forEach(function(p){
+    if(!p.bounds)return;
+    minLat=Math.min(minLat,p.bounds[0][0]);maxLat=Math.max(maxLat,p.bounds[1][0]);
+    minLng=Math.min(minLng,p.bounds[0][1]);maxLng=Math.max(maxLng,p.bounds[1][1]);
+  });
+  var dlat=(maxLat-minLat)*0.15,dlng=(maxLng-minLng)*0.15;
+  minLat-=dlat;maxLat+=dlat;minLng-=dlng;maxLng+=dlng;
+  // Initial cell = full bounding rect
+  var cell=[toXY(minLat,minLng),toXY(minLat,maxLng),toXY(maxLat,maxLng),toXY(maxLat,minLng)];
+  var mine=toXY(refLat,refLng);
+  // Clip to each other photo's half-plane
+  allPhotos.forEach(function(other){
+    if(other.id===photo.id||!other.corners)return;
+    var oLat=(other.corners.tl.lat+other.corners.tr.lat+other.corners.br.lat+other.corners.bl.lat)/4;
+    var oLng=(other.corners.tl.lng+other.corners.tr.lng+other.corners.br.lng+other.corners.bl.lng)/4;
+    cell=_clipPolyHalfPlane(cell,mine,toXY(oLat,oLng));
+    if(cell.length===0)return;
+  });
+  if(cell.length<3)return null;
+  return cell.map(function(pt){return fromXY(pt.x,pt.y);});
+}
+
+function computeAllVoronoi(){
+  var gp=photos.filter(function(p){return p.georef&&p.corners;});
+  if(gp.length<2){
+    // 1 foto — tidak perlu seamline
+    gp.forEach(function(p){p.voronoiCell=null;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+    return;
+  }
+  gp.forEach(function(photo){
+    photo.voronoiCell=computePhotoVoronoiCell(photo,gp);
+  });
+  // Refresh semua overlay
+  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+}
 
 // =====================================================
 // GEOREFERENCE
@@ -1342,6 +1444,8 @@ function georefPhoto(photo){
   document.querySelectorAll('.stab')[4].classList.add('active');
   document.getElementById('tab-measure').classList.add('active');
   updateGcpCoverageBox();
+  // Recompute seamline jika mode aktif
+  if(_seamlineMode)computeAllVoronoi();
 }
 
 // *** PATCH: Update measure tab coverage info box ***
