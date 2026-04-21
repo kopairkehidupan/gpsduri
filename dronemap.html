@@ -1928,34 +1928,36 @@ var _smartCurrentId=null;
 function toggleSmartView(btn){
   _smartViewActive=!_smartViewActive;
   btn.classList.toggle('active',_smartViewActive);
-  btn.textContent=_smartViewActive?'🔍 Smart Nadir AKTIF — Geser kursor':'🔍 Aktifkan Smart Nadir View';
+  btn.textContent=_smartViewActive?'🔍 Smart Nadir AKTIF — Geser peta':'🔍 Aktifkan Smart Nadir View';
   var info=document.getElementById('smartViewInfo');
   if(!_smartViewActive){
-    if(map)map.off('mousemove',_smartOnMove);
+    if(map){map.off('moveend',_smartOnMapMove);map.off('zoomend',_smartOnMapMove);}
     _smartCurrentId=null;_smartViewPinned=null;
-    // Restore all to saved opacity
     photos.forEach(function(p){if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);});
     if(info)info.style.display='none';
     setStatus('Smart Nadir View dinonaktifkan','amber');
   } else {
     if(!map){setStatus('Lakukan georef foto dulu!','amber');_smartViewActive=false;btn.classList.remove('active');btn.textContent='🔍 Aktifkan Smart Nadir View';return;}
-    map.on('mousemove',_smartOnMove);
+    map.on('moveend',_smartOnMapMove);
+    map.on('zoomend',_smartOnMapMove);
     if(info)info.style.display='';
-    setStatus('Smart Nadir View aktif — arahkan kursor ke foto','green');
-    // Immediately run once at map center
-    var c=map.getCenter();_smartApply(c.lat,c.lng);
+    setStatus('Smart Nadir View aktif — geser/zoom peta untuk berganti foto','green');
+    // Langsung jalankan sekali pakai posisi tengah peta saat ini
+    _smartOnMapMove();
   }
+}
+
+function _smartOnMapMove(){
+  if(_smartViewPinned)return;
+  if(!map)return;
+  var c=map.getCenter();
+  _smartApply(c.lat,c.lng);
 }
 
 function updateSmartMinOpacity(el){
   _smartMinOpacity=parseInt(el.value)/100;
   document.getElementById('smartMinOpacityVal').textContent=el.value+'%';
   if(_smartViewActive&&_smartCurrentId)_smartApply_refresh();
-}
-
-function _smartOnMove(e){
-  if(_smartViewPinned)return; // pinned = no auto-switch
-  _smartApply(e.latlng.lat,e.latlng.lng);
 }
 
 function _smartApply(lat,lng){
@@ -2016,11 +2018,14 @@ function smartViewPinActive(){
   _smartApply_refresh();
 }
 
-// Re-attach smart view listener jika map di-reinit (setelah exit split view)
 function _smartViewReattach(){
   if(_smartViewActive&&map){
-    map.off('mousemove',_smartOnMove);
-    map.on('mousemove',_smartOnMove);
+    map.off('moveend',_smartOnMapMove);
+    map.off('zoomend',_smartOnMapMove);
+    map.on('moveend',_smartOnMapMove);
+    map.on('zoomend',_smartOnMapMove);
+    // Langsung update berdasarkan posisi peta saat ini
+    _smartOnMapMove();
   }
 }
 
