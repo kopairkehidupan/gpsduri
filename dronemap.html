@@ -718,7 +718,8 @@ function removePhoto(id){
     currentPhotoId=null;
     if(!photos.some(function(ph){return ph.georef})){showImagePanel();var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='';}
     else hideImagePanel();
-    imgEl=null;canvasEl=null;gcpOverlayEl=null;}
+    imgEl=null;canvasEl=null;gcpOverlayEl=null;
+    if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}_abortCtrl=null;}
   }
   renderPhotoList();updateStats();renderLayerList();
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
