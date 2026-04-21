@@ -325,7 +325,20 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
   <div class="tabpane" id="tab-layers">
     <div class="sbody">
       <div class="s-sec">
-        <div class="s-ttl">Basemap</div>
+        <div class="s-ttl">Smart Nadir View</div>
+        <button class="btn btn-full drag-btn" id="btnSmartView" onclick="toggleSmartView(this)" style="margin-bottom:5px">🔍 Aktifkan Smart Nadir View</button>
+        <div style="font-size:9px;color:var(--mu);line-height:1.8;margin-bottom:6px">Foto yang <b style="color:var(--tx)">pusatnya paling dekat kursor</b> tampil dominan. Foto lain diredupkan. Mirip navigasi Google Maps.</div>
+        <div class="slider-row">
+          <label class="adj-lbl">Min Opacity</label>
+          <input type="range" min="0" max="60" value="8" id="smartMinOpacity" oninput="updateSmartMinOpacity(this)">
+          <span class="slider-val" id="smartMinOpacityVal">8%</span>
+        </div>
+        <div style="margin-top:5px;display:flex;gap:4px;">
+          <button class="btn btn-sc btn-sm" onclick="smartViewShowAll()">👁 Tampil Semua</button>
+          <button class="btn btn-sc btn-sm" onclick="smartViewPinActive()">📌 Pin Foto Ini</button>
+        </div>
+        <div id="smartViewInfo" style="display:none;margin-top:5px;font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);background:rgba(90,158,53,.07);border-radius:4px;padding:4px 8px;line-height:1.8"></div>
+      </div>
         <div class="bmap-row">
           <button class="bmap-btn active" onclick="setBasemap('esri',this)">Satellite</button>
           <button class="bmap-btn" onclick="setBasemap('osm',this)">OSM</button>
@@ -1150,7 +1163,7 @@ function createRotatedOverlay(photo,toGeo){
     _ofc:null,_ofcImg:null,_canvas:null,
     onAdd:function(map){
       this._map=map;this._canvas=document.createElement('canvas');
-      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;';
+      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;transition:opacity 0.35s ease;';
       map.getPanes().overlayPane.appendChild(this._canvas);
       var self=this;
       buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
@@ -1210,13 +1223,14 @@ function createRotatedOverlay(photo,toGeo){
       } else {
         clipPts=cpts;
       }
-      ctx.save();ctx.globalAlpha=photo.opacity;ctx.globalCompositeOperation=photo.blendMode||'normal';
+      this._canvas.style.opacity=photo.opacity;
+      ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation=photo.blendMode||'normal';
       ctx.beginPath();ctx.moveTo(clipPts[0].x,clipPts[0].y);
       for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
       ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
     },
-    setOpacityVal:function(op){photo.opacity=op;this._update();},
+    setOpacityVal:function(op){photo.opacity=op;if(this._canvas)this._canvas.style.opacity=op;},
     setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
     setBlendMode:function(m){photo.blendMode=m;this._update();},
     setColorAdj:function(br,ct,sat){photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;this._rebuildOfc();},
@@ -1401,6 +1415,7 @@ function initMap(refPhoto){
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
   map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
+  _smartViewReattach();
 }
 
 // =====================================================
@@ -1900,6 +1915,113 @@ function showCopyModal(content,filename){
   btnRow.appendChild(btnCopy);btnRow.appendChild(btnClose);box.appendChild(btnRow);bg.appendChild(box);document.body.appendChild(bg);
   setTimeout(function(){ta.select();},100);
 }
+// =====================================================
+// *** SMART NADIR VIEW ***
+// =====================================================
+var _smartViewActive=false;
+var _smartViewPinned=null; // null=auto, id=pinned
+var _smartMinOpacity=0.08;
+var _smartCurrentId=null;
+
+function toggleSmartView(btn){
+  _smartViewActive=!_smartViewActive;
+  btn.classList.toggle('active',_smartViewActive);
+  btn.textContent=_smartViewActive?'🔍 Smart Nadir AKTIF — Geser kursor':'🔍 Aktifkan Smart Nadir View';
+  var info=document.getElementById('smartViewInfo');
+  if(!_smartViewActive){
+    if(map)map.off('mousemove',_smartOnMove);
+    _smartCurrentId=null;_smartViewPinned=null;
+    // Restore all to saved opacity
+    photos.forEach(function(p){if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);});
+    if(info)info.style.display='none';
+    setStatus('Smart Nadir View dinonaktifkan','amber');
+  } else {
+    if(!map){setStatus('Lakukan georef foto dulu!','amber');_smartViewActive=false;btn.classList.remove('active');btn.textContent='🔍 Aktifkan Smart Nadir View';return;}
+    map.on('mousemove',_smartOnMove);
+    if(info)info.style.display='';
+    setStatus('Smart Nadir View aktif — arahkan kursor ke foto','green');
+    // Immediately run once at map center
+    var c=map.getCenter();_smartApply(c.lat,c.lng);
+  }
+}
+
+function updateSmartMinOpacity(el){
+  _smartMinOpacity=parseInt(el.value)/100;
+  document.getElementById('smartMinOpacityVal').textContent=el.value+'%';
+  if(_smartViewActive&&_smartCurrentId)_smartApply_refresh();
+}
+
+function _smartOnMove(e){
+  if(_smartViewPinned)return; // pinned = no auto-switch
+  _smartApply(e.latlng.lat,e.latlng.lng);
+}
+
+function _smartApply(lat,lng){
+  var visible=photos.filter(function(p){return p.georef&&p.visible&&p.corners;});
+  if(visible.length===0)return;
+  var nearest=null,minDist=Infinity;
+  visible.forEach(function(p){
+    var oLat=p.offsetLat||0,oLng=p.offsetLng||0;
+    var cLat=(p.corners.tl.lat+p.corners.tr.lat+p.corners.br.lat+p.corners.bl.lat)/4+oLat;
+    var cLng=(p.corners.tl.lng+p.corners.tr.lng+p.corners.br.lng+p.corners.bl.lng)/4+oLng;
+    var dlat=lat-cLat,dlng=lng-cLng;
+    var dist=dlat*dlat+dlng*dlng;
+    if(dist<minDist){minDist=dist;nearest=p;}
+  });
+  if(!nearest)return;
+  if(nearest.id===_smartCurrentId)return; // no change needed
+  _smartCurrentId=nearest.id;
+  _smartApply_refresh();
+  // Update info panel
+  var info=document.getElementById('smartViewInfo');
+  if(info)info.innerHTML='📷 Aktif: <b>'+nearest.name+'</b><br>'+visible.length+' foto georef | '+(_smartViewPinned?'📌 Dipasak':'🔄 Auto-switch');
+}
+
+function _smartApply_refresh(){
+  var visible=photos.filter(function(p){return p.georef&&p.visible&&p.corners;});
+  visible.forEach(function(p){
+    if(!p.overlay||!p.overlay.setOpacityVal)return;
+    var activeId=_smartViewPinned||_smartCurrentId;
+    if(p.id===activeId){
+      p.overlay.setOpacityVal(p.opacity); // full saved opacity
+    } else {
+      p.overlay.setOpacityVal(_smartMinOpacity);
+    }
+  });
+}
+
+function smartViewShowAll(){
+  // Temporarily show all at full opacity
+  _smartCurrentId=null;_smartViewPinned=null;
+  photos.forEach(function(p){if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);});
+  var info=document.getElementById('smartViewInfo');
+  if(info)info.innerHTML='👁 Semua foto ditampilkan penuh';
+}
+
+function smartViewPinActive(){
+  if(!_smartCurrentId){setStatus('Arahkan kursor ke foto dulu','amber');return;}
+  if(_smartViewPinned===_smartCurrentId){
+    _smartViewPinned=null;
+    setStatus('Pin dilepas — kembali ke mode auto','amber');
+  } else {
+    _smartViewPinned=_smartCurrentId;
+    var p=getPhoto(_smartCurrentId);
+    setStatus('📌 Foto '+( p?p.name:'') +' dipasak','green');
+  }
+  var info=document.getElementById('smartViewInfo');
+  var p=getPhoto(_smartCurrentId);
+  if(info&&p)info.innerHTML='📷 Aktif: <b>'+p.name+'</b><br>'+(_smartViewPinned?'📌 Dipasak (klik lagi untuk lepas)':'🔄 Auto-switch');
+  _smartApply_refresh();
+}
+
+// Re-attach smart view listener jika map di-reinit (setelah exit split view)
+function _smartViewReattach(){
+  if(_smartViewActive&&map){
+    map.off('mousemove',_smartOnMove);
+    map.on('mousemove',_smartOnMove);
+  }
+}
+
 function setStatus(msg,color){
   document.getElementById('statusText').textContent=msg;
   document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
@@ -2004,6 +2126,7 @@ function exitSplitView(){
       var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
       if(allBounds.length>0){var allLats=[],allLngs=[];allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});}
       updateGcpCoverageBox();
+      _smartViewReattach();
     }
   }
   var p=getPhoto(currentPhotoId);
