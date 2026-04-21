@@ -709,21 +709,60 @@ function addPhoto(file){
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
 }
 
-function removePhoto(id){
-  var p=getPhoto(id);
-  if(p&&p.overlay&&map)map.removeLayer(p.overlay);
-  if(p&&p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
-  photos=photos.filter(function(x){return x.id!==id});
-  if(currentPhotoId===id){
-    currentPhotoId=null;
-    if(!photos.some(function(ph){return ph.georef})){showImagePanel();var wm=document.getElementById('welcomeMsg');if(wm)wm.style.display='';}
-    else hideImagePanel();
-    imgEl=null;canvasEl=null;gcpOverlayEl=null;
-    if(_abortCtrl){try{_abortCtrl.abort();}catch(e){}_abortCtrl=null;}
+function removePhoto(id) {
+  var p = getPhoto(id);
+
+  if (p && p.overlay && map) {
+    map.removeLayer(p.overlay);
   }
-  renderPhotoList();updateStats();renderLayerList();
-  document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
-  if(_seamlineMode)computeAllVoronoi();
+
+  if (p && p.gcpLayer && map) {
+    map.removeLayer(p.gcpLayer);
+  }
+
+  photos = photos.filter(function (x) {
+    return x.id !== id;
+  });
+
+  if (currentPhotoId === id) {
+    currentPhotoId = null;
+
+    var hasGeoref = photos.some(function (ph) {
+      return ph.georef;
+    });
+
+    if (!hasGeoref) {
+      showImagePanel();
+      var wm = document.getElementById('welcomeMsg');
+      if (wm) wm.style.display = '';
+    } else {
+      hideImagePanel();
+    }
+
+    imgEl = null;
+    canvasEl = null;
+    gcpOverlayEl = null;
+
+    if (_abortCtrl) {
+      try {
+        _abortCtrl.abort();
+      } catch (e) {}
+      _abortCtrl = null;
+    }
+  }
+
+  renderPhotoList();
+  updateStats();
+  renderLayerList();
+
+  var hdr = document.getElementById('hdrPhotoCount');
+  if (hdr) {
+    hdr.textContent = photos.length + ' foto';
+  }
+
+  if (_seamlineMode) {
+    computeAllVoronoi();
+  }
 }
 
 function getPhoto(id){return photos.find(function(p){return p.id===id})||null}
