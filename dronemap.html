@@ -327,7 +327,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
       <div class="s-sec">
         <div class="s-ttl">Smart Nadir View</div>
         <button class="btn btn-full drag-btn" id="btnSmartView" onclick="toggleSmartView(this)" style="margin-bottom:5px">🔍 Aktifkan Smart Nadir View</button>
-        <div style="font-size:9px;color:var(--mu);line-height:1.8;margin-bottom:6px">Foto yang <b style="color:var(--tx)">pusatnya paling dekat kursor</b> tampil dominan. Foto lain diredupkan. Mirip navigasi Google Maps.</div>
+        <div style="font-size:9px;color:var(--mu);line-height:1.8;margin-bottom:6px">Foto yang <b style="color:var(--tx)">pusatnya paling dekat tengah peta</b> tampil dominan saat peta digeser. Foto lain diredupkan. Geser kursor tidak berpengaruh.</div>
         <div class="slider-row">
           <label class="adj-lbl">Min Opacity</label>
           <input type="range" min="0" max="60" value="8" id="smartMinOpacity" oninput="updateSmartMinOpacity(this)">
@@ -348,11 +348,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <button class="bmap-btn" onclick="setBasemap('dark',this)">Dark</button>
           <button class="bmap-btn" onclick="setBasemap('none',this)">None</button>
         </div>
-      </div>
-      <div class="s-sec">
-        <div class="s-ttl">Mode Nadir <span class="norm-badge" style="margin-left:4px">BARU</span></div>
-        <button class="btn btn-full drag-btn" id="btnNadirMode" onclick="toggleNadirMode(this)" style="margin-bottom:5px;background:rgba(88,166,255,.10);color:var(--in);border:1px solid rgba(88,166,255,.3)">🎯 Mode Nadir (Smart Photo)</button>
-        <div style="font-size:9px;color:var(--mu);line-height:1.8">Saat aktif: geser kursor di peta → hanya foto yang <b style="color:var(--in)">pusat kameranya paling dekat</b> kursor yang ditampilkan. Foto lain di-fade. Mirip Google Maps.</div>
       </div>
       <div class="s-sec">
         <div class="s-ttl">Mode Geser Foto</div>
@@ -471,6 +466,11 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
   <!-- TAB EXPORT -->
   <div class="tabpane" id="tab-export">
     <div class="sbody">
+      <div class="s-sec">
+        <div class="s-ttl">📄 Laporan PDF</div>
+        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Cetak laporan peta lengkap dengan polygon, sensus pokok, dan statistik serangan.</p>
+        <button class="btn btn-full" onclick="openPdfModal()" style="background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#fff;margin-bottom:5px;border:none">📄 Download PDF Laporan</button>
+      </div>
       <div class="s-sec">
         <div class="s-ttl">GeoJSON Gabungan</div>
         <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Semua pengukuran + batas foto + GCP + data sensus pokok dari <strong style="color:var(--tx)" id="exportPhotoCount">0</strong> foto.</p>
@@ -710,9 +710,23 @@ function addPhoto(file){
 }
 
 function removePhoto(id){
-  var p=getPhoto(id);
-  if(p&&p.overlay&&map)map.removeLayer(p.overlay);
-  if(p&&p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
+  var p=getPhoto(id);if(!p)return;
+  // Konfirmasi sebelum hapus
+  var label=p.name+(p.georef?' (sudah georef)':'');
+  showConfirm('Hapus foto "'+label+'" dari daftar?\n\n'+(p.georef?'⚠ Overlay peta untuk foto ini juga akan dihapus.':''),function(){
+    _doRemovePhoto(id);
+  });
+}
+
+function _doRemovePhoto(id){
+  var p=getPhoto(id);if(!p)return;
+  // Hapus layer dari Leaflet
+  if(p.overlay&&map)map.removeLayer(p.overlay);
+  // Force hapus canvas dari DOM (defensive — jika Leaflet tidak tracking-nya)
+  if(p.overlay&&p.overlay._canvas&&p.overlay._canvas.parentNode){
+    p.overlay._canvas.parentNode.removeChild(p.overlay._canvas);
+  }
+  if(p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
   photos=photos.filter(function(x){return x.id!==id});
   if(currentPhotoId===id){
     currentPhotoId=null;
@@ -2378,5 +2392,405 @@ function exitSplitView(){
   renderGCPList();updateGCPStatus();
 }
 </script>
+
+<!-- ===== PDF MODAL ===== -->
+<div id="pdfModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:360px;max-width:95vw;font-family:'DM Sans',sans-serif">
+    <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:16px">📄 Pengaturan Laporan PDF</div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Judul Peta</label>
+      <input id="pdfTitle" type="text" value="PETA AREAL KEBUN SAWIT" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Subtitle (opsional)</label>
+      <input id="pdfSubtitle" type="text" placeholder="Nama Kebun / Lokasi" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Nama Pengecek / Mandor</label>
+      <input id="pdfPengecek" type="text" placeholder="Opsional" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
+      <button onclick="runGeneratePdf()" style="flex:2;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📄 Cetak PDF</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script>
+// =====================================================
+// PDF LAPORAN — menggunakan pdf-lib (seperti MiniMapGIS)
+// =====================================================
+function openPdfModal(){
+  if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
+  var m=document.getElementById('pdfModal');
+  m.style.display='flex';
+}
+function closePdfModal(){
+  document.getElementById('pdfModal').style.display='none';
+}
+document.getElementById('pdfModal').addEventListener('click',function(e){if(e.target===this)closePdfModal();});
+
+function runGeneratePdf(){
+  closePdfModal();
+  showToast('⏳ Membuat PDF...');
+  // Defer sedikit agar toast muncul dulu
+  setTimeout(function(){generateDroneMapPDF();},80);
+}
+
+async function generateDroneMapPDF(){
+  try{
+    if(typeof PDFLib==='undefined'){showToast('⚠ Library pdf-lib belum siap, tunggu sebentar');return;}
+    var PDFDoc=PDFLib.PDFDocument;
+    var rgb=PDFLib.rgb;
+
+    var title=document.getElementById('pdfTitle').value.trim()||'PETA AREAL KEBUN SAWIT';
+    var subtitle=document.getElementById('pdfSubtitle').value.trim();
+    var pengecek=document.getElementById('pdfPengecek').value.trim();
+
+    // ── Kumpulkan semua koordinat ───────────────────────
+    var allLats=[],allLngs=[];
+    measures.forEach(function(m){
+      if(m.coords)m.coords.forEach(function(c){allLats.push(c[1]);allLngs.push(c[0]);});
+      else if(m.type==='marker'){allLats.push(m.lat);allLngs.push(m.lng);}
+    });
+    trees.forEach(function(t){allLats.push(t.lat);allLngs.push(t.lng);});
+    if(allLats.length===0){
+      photos.filter(function(p){return p.georef&&p.bounds;}).forEach(function(p){
+        allLats.push(p.bounds[0][0],p.bounds[1][0]);
+        allLngs.push(p.bounds[0][1],p.bounds[1][1]);
+      });
+    }
+    if(allLats.length===0){showToast('⚠ Tidak ada data untuk dicetak');return;}
+
+    var minLat=Math.min.apply(null,allLats),maxLat=Math.max.apply(null,allLats);
+    var minLng=Math.min.apply(null,allLngs),maxLng=Math.max.apply(null,allLngs);
+    var dLat=(maxLat-minLat)*0.09||0.001,dLng=(maxLng-minLng)*0.09||0.001;
+    minLat-=dLat;maxLat+=dLat;minLng-=dLng;maxLng+=dLng;
+
+    // ── PDF setup (A4 landscape 842x595) ─────────────────
+    var pdfDoc=await PDFDoc.create();
+    var page=pdfDoc.addPage([842,595]);
+    var PW=842,PH=595;
+
+    // Layout — pdf-lib: Y=0 bottom, Y=595 top
+    var MAP_X=45,MAP_Y=50,MAP_W=510,MAP_H=480;
+    var SB_X=MAP_X+MAP_W+14,SB_W=PW-SB_X-10;
+    var cosLat=Math.cos((minLat+maxLat)/2*Math.PI/180);
+
+    function project(lat,lng){
+      var scaleX=MAP_W/((maxLng-minLng)*cosLat);
+      var scaleY=MAP_H/(maxLat-minLat);
+      var sc=Math.min(scaleX,scaleY)*0.9;
+      var cX=MAP_X+MAP_W/2,cY=MAP_Y+MAP_H/2;
+      var x=cX+(lng-(minLng+maxLng)/2)*cosLat*sc;
+      var y=cY+(lat-(minLat+maxLat)/2)*sc; // Y increases upward
+      return[x,y];
+    }
+
+    function hexToRgb(hex){
+      var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||'#000000');
+      return r?{r:parseInt(r[1],16)/255,g:parseInt(r[2],16)/255,b:parseInt(r[3],16)/255}:{r:0,g:0,b:0};
+    }
+
+    // Scanline fill polygon (like MiniMapGIS)
+    function fillPolygon(pts,fillRgb,opacity){
+      var allY=pts.map(function(p){return p[1];});
+      var minYP=Math.min.apply(null,allY),maxYP=Math.max.apply(null,allY);
+      for(var fillY=minYP;fillY<=maxYP;fillY+=1.2){
+        var ints=[];
+        for(var i=0;i<pts.length-1;i++){
+          var x1=pts[i][0],y1=pts[i][1],x2=pts[i+1][0],y2=pts[i+1][1];
+          if((y1<=fillY&&fillY<=y2)||(y2<=fillY&&fillY<=y1)){
+            if(y2!==y1){var t=(fillY-y1)/(y2-y1);ints.push(x1+t*(x2-x1));}
+          }
+        }
+        ints.sort(function(a,b){return a-b;});
+        for(var j=0;j<ints.length-1;j+=2){
+          if(ints[j+1]!==undefined){
+            page.drawLine({start:{x:ints[j],y:fillY},end:{x:ints[j+1],y:fillY},thickness:1.2,color:rgb(fillRgb.r,fillRgb.g,fillRgb.b),opacity:opacity});
+          }
+        }
+      }
+    }
+
+    function strokePolygon(pts,strokeRgb,lineWidth){
+      for(var i=0;i<pts.length-1;i++){
+        page.drawLine({start:{x:pts[i][0],y:pts[i][1]},end:{x:pts[i+1][0],y:pts[i+1][1]},thickness:lineWidth,color:rgb(strokeRgb.r,strokeRgb.g,strokeRgb.b),opacity:1});
+      }
+      if(pts.length>1){
+        page.drawLine({start:{x:pts[pts.length-1][0],y:pts[pts.length-1][1]},end:{x:pts[0][0],y:pts[0][1]},thickness:lineWidth,color:rgb(strokeRgb.r,strokeRgb.g,strokeRgb.b),opacity:1});
+      }
+    }
+
+    // ── HEADER ──────────────────────────────────────────
+    // Dark green header bar
+    page.drawRectangle({x:0,y:PH-28,width:PW,height:28,color:rgb(0.04,0.15,0.08)});
+    page.drawRectangle({x:0,y:PH-30,width:PW,height:2,color:rgb(0.18,0.66,0.29)});
+    // Title
+    var titleSize=title.length>35?9:title.length>25?11:13;
+    page.drawText(title,{x:MAP_X,y:PH-20,size:titleSize,color:rgb(1,1,1),font:await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold)});
+    if(subtitle){
+      page.drawText(subtitle,{x:MAP_X,y:PH-27,size:8,color:rgb(0.6,0.9,0.6)});
+    }
+    var tglStr='Dicetak: '+new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+    page.drawText(tglStr,{x:PW-10,y:PH-15,size:7,color:rgb(0.7,0.85,0.7)});
+    page.drawText('DroneMap v3 Pro',{x:PW-10,y:PH-23,size:7,color:rgb(0.5,0.7,0.5)});
+
+    // Embed font
+    var fontBold=await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    var fontNorm=await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+
+    // ── MAP FRAME ──────────────────────────────────────
+    page.drawRectangle({x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1.5});
+
+    // Grid garis koordinat
+    var nGrid=4;
+    var gridCol=rgb(0.75,0.75,0.75);
+    for(var gi=0;gi<=nGrid;gi++){
+      var lng=minLng+(maxLng-minLng)*gi/nGrid;
+      var gPt=project((minLat+maxLat)/2,lng);
+      if(gPt[0]>=MAP_X&&gPt[0]<=MAP_X+MAP_W){
+        page.drawLine({start:{x:gPt[0],y:MAP_Y},end:{x:gPt[0],y:MAP_Y+MAP_H},thickness:0.4,color:gridCol,dashArray:[3,3],dashPhase:0});
+        page.drawText(lng.toFixed(4)+'°E',{x:gPt[0]-12,y:MAP_Y-11,size:6,color:rgb(0.3,0.3,0.3),font:fontNorm});
+      }
+      var lat=minLat+(maxLat-minLat)*gi/nGrid;
+      var gPtL=project(lat,minLng);
+      if(gPtL[1]>=MAP_Y&&gPtL[1]<=MAP_Y+MAP_H){
+        page.drawLine({start:{x:MAP_X,y:gPtL[1]},end:{x:MAP_X+MAP_W,y:gPtL[1]},thickness:0.4,color:gridCol,dashArray:[3,3],dashPhase:0});
+        page.drawText(lat.toFixed(4)+'°N',{x:MAP_X-38,y:gPtL[1]-3,size:6,color:rgb(0.3,0.3,0.3),font:fontNorm});
+      }
+    }
+
+    // ── GAMBAR POLYGON & POLYLINE ───────────────────────
+    var polLeg=[];
+    measures.forEach(function(m){
+      if(m.type==='polygon'&&m.coords&&m.coords.length>=3){
+        var isBK=(m.id===_batasKebunId);
+        var sHex=isBK?'#2e8024':'#1a6bcc';
+        var fHex=isBK?'#5a9e35':'#58a6ff';
+        var sRgb=hexToRgb(sHex),fRgb=hexToRgb(fHex);
+        var pts=m.coords.map(function(c){return project(c[1],c[0]);});
+        pts.push(pts[0]); // close
+        // Fill
+        fillPolygon(pts,fRgb,isBK?0.28:0.18);
+        // Stroke
+        strokePolygon(pts,sRgb,isBK?1.4:0.8);
+        // Label centroid
+        var cx=pts.slice(0,-1).reduce(function(s,p){return s+p[0];},0)/pts.slice(0,-1).length;
+        var cy=pts.slice(0,-1).reduce(function(s,p){return s+p[1];},0)/pts.slice(0,-1).length;
+        if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
+          var lbl=m.label||'Blok';
+          var aHa=(m.area/10000).toFixed(2);
+          var tw=lbl.length*4.2;
+          page.drawRectangle({x:cx-tw/2-2,y:cy-4,width:tw+4,height:10,color:rgb(1,1,1),opacity:0.88});
+          page.drawText(lbl,{x:cx-tw/2,y:cy+1.5,size:5.5,color:rgb(isBK?0:0.1,isBK?0.4:0.25,isBK?0:0.6),font:fontBold});
+          page.drawText(aHa+' Ha',{x:cx-tw/2,y:cy-4.5,size:5,color:rgb(0.25,0.25,0.25),font:fontNorm});
+        }
+        polLeg.push({label:m.label||'Blok',area:m.area,isBK:isBK,fHex:fHex,sHex:sHex,trees:m.treesInside||0,density:m.density||'-'});
+      } else if(m.type==='line'&&m.coords&&m.coords.length>=2){
+        var lRgb=hexToRgb('#3580d8');
+        for(var li=0;li<m.coords.length-1;li++){
+          var pa=project(m.coords[li][1],m.coords[li][0]);
+          var pb=project(m.coords[li+1][1],m.coords[li+1][0]);
+          page.drawLine({start:{x:pa[0],y:pa[1]},end:{x:pb[0],y:pb[1]},thickness:1.0,color:rgb(lRgb.r,lRgb.g,lRgb.b),opacity:0.85,dashArray:[5,3],dashPhase:0});
+        }
+        polLeg.push({label:m.label||'Line',isLine:true,fHex:'#3580d8',sHex:'#3580d8',len:m.len});
+      }
+    });
+
+    // ── TREE MARKERS ───────────────────────────────────
+    var treeColors={normal:{r:0.18,g:0.63,b:0.26},sakit:{r:0.94,g:0.65,b:0},mati:{r:0.97,g:0.32,b:0.29},kosong:{r:0.49,g:0.52,b:0.56}};
+    trees.forEach(function(t){
+      var pt=project(t.lat,t.lng);
+      if(pt[0]<MAP_X||pt[0]>MAP_X+MAP_W||pt[1]<MAP_Y||pt[1]>MAP_Y+MAP_H)return;
+      var col=treeColors[t.status]||treeColors.normal;
+      page.drawCircle({x:pt[0],y:pt[1],size:1.4,color:rgb(col.r,col.g,col.b)});
+    });
+
+    // ── SIDEBAR KANAN ─────────────────────────────────
+    var yPos=MAP_Y+MAP_H; // start from top of map area
+
+    // --- BOX 1: JUDUL ---
+    var box1H=subtitle?50:40;
+    page.drawRectangle({x:SB_X,y:yPos-box1H,width:SB_W,height:box1H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    var tSize=title.length>28?8:title.length>20?9:11;
+    page.drawText(title,{x:SB_X+SB_W/2-(title.length*tSize*0.3),y:yPos-15,size:tSize,color:rgb(0,0,0),font:fontBold});
+    if(subtitle){
+      page.drawText(subtitle,{x:SB_X+SB_W/2-(subtitle.length*7*0.29),y:yPos-27,size:7,color:rgb(0.4,0.4,0.4),font:fontNorm});
+    }
+    yPos-=box1H;
+
+    // --- BOX 2: KOMPAS + SKALA ---
+    var box2H=70;
+    page.drawRectangle({x:SB_X,y:yPos-box2H,width:SB_W,height:box2H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    // Kompas
+    var cmpX=SB_X+32,cmpY=yPos-box2H/2;
+    page.drawCircle({x:cmpX,y:cmpY,size:18,borderColor:rgb(0,0,0),borderWidth:1.2});
+    // Panah Utara (hitam)
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY+16},thickness:2.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+16},end:{x:cmpX-4,y:cmpY+10},thickness:2.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+16},end:{x:cmpX+4,y:cmpY+10},thickness:2.5,color:rgb(0,0,0)});
+    // Panah Selatan (abu)
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY-16},thickness:2,color:rgb(0.6,0.6,0.6)});
+    page.drawText('U',{x:cmpX-4,y:cmpY+20,size:10,color:rgb(0,0,0),font:fontBold});
+    // Skala bar
+    var realDist=(maxLng-minLng)*cosLat*111320;
+    var pdfWidthPt=MAP_W;
+    var scaleRatio=Math.round(realDist/pdfWidthPt*72*2.54/100*100);
+    var s10=Math.pow(10,Math.floor(Math.log10(Math.max(scaleRatio,1))));
+    scaleRatio=Math.round(scaleRatio/s10)*s10;
+    var scaleStr='Skala 1 : '+(scaleRatio||6000).toLocaleString('id-ID');
+    var sbX=SB_X+52,sbY=yPos-box2H/2;
+    var sbW=SB_W-60;
+    page.drawText(scaleStr,{x:sbX,y:sbY+10,size:7,color:rgb(0,0,0),font:fontBold});
+    page.drawLine({start:{x:sbX,y:sbY},end:{x:sbX+sbW,y:sbY},thickness:1.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX,y:sbY-4},end:{x:sbX,y:sbY+4},thickness:1.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW/2,y:sbY-3},end:{x:sbX+sbW/2,y:sbY+3},thickness:1,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW,y:sbY-4},end:{x:sbX+sbW,y:sbY+4},thickness:1.5,color:rgb(0,0,0)});
+    page.drawText('0',{x:sbX-3,y:sbY-10,size:6,color:rgb(0,0,0),font:fontNorm});
+    page.drawText((scaleRatio/2/1000).toFixed(1)+'km',{x:sbX+sbW/2-6,y:sbY-10,size:6,color:rgb(0,0,0),font:fontNorm});
+    page.drawText((scaleRatio/1000).toFixed(1)+'km',{x:sbX+sbW-8,y:sbY-10,size:6,color:rgb(0,0,0),font:fontNorm});
+    yPos-=box2H;
+
+    // --- BOX 3: STATISTIK SENSUS ---
+    var nTotal=trees.length;
+    var nNormal=trees.filter(function(t){return t.status==='normal';}).length;
+    var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
+    var nMati=trees.filter(function(t){return t.status==='mati';}).length;
+    var nKosong=trees.filter(function(t){return t.status==='kosong';}).length;
+    var DI=nTotal>0?((nSakit+nMati+nKosong)/nTotal*100):0;
+    var DSI=nTotal>0?((nSakit*1+nMati*2+nKosong*1)/(nTotal*2)*100):0;
+    var statusLabel=DI>20?'ENDEMIK':DI>10?'WASPADA':'TERKENDALI';
+    var statusRgb=DI>20?{r:0.72,g:0.11,b:0.11}:DI>10?{r:0.7,g:0.3,b:0}:{r:0.1,g:0.42,b:0.19};
+
+    var statRows=[['Total Pokok',nTotal],['Normal',nNormal],['Sakit',nSakit],['Mati',nMati],['Kosong',nKosong]];
+    var rowH=11,box3H=20+statRows.length*rowH+14;
+    page.drawRectangle({x:SB_X,y:yPos-box3H,width:SB_W,height:box3H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    // Header
+    page.drawRectangle({x:SB_X,y:yPos-12,width:SB_W,height:12,color:rgb(0.04,0.15,0.08)});
+    page.drawText('STATISTIK SENSUS',{x:SB_X+SB_W/2-36,y:yPos-9,size:7,color:rgb(1,1,1),font:fontBold});
+    var sy=yPos-12;
+    statRows.forEach(function(row,i){
+      var bg=i%2===0?rgb(0.94,0.98,0.94):rgb(1,1,1);
+      page.drawRectangle({x:SB_X,y:sy-rowH,width:SB_W,height:rowH,color:bg});
+      page.drawText(String(row[0]),{x:SB_X+3,y:sy-rowH+3,size:7,color:rgb(0.15,0.15,0.15),font:fontNorm});
+      var valStr=String(row[1]);
+      page.drawText(valStr,{x:SB_X+SB_W-3-valStr.length*4.5,y:sy-rowH+3,size:7,color:rgb(0,0,0),font:fontBold});
+      sy-=rowH;
+    });
+    // DI/DSI bar
+    page.drawRectangle({x:SB_X,y:sy-13,width:SB_W,height:13,color:rgb(statusRgb.r,statusRgb.g,statusRgb.b)});
+    var diStr='DI: '+DI.toFixed(1)+'%  DSI: '+DSI.toFixed(1)+'%  '+statusLabel;
+    page.drawText(diStr,{x:SB_X+SB_W/2-(diStr.length*3.2),y:sy-9,size:6.5,color:rgb(1,1,1),font:fontBold});
+    yPos-=box3H;
+
+    // --- BOX 4: KETERANGAN ---
+    // Buat list legend items
+    var legItems=[];
+    if(nTotal>0){
+      legItems.push({dot:true,col:{r:0.18,g:0.63,b:0.26},lbl:'Pokok Normal ('+nNormal+')'});
+      legItems.push({dot:true,col:{r:0.94,g:0.65,b:0},lbl:'Pokok Sakit ('+nSakit+')'});
+      legItems.push({dot:true,col:{r:0.97,g:0.32,b:0.29},lbl:'Pokok Mati ('+nMati+')'});
+      legItems.push({dot:true,col:{r:0.49,g:0.52,b:0.56},lbl:'Pokok Kosong ('+nKosong+')'});
+    }
+    polLeg.forEach(function(p){
+      if(p.isLine){
+        legItems.push({isLine:true,fHex:p.fHex,lbl:p.label+(p.len?' ('+fmtLen(p.len)+')':'')});
+      } else {
+        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:p.label+' '+(p.area/10000).toFixed(2)+' Ha'+(p.trees>0?' 🌴'+p.trees:'')});
+      }
+    });
+
+    var legRowH=11,box4H=18+legItems.length*legRowH+18;
+    var remainH=yPos-MAP_Y;
+    if(box4H>remainH)box4H=remainH;
+    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:box4H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    page.drawRectangle({x:SB_X,y:yPos-12,width:SB_W,height:12,color:rgb(0.04,0.15,0.08)});
+    page.drawText('KETERANGAN',{x:SB_X+SB_W/2-26,y:yPos-9,size:7,color:rgb(1,1,1),font:fontBold});
+    var ky=yPos-12;
+    legItems.forEach(function(item){
+      if(ky-legRowH<yPos-box4H+14)return; // clip
+      var fRgb=item.col||hexToRgb(item.fHex||'#888');
+      var sRgb=hexToRgb(item.sHex||item.fHex||'#888');
+      if(item.dot){
+        page.drawCircle({x:SB_X+7,y:ky-legRowH/2,size:3.5,color:rgb(fRgb.r,fRgb.g,fRgb.b)});
+      } else if(item.isLine){
+        page.drawLine({start:{x:SB_X+3,y:ky-legRowH/2},end:{x:SB_X+13,y:ky-legRowH/2},thickness:1.5,color:rgb(fRgb.r,fRgb.g,fRgb.b),dashArray:[4,2],dashPhase:0});
+      } else {
+        page.drawRectangle({x:SB_X+3,y:ky-legRowH+2,width:10,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.75});
+      }
+      var lblText=item.lbl;if(lblText.length>22)lblText=lblText.substring(0,20)+'..';
+      page.drawText(lblText,{x:SB_X+16,y:ky-legRowH+3,size:6.5,color:rgb(0.1,0.1,0.1),font:fontNorm});
+      ky-=legRowH;
+    });
+    // Total luas
+    var totalArea=polLeg.reduce(function(s,p){return s+(p.isLine?0:(p.area||0));},0);
+    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:14,color:rgb(0.1,0.42,0.19)});
+    var totalStr='Total Luas: '+(totalArea/10000).toFixed(2)+' Ha';
+    page.drawText(totalStr,{x:SB_X+SB_W/2-(totalStr.length*3.5),y:yPos-box4H+4,size:7.5,color:rgb(1,1,1),font:fontBold});
+
+    // ── FOOTER ─────────────────────────────────────────
+    page.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
+    page.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
+    if(pengecek)page.drawText('Pengecek: '+pengecek,{x:PW/2-pengecek.length*3,y:2,size:6,color:rgb(0.4,0.4,0.4),font:fontNorm});
+    page.drawText('Hal. 1',{x:PW-30,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+
+    // ── HALAMAN 2: TABEL DATA (jika ada pokok) ──────────
+    if(trees.length>0){
+      var page2=pdfDoc.addPage([842,595]);
+      page2.drawRectangle({x:0,y:PH-28,width:PW,height:28,color:rgb(0.04,0.15,0.08)});
+      page2.drawText(title+' — Data Sensus Pokok Sawit',{x:MAP_X,y:PH-19,size:11,color:rgb(1,1,1),font:fontBold});
+
+      var tHdr=['No Pokok','Blok/Baris','Status','Latitude','Longitude','Catatan'];
+      var colW=[55,55,45,80,80,160];
+      var colX=[MAP_X];
+      for(var ci=0;ci<colW.length-1;ci++)colX.push(colX[ci]+colW[ci]+3);
+      var tY=PH-42,tRowH=13;
+
+      // Header tabel
+      page2.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:rgb(0.1,0.42,0.19)});
+      tHdr.forEach(function(h,i){page2.drawText(h,{x:colX[i]+2,y:tY-tRowH+3,size:7,color:rgb(1,1,1),font:fontBold});});
+      tY-=tRowH;
+
+      var sColors={normal:rgb(0.1,0.45,0.15),sakit:rgb(0.65,0.35,0),mati:rgb(0.65,0.1,0.1),kosong:rgb(0.45,0.45,0.45)};
+      trees.forEach(function(t,i){
+        if(tY-tRowH<15){return;} // clip — halaman 3 tidak diimpl
+        var bg=i%2===0?rgb(0.96,0.99,0.96):rgb(1,1,1);
+        page2.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:bg});
+        var labels={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
+        var row=[t.no,t.block||'—',labels[t.status]||t.status,t.lat.toFixed(6),t.lng.toFixed(6),t.note||'—'];
+        row.forEach(function(val,j){
+          var col=j===2?(sColors[t.status]||rgb(0,0,0)):rgb(0.15,0.15,0.15);
+          var fnt=j===2?fontBold:fontNorm;
+          var str=String(val);if(str.length>22)str=str.substring(0,20)+'..';
+          page2.drawText(str,{x:colX[j]+2,y:tY-tRowH+3,size:7,color:col,font:fnt});
+        });
+        // Row border
+        page2.drawLine({start:{x:MAP_X,y:tY-tRowH},end:{x:PW-MAP_X,y:tY-tRowH},thickness:0.3,color:rgb(0.8,0.8,0.8)});
+        tY-=tRowH;
+      });
+      // Footer page 2
+      page2.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
+      page2.drawText('DroneMap v3 Pro',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
+      page2.drawText('Hal. 2 / 2',{x:PW-35,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+    }
+
+    // ── Simpan & Download ────────────────────────────────
+    var pdfBytes=await pdfDoc.save();
+    var now=new Date();
+    var dateStr=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+    var fname=(title.replace(/[^A-Z0-9]+/g,'_')||'Laporan')+'_'+dateStr+'.pdf';
+    var blob=new Blob([pdfBytes],{type:'application/pdf'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download=fname;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+    showToast('✅ PDF berhasil didownload!\n📄 '+fname);
+  }catch(err){
+    console.error('PDF error:',err);
+    showToast('❌ Gagal membuat PDF: '+err.message);
+  }
+}
+</script>
 </body>
-</html>
