@@ -705,9 +705,23 @@ function addPhoto(file){
 }
 
 function removePhoto(id){
-  var p=getPhoto(id);
-  if(p&&p.overlay&&map)map.removeLayer(p.overlay);
-  if(p&&p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
+  var p=getPhoto(id);if(!p)return;
+  // Konfirmasi sebelum hapus
+  var label=p.name+(p.georef?' (sudah georef)':'');
+  showConfirm('Hapus foto "'+label+'" dari daftar?\n\n'+(p.georef?'⚠ Overlay peta untuk foto ini juga akan dihapus.':''),function(){
+    _doRemovePhoto(id);
+  });
+}
+
+function _doRemovePhoto(id){
+  var p=getPhoto(id);if(!p)return;
+  // Hapus layer dari Leaflet
+  if(p.overlay&&map)map.removeLayer(p.overlay);
+  // Force hapus canvas dari DOM (defensive — jika Leaflet tidak tracking-nya)
+  if(p.overlay&&p.overlay._canvas&&p.overlay._canvas.parentNode){
+    p.overlay._canvas.parentNode.removeChild(p.overlay._canvas);
+  }
+  if(p.gcpLayer&&map)map.removeLayer(p.gcpLayer);
   photos=photos.filter(function(x){return x.id!==id});
   if(currentPhotoId===id){
     currentPhotoId=null;
