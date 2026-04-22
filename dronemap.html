@@ -2782,13 +2782,13 @@ async function generateDroneMapPDF(){
     var statusLabel=DI>20?'ENDEMIK':DI>10?'WASPADA':'TERKENDALI';
     var statusRgb=DI>20?{r:0.72,g:0.11,b:0.11}:DI>10?{r:0.7,g:0.3,b:0}:{r:0.1,g:0.42,b:0.19};
 
-    // Statistik: Total, Normal, Sakit, Mati, Kosong
+    // Statistik: Total, Normal, Sakit, Mati, Kosong (tanpa emoji — WinAnsi tidak support)
     var statRows=[
       ['Total Pokok',nTotal,rgb(0,0,0)],
-      ['🟢 Normal',nNormal,rgb(0.1,0.45,0.15)],
-      ['🟡 Sakit',nSakit,rgb(0.65,0.38,0)],
-      ['🔴 Mati',nMati,rgb(0.65,0.1,0.1)],
-      ['⬜ Kosong',nKosong,rgb(0.45,0.45,0.45)]
+      ['Normal',nNormal,rgb(0.1,0.45,0.15)],
+      ['Sakit',nSakit,rgb(0.65,0.38,0)],
+      ['Mati',nMati,rgb(0.65,0.1,0.1)],
+      ['Kosong',nKosong,rgb(0.45,0.45,0.45)]
     ];
     var rowH=11,box3H=20+statRows.length*rowH+14;
     page.drawRectangle({x:SB_X,y:yPos-box3H,width:SB_W,height:box3H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
@@ -2798,7 +2798,12 @@ async function generateDroneMapPDF(){
     statRows.forEach(function(row,i){
       var bg=i%2===0?rgb(0.94,0.98,0.94):rgb(1,1,1);
       page.drawRectangle({x:SB_X,y:sy-rowH,width:SB_W,height:rowH,color:bg});
-      page.drawText(String(row[0]),{x:SB_X+3,y:sy-rowH+3,size:7,color:rgb(0.15,0.15,0.15),font:fontNorm});
+      // Dot warna sebagai indikator (kecuali baris Total)
+      if(i>0){
+        page.drawCircle({x:SB_X+5,y:sy-rowH/2,size:3,color:row[2]});
+      }
+      var lblX=i>0?SB_X+11:SB_X+3;
+      page.drawText(String(row[0]),{x:lblX,y:sy-rowH+3,size:7,color:rgb(0.15,0.15,0.15),font:i===0?fontBold:fontNorm});
       var valStr=String(row[1]);
       page.drawText(valStr,{x:SB_X+SB_W-3-valStr.length*4.5,y:sy-rowH+3,size:7,color:row[2],font:fontBold});
       sy-=rowH;
@@ -2816,7 +2821,7 @@ async function generateDroneMapPDF(){
         legItems.push({isLine:true,fHex:p.fHex,sHex:p.sHex,lbl:p.label+(p.len?' ('+fmtLen(p.len)+')':'')});
       } else {
         var aHaStr=(p.area/10000).toFixed(2)+' Ha';
-        var treeTxt=p.trees>0?'  🌴 '+p.trees+' pokok':'';
+        var treeTxt=p.trees>0?'  '+p.trees+' pokok':'';
         legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:p.label,sub:aHaStr+treeTxt});
       }
     });
