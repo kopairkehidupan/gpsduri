@@ -1809,18 +1809,30 @@ function renderMeasures(){
         var georefPhotos=photos.filter(function(p){return p.georef;});
         var currentOwnerExplicit=_bkOwnerMapExplicit[m.id];
         var currentOwnerAuto=_bkOwnerMap[m.id];
-        var ownerPhoto=currentOwnerExplicit!==undefined?getPhoto(currentOwnerExplicit):getPhoto(currentOwnerAuto);
-        var ownerLabel=ownerPhoto?ownerPhoto.name:'—';
+        var effectiveOwnerId=currentOwnerExplicit!==undefined?currentOwnerExplicit:currentOwnerAuto;
+        var ownerPhoto=getPhoto(effectiveOwnerId);
+        var ownerLabel=ownerPhoto?ownerPhoto.name:'Belum ada foto';
+        var isAutoAssigned=currentOwnerExplicit===undefined;
+        var autoLabelStr=isAutoAssigned?('— Auto: '+ownerLabel+' —'):'— Auto (ganti ke foto lain) —';
+        var statusColor=ownerPhoto?'var(--ok)':'var(--er)';
+        var statusMsg=ownerPhoto
+          ?(isAutoAssigned?'✓ Auto-assign: '+ownerPhoto.name:'✓ Eksplisit: '+ownerPhoto.name)
+          :'⚠ Belum ada foto yang di-assign';
         photoSelHtml='<div style="margin-top:6px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:5px;padding:6px 8px">'
-          +'<div style="font-size:8px;color:var(--in);font-family:\'Space Mono\',monospace;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Tetapkan ke Foto</div>'
-          +'<select onchange="setBkPhotoOwner('+m.id+',this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9px;padding:4px 6px;font-family:\'Space Mono\',monospace;outline:none">'
-          +'<option value="">— Auto ('+ownerLabel+') —</option>'
+          +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
+          +'<span style="font-size:8px;color:var(--in);font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.05em">Tetapkan ke Foto</span>'
+          +'<span style="font-size:8px;color:'+statusColor+';font-family:\'Space Mono\',monospace">'+statusMsg+'</span>'
+          +'</div>'
+          +'<select onchange="setBkPhotoOwner('+m.id+',this.value)" style="width:100%;background:var(--s2);border:1px solid '+(ownerPhoto?'var(--bd)':'var(--er)')+';border-radius:4px;color:var(--tx);font-size:9px;padding:4px 6px;font-family:\'Space Mono\',monospace;outline:none">'
+          +'<option value="">'+autoLabelStr+'</option>'
           +georefPhotos.map(function(p){
             var sel=(currentOwnerExplicit!==undefined&&currentOwnerExplicit===p.id)?' selected':'';
             return '<option value="'+p.id+'"'+sel+'>'+p.name+'</option>';
           }).join('')
           +'</select>'
-          +'<div style="font-size:8px;color:var(--mu);margin-top:3px;line-height:1.5">Foto yang dipilih akan di-crop ke polygon ini. Foto lain akan menutup area ini.</div>'
+          +'<div style="font-size:8px;color:var(--mu);margin-top:3px;line-height:1.5">'
+          +(isAutoAssigned&&ownerPhoto?'Auto berdasarkan jarak centroid. Pilih manual jika salah.':'Foto terpilih akan di-clip ke polygon ini.')
+          +'</div>'
           +'</div>';
       }
       return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+photoSelHtml+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
@@ -1876,24 +1888,63 @@ function _rebuildBatasKebunPolygons(){
 // Rebuild _bkOwnerMap: explicit user setting > auto-nearest photo
 function _rebuildBkOwnerMap(){
   _bkOwnerMap={};
+  var usedPhotoIds=new Set(); // track which photos are already assigned
+
+  // Pass 1: Apply explicit user assignments first (highest priority)
   _batasKebunPolygons.forEach(function(bk){
-    // Explicit user assignment takes priority
     if(_bkOwnerMapExplicit[bk.id]!==undefined){
       _bkOwnerMap[bk.id]=_bkOwnerMapExplicit[bk.id];
-      return;
+      usedPhotoIds.add(_bkOwnerMapExplicit[bk.id]);
     }
-    // Auto: find nearest georef'd photo centroid
-    var bestPhotoId=null,bestDist=Infinity;
+  });
+
+  // Pass 2: Auto-assign remaining BKs — greedy unique matching
+  // Build distance matrix: for each unassigned BK, score all candidate photos
+  var georefPhotos=photos.filter(function(p){return p.georef&&p.corners;});
+  var unassignedBKs=_batasKebunPolygons.filter(function(bk){
+    return _bkOwnerMap[bk.id]===undefined;
+  });
+
+  // Collect all (distance, bkId, photoId) pairs and sort by distance
+  var candidates=[];
+  unassignedBKs.forEach(function(bk){
     var bkCLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
     var bkCLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
-    photos.filter(function(p){return p.georef&&p.corners;}).forEach(function(p){
+    georefPhotos.forEach(function(p){
       var cLat=(p.corners.tl.lat+p.corners.tr.lat+p.corners.br.lat+p.corners.bl.lat)/4+(p.offsetLat||0);
       var cLng=(p.corners.tl.lng+p.corners.tr.lng+p.corners.br.lng+p.corners.bl.lng)/4+(p.offsetLng||0);
       var d=(cLat-bkCLat)*(cLat-bkCLat)+(cLng-bkCLng)*(cLng-bkCLng);
-      if(d<bestDist){bestDist=d;bestPhotoId=p.id;}
+      candidates.push({dist:d,bkId:bk.id,photoId:p.id});
     });
-    if(bestPhotoId!==null)_bkOwnerMap[bk.id]=bestPhotoId;
   });
+  // Sort by distance (closest first)
+  candidates.sort(function(a,b){return a.dist-b.dist;});
+
+  // Greedy assign: each BK gets the nearest available photo
+  var assignedBkIds=new Set();
+  candidates.forEach(function(c){
+    if(assignedBkIds.has(c.bkId))return; // BK already assigned
+    if(usedPhotoIds.has(c.photoId)){
+      // Photo already used — only assign if no other option (more BKs than photos)
+      // Check if this BK still has no assignment
+      // We'll handle fallback in a third pass below
+      return;
+    }
+    // Assign this BK to this photo
+    _bkOwnerMap[c.bkId]=c.photoId;
+    assignedBkIds.add(c.bkId);
+    usedPhotoIds.add(c.photoId);
+  });
+
+  // Pass 3: Fallback for BKs still unassigned (more BKs than available photos)
+  // Assign to nearest photo even if already used
+  candidates.forEach(function(c){
+    if(assignedBkIds.has(c.bkId))return;
+    if(_bkOwnerMap[c.bkId]!==undefined)return;
+    _bkOwnerMap[c.bkId]=c.photoId;
+    assignedBkIds.add(c.bkId);
+  });
+
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
 }
 
