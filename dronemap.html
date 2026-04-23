@@ -1313,7 +1313,7 @@ function createRotatedOverlay(photo,toGeo){
       var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
       var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
       var e2=cpts[0].x,f2=cpts[0].y;
-      var isSelected=_dragModeActive&&_selectedDragPhoto&&_selectedDragPhoto.id===photo.id;
+      var isSelected=_dragModeActive&&_selectedDragPhoto&&_selectedDragPhoto.id===photo.id; 
         if(_showPhotoOutlines||_dragModeActive){
           ctx.save();
           ctx.globalAlpha=isSelected?1.0:(_dragModeActive?0.4:0.5);
