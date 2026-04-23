@@ -1871,10 +1871,20 @@ function _rebuildBatasKebunPolygons(){
   _batasKebunIds.forEach(function(id){
     var m=measures.find(function(m){return m.id===id;});
     if(!m||m.type!=='polygon')return;
-    var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
-    if(!layer)return;
-    var gj=layer.toGeoJSON();
-    var verts=gj.geometry.coordinates[0].slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
+    // Ambil koordinat dari m.coords yang selalu tersedia — JANGAN bergantung pada drawnItems layer lookup
+    // yang bisa gagal jika layer tidak ditemukan (fragile)
+    var verts;
+    if(m.coords&&m.coords.length>=3){
+      // m.coords berformat [[lng,lat],...] dari GeoJSON
+      verts=m.coords.map(function(c){return{lat:c[1],lng:c[0]};});
+    } else {
+      // Fallback: coba dari drawnItems
+      var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
+      if(!layer)return;
+      var gj=layer.toGeoJSON();
+      verts=gj.geometry.coordinates[0].slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
+    }
+    if(!verts||verts.length<3)return;
     _batasKebunPolygons.push({id:id,label:m.label||'Blok #'+id,verts:verts});
   });
   // Update legacy single-polygon alias (pakai pertama, untuk renderAerialToCanvas warisan)
