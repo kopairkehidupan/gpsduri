@@ -353,6 +353,8 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         <div class="s-ttl">Mode Geser Foto</div>
         <button class="btn btn-full drag-btn" id="btnDragMode" onclick="toggleDragMode(this)" style="margin-bottom:5px">✋ Aktifkan Mode Geser Foto</button>
         <div style="font-size:9px;color:var(--mu);line-height:1.7">Saat aktif: klik &amp; drag foto di peta untuk menyesuaikan posisi.</div>
+        <!-- TAMBAHKAN setelah div info Mode Geser Foto -->
+        <div id="dragSelectedInfo" style="display:none;margin-top:6px;background:rgba(90,158,53,.08);border:1px solid rgba(90,158,53,.25);border-radius:5px;padding:6px 9px;font-size:9px;font-family:'Space Mono',monospace;line-height:1.8"></div>
       </div>
       <div class="s-sec" style="padding-bottom:8px">
         <div class="s-ttl">Overlay Foto &amp; Z-Order</div>
@@ -1311,12 +1313,19 @@ function createRotatedOverlay(photo,toGeo){
       var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
       var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
       var e2=cpts[0].x,f2=cpts[0].y;
-      if(_showPhotoOutlines||_dragModeActive){
-        ctx.save();ctx.globalAlpha=_dragModeActive?0.9:0.5;
-        ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
-        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
-        ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
-      }
+      ivar isSelected=_dragModeActive&&_selectedDragPhoto&&_selectedDragPhoto.id===photo.id;
+        if(_showPhotoOutlines||_dragModeActive){
+          ctx.save();
+          ctx.globalAlpha=isSelected?1.0:(_dragModeActive?0.4:0.5);
+          ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
+          ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
+          ctx.strokeStyle=isSelected?'#7dc455':'#5a9e35';
+          ctx.lineWidth=isSelected?3:(_dragModeActive?1.5:1.5);
+          if(isSelected){ctx.shadowColor='#5a9e35';ctx.shadowBlur=6;}
+          ctx.stroke();
+          if(isSelected){ctx.shadowBlur=0;}
+          ctx.restore();
+        }
       // === CLIP PATH: Owner BK eksplisit > auto-nearest > Voronoi > 4 sudut foto ===
       var clipPts;
       var activeBK=_batasKebunPolygons;
