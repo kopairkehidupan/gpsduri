@@ -1262,8 +1262,18 @@ function createRotatedOverlay(photo,toGeo){
       map.getPanes().overlayPane.appendChild(this._canvas);
       var self=this;
       buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
+      this._canvas.addEventListener('click',function(e){
+        if(!_dragModeActive)return;
+        e.stopPropagation();
+        // Klik foto ini = pilih foto ini
+        _selectedDragPhoto=photo;
+        _updateDragModeInfo();
+        map.dragging.disable();
+      });
       this._canvas.addEventListener('mousedown',function(e){
-        if(!_dragModeActive)return;e.stopPropagation();
+        if(!_dragModeActive)return;
+        if(_selectedDragPhoto!==photo)return; // hanya foto yang dipilih yang bisa di-drag
+        e.stopPropagation();
         var r=map.getContainer().getBoundingClientRect();
         var cp=map.containerPointToLatLng([e.clientX-r.left,e.clientY-r.top]);
         _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
@@ -1580,12 +1590,44 @@ function gcpSpreadScoreForPhoto(photo){
 // =====================================================
 // DRAG MODE
 // =====================================================
+var _selectedDragPhoto = null; // foto yang sedang dipilih untuk digeser
+
 function toggleDragMode(btn){
   _dragModeActive=!_dragModeActive;
   btn.classList.toggle('active',_dragModeActive);
-  btn.textContent=_dragModeActive?'✋ Mode Geser AKTIF — Drag Foto':'✋ Aktifkan Mode Geser Foto';
-  if(map){map.getContainer().style.cursor=_dragModeActive?'crosshair':'';if(!_dragModeActive){map.dragging.enable();_dragPhoto=null;}}
+  btn.textContent=_dragModeActive?'✋ Mode Geser AKTIF — Klik foto dulu':'✋ Aktifkan Mode Geser Foto';
+  if(map){
+    map.getContainer().style.cursor=_dragModeActive?'default':'';
+    if(!_dragModeActive){
+      map.dragging.enable();
+      _dragPhoto=null;
+      _selectedDragPhoto=null;
+      _clearDragSelection();
+    }
+  }
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  _updateDragModeInfo();
+}
+
+function _clearDragSelection(){
+  _selectedDragPhoto=null;
+  var info=document.getElementById('dragSelectedInfo');
+  if(info)info.style.display='none';
+  if(map)map.dragging.enable();
+}
+
+function _updateDragModeInfo(){
+  var info=document.getElementById('dragSelectedInfo');
+  if(!info)return;
+  if(!_dragModeActive){info.style.display='none';return;}
+  if(_selectedDragPhoto){
+    info.style.display='';
+    info.innerHTML='<span style="color:var(--saw2)">✓ Terpilih: <b>'+_selectedDragPhoto.name+'</b></span><br>'
+      +'<span style="font-size:8px;color:var(--mu)">Drag untuk geser · Klik area kosong untuk batal</span>';
+  } else {
+    info.style.display='';
+    info.innerHTML='<span style="color:var(--mu)">Klik foto di peta untuk memilihnya</span>';
+  }
 }
 document.addEventListener('mousemove',function(e){
   if(!_dragModeActive||!_dragPhoto||!map||!_dragStartLatLng)return;
@@ -1598,8 +1640,10 @@ document.addEventListener('mousemove',function(e){
 });
 document.addEventListener('mouseup',function(){
   if(!_dragModeActive||!_dragPhoto)return;
-  if(map)map.dragging.enable();
-  document.body.style.cursor='';_dragPhoto=null;_dragStartLatLng=null;_dragStartOffset=null;renderLayerList();
+  if(map)map.dragging.enable(); // map bisa digeser lagi, tapi foto masih terpilih
+  document.body.style.cursor='';
+  _dragPhoto=null;_dragStartLatLng=null;_dragStartOffset=null;
+  renderLayerList();
 });
 function updateOffsetDisplay(photo){var el=document.getElementById('offset_'+photo.id);if(el)el.textContent='Δ '+photo.offsetLat.toFixed(6)+' / '+photo.offsetLng.toFixed(6);}
 function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
@@ -1650,7 +1694,15 @@ function initMap(refPhoto){
     renderMeasures();updateStats();
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-  map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
+  map.on('click',function(e){
+    if(_treeMode==='add'){addTree(e.latlng.lat,e.latlng.lng);return;}
+    if(_dragModeActive&&!_dragPhoto){
+      // Klik area kosong = batal pilihan
+      _clearDragSelection();
+      _updateDragModeInfo();
+      map.dragging.enable();
+    }
+  });
   _smartViewReattach();
 }
 
@@ -2559,7 +2611,15 @@ function exitSplitView(){
       map.on(L.Draw.Event.EDITED,refreshMeasures);
       map.on(L.Draw.Event.DELETED,function(e){e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});renderMeasures();updateStats();});
       map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-      map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
+      map.on('click',function(e){
+        if(_treeMode==='add'){addTree(e.latlng.lat,e.latlng.lng);return;}
+        if(_dragModeActive&&!_dragPhoto){
+          // Klik area kosong = batal pilihan
+          _clearDragSelection();
+          _updateDragModeInfo();
+          map.dragging.enable();
+        }
+      });
       photos.forEach(function(ph){
         if(ph.georef&&ph.gcps.length>=3){
           var tg=buildAffine(ph.gcps);ph.overlay=createRotatedOverlay(ph,tg);
