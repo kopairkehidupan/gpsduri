@@ -468,7 +468,22 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
     <div class="sbody">
       <div class="s-sec">
         <div class="s-ttl">📄 Laporan PDF</div>
-        <p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">Cetak laporan peta lengkap dengan polygon, sensus pokok, dan statistik serangan.</p>
+        <!-- PILIHAN BLOK — tampil semua polygon, langsung di tab -->
+        <div id="exportBlokPanel" style="margin-bottom:10px">
+          <div style="font-size:9px;color:var(--mu);margin-bottom:5px;line-height:1.5">
+            Pilih blok/polygon yang akan dicetak dan atur foto drone-nya:
+          </div>
+          <!-- Tabel blok -->
+          <div id="exportBlokList" style="border:1px solid var(--bd);border-radius:7px;overflow:hidden;margin-bottom:6px">
+            <div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada polygon. Gambar di tab Ukur.</div>
+          </div>
+          <!-- Shortcut buttons -->
+          <div id="exportBlokActions" style="display:none;display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">
+            <button onclick="exportBlokAll(true,true)" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--saw2);cursor:pointer">Semua + Foto</button>
+            <button onclick="exportBlokAll(true,false)" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">Semua, Tanpa Foto</button>
+            <button onclick="exportBlokAll(false,false)" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">Batal Semua</button>
+          </div>
+        </div>
         <button class="btn btn-full" onclick="openPdfModal()" style="background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#fff;margin-bottom:5px;border:none">📄 Download PDF Laporan</button>
       </div>
       <div class="s-sec">
@@ -1775,6 +1790,8 @@ function renderMeasures(){
     }
     return '';
   }).join('');
+  // Update Export tab blok selector whenever measures change
+  renderExportBlokList();
 }
 
 function renameShape(id,val){var m=measures.find(function(m){return m.id===id});if(m)m.label=val}
@@ -1809,6 +1826,8 @@ function _rebuildBatasKebunPolygons(){
   _batasKebunId=_batasKebunPolygons.length>0?_batasKebunPolygons[0].id:null;
   // Refresh semua overlay
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  // Update export tab blok list (BK status berubah)
+  renderExportBlokList();
 }
 
 function setBatasKebun(id){
@@ -2425,7 +2444,7 @@ function exitSplitView(){
 <div id="pdfModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;backdrop-filter:blur(6px)">
   <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:400px;max-width:95vw;font-family:'DM Sans',sans-serif">
     <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:16px">📄 Pengaturan Laporan PDF</div>
-    <div style="margin-bottom:10px">
+    <div style="margin-bottom:14px">
       <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Judul Peta</label>
       <input id="pdfTitle" type="text" value="PETA AREAL KEBUN SAWIT" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
     </div>
@@ -2433,38 +2452,13 @@ function exitSplitView(){
       <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Subtitle (opsional)</label>
       <input id="pdfSubtitle" type="text" placeholder="Nama Kebun / Lokasi" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
     </div>
-    <div style="margin-bottom:10px">
+    <div style="margin-bottom:14px">
       <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Nama Pengecek / Mandor</label>
       <input id="pdfPengecek" type="text" placeholder="Opsional" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
     </div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:8px">Pilih Areal / Blok yang Dicetak</label>
-      <!-- Saat ada BK aktif: tampil tabel per-blok -->
-      <div id="pdfBkSelector" style="display:none;border:1px solid var(--bd);border-radius:9px;overflow:hidden">
-        <!-- header tabel -->
-        <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;background:rgba(90,158,53,.12);padding:7px 10px;font-size:8px;font-weight:700;color:var(--saw2);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.5px;gap:10px">
-          <span>Blok</span><span style="white-space:nowrap">Cetak</span><span style="white-space:nowrap">Foto Drone</span>
-        </div>
-        <div id="pdfBkList"></div>
-        <!-- footer actions -->
-        <div style="display:flex;gap:6px;padding:7px 10px;background:var(--s2);border-top:1px solid var(--bd)">
-          <button onclick="pdfBkSelectAll(true)" style="font-size:9px;padding:2px 9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--saw2);cursor:pointer">Pilih Semua</button>
-          <button onclick="pdfBkSelectAll(false)" style="font-size:9px;padding:2px 9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">Batal Semua</button>
-          <button onclick="pdfFotoAll(true)" style="font-size:9px;padding:2px 9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--in);cursor:pointer">Foto Semua</button>
-          <button onclick="pdfFotoAll(false)" style="font-size:9px;padding:2px 9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">Tanpa Foto</button>
-        </div>
-      </div>
-      <!-- Saat tidak ada BK: fallback global foto toggle -->
-      <div id="pdfNoBlokInfo" style="background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 13px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:600;color:var(--tx)">Semua Pengukuran</span>
-          <label class="toggle"><input type="checkbox" id="pdfIncludeFoto" checked onchange="onPdfFotoToggle(this)"><span class="toggle-sl"></span></label>
-        </div>
-        <div id="pdfFotoInfo" style="font-size:9px;line-height:1.7;color:var(--mu)">
-          Toggle kanan = sertakan foto drone di PDF
-        </div>
-        <div style="margin-top:5px;font-size:9px;color:var(--mu)">Belum ada Batas Blok aktif. Gambar polygon dan klik "Jadikan Batas Blok" di tab Ukur.</div>
-      </div>
+    <!-- Ringkasan pilihan blok yang sudah dikonfigurasi di tab Export -->
+    <div id="pdfModalSummary" style="margin-bottom:14px;background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;line-height:1.8">
+      Konfigurasi blok & foto sudah diatur di tab Export.
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
@@ -2478,69 +2472,95 @@ function exitSplitView(){
 // =====================================================
 // PDF LAPORAN — menggunakan pdf-lib (seperti MiniMapGIS)
 // =====================================================
+// =====================================================
+// EXPORT TAB — BLOK SELECTOR (semua polygon)
+// =====================================================
+function renderExportBlokList(){
+  var el=document.getElementById('exportBlokList');
+  var actEl=document.getElementById('exportBlokActions');
+  if(!el)return;
+  var polys=measures.filter(function(m){return m.type==='polygon';});
+  if(polys.length===0){
+    el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada polygon. Gambar di tab Ukur.</div>';
+    if(actEl)actEl.style.display='none';
+    return;
+  }
+  if(actEl)actEl.style.display='flex';
+  // Header
+  var html='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;background:rgba(90,158,53,.10);padding:6px 10px;font-size:8px;font-weight:700;color:var(--saw2);font-family:\'Space Mono\',monospace;text-transform:uppercase;gap:10px;border-bottom:1px solid var(--bd)">'
+    +'<span>Polygon</span><span style="white-space:nowrap;color:var(--tx)">Cetak</span><span style="white-space:nowrap;color:var(--in)">Foto</span></div>';
+  polys.forEach(function(m){
+    var isBK=_batasKebunIds.has(m.id);
+    var aHa=(m.area/10000).toFixed(2)+' Ha';
+    var pokokStr=m.treesInside>0?' | '+m.treesInside+' pokok':'';
+    var bkBadge=isBK?'<span style="font-size:7px;padding:0 4px;border-radius:6px;background:rgba(90,158,53,.25);color:var(--saw2);margin-left:3px">BK</span>':'';
+    // Foto toggle: hanya aktif jika polygon adalah Batas Blok
+    var fotoDisabled=!isBK;
+    html+='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);gap:10px;background:var(--sf)">'
+      +'<div><div style="font-size:10px;font-weight:500;color:var(--tx)">'+m.label+bkBadge+'</div>'
+        +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+aHa+pokokStr+'</div></div>'
+      // Toggle Cetak
+      +'<label class="toggle" title="Cetak polygon ini"><input type="checkbox" class="expBkCb" data-id="'+m.id+'" checked onchange="onExpBkChange('+m.id+')"><span class="toggle-sl"></span></label>'
+      // Toggle Foto (hanya enabled jika isBK)
+      +'<label class="toggle" title="'+(isBK?'Sertakan foto drone':'Hanya untuk Batas Blok aktif')+'" id="expFotoLbl_'+m.id+'" style="opacity:'+(fotoDisabled?'0.25':'1')+'">'
+        +'<input type="checkbox" class="expBkFoto" data-id="'+m.id+'" '+(isBK?'checked':'')+' '+(fotoDisabled?'disabled':'')+' style="">'
+        +'<span class="toggle-sl" style="background:var(--in)"></span>'
+      +'</label>'
+      +'</div>';
+  });
+  el.innerHTML=html;
+  // Update modal summary
+  _updatePdfModalSummary();
+}
+
+function onExpBkChange(id){
+  var cb=document.querySelector('.expBkCb[data-id="'+id+'"]');
+  var fl=document.getElementById('expFotoLbl_'+id);
+  var isBK=_batasKebunIds.has(id);
+  if(fl)fl.style.opacity=(cb&&cb.checked&&isBK)?'1':'0.25';
+  _updatePdfModalSummary();
+}
+
+function exportBlokAll(cetak, foto){
+  document.querySelectorAll('.expBkCb').forEach(function(cb){
+    cb.checked=cetak;
+    onExpBkChange(parseInt(cb.getAttribute('data-id')));
+  });
+  if(cetak){
+    document.querySelectorAll('.expBkFoto').forEach(function(cb){
+      if(!cb.disabled)cb.checked=foto;
+    });
+  }
+  _updatePdfModalSummary();
+}
+
+function _updatePdfModalSummary(){
+  var el=document.getElementById('pdfModalSummary');if(!el)return;
+  var polys=measures.filter(function(m){return m.type==='polygon';});
+  var totalCetak=0,totalFoto=0,totalArea=0;
+  polys.forEach(function(m){
+    var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+    var fcb=document.querySelector('.expBkFoto[data-id="'+m.id+'"]');
+    if(cb&&cb.checked){totalCetak++;totalArea+=m.area||0;if(fcb&&fcb.checked)totalFoto++;}
+  });
+  if(totalCetak===0){el.innerHTML='<span style="color:var(--er)">Belum ada blok yang dipilih</span>';return;}
+  el.innerHTML=totalCetak+' blok dipilih | '+(totalArea/10000).toFixed(2)+' Ha total'+
+    (totalFoto>0?'<br><span style="color:var(--in)">Foto drone: '+totalFoto+' blok</span>':'<br><span style="color:var(--mu)">Tanpa foto drone</span>');
+}
+
 function openPdfModal(){
   if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
-  var m=document.getElementById('pdfModal');
-  var bkSel=document.getElementById('pdfBkSelector');
-  var noBlokInfo=document.getElementById('pdfNoBlokInfo');
-  var bkList=document.getElementById('pdfBkList');
-
-  if(_batasKebunPolygons.length>0){
-    // Ada BK — tampilkan tabel per-blok
-    bkSel.style.display='';
-    noBlokInfo.style.display='none';
-    bkList.innerHTML=_batasKebunPolygons.map(function(bk){
-      var mm=measures.find(function(m){return m.id===bk.id;});
-      var aHa=mm?(mm.area/10000).toFixed(2)+' Ha':'';
-      var pokokStr=mm&&mm.treesInside>0?' | '+mm.treesInside+' pokok':'';
-      return '<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:8px 10px;border-bottom:1px solid var(--bd);gap:10px;background:var(--sf)" data-bk-id="'+bk.id+'">'+
-        '<div>'+
-          '<div style="font-size:10px;font-weight:600;color:var(--tx)">'+bk.label+'</div>'+
-          '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+aHa+pokokStr+'</div>'+
-        '</div>'+
-        // Toggle cetak
-        '<label class="toggle" title="Cetak blok ini">'+
-          '<input type="checkbox" class="pdfBkCb" data-id="'+bk.id+'" checked onchange="onBkCbChange('+bk.id+')">'+
-          '<span class="toggle-sl"></span>'+
-        '</label>'+
-        // Toggle foto
-        '<label class="toggle" title="Sertakan foto drone blok ini" id="pdfFotoLbl_'+bk.id+'" style="opacity:1">'+
-          '<input type="checkbox" class="pdfBkFoto" data-id="'+bk.id+'" checked style="">'+
-          '<span class="toggle-sl" style="background:var(--in)"></span>'+
-        '</label>'+
-      '</div>';
-    }).join('');
-    // Legend di bawah header
-    bkList.insertAdjacentHTML('afterbegin',
-      '<div style="display:flex;gap:12px;padding:5px 10px;background:var(--s2);font-size:8px;color:var(--mu);border-bottom:1px solid var(--bd)">'+
-        '<span style="margin-left:auto">Cetak</span>'+
-        '<span style="color:var(--in)">Foto</span>'+
-      '</div>'
-    );
-  } else {
-    bkSel.style.display='none';
-    noBlokInfo.style.display='';
-  }
-  m.style.display='flex';
+  // Pastikan blok list ter-render
+  renderExportBlokList();
+  _updatePdfModalSummary();
+  document.getElementById('pdfModal').style.display='flex';
 }
 
-function onBkCbChange(id){
-  // Jika blok dimatikan, disable juga foto toggle-nya
-  var cb=document.querySelector('.pdfBkCb[data-id="'+id+'"]');
-  var fl=document.getElementById('pdfFotoLbl_'+id);
-  if(fl)fl.style.opacity=cb&&cb.checked?'1':'0.3';
-}
+function pdfBkSelectAll(val){} // legacy — tidak dipakai lagi
+function pdfFotoAll(val){}     // legacy — tidak dipakai lagi
+function onBkCbChange(id){}    // legacy
+function onPdfFotoToggle(cb){} // legacy
 
-function pdfBkSelectAll(val){
-  document.querySelectorAll('.pdfBkCb').forEach(function(cb){
-    cb.checked=val;
-    onBkCbChange(parseInt(cb.getAttribute('data-id')));
-  });
-}
-
-function pdfFotoAll(val){
-  document.querySelectorAll('.pdfBkFoto').forEach(function(cb){cb.checked=val;});
-}
 function closePdfModal(){
   document.getElementById('pdfModal').style.display='none';
 }
@@ -2550,12 +2570,6 @@ function runGeneratePdf(){
   closePdfModal();
   showToast('⏳ Membuat PDF...');
   setTimeout(function(){generateDroneMapPDF();},80);
-}
-
-function onPdfFotoToggle(cb){
-  var info=document.getElementById('pdfFotoInfo');
-  if(!info)return;
-  info.innerHTML=cb.checked?'Toggle kanan = sertakan foto drone di PDF':'Hanya polygon vector (tanpa foto drone)';
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -2653,26 +2667,27 @@ async function generateDroneMapPDF(){
     var pengecek=document.getElementById('pdfPengecek').value.trim();
     var includeFoto=photos.some(function(p){return p.georef&&p.visible&&p.corners;});
 
-    // Kumpulkan BK yang dipilih + setting foto per blok
-    var selectedBkIds=new Set();
-    document.querySelectorAll('.pdfBkCb:checked').forEach(function(cb){selectedBkIds.add(parseInt(cb.getAttribute('data-id')));});
+    // Kumpulkan pilihan dari Export tab (bukan modal lagi)
+    // Semua polygon: baca toggle cetak & foto dari Export tab
+    var selectedBkIds=new Set();  // IDs polygon yang dipilih untuk cetak
+    var selectedBkPolygons=[];    // [{id,label,verts,foto}] — hanya BK yang dipilih + foto
 
-    // Jika tidak ada BK terdaftar sama sekali, baca global foto toggle
-    var globalFoto=(document.getElementById('pdfIncludeFoto')&&document.getElementById('pdfIncludeFoto').checked);
+    measures.filter(function(m){return m.type==='polygon';}).forEach(function(m){
+      var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+      if(!cb||!cb.checked)return; // polygon tidak dipilih
+      selectedBkIds.add(m.id);
+      // Foto: hanya berlaku jika polygon adalah Batas Blok
+      var isBK=_batasKebunIds.has(m.id);
+      var fcb=document.querySelector('.expBkFoto[data-id="'+m.id+'"]');
+      var bkFoto=isBK&&fcb&&fcb.checked&&includeFoto;
+      if(isBK){
+        var bkPoly=_batasKebunPolygons.find(function(b){return b.id===m.id;});
+        if(bkPoly)selectedBkPolygons.push({id:m.id,label:bkPoly.label,verts:bkPoly.verts,foto:bkFoto});
+      }
+    });
 
-    // Build array per blok: {id, label, verts, foto}
-    var selectedBkPolygons=[];
-    if(_batasKebunPolygons.length>0){
-      _batasKebunPolygons.forEach(function(bk){
-        if(selectedBkIds.size>0&&!selectedBkIds.has(bk.id))return; // skip jika tidak dipilih
-        var fotoCb=document.querySelector('.pdfBkFoto[data-id="'+bk.id+'"]');
-        var bkFoto=fotoCb?fotoCb.checked:true;
-        selectedBkPolygons.push({id:bk.id,label:bk.label,verts:bk.verts,foto:bkFoto&&includeFoto});
-      });
-    }
-    // Jika tidak ada BK sama sekali, includeFoto dari global toggle
-    if(_batasKebunPolygons.length===0)includeFoto=includeFoto&&globalFoto;
-    else includeFoto=selectedBkPolygons.some(function(bk){return bk.foto;});
+    // Ada foto jika ada BK polygon yang foto=true
+    includeFoto=includeFoto&&selectedBkPolygons.some(function(bk){return bk.foto;});
 
     // ── Kumpulkan semua koordinat ───────────────────────
     var allLats=[],allLngs=[];
@@ -2819,11 +2834,11 @@ async function generateDroneMapPDF(){
     measures.forEach(function(m){
       if(m.type==='polygon'&&m.coords&&m.coords.length>=3){
         var isBK=_batasKebunIds.has(m.id);
-        // Jika ada BK terpilih, hanya gambar BK yang dipilih + polygon biasa lainnya
-        var isSelectedBK=isBK&&(selectedBkIds.size===0||selectedBkIds.has(m.id));
+        var isSelected=selectedBkIds.size===0||selectedBkIds.has(m.id);
+        if(!isSelected)return; // skip polygon yang tidak dipilih cetak
         // Cek apakah blok ini punya foto
         var thisBkFoto=false;
-        if(isSelectedBK){
+        if(isBK){
           var bkEntry=selectedBkPolygons.find(function(b){return b.id===m.id;});
           thisBkFoto=bkEntry?bkEntry.foto:false;
         }
@@ -2832,13 +2847,13 @@ async function generateDroneMapPDF(){
         var sRgb=hexToRgb(sHex),fRgb=hexToRgb(fHex);
         var pts=m.coords.map(function(c){return project(c[1],c[0]);});
         pts.push(pts[0]); // close
-        // Blok ini punya foto = jangan fill; blok tanpa foto atau bukan BK = fill
-        var thisBlockHasFoto=isSelectedBK&&thisBkFoto;
+        // Jika blok punya foto → tidak perlu fill, foto akan menutup area
+        var thisBlockHasFoto=thisBkFoto;
         if(!thisBlockHasFoto){
           fillPolygon(pts,fRgb,isBK?0.28:0.18);
         }
-        // Stroke tebal jika BK dipilih
-        var strokeW=thisBlockHasFoto?(isSelectedBK?2.5:1.2):(isBK?1.4:0.8);
+        // Stroke: BK lebih tebal
+        var strokeW=thisBlockHasFoto?2.5:(isBK?1.4:0.8);
         strokePolygon(pts,sRgb,strokeW);
         // Label centroid — dinaikkan agar tidak terpotong
         var cx=pts.slice(0,-1).reduce(function(s,p){return s+p[0];},0)/pts.slice(0,-1).length;
