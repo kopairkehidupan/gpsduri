@@ -692,6 +692,12 @@ function switchTab(id,el){
   document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('active')});
   el.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
+  // Saat masuk tab Export, render blok list jika belum ada isinya
+  if(id==='export'){
+    var bl=document.getElementById('exportBlokList');
+    var hasRows=bl&&bl.querySelector('.expBkCb');
+    if(!hasRows)renderExportBlokList();
+  }
 }
 
 // =====================================================
@@ -1327,8 +1333,9 @@ function createRotatedOverlay(photo,toGeo){
           var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
           return{x:lp.x-off.x,y:lp.y-off.y};
         });
-      } else {
-        // Default: 4 sudut foto
+      }
+      if(!clipPts){
+        // Default: 4 sudut foto (hanya jika tidak ada BK dan tidak ada Voronoi)
         clipPts=cpts;
       }
       this._canvas.style.opacity=this._nadirOp!==undefined?this._nadirOp:photo.opacity;
@@ -2486,6 +2493,12 @@ function renderExportBlokList(){
     return;
   }
   if(actEl)actEl.style.display='flex';
+
+  // Simpan state toggle sebelum rebuild
+  var prevCetak={},prevFoto={};
+  el.querySelectorAll('.expBkCb').forEach(function(cb){prevCetak[cb.getAttribute('data-id')]=cb.checked;});
+  el.querySelectorAll('.expBkFoto').forEach(function(cb){prevFoto[cb.getAttribute('data-id')]=cb.checked;});
+
   // Header
   var html='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;background:rgba(90,158,53,.10);padding:6px 10px;font-size:8px;font-weight:700;color:var(--saw2);font-family:\'Space Mono\',monospace;text-transform:uppercase;gap:10px;border-bottom:1px solid var(--bd)">'
     +'<span>Polygon</span><span style="white-space:nowrap;color:var(--tx)">Cetak</span><span style="white-space:nowrap;color:var(--in)">Foto</span></div>';
@@ -2494,22 +2507,23 @@ function renderExportBlokList(){
     var aHa=(m.area/10000).toFixed(2)+' Ha';
     var pokokStr=m.treesInside>0?' | '+m.treesInside+' pokok':'';
     var bkBadge=isBK?'<span style="font-size:7px;padding:0 4px;border-radius:6px;background:rgba(90,158,53,.25);color:var(--saw2);margin-left:3px">BK</span>':'';
-    // Foto toggle: hanya aktif jika polygon adalah Batas Blok
     var fotoDisabled=!isBK;
+    var sid=String(m.id);
+    // Pertahankan state lama jika ada, default: cetak=true, foto=isBK
+    var cetakVal=(sid in prevCetak)?prevCetak[sid]:true;
+    var fotoVal=(sid in prevFoto)?prevFoto[sid]:isBK;
+    var fotoOpacity=(cetakVal&&isBK)?'1':'0.25';
     html+='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);gap:10px;background:var(--sf)">'
       +'<div><div style="font-size:10px;font-weight:500;color:var(--tx)">'+m.label+bkBadge+'</div>'
         +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+aHa+pokokStr+'</div></div>'
-      // Toggle Cetak
-      +'<label class="toggle" title="Cetak polygon ini"><input type="checkbox" class="expBkCb" data-id="'+m.id+'" checked onchange="onExpBkChange('+m.id+')"><span class="toggle-sl"></span></label>'
-      // Toggle Foto (hanya enabled jika isBK)
-      +'<label class="toggle" title="'+(isBK?'Sertakan foto drone':'Hanya untuk Batas Blok aktif')+'" id="expFotoLbl_'+m.id+'" style="opacity:'+(fotoDisabled?'0.25':'1')+'">'
-        +'<input type="checkbox" class="expBkFoto" data-id="'+m.id+'" '+(isBK?'checked':'')+' '+(fotoDisabled?'disabled':'')+' style="">'
+      +'<label class="toggle" title="Cetak polygon ini"><input type="checkbox" class="expBkCb" data-id="'+m.id+'" '+(cetakVal?'checked':'')+' onchange="onExpBkChange('+m.id+')"><span class="toggle-sl"></span></label>'
+      +'<label class="toggle" title="'+(isBK?'Sertakan foto drone':'Hanya untuk Batas Blok aktif')+'" id="expFotoLbl_'+m.id+'" style="opacity:'+fotoOpacity+'">'
+        +'<input type="checkbox" class="expBkFoto" data-id="'+m.id+'" '+(fotoVal&&isBK?'checked':'')+' '+(fotoDisabled?'disabled':'')+' style="">'
         +'<span class="toggle-sl" style="background:var(--in)"></span>'
       +'</label>'
       +'</div>';
   });
   el.innerHTML=html;
-  // Update modal summary
   _updatePdfModalSummary();
 }
 
@@ -2550,8 +2564,8 @@ function _updatePdfModalSummary(){
 
 function openPdfModal(){
   if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
-  // Pastikan blok list ter-render
-  renderExportBlokList();
+  // Jangan rebuild list di sini! State toggle sudah diatur user di tab Export.
+  // Hanya update summary untuk tampilkan ringkasan terkini.
   _updatePdfModalSummary();
   document.getElementById('pdfModal').style.display='flex';
 }
