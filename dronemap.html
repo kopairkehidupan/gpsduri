@@ -640,7 +640,8 @@ var _lastPolygonLayer=null;
 // BATAS KEBUN STATE — multi-polygon support
 var _batasKebunIds=new Set();   // Set of polygon measure IDs yang aktif sebagai Batas Kebun
 var _batasKebunPolygons=[];     // [{id, label, verts:[{lat,lng}]}] — list semua BK aktif
-var _bkOwnerMap={};            // {bkId: photoId} — foto yang "memiliki" tiap BK polygon
+var _bkOwnerMap={};            // {bkId: photoId} — computed owner (auto/explicit)
+var _bkOwnerMapExplicit={};    // {bkId: photoId} — override eksplisit oleh user
 // Legacy alias untuk backward compat dengan PDF code (akan di-set ke nearest BK polygon)
 var _batasKebunPolygon=null;    // Digunakan oleh renderAerialToCanvas (single clip) — deprecated
 var _batasKebunId=null;         // Deprecated — gunakan _batasKebunIds
@@ -762,7 +763,6 @@ function _doRemovePhoto(id){
   }
   renderPhotoList();updateStats();renderLayerList();
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
-  _rebuildBkOwnerMap();
   if(_seamlineMode)computeAllVoronoi();
 }
 
@@ -1307,35 +1307,34 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-      // === CLIP PATH: Batas Kebun berdasarkan INTERSEKSI foto+BK, bukan jarak centroid ===
+      // === CLIP PATH: Owner BK eksplisit > auto-nearest > Voronoi > 4 sudut foto ===
       var clipPts;
       var activeBK=_batasKebunPolygons;
-      var ownedBK=null;
+      var ownedBK=null; // BK yang dimiliki foto ini
       if(activeBK&&activeBK.length>0){
+        // Cari BK yang owner-nya adalah foto ini (berdasarkan _bkOwnerMap)
         for(var _bki=0;_bki<activeBK.length;_bki++){
           if(_bkOwnerMap[activeBK[_bki].id]===photo.id){
             ownedBK=activeBK[_bki];break;
           }
         }
         if(ownedBK){
+          // Clip foto ini ke polygon BK miliknya
           clipPts=ownedBK.verts.map(function(v){
             var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
             return{x:lp.x-off.x,y:lp.y-off.y};
           });
         }
-        // else: foto ini tidak memiliki BK apapun → clipPts undefined
-        // → jatuh ke Voronoi atau 4 sudut foto di bawah
+        // else: foto ini tidak punya BK → fallback Voronoi atau 4 sudut
       }
       if(!clipPts&&_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
-        // Mode Seamline Voronoi: clip ke sel Voronoi foto ini
         clipPts=photo.voronoiCell.map(function(v){
           var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
           return{x:lp.x-off.x,y:lp.y-off.y};
         });
       }
       if(!clipPts){
-        // Default: 4 sudut foto (hanya jika tidak ada BK dan tidak ada Voronoi)
-        clipPts=cpts;
+        clipPts=cpts; // Default: 4 sudut foto
       }
       this._canvas.style.opacity=this._nadirOp!==undefined?this._nadirOp:photo.opacity;
       ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation=photo.blendMode||'normal';
@@ -1343,8 +1342,7 @@ function createRotatedOverlay(photo,toGeo){
       for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
       ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
-      // === PUNCH-OUT: hapus area BK milik foto lain dari canvas ini ===
-      // Foto yang tidak memiliki BK apapun: potong keluar semua area BK
+      // === PUNCH-OUT: Jika foto ini tidak memiliki BK, hapus area BK milik foto lain ===
       if(activeBK&&activeBK.length>0&&!ownedBK){
         activeBK.forEach(function(bk){
           if(!bk.verts||bk.verts.length<3)return;
@@ -1358,8 +1356,7 @@ function createRotatedOverlay(photo,toGeo){
           ctx.beginPath();
           ctx.moveTo(bkPts[0].x,bkPts[0].y);
           for(var _pi=1;_pi<bkPts.length;_pi++)ctx.lineTo(bkPts[_pi].x,bkPts[_pi].y);
-          ctx.closePath();
-          ctx.fill();
+          ctx.closePath();ctx.fill();
           ctx.restore();
         });
       }
@@ -1806,7 +1803,27 @@ function renderMeasures(){
       var isBK=_batasKebunIds.has(m.id);
       var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(90,158,53,.25);color:var(--saw2);font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid rgba(90,158,53,.4)">BLOK AKTIF</span>':'';
       var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?'var(--saw)':'var(--bd)')+';background:'+(isBK?'rgba(90,158,53,.2)':'var(--s3)')+';color:'+(isBK?'var(--saw2)':'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Blok Aktif — Klik untuk nonaktif':'Jadikan Batas Blok')+'</button>';
-      return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
+      // Foto-assignment selector (hanya tampil jika polygon adalah BK aktif)
+      var photoSelHtml='';
+      if(isBK){
+        var georefPhotos=photos.filter(function(p){return p.georef;});
+        var currentOwnerExplicit=_bkOwnerMapExplicit[m.id];
+        var currentOwnerAuto=_bkOwnerMap[m.id];
+        var ownerPhoto=currentOwnerExplicit!==undefined?getPhoto(currentOwnerExplicit):getPhoto(currentOwnerAuto);
+        var ownerLabel=ownerPhoto?ownerPhoto.name:'—';
+        photoSelHtml='<div style="margin-top:6px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.2);border-radius:5px;padding:6px 8px">'
+          +'<div style="font-size:8px;color:var(--in);font-family:\'Space Mono\',monospace;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Tetapkan ke Foto</div>'
+          +'<select onchange="setBkPhotoOwner('+m.id+',this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9px;padding:4px 6px;font-family:\'Space Mono\',monospace;outline:none">'
+          +'<option value="">— Auto ('+ownerLabel+') —</option>'
+          +georefPhotos.map(function(p){
+            var sel=(currentOwnerExplicit!==undefined&&currentOwnerExplicit===p.id)?' selected':'';
+            return '<option value="'+p.id+'"'+sel+'>'+p.name+'</option>';
+          }).join('')
+          +'</select>'
+          +'<div style="font-size:8px;color:var(--mu);margin-top:3px;line-height:1.5">Foto yang dipilih akan di-crop ke polygon ini. Foto lain akan menutup area ini.</div>'
+          +'</div>';
+      }
+      return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+photoSelHtml+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
     }
     if(m.type==='line'){
       var pts2=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
@@ -1851,16 +1868,21 @@ function _rebuildBatasKebunPolygons(){
   // Update legacy single-polygon alias (pakai pertama, untuk renderAerialToCanvas warisan)
   _batasKebunPolygon=_batasKebunPolygons.length>0?_batasKebunPolygons[0].verts:null;
   _batasKebunId=_batasKebunPolygons.length>0?_batasKebunPolygons[0].id:null;
-  // Refresh semua overlay
-  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  _rebuildBkOwnerMap();
   // Update export tab blok list (BK status berubah)
   renderExportBlokList();
-  _rebuildBkOwnerMap();
 }
 
+// Rebuild _bkOwnerMap: explicit user setting > auto-nearest photo
 function _rebuildBkOwnerMap(){
   _bkOwnerMap={};
   _batasKebunPolygons.forEach(function(bk){
+    // Explicit user assignment takes priority
+    if(_bkOwnerMapExplicit[bk.id]!==undefined){
+      _bkOwnerMap[bk.id]=_bkOwnerMapExplicit[bk.id];
+      return;
+    }
+    // Auto: find nearest georef'd photo centroid
     var bestPhotoId=null,bestDist=Infinity;
     var bkCLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
     var bkCLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
@@ -1875,10 +1897,24 @@ function _rebuildBkOwnerMap(){
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
 }
 
+// User explicitly assigns polygon BK → foto tertentu (atau kosong = auto)
+function setBkPhotoOwner(bkId,photoId){
+  bkId=parseInt(bkId);
+  if(!photoId||photoId===''){
+    delete _bkOwnerMapExplicit[bkId];
+  } else {
+    _bkOwnerMapExplicit[bkId]=parseFloat(photoId);
+  }
+  _rebuildBkOwnerMap();
+  // Refresh measure list (badge owner berubah)
+  renderMeasures();
+}
+
 function setBatasKebun(id){
   if(_batasKebunIds.has(id)){
-    // Toggle OFF — hapus dari set
+    // Toggle OFF — hapus dari set + hapus explicit assignment
     _batasKebunIds.delete(id);
+    delete _bkOwnerMapExplicit[id];
     var m=measures.find(function(m){return m.id===id;});
     if(m)m.isBatasKebun=false;
     _rebuildBatasKebunPolygons();
