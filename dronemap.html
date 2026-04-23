@@ -622,9 +622,12 @@ var _treeLayer=null;
 var _editingTreeId=null;
 var _lastPolygonLayer=null;
 
-// BATAS KEBUN STATE
-var _batasKebunId=null;
-var _batasKebunPolygon=null; // Array of {lat,lng} — polygon vertices for crop masking
+// BATAS KEBUN STATE — multi-polygon support
+var _batasKebunIds=new Set();   // Set of polygon measure IDs yang aktif sebagai Batas Kebun
+var _batasKebunPolygons=[];     // [{id, label, verts:[{lat,lng}]}] — list semua BK aktif
+// Legacy alias untuk backward compat dengan PDF code (akan di-set ke nearest BK polygon)
+var _batasKebunPolygon=null;    // Digunakan oleh renderAerialToCanvas (single clip) — deprecated
+var _batasKebunId=null;         // Deprecated — gunakan _batasKebunIds
 
 // NADIR MODE STATE
 var _nadirMode=false;
@@ -1281,15 +1284,29 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-      // === CLIP PATH: Batas Kebun > Voronoi Seamline > 4 sudut foto ===
+      // === CLIP PATH: Batas Kebun terdekat > Voronoi Seamline > 4 sudut foto ===
       var clipPts;
-      if(_batasKebunPolygon&&_batasKebunPolygon.length>=3){
-        // Mode crop Batas Kebun
-        clipPts=_batasKebunPolygon.map(function(v){
-          var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
-          return{x:lp.x-off.x,y:lp.y-off.y};
+      // Cari Batas Kebun yang paling dekat dengan pusat foto ini
+      var activeBK=_batasKebunPolygons;
+      if(activeBK&&activeBK.length>0){
+        var pCenterLat=(tl.lat+tr.lat+br.lat+bl.lat)/4+(photo.offsetLat||0);
+        var pCenterLng=(tl.lng+tr.lng+br.lng+bl.lng)/4+(photo.offsetLng||0);
+        var nearestBK=null,minDist2=Infinity;
+        activeBK.forEach(function(bk){
+          if(!bk.verts||bk.verts.length<3)return;
+          var bkLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
+          var bkLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
+          var d=(pCenterLat-bkLat)*(pCenterLat-bkLat)+(pCenterLng-bkLng)*(pCenterLng-bkLng);
+          if(d<minDist2){minDist2=d;nearestBK=bk;}
         });
-      } else if(_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
+        if(nearestBK){
+          clipPts=nearestBK.verts.map(function(v){
+            var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
+            return{x:lp.x-off.x,y:lp.y-off.y};
+          });
+        }
+      }
+      if(!clipPts&&_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
         // Mode Seamline Voronoi: clip ke sel Voronoi foto ini
         clipPts=photo.voronoiCell.map(function(v){
           var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
@@ -1720,20 +1737,15 @@ function refreshMeasures(){
   drawnItems.eachLayer(function(layer){
     if(!layer.toGeoJSON)return;
     var gj=layer.toGeoJSON(),id=layer._mid||0,gt=gj.geometry.type,lb=lbl[id]||'Shape #'+id;
-    if(gt==='Polygon'){var a=turf.area(gj),pe=turf.length(turf.polygonToLine(gj),{units:'meters'}),co=gj.geometry.coordinates[0].slice(0,-1);measures.push({id:id,type:'polygon',area:a,perim:pe,coords:co,label:lb,isBatasKebun:(_batasKebunId===id)})}
+    if(gt==='Polygon'){var a=turf.area(gj),pe=turf.length(turf.polygonToLine(gj),{units:'meters'}),co=gj.geometry.coordinates[0].slice(0,-1);measures.push({id:id,type:'polygon',area:a,perim:pe,coords:co,label:lb,isBatasKebun:_batasKebunIds.has(id)})}
     else if(gt==='LineString'){var ln=turf.length(gj,{units:'meters'}),co2=gj.geometry.coordinates;measures.push({id:id,type:'line',len:ln,coords:co2,label:lb})}
     else if(gt==='Point'){var c=gj.geometry.coordinates;measures.push({id:id,type:'marker',lat:c[1],lng:c[0],label:lb})}
   });
   renderMeasures();updateStats();
-  // Update crop mask jika polygon Batas Kebun diedit
-  if(_batasKebunId&&drawnItems){
-    drawnItems.eachLayer(function(layer){
-      if(layer._mid===_batasKebunId&&layer.toGeoJSON){
-        var gj2=layer.toGeoJSON();
-        _batasKebunPolygon=gj2.geometry.coordinates[0].slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
-        photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
-      }
-    });
+  // Update crop mask jika ada polygon Batas Kebun yang diedit
+  if(_batasKebunIds.size>0){
+    _rebuildBatasKebunPolygons();
+    _updateBatasKebunInfoPanel();
   }
 }
 
@@ -1749,9 +1761,9 @@ function renderMeasures(){
       var pts=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
       var treeInfo=m.treesInside!==undefined?'<div style="font-size:9px;color:var(--saw2);font-family:\'Space Mono\',monospace;margin-top:3px">🌴 '+m.treesInside+' pokok | '+m.density+' pokok/ha</div>':'';
       var warnHtml=m.outsideWarning||'';
-      var isBK=m.isBatasKebun;
-      var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(90,158,53,.25);color:var(--saw2);font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid rgba(90,158,53,.4)">🌴 KEBUN</span>':'';
-      var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?'var(--saw)':'var(--bd)')+';background:'+(isBK?'rgba(90,158,53,.2)':'var(--s3)')+';color:'+(isBK?'var(--saw2)':'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Batas Kebun Aktif — Klik untuk nonaktif':'🌴 Set sebagai Batas Kebun')+'</button>';
+      var isBK=_batasKebunIds.has(m.id);
+      var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(90,158,53,.25);color:var(--saw2);font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid rgba(90,158,53,.4)">BLOK AKTIF</span>':'';
+      var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?'var(--saw)':'var(--bd)')+';background:'+(isBK?'rgba(90,158,53,.2)':'var(--s3)')+';color:'+(isBK?'var(--saw2)':'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Blok Aktif — Klik untuk nonaktif':'Jadikan Batas Blok')+'</button>';
       return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
     }
     if(m.type==='line'){
@@ -1767,65 +1779,89 @@ function renderMeasures(){
 
 function renameShape(id,val){var m=measures.find(function(m){return m.id===id});if(m)m.label=val}
 function deleteShape(id){
-  if(id===_batasKebunId){
-    _batasKebunId=null;
-    _batasKebunPolygon=null;
-    photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  if(_batasKebunIds.has(id)){
+    _batasKebunIds.delete(id);
+    _rebuildBatasKebunPolygons();
+    _updateBatasKebunInfoPanel();
   }
   drawnItems.eachLayer(function(l){if(l._mid===id)drawnItems.removeLayer(l)});
   measures=measures.filter(function(m){return m.id!==id});renderMeasures();updateStats();updateSensusStats();
 }
 
 // =====================================================
-// *** PATCH 7: BATAS KEBUN ***
+// *** PATCH 7: BATAS KEBUN — multi-polygon ***
 // =====================================================
+
+// Helper: rebuild _batasKebunPolygons dari _batasKebunIds + measures + drawnItems
+function _rebuildBatasKebunPolygons(){
+  _batasKebunPolygons=[];
+  _batasKebunIds.forEach(function(id){
+    var m=measures.find(function(m){return m.id===id;});
+    if(!m||m.type!=='polygon')return;
+    var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
+    if(!layer)return;
+    var gj=layer.toGeoJSON();
+    var verts=gj.geometry.coordinates[0].slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
+    _batasKebunPolygons.push({id:id,label:m.label||'Blok #'+id,verts:verts});
+  });
+  // Update legacy single-polygon alias (pakai pertama, untuk renderAerialToCanvas warisan)
+  _batasKebunPolygon=_batasKebunPolygons.length>0?_batasKebunPolygons[0].verts:null;
+  _batasKebunId=_batasKebunPolygons.length>0?_batasKebunPolygons[0].id:null;
+  // Refresh semua overlay
+  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+}
+
 function setBatasKebun(id){
-  if(_batasKebunId===id){
-    measures.forEach(function(m){m.isBatasKebun=false;});
-    _batasKebunId=null;
-    _batasKebunPolygon=null; // clear crop mask
-    // Refresh semua overlay agar crop hilang
-    photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
+  if(_batasKebunIds.has(id)){
+    // Toggle OFF — hapus dari set
+    _batasKebunIds.delete(id);
+    var m=measures.find(function(m){return m.id===id;});
+    if(m)m.isBatasKebun=false;
+    _rebuildBatasKebunPolygons();
     renderMeasures();updateSensusStats();
-    var bi=document.getElementById('batasKebunInfo');if(bi)bi.style.display='none';
-    setStatus('Batas Kebun dinonaktifkan — Crop mask dihapus','amber');
+    setStatus('Batas Blok dinonaktifkan','amber');
+    _updateBatasKebunInfoPanel();
     return;
   }
-  measures.forEach(function(m){m.isBatasKebun=(m.id===id);});
-  _batasKebunId=id;
-  var m=measures.find(function(m){return m.id===id});
+  // Toggle ON — tambah ke set
+  _batasKebunIds.add(id);
+  var m=measures.find(function(m){return m.id===id;});
   if(m){
-    renderMeasures();
-    // Find the layer and recalculate
-    var layer=null;drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
+    m.isBatasKebun=true;
+    // Hitung ulang pokok di dalam polygon ini
+    var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===id)layer=l;});
     if(layer&&typeof turf!=='undefined'){
       var gj=layer.toGeoJSON();
       var inside=countTreesInPolygon(gj);
       var area=turf.area(gj);
       var density=area>0?(inside/(area/10000)).toFixed(1):'-';
       m.treesInside=inside;m.density=density;
-
-      // *** STORE POLYGON VERTICES untuk crop mask ***
-      // GeoJSON polygon coords = [[lng,lat], [lng,lat], ...]
-      var rawCoords=gj.geometry.coordinates[0];
-      // Hapus titik terakhir jika sama dengan pertama (GeoJSON closed ring)
-      var polyVerts=rawCoords.slice(0,-1).map(function(c){return{lat:c[1],lng:c[0]};});
-      _batasKebunPolygon=polyVerts;
-
-      // Refresh semua overlay dengan crop mask baru
-      photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
-
-      var bi=document.getElementById('batasKebunInfo');
-      if(bi){
-        bi.style.display='';
-        bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b><br>'+
-          '<span style="font-size:8px;color:var(--mu)">✂ Crop aktif: '+polyVerts.length+' titik sudut polygon</span>';
-      }
-      setStatus('✂ Crop aktif: '+fmtArea(area)+' | 🌴 '+inside+' pokok | '+polyVerts.length+' sudut','green');
-      showToast('✂ Crop Batas Kebun aktif!\nLuas: '+fmtArea(area)+'\nPokok di dalam: '+inside+'\nSudut polygon: '+polyVerts.length+'\nKepadatan: '+density+' pokok/ha');
     }
-    updateSensusStats();
   }
+  _rebuildBatasKebunPolygons();
+  renderMeasures();updateSensusStats();
+  // Status
+  var totalBK=_batasKebunIds.size;
+  var totalArea=_batasKebunPolygons.reduce(function(s,bk){
+    var mm=measures.find(function(m){return m.id===bk.id;});return s+(mm?mm.area:0);},0);
+  setStatus('Batas Blok aktif: '+totalBK+' blok | Total: '+(totalArea/10000).toFixed(2)+' Ha','green');
+  showToast('Batas Blok ditambahkan!\nTotal: '+totalBK+' blok aktif');
+  _updateBatasKebunInfoPanel();
+}
+
+function _updateBatasKebunInfoPanel(){
+  var bi=document.getElementById('batasKebunInfo');if(!bi)return;
+  if(_batasKebunIds.size===0){bi.style.display='none';return;}
+  var totalArea=0,totalInside=0;
+  var rows=[];
+  _batasKebunPolygons.forEach(function(bk){
+    var mm=measures.find(function(m){return m.id===bk.id;});
+    if(!mm)return;
+    totalArea+=mm.area||0;totalInside+=mm.treesInside||0;
+    rows.push(bk.label+': '+(mm.area/10000).toFixed(2)+' Ha');
+  });
+  bi.style.display='';
+  bi.innerHTML='Batas Blok aktif: '+_batasKebunIds.size+'<br>'+rows.join('<br>')+'<br>Total luas: <b>'+(totalArea/10000).toFixed(2)+' Ha</b> | Pokok: <b>'+totalInside+'</b>';
 }
 
 // =====================================================
@@ -1938,27 +1974,18 @@ function updateSensusStats(){
   document.getElementById('stMati').textContent=mati;
   // Update Batas Kebun info if active
   var bi=document.getElementById('batasKebunInfo');
-  if(_batasKebunId&&bi){
-    var bkM=measures.find(function(m){return m.id===_batasKebunId});
-    var layer=null;if(drawnItems)drawnItems.eachLayer(function(l){if(l._mid===_batasKebunId)layer=l;});
-    if(bkM&&layer&&typeof turf!=='undefined'){
-      var gj=layer.toGeoJSON();
-      var inside=countTreesInPolygon(gj);
-      var area=turf.area(gj);
-      var density=area>0?(inside/(area/10000)).toFixed(1):'-';
-      bi.style.display='';
-      bi.innerHTML='🌴 <b>Batas Kebun:</b> '+fmtArea(area)+'<br>Pokok di dalam: <b>'+inside+'</b> | Kepadatan: <b>'+density+' /ha</b>';
-    }
-  }
+  if(_batasKebunIds.size>0&&bi){
+    _updateBatasKebunInfoPanel();
+  } else if(bi){bi.style.display='none';}
   var densityEl=document.getElementById('sensusDensity');
-  if(!_batasKebunId&&measures.length>0){
+  if(_batasKebunIds.size===0&&measures.length>0){
     var polys=measures.filter(function(m){return m.type==='polygon'});
     if(polys.length>0){
       var lastPoly=polys[polys.length-1];
       var d=lastPoly.area>0?(total/(lastPoly.area/10000)).toFixed(1):'-';
       densityEl.innerHTML='Kepadatan: <span style="color:var(--saw2)">'+d+'</span> pokok/ha<br><span style="font-size:8px">Dari polygon terakhir: '+fmtArea(lastPoly.area)+'</span>';
     }
-  } else if(!_batasKebunId){densityEl.textContent='Kepadatan: — pokok/ha';}
+  } else if(_batasKebunIds.size===0){densityEl.textContent='Kepadatan: — pokok/ha';}
   else{densityEl.style.display='none';}
 }
 
@@ -2013,11 +2040,12 @@ function buildGeoJSON(){
     photo.gcps.forEach(function(g,i){features.push({type:'Feature',geometry:{type:'Point',coordinates:[g.lng,g.lat]},properties:{feature_type:'gcp',photo_name:photo.name,gcp_index:i+1,pixel_x:Math.round(g.px),pixel_y:Math.round(g.py)}});});
   });
   trees.forEach(function(t){features.push({type:'Feature',geometry:{type:'Point',coordinates:[t.lng,t.lat]},properties:{feature_type:'palm_tree',no_pokok:t.no,blok:t.block,status:t.status,catatan:t.note}});});
-  // Include Batas Kebun polygon if set
-  if(_batasKebunId&&drawnItems){
+  // Include semua Batas Kebun polygon aktif
+  if(_batasKebunIds.size>0&&drawnItems){
     drawnItems.eachLayer(function(layer){
-      if(layer._mid===_batasKebunId&&layer.toGeoJSON){
-        var f=layer.toGeoJSON();f.properties={feature_type:'batas_kebun',label:'Batas Kebun'};features.push(f);
+      if(_batasKebunIds.has(layer._mid)&&layer.toGeoJSON){
+        var mm=measures.find(function(m){return m.id===layer._mid;})||{};
+        var f=layer.toGeoJSON();f.properties={feature_type:'batas_kebun',label:mm.label||'Batas Blok'};features.push(f);
       }
     });
   }
@@ -2419,6 +2447,15 @@ function exitSplitView(){
         <span style="color:var(--mu)">Rona warna polygon tidak tampil — hanya garis batas</span>
       </div>
     </div>
+    <!-- Multi-BK selector -->
+    <div id="pdfBkSelector" style="margin-bottom:14px;background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;display:none">
+      <div style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Pilih Blok yang Dicetak</div>
+      <div id="pdfBkList" style="font-size:9px;line-height:2"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="pdfBkSelectAll(true)" style="font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--saw2);cursor:pointer">Pilih Semua</button>
+        <button onclick="pdfBkSelectAll(false)" style="font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">Batal Semua</button>
+      </div>
+    </div>
     <div style="display:flex;gap:8px">
       <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
       <button onclick="runGeneratePdf()" style="flex:2;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📄 Cetak PDF</button>
@@ -2434,7 +2471,28 @@ function exitSplitView(){
 function openPdfModal(){
   if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
   var m=document.getElementById('pdfModal');
+  // Populate BK selector
+  var bkSel=document.getElementById('pdfBkSelector');
+  var bkList=document.getElementById('pdfBkList');
+  if(_batasKebunPolygons.length>0){
+    bkSel.style.display='';
+    bkList.innerHTML=_batasKebunPolygons.map(function(bk){
+      var mm=measures.find(function(m){return m.id===bk.id;});
+      var aHa=mm?(mm.area/10000).toFixed(2)+' Ha':'';
+      return '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:2px 0">'+
+        '<input type="checkbox" class="pdfBkCb" data-id="'+bk.id+'" checked style="accent-color:var(--saw)">'+
+        '<span style="color:var(--tx)">'+bk.label+'</span>'+
+        (aHa?'<span style="color:var(--mu);font-size:8px;font-family:\'Space Mono\',monospace">'+aHa+'</span>':'')+
+        '</label>';
+    }).join('');
+  } else {
+    bkSel.style.display='none';
+  }
   m.style.display='flex';
+}
+
+function pdfBkSelectAll(val){
+  document.querySelectorAll('.pdfBkCb').forEach(function(cb){cb.checked=val;});
 }
 function closePdfModal(){
   document.getElementById('pdfModal').style.display='none';
@@ -2461,26 +2519,23 @@ function onPdfFotoToggle(cb){
 // Render semua foto georef ke offscreen canvas untuk embed PDF
 // Mengembalikan HTMLCanvasElement berisi mosaik aerial
 // ──────────────────────────────────────────────────────────────
-async function renderAerialToCanvas(mapW, mapH, projectFn){
+async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon){
+  // clipPolygon: array of {lat,lng} atau null
+  // Jika null: cari nearest BK untuk tiap foto (behavior lama)
+  // Jika array: clip canvas ke polygon ini saja
   var canvas=document.createElement('canvas');
   canvas.width=mapW;canvas.height=mapH;
   var ctx=canvas.getContext('2d');
 
-  // Helper: konversi pdf-lib coords [pdfX,pdfY] ke canvas coords
-  // pdf-lib: Y=0 bawah, Y=PH atas.  project() mengembalikan Y meningkat ke atas.
-  // Canvas: Y=0 atas, Y=mapH bawah.
   function pdfToCanvas(pt){
-    // pt = [pdfX, pdfY] dimana pdfY = MAP_Y + offset_from_bottom_of_map
-    // canvas x = pdfX - MAP_X_offset (kita pakai 0-based karena canvas sudah di-size mapW x mapH)
-    // Tapi project() mengembalikan nilai absolut dalam pdf-lib coords
-    // Kita simpan MAP_X, MAP_Y, MAP_H di closure
     return [pt[0]-_pdfMapX, mapH-(pt[1]-_pdfMapY)];
   }
 
-  // Clip ke batas kebun jika aktif
-  if(_batasKebunPolygon&&_batasKebunPolygon.length>=3){
+  // Tentukan clip region
+  var useClip=clipPolygon&&clipPolygon.length>=3;
+  if(useClip){
     ctx.beginPath();
-    _batasKebunPolygon.forEach(function(v,i){
+    clipPolygon.forEach(function(v,i){
       var pt=projectFn(v.lat,v.lng);
       var cp=pdfToCanvas(pt);
       if(i===0)ctx.moveTo(cp[0],cp[1]);else ctx.lineTo(cp[0],cp[1]);
@@ -2494,19 +2549,38 @@ async function renderAerialToCanvas(mapW, mapH, projectFn){
 
   for(var pi=0;pi<sortedP.length;pi++){
     var photo=sortedP[pi];
+    // Jika ada clip polygon, hanya render foto yang pusatnya dekat dengan clip polygon
+    if(useClip){
+      var pCenterLat=(photo.corners.tl.lat+photo.corners.tr.lat+photo.corners.br.lat+photo.corners.bl.lat)/4+(photo.offsetLat||0);
+      var pCenterLng=(photo.corners.tl.lng+photo.corners.tr.lng+photo.corners.br.lng+photo.corners.bl.lng)/4+(photo.offsetLng||0);
+      // Centroid clip polygon
+      var clipCenterLat=clipPolygon.reduce(function(s,v){return s+v.lat;},0)/clipPolygon.length;
+      var clipCenterLng=clipPolygon.reduce(function(s,v){return s+v.lng;},0)/clipPolygon.length;
+      // Jika foto lebih dekat ke BK lain, skip — hanya render foto yang dekat dengan BK ini
+      // Cek apakah BK ini adalah nearest BK untuk foto ini
+      if(_batasKebunPolygons.length>1){
+        var minD=Infinity,nearestBkCenterLat=clipCenterLat,nearestBkCenterLng=clipCenterLng;
+        _batasKebunPolygons.forEach(function(bk){
+          var bkCLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
+          var bkCLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
+          var d=(pCenterLat-bkCLat)*(pCenterLat-bkCLat)+(pCenterLng-bkCLng)*(pCenterLng-bkCLng);
+          if(d<minD){minD=d;nearestBkCenterLat=bkCLat;nearestBkCenterLng=bkCLng;}
+        });
+        // Jika nearest bukan clip polygon ini, skip foto ini
+        var dToThis=(pCenterLat-clipCenterLat)*(pCenterLat-clipCenterLat)+(pCenterLng-clipCenterLng)*(pCenterLng-clipCenterLng);
+        if(Math.abs(dToThis-minD)>1e-12)continue; // bukan nearest
+      }
+    }
+
     var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
-    // Hitung posisi 4 sudut di canvas
     var tlP=projectFn(photo.corners.tl.lat+oLat,photo.corners.tl.lng+oLng);
     var trP=projectFn(photo.corners.tr.lat+oLat,photo.corners.tr.lng+oLng);
     var blP=projectFn(photo.corners.bl.lat+oLat,photo.corners.bl.lng+oLng);
     var tlC=pdfToCanvas(tlP),trC=pdfToCanvas(trP),blC=pdfToCanvas(blP);
     var W=photo.w,H=photo.h;
-    // Canvas 2D transform: [a,b,c,d,e,f]
-    // pixel(px,py) → (a*px+c*py+e, b*px+d*py+f)
     var a=(trC[0]-tlC[0])/W,b_=(trC[1]-tlC[1])/W;
     var c_=(blC[0]-tlC[0])/H,d_=(blC[1]-tlC[1])/H;
     var e_=tlC[0],f_=tlC[1];
-    // Load image
     var img=await (function(src){
       return new Promise(function(res,rej){
         var im=new Image();im.onload=function(){res(im);};im.onerror=rej;im.src=src;
@@ -2514,7 +2588,6 @@ async function renderAerialToCanvas(mapW, mapH, projectFn){
     })(photo.src);
     ctx.save();
     ctx.globalAlpha=Math.min(photo.opacity||0.9,1);
-    // Apply brightness/contrast via CSS filter
     var br=photo.brightness||100,ct=photo.contrast||100,sat=photo.saturation||100;
     ctx.filter='brightness('+br+'%) contrast('+ct+'%) saturate('+sat+'%)';
     ctx.transform(a,b_,c_,d_,e_,f_);
@@ -2538,6 +2611,13 @@ async function generateDroneMapPDF(){
     var includeFoto=(document.getElementById('pdfIncludeFoto').checked);
     // Hanya sertakan foto jika ada foto yang georef
     includeFoto=includeFoto&&photos.some(function(p){return p.georef&&p.visible&&p.corners;});
+
+    // Kumpulkan BK yang dipilih di modal
+    var selectedBkIds=new Set();
+    document.querySelectorAll('.pdfBkCb:checked').forEach(function(cb){selectedBkIds.add(parseInt(cb.getAttribute('data-id')));});
+    // Jika tidak ada BK dipilih (atau tidak ada BK sama sekali), gunakan semua BK aktif
+    var selectedBkPolygons=_batasKebunPolygons.filter(function(bk){return selectedBkIds.size===0||selectedBkIds.has(bk.id);});
+    // Jika tidak ada BK sama sekali, selectedBkPolygons = []
 
     // ── Kumpulkan semua koordinat ───────────────────────
     var allLats=[],allLngs=[];
@@ -2648,19 +2728,30 @@ async function generateDroneMapPDF(){
       }
     }
 
-    // ── EMBED FOTO UDARA (PNG, transparan di luar polygon) ─
-    // PNG digunakan agar area di luar polygon Batas Kebun tetap transparan
-    // sehingga grid dan background putih tetap terlihat di luar polygon
+    // ── EMBED FOTO UDARA (PNG, per-blok clip ke BK polygon masing-masing) ─
     if(includeFoto){
       showToast('⏳ Me-render foto udara ke PDF...');
       try{
-        var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project);
-        // PNG untuk menjaga transparansi di luar area polygon clip
-        var aerialDataUrl=aerialCanvas.toDataURL('image/png');
-        var aerialB64=aerialDataUrl.split(',')[1];
-        var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
-        var aerialImg=await pdfDoc.embedPng(aerialBytes);
-        page.drawImage(aerialImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
+        if(selectedBkPolygons.length>0){
+          // Render tiap BK secara terpisah agar tiap blok hanya tampil fotonya sendiri
+          for(var bki=0;bki<selectedBkPolygons.length;bki++){
+            var bkPoly=selectedBkPolygons[bki];
+            var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,bkPoly.verts);
+            var aerialDataUrl=aerialCanvas.toDataURL('image/png');
+            var aerialB64=aerialDataUrl.split(',')[1];
+            var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
+            var aerialImg=await pdfDoc.embedPng(aerialBytes);
+            page.drawImage(aerialImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
+          }
+        } else {
+          // Tidak ada BK — render semua foto tanpa clip
+          var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,null);
+          var aerialDataUrl=aerialCanvas.toDataURL('image/png');
+          var aerialB64=aerialDataUrl.split(',')[1];
+          var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
+          var aerialImg=await pdfDoc.embedPng(aerialBytes);
+          page.drawImage(aerialImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
+        }
       }catch(aerr){
         console.warn('Aerial render error:',aerr);
         showToast('⚠ Foto udara gagal dirender, melanjutkan tanpa foto...');
@@ -2672,7 +2763,10 @@ async function generateDroneMapPDF(){
     var polLeg=[];
     measures.forEach(function(m){
       if(m.type==='polygon'&&m.coords&&m.coords.length>=3){
-        var isBK=(m.id===_batasKebunId);
+        var isBK=_batasKebunIds.has(m.id);
+        // Jika ada BK terpilih, hanya gambar BK yang dipilih + polygon biasa lainnya
+        // Polygon BK yang tidak dipilih di modal: tetap gambar tapi lebih tipis
+        var isSelectedBK=isBK&&(selectedBkIds.size===0||selectedBkIds.has(m.id));
         var sHex=isBK?'#2e8024':'#1a6bcc';
         var fHex=isBK?'#5a9e35':'#58a6ff';
         var sRgb=hexToRgb(sHex),fRgb=hexToRgb(fHex);
@@ -2682,8 +2776,8 @@ async function generateDroneMapPDF(){
         if(!includeFoto){
           fillPolygon(pts,fRgb,isBK?0.28:0.18);
         }
-        // Stroke: lebih tebal jika ada foto untuk kontras
-        var strokeW=includeFoto?(isBK?2.5:1.6):(isBK?1.4:0.8);
+        // Stroke: BK yang dipilih lebih tebal
+        var strokeW=includeFoto?(isSelectedBK?2.5:isBK?1.2:1.0):(isBK?1.4:0.8);
         strokePolygon(pts,sRgb,strokeW);
         // Label centroid — dinaikkan agar tidak terpotong
         var cx=pts.slice(0,-1).reduce(function(s,p){return s+p[0];},0)/pts.slice(0,-1).length;
