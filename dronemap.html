@@ -640,6 +640,7 @@ var _lastPolygonLayer=null;
 // BATAS KEBUN STATE — multi-polygon support
 var _batasKebunIds=new Set();   // Set of polygon measure IDs yang aktif sebagai Batas Kebun
 var _batasKebunPolygons=[];     // [{id, label, verts:[{lat,lng}]}] — list semua BK aktif
+var _bkOwnerMap={};            // {bkId: photoId} — foto yang "memiliki" tiap BK polygon
 // Legacy alias untuk backward compat dengan PDF code (akan di-set ke nearest BK polygon)
 var _batasKebunPolygon=null;    // Digunakan oleh renderAerialToCanvas (single clip) — deprecated
 var _batasKebunId=null;         // Deprecated — gunakan _batasKebunIds
@@ -761,6 +762,7 @@ function _doRemovePhoto(id){
   }
   renderPhotoList();updateStats();renderLayerList();
   document.getElementById('hdrPhotoCount').textContent=photos.length+' foto';
+  _rebuildBkOwnerMap();
   if(_seamlineMode)computeAllVoronoi();
 }
 
@@ -1308,79 +1310,21 @@ function createRotatedOverlay(photo,toGeo){
       // === CLIP PATH: Batas Kebun berdasarkan INTERSEKSI foto+BK, bukan jarak centroid ===
       var clipPts;
       var activeBK=_batasKebunPolygons;
+      var ownedBK=null;
       if(activeBK&&activeBK.length>0){
-        var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
-        // Sudut-sudut foto dalam lat/lng (sudah dengan offset)
-        var photoCorners=[
-          {lat:tl.lat+oLat,lng:tl.lng+oLng},
-          {lat:tr.lat+oLat,lng:tr.lng+oLng},
-          {lat:br.lat+oLat,lng:br.lng+oLng},
-          {lat:bl.lat+oLat,lng:bl.lng+oLng}
-        ];
-        var pCenterLat=(photoCorners[0].lat+photoCorners[1].lat+photoCorners[2].lat+photoCorners[3].lat)/4;
-        var pCenterLng=(photoCorners[0].lng+photoCorners[1].lng+photoCorners[2].lng+photoCorners[3].lng)/4;
-      
-        // Helper: point-in-polygon (ray casting, lat/lng space)
-        function _ptInPoly(ptLat,ptLng,polyVerts){
-          var inside=false,n=polyVerts.length;
-          for(var i=0,j=n-1;i<n;j=i++){
-            var xi=polyVerts[i].lng,yi=polyVerts[i].lat;
-            var xj=polyVerts[j].lng,yj=polyVerts[j].lat;
-            var intersect=((yi>ptLat)!==(yj>ptLat))&&(ptLng<(xj-xi)*(ptLat-yi)/(yj-yi)+xi);
-            if(intersect)inside=!inside;
+        for(var _bki=0;_bki<activeBK.length;_bki++){
+          if(_bkOwnerMap[activeBK[_bki].id]===photo.id){
+            ownedBK=activeBK[_bki];break;
           }
-          return inside;
         }
-      
-        // Cek apakah foto berpotongan dengan BK:
-        // Foto intersects BK jika:
-        //   (a) pusat foto ada di dalam BK, ATAU
-        //   (b) setidaknya 1 sudut foto ada di dalam BK, ATAU
-        //   (c) setidaknya 1 vertex BK ada di dalam footprint foto
-        function _polyContainsAnyPoint(poly,pts){
-          return pts.some(function(p){return _ptInPoly(p.lat,p.lng,poly);});
-        }
-        function _ptInPhotoFootprint(ptLat,ptLng){
-          return _ptInPoly(ptLat,ptLng,photoCorners);
-        }
-      
-        // Kumpulkan semua BK yang benar-benar berpotongan dengan foto ini
-        var intersectingBKs=activeBK.filter(function(bk){
-          if(!bk.verts||bk.verts.length<3)return false;
-          // Cek pusat foto dalam BK
-          if(_ptInPoly(pCenterLat,pCenterLng,bk.verts))return true;
-          // Cek sudut foto dalam BK
-          if(_polyContainsAnyPoint(bk.verts,photoCorners))return true;
-          // Cek vertex BK dalam footprint foto
-          if(bk.verts.some(function(v){return _ptInPhotoFootprint(v.lat,v.lng);}))return true;
-          return false;
-        });
-      
-        if(intersectingBKs.length===1){
-          // Hanya satu BK yang berpotongan — clip langsung
-          clipPts=intersectingBKs[0].verts.map(function(v){
+        if(ownedBK){
+          clipPts=ownedBK.verts.map(function(v){
             var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
             return{x:lp.x-off.x,y:lp.y-off.y};
           });
-        } else if(intersectingBKs.length>1){
-          // Beberapa BK berpotongan dengan foto ini:
-          // Clip ke BK yang pusatnya paling dekat dengan pusat foto
-          var nearestBK=null,minD=Infinity;
-          intersectingBKs.forEach(function(bk){
-            var bkLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
-            var bkLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
-            var d=(pCenterLat-bkLat)*(pCenterLat-bkLat)+(pCenterLng-bkLng)*(pCenterLng-bkLng);
-            if(d<minD){minD=d;nearestBK=bk;}
-          });
-          if(nearestBK){
-            clipPts=nearestBK.verts.map(function(v){
-              var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
-              return{x:lp.x-off.x,y:lp.y-off.y};
-            });
-          }
         }
-        // intersectingBKs.length===0 → foto tidak berpotongan dengan BK manapun
-        // → clipPts tetap undefined → foto tidak di-clip ke BK manapun (tampil penuh / Voronoi)
+        // else: foto ini tidak memiliki BK apapun → clipPts undefined
+        // → jatuh ke Voronoi atau 4 sudut foto di bawah
       }
       if(!clipPts&&_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
         // Mode Seamline Voronoi: clip ke sel Voronoi foto ini
@@ -1399,6 +1343,26 @@ function createRotatedOverlay(photo,toGeo){
       for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
       ctx.closePath();ctx.clip();
       ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
+      // === PUNCH-OUT: hapus area BK milik foto lain dari canvas ini ===
+      // Foto yang tidak memiliki BK apapun: potong keluar semua area BK
+      if(activeBK&&activeBK.length>0&&!ownedBK){
+        activeBK.forEach(function(bk){
+          if(!bk.verts||bk.verts.length<3)return;
+          var bkPts=bk.verts.map(function(v){
+            var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
+            return{x:lp.x-off.x,y:lp.y-off.y};
+          });
+          ctx.save();
+          ctx.globalCompositeOperation='destination-out';
+          ctx.globalAlpha=1;
+          ctx.beginPath();
+          ctx.moveTo(bkPts[0].x,bkPts[0].y);
+          for(var _pi=1;_pi<bkPts.length;_pi++)ctx.lineTo(bkPts[_pi].x,bkPts[_pi].y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        });
+      }
     },
     setOpacityVal:function(op){photo.opacity=op;if(this._canvas&&this._nadirOp===undefined)this._canvas.style.opacity=op;},
     setNadirOpacity:function(op){
@@ -1590,6 +1554,7 @@ function georefPhoto(photo){
   document.querySelectorAll('.stab')[4].classList.add('active');
   document.getElementById('tab-measure').classList.add('active');
   updateGcpCoverageBox();
+  _rebuildBkOwnerMap();
   // Recompute seamline jika mode aktif
   if(_seamlineMode)computeAllVoronoi();
 }
@@ -1890,6 +1855,24 @@ function _rebuildBatasKebunPolygons(){
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
   // Update export tab blok list (BK status berubah)
   renderExportBlokList();
+  _rebuildBkOwnerMap();
+}
+
+function _rebuildBkOwnerMap(){
+  _bkOwnerMap={};
+  _batasKebunPolygons.forEach(function(bk){
+    var bestPhotoId=null,bestDist=Infinity;
+    var bkCLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
+    var bkCLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
+    photos.filter(function(p){return p.georef&&p.corners;}).forEach(function(p){
+      var cLat=(p.corners.tl.lat+p.corners.tr.lat+p.corners.br.lat+p.corners.bl.lat)/4+(p.offsetLat||0);
+      var cLng=(p.corners.tl.lng+p.corners.tr.lng+p.corners.br.lng+p.corners.bl.lng)/4+(p.offsetLng||0);
+      var d=(cLat-bkCLat)*(cLat-bkCLat)+(cLng-bkCLng)*(cLng-bkCLng);
+      if(d<bestDist){bestDist=d;bestPhotoId=p.id;}
+    });
+    if(bestPhotoId!==null)_bkOwnerMap[bk.id]=bestPhotoId;
+  });
+  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
 }
 
 function setBatasKebun(id){
