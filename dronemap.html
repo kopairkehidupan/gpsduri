@@ -1305,27 +1305,82 @@ function createRotatedOverlay(photo,toGeo){
         ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
         ctx.strokeStyle='#5a9e35';ctx.lineWidth=_dragModeActive?2:1.5;ctx.stroke();ctx.restore();
       }
-      // === CLIP PATH: Batas Kebun terdekat > Voronoi Seamline > 4 sudut foto ===
+      // === CLIP PATH: Batas Kebun berdasarkan INTERSEKSI foto+BK, bukan jarak centroid ===
       var clipPts;
-      // Cari Batas Kebun yang paling dekat dengan pusat foto ini
       var activeBK=_batasKebunPolygons;
       if(activeBK&&activeBK.length>0){
-        var pCenterLat=(tl.lat+tr.lat+br.lat+bl.lat)/4+(photo.offsetLat||0);
-        var pCenterLng=(tl.lng+tr.lng+br.lng+bl.lng)/4+(photo.offsetLng||0);
-        var nearestBK=null,minDist2=Infinity;
-        activeBK.forEach(function(bk){
-          if(!bk.verts||bk.verts.length<3)return;
-          var bkLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
-          var bkLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
-          var d=(pCenterLat-bkLat)*(pCenterLat-bkLat)+(pCenterLng-bkLng)*(pCenterLng-bkLng);
-          if(d<minDist2){minDist2=d;nearestBK=bk;}
+        var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
+        // Sudut-sudut foto dalam lat/lng (sudah dengan offset)
+        var photoCorners=[
+          {lat:tl.lat+oLat,lng:tl.lng+oLng},
+          {lat:tr.lat+oLat,lng:tr.lng+oLng},
+          {lat:br.lat+oLat,lng:br.lng+oLng},
+          {lat:bl.lat+oLat,lng:bl.lng+oLng}
+        ];
+        var pCenterLat=(photoCorners[0].lat+photoCorners[1].lat+photoCorners[2].lat+photoCorners[3].lat)/4;
+        var pCenterLng=(photoCorners[0].lng+photoCorners[1].lng+photoCorners[2].lng+photoCorners[3].lng)/4;
+      
+        // Helper: point-in-polygon (ray casting, lat/lng space)
+        function _ptInPoly(ptLat,ptLng,polyVerts){
+          var inside=false,n=polyVerts.length;
+          for(var i=0,j=n-1;i<n;j=i++){
+            var xi=polyVerts[i].lng,yi=polyVerts[i].lat;
+            var xj=polyVerts[j].lng,yj=polyVerts[j].lat;
+            var intersect=((yi>ptLat)!==(yj>ptLat))&&(ptLng<(xj-xi)*(ptLat-yi)/(yj-yi)+xi);
+            if(intersect)inside=!inside;
+          }
+          return inside;
+        }
+      
+        // Cek apakah foto berpotongan dengan BK:
+        // Foto intersects BK jika:
+        //   (a) pusat foto ada di dalam BK, ATAU
+        //   (b) setidaknya 1 sudut foto ada di dalam BK, ATAU
+        //   (c) setidaknya 1 vertex BK ada di dalam footprint foto
+        function _polyContainsAnyPoint(poly,pts){
+          return pts.some(function(p){return _ptInPoly(p.lat,p.lng,poly);});
+        }
+        function _ptInPhotoFootprint(ptLat,ptLng){
+          return _ptInPoly(ptLat,ptLng,photoCorners);
+        }
+      
+        // Kumpulkan semua BK yang benar-benar berpotongan dengan foto ini
+        var intersectingBKs=activeBK.filter(function(bk){
+          if(!bk.verts||bk.verts.length<3)return false;
+          // Cek pusat foto dalam BK
+          if(_ptInPoly(pCenterLat,pCenterLng,bk.verts))return true;
+          // Cek sudut foto dalam BK
+          if(_polyContainsAnyPoint(bk.verts,photoCorners))return true;
+          // Cek vertex BK dalam footprint foto
+          if(bk.verts.some(function(v){return _ptInPhotoFootprint(v.lat,v.lng);}))return true;
+          return false;
         });
-        if(nearestBK){
-          clipPts=nearestBK.verts.map(function(v){
+      
+        if(intersectingBKs.length===1){
+          // Hanya satu BK yang berpotongan — clip langsung
+          clipPts=intersectingBKs[0].verts.map(function(v){
             var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
             return{x:lp.x-off.x,y:lp.y-off.y};
           });
+        } else if(intersectingBKs.length>1){
+          // Beberapa BK berpotongan dengan foto ini:
+          // Clip ke BK yang pusatnya paling dekat dengan pusat foto
+          var nearestBK=null,minD=Infinity;
+          intersectingBKs.forEach(function(bk){
+            var bkLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
+            var bkLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
+            var d=(pCenterLat-bkLat)*(pCenterLat-bkLat)+(pCenterLng-bkLng)*(pCenterLng-bkLng);
+            if(d<minD){minD=d;nearestBK=bk;}
+          });
+          if(nearestBK){
+            clipPts=nearestBK.verts.map(function(v){
+              var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
+              return{x:lp.x-off.x,y:lp.y-off.y};
+            });
+          }
         }
+        // intersectingBKs.length===0 → foto tidak berpotongan dengan BK manapun
+        // → clipPts tetap undefined → foto tidak di-clip ke BK manapun (tampil penuh / Voronoi)
       }
       if(!clipPts&&_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
         // Mode Seamline Voronoi: clip ke sel Voronoi foto ini
