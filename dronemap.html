@@ -623,6 +623,37 @@ var _bkOwnerMapExplicit={};    // {bkId: photoId} — override eksplisit oleh us
 var _batasKebunPolygon=null;    // Digunakan oleh renderAerialToCanvas (single clip) — deprecated
 var _batasKebunId=null;         // Deprecated — gunakan _batasKebunIds
 
+// BATAS KEBUN — COLOR PALETTE (warna berbeda tiap blok)
+var _bkColorPalette=[
+  '#e74c3c','#3498db','#f39c12','#9b59b6',
+  '#1abc9c','#e67e22','#e91e63','#00bcd4',
+  '#8bc34a','#ff5722'
+];
+var _bkColorMap={};  // {bkId: colorHex}
+
+function _getBkColor(bkId){
+  if(_bkColorMap[bkId])return _bkColorMap[bkId];
+  // Assign warna berikutnya yang belum terpakai
+  var usedColors=Object.values(_bkColorMap);
+  var color=_bkColorPalette.find(function(c){return usedColors.indexOf(c)===-1;});
+  if(!color)color=_bkColorPalette[Object.keys(_bkColorMap).length%_bkColorPalette.length];
+  _bkColorMap[bkId]=color;
+  return color;
+}
+
+function _applyBkColors(){
+  if(!drawnItems)return;
+  drawnItems.eachLayer(function(layer){
+    if(!layer._mid||!layer.setStyle)return;
+    if(_batasKebunIds.has(layer._mid)){
+      var col=_getBkColor(layer._mid);
+      layer.setStyle({color:col,fillColor:col,weight:2.5,fillOpacity:0.18,dashArray:null});
+    } else {
+      layer.setStyle({color:'#5a9e35',fillColor:'#5a9e35',weight:2,fillOpacity:0.14,dashArray:null});
+    }
+  });
+}
+
 // NADIR MODE STATE
 
 var _nadirMoveHandler=null;
@@ -1734,6 +1765,8 @@ function refreshMeasures(){
     _rebuildBatasKebunPolygons();
     _updateBatasKebunInfoPanel();
   }
+  // Terapkan ulang warna BK setelah edit
+  _applyBkColors();
 }
 
 // =====================================================
@@ -1749,8 +1782,9 @@ function renderMeasures(){
       var treeInfo=m.treesInside!==undefined?'<div style="font-size:9px;color:var(--saw2);font-family:\'Space Mono\',monospace;margin-top:3px">🌴 '+m.treesInside+' pokok | '+m.density+' pokok/ha</div>':'';
       var warnHtml=m.outsideWarning||'';
       var isBK=_batasKebunIds.has(m.id);
-      var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:rgba(90,158,53,.25);color:var(--saw2);font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid rgba(90,158,53,.4)">BLOK AKTIF</span>':'';
-      var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?'var(--saw)':'var(--bd)')+';background:'+(isBK?'rgba(90,158,53,.2)':'var(--s3)')+';color:'+(isBK?'var(--saw2)':'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Blok Aktif — Klik untuk nonaktif':'Jadikan Batas Blok')+'</button>';
+      var bkColor=isBK?_getBkColor(m.id):'#5a9e35';
+      var bkTag=isBK?'<span style="font-size:8px;padding:1px 6px;border-radius:8px;background:'+bkColor+'33;color:'+bkColor+';font-family:\'Space Mono\',monospace;margin-left:4px;border:1px solid '+bkColor+'66"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+bkColor+';margin-right:3px;vertical-align:middle"></span>BLOK AKTIF</span>':'';
+      var bkBtn='<button onclick="setBatasKebun('+m.id+')" style="margin-top:5px;font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid '+(isBK?bkColor:'var(--bd)')+';background:'+(isBK?bkColor+'22':'var(--s3)')+';color:'+(isBK?bkColor:'var(--mu)')+';cursor:pointer;white-space:nowrap;font-family:\'Space Mono\',monospace">'+(isBK?'✓ Blok Aktif — Klik untuk nonaktif':'Jadikan Batas Blok')+'</button>';
       // Foto-assignment selector (hanya tampil jika polygon adalah BK aktif)
       var photoSelHtml='';
       if(isBK){
@@ -1783,7 +1817,7 @@ function renderMeasures(){
           +'</div>'
           +'</div>';
       }
-      return '<div class="m-card'+(isBK?' batas-kebun-card':'')+'">'+'<div class="m-card-head"><span>◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+photoSelHtml+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
+      return '<div class="m-card" style="'+(isBK?'border-left:3px solid '+bkColor+' !important;background:'+bkColor+'0d;':'')+'">'+'<div class="m-card-head"><span style="color:'+(isBK?bkColor:'var(--mu)')+'">◆</span><div class="m-lbl"><input value="'+m.label+'" onchange="renameShape('+m.id+',this.value)">'+bkTag+'</div><button class="m-del" onclick="deleteShape('+m.id+')">✕</button></div><div class="m-val" style="color:'+(isBK?bkColor:'var(--saw2)')+'">'+fmtArea(m.area)+'</div><div class="m-sub">Keliling: '+fmtLen(m.perim)+' · '+m.coords.length+' vertex</div>'+treeInfo+bkBtn+photoSelHtml+warnHtml+'<details class="m-pts"><summary>Koordinat Vertex</summary><ul class="m-pt-list">'+pts+'</ul></details></div>';
     }
     if(m.type==='line'){
       var pts2=m.coords.map(function(c,i){return '<li>'+(i+1)+'. '+c[1].toFixed(8)+', '+c[0].toFixed(8)+'</li>'}).join('');
@@ -1841,6 +1875,8 @@ function _rebuildBatasKebunPolygons(){
   _rebuildBkOwnerMap();
   // Update export tab blok list (BK status berubah)
   renderExportBlokList();
+  // Terapkan warna berbeda tiap polygon BK
+  _applyBkColors();
 }
 
 // Rebuild _bkOwnerMap: explicit user setting > auto-nearest photo
@@ -1921,9 +1957,10 @@ function setBkPhotoOwner(bkId,photoId){
 
 function setBatasKebun(id){
   if(_batasKebunIds.has(id)){
-    // Toggle OFF — hapus dari set + hapus explicit assignment
+    // Toggle OFF — hapus dari set + hapus explicit assignment + hapus warna
     _batasKebunIds.delete(id);
     delete _bkOwnerMapExplicit[id];
+    delete _bkColorMap[id];
     var m=measures.find(function(m){return m.id===id;});
     if(m)m.isBatasKebun=false;
     _rebuildBatasKebunPolygons();
@@ -2422,9 +2459,10 @@ function renderExportBlokList(){
     +'<span>Polygon</span><span style="white-space:nowrap;color:var(--tx)">Cetak</span><span style="white-space:nowrap;color:var(--in)">Foto</span></div>';
   polys.forEach(function(m){
     var isBK=_batasKebunIds.has(m.id);
+    var bkColor=isBK?_getBkColor(m.id):'#5a9e35';
     var aHa=(m.area/10000).toFixed(2)+' Ha';
     var pokokStr=m.treesInside>0?' | '+m.treesInside+' pokok':'';
-    var bkBadge=isBK?'<span style="font-size:7px;padding:0 4px;border-radius:6px;background:rgba(90,158,53,.25);color:var(--saw2);margin-left:3px">BK</span>':'';
+    var bkBadge=isBK?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+bkColor+';margin-left:4px;vertical-align:middle"></span>':'';
     var fotoDisabled=!isBK;
     var sid=String(m.id);
     // Pertahankan state lama jika ada, default: cetak=true, foto=isBK
