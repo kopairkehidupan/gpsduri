@@ -1561,6 +1561,7 @@ function movePhotoDown(pid){
   photos[idx-1].overlay&&photos[idx-1].overlay.forceUpdate&&photos[idx-1].overlay.forceUpdate();
   renderLayerList();
 }
+function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
 
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
@@ -2190,6 +2191,14 @@ function updateExportPerPhoto(){
 }
 
 // =====================================================
+function setStatus(msg,color){
+  document.getElementById('statusText').textContent=msg;
+  document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
+}
+function updateStep(n){
+  [1,2,3].forEach(function(i){var el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');});
+}
+
 // HELPERS
 // =====================================================
 function showToast(msg){
