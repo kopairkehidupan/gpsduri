@@ -2508,10 +2508,9 @@ function runGeneratePdf(){
 // Render semua foto georef ke offscreen canvas untuk embed PDF
 // Mengembalikan HTMLCanvasElement berisi mosaik aerial
 // ──────────────────────────────────────────────────────────────
-async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon){
+async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
   // clipPolygon: array of {lat,lng} atau null
-  // Jika null: cari nearest BK untuk tiap foto (behavior lama)
-  // Jika array: clip canvas ke polygon ini saja
+  // bkId: ID blok kebun (opsional) — jika ada, gunakan _bkOwnerMap untuk filter foto
   var canvas=document.createElement('canvas');
   canvas.width=mapW;canvas.height=mapH;
   var ctx=canvas.getContext('2d');
@@ -2536,28 +2535,32 @@ async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon){
   var sortedP=photos.filter(function(p){return p.georef&&p.visible&&p.corners&&p.src;})
     .slice().sort(function(a,b){return(a.zOrder||0)-(b.zOrder||0);});
 
+  // Jika bkId diberikan, gunakan _bkOwnerMap — hanya render foto yang di-assign ke BK ini
+  // Jika bkId tidak ada tapi useClip, fallback ke jarak centroid (backward compat)
+  var ownerPhotoId=bkId!==undefined?_bkOwnerMap[bkId]:undefined;
+
   for(var pi=0;pi<sortedP.length;pi++){
     var photo=sortedP[pi];
-    // Jika ada clip polygon, hanya render foto yang pusatnya dekat dengan clip polygon
+
     if(useClip){
-      var pCenterLat=(photo.corners.tl.lat+photo.corners.tr.lat+photo.corners.br.lat+photo.corners.bl.lat)/4+(photo.offsetLat||0);
-      var pCenterLng=(photo.corners.tl.lng+photo.corners.tr.lng+photo.corners.br.lng+photo.corners.bl.lng)/4+(photo.offsetLng||0);
-      // Centroid clip polygon
-      var clipCenterLat=clipPolygon.reduce(function(s,v){return s+v.lat;},0)/clipPolygon.length;
-      var clipCenterLng=clipPolygon.reduce(function(s,v){return s+v.lng;},0)/clipPolygon.length;
-      // Jika foto lebih dekat ke BK lain, skip — hanya render foto yang dekat dengan BK ini
-      // Cek apakah BK ini adalah nearest BK untuk foto ini
-      if(_batasKebunPolygons.length>1){
-        var minD=Infinity,nearestBkCenterLat=clipCenterLat,nearestBkCenterLng=clipCenterLng;
+      if(ownerPhotoId!==undefined){
+        // *** GUNAKAN _bkOwnerMap: hanya render foto yang di-assign ke BK ini ***
+        if(photo.id!==ownerPhotoId)continue;
+      } else if(_batasKebunPolygons.length>1){
+        // Fallback jarak centroid (jika bkId tidak diketahui)
+        var pCenterLat=(photo.corners.tl.lat+photo.corners.tr.lat+photo.corners.br.lat+photo.corners.bl.lat)/4+(photo.offsetLat||0);
+        var pCenterLng=(photo.corners.tl.lng+photo.corners.tr.lng+photo.corners.br.lng+photo.corners.bl.lng)/4+(photo.offsetLng||0);
+        var clipCenterLat=clipPolygon.reduce(function(s,v){return s+v.lat;},0)/clipPolygon.length;
+        var clipCenterLng=clipPolygon.reduce(function(s,v){return s+v.lng;},0)/clipPolygon.length;
+        var minD=Infinity;
         _batasKebunPolygons.forEach(function(bk){
           var bkCLat=bk.verts.reduce(function(s,v){return s+v.lat;},0)/bk.verts.length;
           var bkCLng=bk.verts.reduce(function(s,v){return s+v.lng;},0)/bk.verts.length;
           var d=(pCenterLat-bkCLat)*(pCenterLat-bkCLat)+(pCenterLng-bkCLng)*(pCenterLng-bkCLng);
-          if(d<minD){minD=d;nearestBkCenterLat=bkCLat;nearestBkCenterLng=bkCLng;}
+          if(d<minD)minD=d;
         });
-        // Jika nearest bukan clip polygon ini, skip foto ini
         var dToThis=(pCenterLat-clipCenterLat)*(pCenterLat-clipCenterLat)+(pCenterLng-clipCenterLng)*(pCenterLng-clipCenterLng);
-        if(Math.abs(dToThis-minD)>1e-12)continue; // bukan nearest
+        if(Math.abs(dToThis-minD)>1e-12)continue;
       }
     }
 
@@ -2739,7 +2742,7 @@ async function generateDroneMapPDF(){
           for(var bki=0;bki<selectedBkPolygons.length;bki++){
             var bkPoly=selectedBkPolygons[bki];
             if(!bkPoly.foto)continue; // skip blok yang foto=false
-            var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,bkPoly.verts);
+            var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,bkPoly.verts,bkPoly.id);
             var aerialDataUrl=aerialCanvas.toDataURL('image/png');
             var aerialB64=aerialDataUrl.split(',')[1];
             var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
