@@ -460,6 +460,23 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
             <button onclick="exportBlokAll(false,false)" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">Batal Semua</button>
           </div>
         </div>
+        <!-- OPSI PDF -->
+        <div style="background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:9px 11px;margin-bottom:10px">
+          <div style="font-size:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:8px">Opsi Cetak PDF</div>
+          <!-- Label blok -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bd)">
+            <div>
+              <span style="font-size:10px;color:var(--tx)">Label Nama Blok</span>
+              <div style="font-size:9px;color:var(--mu)">Tampilkan nama &amp; luas di tengah polygon</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="togPdfLabels" checked onchange="_pdfShowLabels=this.checked;_updateLabelDragMarkers()"><span class="toggle-sl"></span></label>
+          </div>
+          <!-- Label draggable hint -->
+          <div id="labelDragHint" style="font-size:9px;color:var(--mu);margin-top:5px;line-height:1.6;font-family:'Space Mono',monospace;padding:4px 7px;background:rgba(90,158,53,.05);border-radius:4px;border:1px solid rgba(90,158,53,.2)">
+            💡 Aktifkan Label → muncul <b style="color:var(--saw2)">marker L</b> di peta tiap blok.<br>Drag marker untuk geser posisi label.
+            <button onclick="resetAllLabelOffsets()" style="margin-top:4px;display:block;font-size:8px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ Reset semua posisi label</button>
+          </div>
+        </div>
         <button class="btn btn-full" onclick="openPdfModal()" style="background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#fff;margin-bottom:5px;border:none">📄 Download PDF Laporan</button>
       </div>
       <div class="s-sec">
@@ -658,6 +675,11 @@ function _applyBkColors(){
 
 var _nadirMoveHandler=null;
 
+// PDF OPTIONS STATE
+var _pdfShowLabels=true;    // toggle label blok di PDF
+var _labelOffsets={};       // {measureId: {dx,dy}} — offset label dalam satuan derajat lat/lng
+var _labelDragMarkers={};   // {measureId: L.Marker} — marker drag untuk posisi label di peta
+
 // =====================================================
 // *** PATCH 1: CONVEX HULL UTILITIES ***
 // =====================================================
@@ -707,6 +729,7 @@ function switchTab(id,el){
     var bl=document.getElementById('exportBlokList');
     var hasRows=bl&&bl.querySelector('.expBkCb');
     if(!hasRows)renderExportBlokList();
+    _updateLabelDragMarkers();
   }
 }
 
@@ -723,8 +746,8 @@ function addPhoto(file){
   var photo={
     id:id,name:file.name,src:null,w:0,h:0,
     gcps:[],georef:false,bounds:null,overlay:null,
-    visible:true,opacity:0.9,gcpLayer:null,corners:null,
-    feather:0.12,blendMode:'normal',
+    visible:true,opacity:1.0,gcpLayer:null,corners:null,
+    feather:0,blendMode:'normal',
     offsetLat:0,offsetLng:0,zOrder:photos.length,
     brightness:100,contrast:100,saturation:100,hue:0,
     colorNormApplied:false
@@ -2441,9 +2464,10 @@ function renderExportBlokList(){
   var el=document.getElementById('exportBlokList');
   var actEl=document.getElementById('exportBlokActions');
   if(!el)return;
-  var polys=measures.filter(function(m){return m.type==='polygon';});
-  if(polys.length===0){
-    el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada polygon. Gambar di tab Ukur.</div>';
+  // Semua polygon DAN polyline
+  var items=measures.filter(function(m){return m.type==='polygon'||m.type==='line';});
+  if(items.length===0){
+    el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada polygon/line. Gambar di tab Ukur.</div>';
     if(actEl)actEl.style.display='none';
     return;
   }
@@ -2456,23 +2480,29 @@ function renderExportBlokList(){
 
   // Header
   var html='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;background:rgba(90,158,53,.10);padding:6px 10px;font-size:8px;font-weight:700;color:var(--saw2);font-family:\'Space Mono\',monospace;text-transform:uppercase;gap:10px;border-bottom:1px solid var(--bd)">'
-    +'<span>Polygon</span><span style="white-space:nowrap;color:var(--tx)">Cetak</span><span style="white-space:nowrap;color:var(--in)">Foto</span></div>';
-  polys.forEach(function(m){
-    var isBK=_batasKebunIds.has(m.id);
+    +'<span>Polygon / Line</span><span style="white-space:nowrap;color:var(--tx)">Cetak</span><span style="white-space:nowrap;color:var(--in)">Foto</span></div>';
+
+  items.forEach(function(m){
+    var isPoly=m.type==='polygon';
+    var isLine=m.type==='line';
+    var isBK=isPoly&&_batasKebunIds.has(m.id);
     var bkColor=isBK?_getBkColor(m.id):'#5a9e35';
-    var aHa=(m.area/10000).toFixed(2)+' Ha';
-    var pokokStr=m.treesInside>0?' | '+m.treesInside+' pokok':'';
-    var bkBadge=isBK?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+bkColor+';margin-left:4px;vertical-align:middle"></span>':'';
+    var lineColor='#3580d8';
+    var aInfo=isPoly?(m.area/10000).toFixed(2)+' Ha':(m.len?fmtLen(m.len):'—');
+    var pokokStr=isPoly&&m.treesInside>0?' | '+m.treesInside+' pokok':'';
+    var typeBadge=isLine
+      ?'<span style="font-size:7px;padding:0 4px;border-radius:3px;background:rgba(53,128,216,.2);color:'+lineColor+';margin-left:3px">LINE</span>'
+      :(isBK?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+bkColor+';margin-left:4px;vertical-align:middle"></span>':'');
     var fotoDisabled=!isBK;
     var sid=String(m.id);
-    // Pertahankan state lama jika ada, default: cetak=true, foto=isBK
     var cetakVal=(sid in prevCetak)?prevCetak[sid]:true;
     var fotoVal=(sid in prevFoto)?prevFoto[sid]:isBK;
     var fotoOpacity=(cetakVal&&isBK)?'1':'0.25';
-    html+='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);gap:10px;background:var(--sf)">'
-      +'<div><div style="font-size:10px;font-weight:500;color:var(--tx)">'+m.label+bkBadge+'</div>'
-        +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+aHa+pokokStr+'</div></div>'
-      +'<label class="toggle" title="Cetak polygon ini"><input type="checkbox" class="expBkCb" data-id="'+m.id+'" '+(cetakVal?'checked':'')+' onchange="onExpBkChange('+m.id+')"><span class="toggle-sl"></span></label>'
+    var rowBg=isLine?'rgba(53,128,216,.04)':'var(--sf)';
+    html+='<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);gap:10px;background:'+rowBg+'">'
+      +'<div><div style="font-size:10px;font-weight:500;color:var(--tx)">'+m.label+typeBadge+'</div>'
+        +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+aInfo+pokokStr+'</div></div>'
+      +'<label class="toggle" title="Cetak ke PDF"><input type="checkbox" class="expBkCb" data-id="'+m.id+'" '+(cetakVal?'checked':'')+' onchange="onExpBkChange('+m.id+')"><span class="toggle-sl"></span></label>'
       +'<label class="toggle" title="'+(isBK?'Sertakan foto drone':'Hanya untuk Batas Blok aktif')+'" id="expFotoLbl_'+m.id+'" style="opacity:'+fotoOpacity+'">'
         +'<input type="checkbox" class="expBkFoto" data-id="'+m.id+'" '+(fotoVal&&isBK?'checked':'')+' '+(fotoDisabled?'disabled':'')+' style="">'
         +'<span class="toggle-sl" style="background:var(--in)"></span>'
@@ -2481,6 +2511,46 @@ function renderExportBlokList(){
   });
   el.innerHTML=html;
   _updatePdfModalSummary();
+}
+
+// ── Label Drag Markers ────────────────────────────────
+function _updateLabelDragMarkers(){
+  // Hapus semua marker lama
+  Object.keys(_labelDragMarkers).forEach(function(id){
+    if(_labelDragMarkers[id]&&map)try{map.removeLayer(_labelDragMarkers[id]);}catch(e){}
+    delete _labelDragMarkers[id];
+  });
+  if(!_pdfShowLabels||!map)return;
+  // Buat marker L (label) di setiap polygon yang ada di measures
+  measures.filter(function(m){return m.type==='polygon'&&m.coords&&m.coords.length>=3;}).forEach(function(m){
+    var off=_labelOffsets[m.id]||{dlat:0,dlng:0};
+    var cLat=m.coords.reduce(function(s,c){return s+c[1];},0)/m.coords.length+off.dlat;
+    var cLng=m.coords.reduce(function(s,c){return s+c[0];},0)/m.coords.length+off.dlng;
+    var isBK=_batasKebunIds.has(m.id);
+    var col=isBK?_getBkColor(m.id):'#5a9e35';
+    var icon=L.divIcon({
+      className:'',
+      html:'<div style="width:22px;height:22px;border-radius:4px;background:'+col+';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font:bold 9px monospace;color:#fff;cursor:move;user-select:none">L</div>',
+      iconSize:[22,22],iconAnchor:[11,11]
+    });
+    var marker=L.marker([cLat,cLng],{icon:icon,draggable:true,zIndexOffset:1000});
+    marker._mid=m.id;
+    marker.on('dragend',function(e){
+      var ll=e.target.getLatLng();
+      var cLat0=m.coords.reduce(function(s,c){return s+c[1];},0)/m.coords.length;
+      var cLng0=m.coords.reduce(function(s,c){return s+c[0];},0)/m.coords.length;
+      _labelOffsets[m.id]={dlat:ll.lat-cLat0,dlng:ll.lng-cLng0};
+    });
+    marker.bindTooltip(m.label||'Blok',{permanent:false,direction:'top',className:'',offset:[0,-14]});
+    marker.addTo(map);
+    _labelDragMarkers[m.id]=marker;
+  });
+}
+
+function resetAllLabelOffsets(){
+  _labelOffsets={};
+  _updateLabelDragMarkers();
+  showToast('Posisi semua label direset ke centroid polygon');
 }
 
 function onExpBkChange(id){
@@ -2506,16 +2576,25 @@ function exportBlokAll(cetak, foto){
 
 function _updatePdfModalSummary(){
   var el=document.getElementById('pdfModalSummary');if(!el)return;
-  var polys=measures.filter(function(m){return m.type==='polygon';});
-  var totalCetak=0,totalFoto=0,totalArea=0;
-  polys.forEach(function(m){
+  var items=measures.filter(function(m){return m.type==='polygon'||m.type==='line';});
+  var totalCetak=0,totalFoto=0,totalArea=0,totalLines=0;
+  items.forEach(function(m){
     var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
     var fcb=document.querySelector('.expBkFoto[data-id="'+m.id+'"]');
-    if(cb&&cb.checked){totalCetak++;totalArea+=m.area||0;if(fcb&&fcb.checked)totalFoto++;}
+    if(cb&&cb.checked){
+      totalCetak++;
+      if(m.type==='polygon')totalArea+=m.area||0;
+      if(m.type==='line')totalLines++;
+      if(fcb&&fcb.checked)totalFoto++;
+    }
   });
-  if(totalCetak===0){el.innerHTML='<span style="color:var(--er)">Belum ada blok yang dipilih</span>';return;}
-  el.innerHTML=totalCetak+' blok dipilih | '+(totalArea/10000).toFixed(2)+' Ha total'+
-    (totalFoto>0?'<br><span style="color:var(--in)">Foto drone: '+totalFoto+' blok</span>':'<br><span style="color:var(--mu)">Tanpa foto drone</span>');
+  if(totalCetak===0){el.innerHTML='<span style="color:var(--er)">Belum ada item yang dipilih</span>';return;}
+  var parts=[];
+  var polyCetak=totalCetak-totalLines;
+  if(polyCetak>0)parts.push(polyCetak+' polygon ('+(totalArea/10000).toFixed(2)+' Ha)');
+  if(totalLines>0)parts.push(totalLines+' polyline');
+  el.innerHTML=parts.join(' + ')+(totalFoto>0?'<br><span style="color:var(--in)">Foto drone: '+totalFoto+' blok</span>':'<br><span style="color:var(--mu)">Tanpa foto drone</span>')
+    +'<br><span style="color:var(--mu)">Label: '+ (_pdfShowLabels?'<span style="color:var(--saw2)">Tampil</span>':'<span>Sembunyikan</span>')+'</span>';
 }
 
 function openPdfModal(){
@@ -2641,21 +2720,24 @@ async function generateDroneMapPDF(){
     var includeFoto=photos.some(function(p){return p.georef&&p.visible&&p.corners;});
 
     // Kumpulkan pilihan dari Export tab (bukan modal lagi)
-    // Semua polygon: baca toggle cetak & foto dari Export tab
+    // Semua polygon & line: baca toggle cetak & foto dari Export tab
+    var selectedIds=new Set();  // IDs semua measure yang dipilih untuk cetak
     var selectedBkIds=new Set();  // IDs polygon yang dipilih untuk cetak
     var selectedBkPolygons=[];    // [{id,label,verts,foto}] — hanya BK yang dipilih + foto
 
-    measures.filter(function(m){return m.type==='polygon';}).forEach(function(m){
+    measures.filter(function(m){return m.type==='polygon'||m.type==='line';}).forEach(function(m){
       var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
-      if(!cb||!cb.checked)return; // polygon tidak dipilih
-      selectedBkIds.add(m.id);
-      // Foto: hanya berlaku jika polygon adalah Batas Blok
-      var isBK=_batasKebunIds.has(m.id);
-      var fcb=document.querySelector('.expBkFoto[data-id="'+m.id+'"]');
-      var bkFoto=isBK&&fcb&&fcb.checked&&includeFoto;
-      if(isBK){
-        var bkPoly=_batasKebunPolygons.find(function(b){return b.id===m.id;});
-        if(bkPoly)selectedBkPolygons.push({id:m.id,label:bkPoly.label,verts:bkPoly.verts,foto:bkFoto});
+      if(!cb||!cb.checked)return; // tidak dipilih
+      selectedIds.add(m.id);
+      if(m.type==='polygon'){
+        selectedBkIds.add(m.id);
+        var isBK=_batasKebunIds.has(m.id);
+        var fcb=document.querySelector('.expBkFoto[data-id="'+m.id+'"]');
+        var bkFoto=isBK&&fcb&&fcb.checked&&includeFoto;
+        if(isBK){
+          var bkPoly=_batasKebunPolygons.find(function(b){return b.id===m.id;});
+          if(bkPoly)selectedBkPolygons.push({id:m.id,label:bkPoly.label,verts:bkPoly.verts,foto:bkFoto});
+        }
       }
     });
 
@@ -2807,7 +2889,7 @@ async function generateDroneMapPDF(){
     measures.forEach(function(m){
       if(m.type==='polygon'&&m.coords&&m.coords.length>=3){
         var isBK=_batasKebunIds.has(m.id);
-        var isSelected=selectedBkIds.size===0||selectedBkIds.has(m.id);
+        var isSelected=selectedIds.size===0||selectedIds.has(m.id);
         if(!isSelected)return; // skip polygon yang tidak dipilih cetak
         // Cek apakah blok ini punya foto
         var thisBkFoto=false;
@@ -2820,32 +2902,34 @@ async function generateDroneMapPDF(){
         var sRgb=hexToRgb(sHex),fRgb=hexToRgb(fHex);
         var pts=m.coords.map(function(c){return project(c[1],c[0]);});
         pts.push(pts[0]); // close
-        // Jika blok punya foto → tidak perlu fill, foto akan menutup area
         var thisBlockHasFoto=thisBkFoto;
         if(!thisBlockHasFoto){
           fillPolygon(pts,fRgb,isBK?0.28:0.18);
         }
-        // Stroke: BK lebih tebal
         var strokeW=thisBlockHasFoto?2.5:(isBK?1.4:0.8);
         strokePolygon(pts,sRgb,strokeW);
-        // Label centroid — dinaikkan agar tidak terpotong
-        var cx=pts.slice(0,-1).reduce(function(s,p){return s+p[0];},0)/pts.slice(0,-1).length;
-        var cy=pts.slice(0,-1).reduce(function(s,p){return s+p[1];},0)/pts.slice(0,-1).length;
-        if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
-          var lbl=m.label||'Blok';
-          var aHa=(m.area/10000).toFixed(2)+' Ha';
-          var tw=Math.max(lbl.length*4.2, aHa.length*3.8);
-          // Kotak putih latar label (lebih tinggi)
-          page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,color:rgb(1,1,1),opacity:0.92});
-          // Garis border tipis
-          page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,borderColor:rgb(isBK?0.18:0.1,isBK?0.63:0.25,isBK?0.26:0.6),borderWidth:0.5});
-          // Nama blok di atas
-          page.drawText(lbl,{x:cx-lbl.length*4.2/2,y:cy+4,size:6,color:rgb(isBK?0:0.1,isBK?0.35:0.2,isBK?0:0.55),font:fontBold});
-          // Luas di bawah
-          page.drawText(aHa,{x:cx-aHa.length*3.8/2,y:cy-4.5,size:5.5,color:rgb(0.2,0.2,0.2),font:fontNorm});
+        // Label — gunakan offset jika ada, toggle via _pdfShowLabels
+        if(_pdfShowLabels){
+          var off=_labelOffsets[m.id]||{dlat:0,dlng:0};
+          var cLat0=m.coords.reduce(function(s,c){return s+c[1];},0)/m.coords.length;
+          var cLng0=m.coords.reduce(function(s,c){return s+c[0];},0)/m.coords.length;
+          var lpt=project(cLat0+off.dlat,cLng0+off.dlng);
+          var cx=lpt[0],cy=lpt[1];
+          if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
+            var lbl=m.label||'Blok';
+            var aHa=(m.area/10000).toFixed(2)+' Ha';
+            var tw=Math.max(lbl.length*4.2, aHa.length*3.8);
+            page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,color:rgb(1,1,1),opacity:0.92});
+            page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,borderColor:rgb(isBK?0.18:0.1,isBK?0.63:0.25,isBK?0.26:0.6),borderWidth:0.5});
+            page.drawText(lbl,{x:cx-lbl.length*4.2/2,y:cy+4,size:6,color:rgb(isBK?0:0.1,isBK?0.35:0.2,isBK?0:0.55),font:fontBold});
+            page.drawText(aHa,{x:cx-aHa.length*3.8/2,y:cy-4.5,size:5.5,color:rgb(0.2,0.2,0.2),font:fontNorm});
+          }
         }
         polLeg.push({label:m.label||'Blok',area:m.area,isBK:isBK,fHex:fHex,sHex:sHex,trees:m.treesInside||0,density:m.density||'-'});
       } else if(m.type==='line'&&m.coords&&m.coords.length>=2){
+        // Line — pakai toggle cetak dari selectedIds
+        var isSelectedLine=selectedIds.size===0||selectedIds.has(m.id);
+        if(!isSelectedLine)return;
         var lRgb=hexToRgb('#3580d8');
         for(var li=0;li<m.coords.length-1;li++){
           var pa=project(m.coords[li][1],m.coords[li][0]);
@@ -2914,8 +2998,9 @@ async function generateDroneMapPDF(){
     page.drawText((scaleRatio/1000).toFixed(1)+'km',{x:sbX+sbW-10,y:sbY-9,size:6,color:rgb(0,0,0),font:fontNorm});
     yPos-=box2H;
 
-    // --- BOX 3: STATISTIK SENSUS ---
+    // --- BOX 3: STATISTIK SENSUS (hanya jika ada data sensus) ---
     var nTotal=trees.length;
+    if(nTotal>0){
     var nNormal=trees.filter(function(t){return t.status==='normal';}).length;
     var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
     var nMati=trees.filter(function(t){return t.status==='mati';}).length;
@@ -2924,8 +3009,6 @@ async function generateDroneMapPDF(){
     var DSI=nTotal>0?((nSakit*1+nMati*2+nKosong*1)/(nTotal*2)*100):0;
     var statusLabel=DI>20?'ENDEMIK':DI>10?'WASPADA':'TERKENDALI';
     var statusRgb=DI>20?{r:0.72,g:0.11,b:0.11}:DI>10?{r:0.7,g:0.3,b:0}:{r:0.1,g:0.42,b:0.19};
-
-    // Statistik: Total, Normal, Sakit, Mati, Kosong (tanpa emoji — WinAnsi tidak support)
     var statRows=[
       ['Total Pokok',nTotal,rgb(0,0,0)],
       ['Normal',nNormal,rgb(0.1,0.45,0.15)],
@@ -2941,10 +3024,7 @@ async function generateDroneMapPDF(){
     statRows.forEach(function(row,i){
       var bg=i%2===0?rgb(0.94,0.98,0.94):rgb(1,1,1);
       page.drawRectangle({x:SB_X,y:sy-rowH,width:SB_W,height:rowH,color:bg});
-      // Dot warna sebagai indikator (kecuali baris Total)
-      if(i>0){
-        page.drawCircle({x:SB_X+5,y:sy-rowH/2,size:3,color:row[2]});
-      }
+      if(i>0){page.drawCircle({x:SB_X+5,y:sy-rowH/2,size:3,color:row[2]});}
       var lblX=i>0?SB_X+11:SB_X+3;
       page.drawText(String(row[0]),{x:lblX,y:sy-rowH+3,size:7,color:rgb(0.15,0.15,0.15),font:i===0?fontBold:fontNorm});
       var valStr=String(row[1]);
@@ -2956,6 +3036,7 @@ async function generateDroneMapPDF(){
     var diStr='DI: '+DI.toFixed(1)+'%   DSI: '+DSI.toFixed(1)+'%   '+statusLabel;
     page.drawText(diStr,{x:SB_X+SB_W/2-(diStr.length*3),y:sy-9,size:6.5,color:rgb(1,1,1),font:fontBold});
     yPos-=box3H;
+    } // end if(nTotal>0)
 
     // --- BOX 4: RINCIAN AREAL (hanya polygon, tanpa duplikat tree) ---
     var legItems=[];
