@@ -1264,22 +1264,19 @@ function createRotatedOverlay(photo,toGeo){
       map.getPanes().overlayPane.appendChild(this._canvas);
       var self=this;
       buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
-      this._canvas.addEventListener('click',function(e){
-        if(!_dragModeActive)return;
-        e.stopPropagation();
-        // Klik foto ini = pilih foto ini
-        _selectedDragPhoto=photo;
-        _updateDragModeInfo();
-        map.dragging.disable();
-      });
-      this._canvas.addEventListener('mousedown',function(e){
-        if(!_dragModeActive)return;
-        if(_selectedDragPhoto!==photo)return; // hanya foto yang dipilih yang bisa di-drag
-        e.stopPropagation();
-        var r=map.getContainer().getBoundingClientRect();
-        var cp=map.containerPointToLatLng([e.clientX-r.left,e.clientY-r.top]);
-        _dragPhoto=photo;_dragStartLatLng=cp;_dragStartOffset={lat:photo.offsetLat,lng:photo.offsetLng};
-        map.dragging.disable();document.body.style.cursor='grabbing';e.preventDefault();
+      this._canvas.addEventListener('mousedown', function(e) {
+          if (!_dragModeActive) return;
+          if (!_selectedDragPhoto || _selectedDragPhoto.id !== photo.id) return;
+          // Konfirmasi ini memang foto yang terpilih — mulai drag
+          e.stopPropagation();
+          e.preventDefault();
+          var r = map.getContainer().getBoundingClientRect();
+          var cp = map.containerPointToLatLng([e.clientX - r.left, e.clientY - r.top]);
+          _dragPhoto = photo;
+          _dragStartLatLng = cp;
+          _dragStartOffset = { lat: photo.offsetLat, lng: photo.offsetLng };
+          map.dragging.disable();
+          document.body.style.cursor = 'grabbing';
       });
       map.on('zoom viewreset move zoomend moveend resize',this._update,this);
     },
@@ -1612,6 +1609,11 @@ function toggleDragMode(btn){
       _dragPhoto=null;
       _selectedDragPhoto=null;
       _clearDragSelection();
+      // Tambahkan di dalam blok `if(!_dragModeActive)` setelah _clearDragSelection():
+      photos.forEach(function(p) {
+          if (p.overlay && p.overlay._canvas)
+              p.overlay._canvas.style.cursor = '';
+      });
     }
   }
   photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
@@ -1655,6 +1657,39 @@ document.addEventListener('mouseup',function(){
   renderLayerList();
 });
 function updateOffsetDisplay(photo){var el=document.getElementById('offset_'+photo.id);if(el)el.textContent='Δ '+photo.offsetLat.toFixed(6)+' / '+photo.offsetLng.toFixed(6);}
+// =====================================================
+// DRAG MODE — GEO HIT TEST
+// =====================================================
+function _pointInPolygonLL(lat, lng, poly) {
+  // poly: array of {lat, lng}
+  var inside = false, n = poly.length;
+  for (var i = 0, j = n - 1; i < n; j = i++) {
+    var xi = poly[i].lng, yi = poly[i].lat;
+    var xj = poly[j].lng, yj = poly[j].lat;
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi))
+      inside = !inside;
+  }
+  return inside;
+}
+
+function _findPhotoAtLatLng(lat, lng) {
+  // Cari foto georef yang quad-nya mengandung titik ini,
+  // diurutkan z-order tertinggi dulu (foto "paling atas" yang dipilih)
+  return photos
+    .filter(function(p) { return p.georef && p.visible && p.corners; })
+    .sort(function(a, b) { return (b.zOrder || 0) - (a.zOrder || 0); })
+    .find(function(p) {
+      var oLat = p.offsetLat || 0, oLng = p.offsetLng || 0;
+      var c = p.corners;
+      var quad = [
+        { lat: c.tl.lat + oLat, lng: c.tl.lng + oLng },
+        { lat: c.tr.lat + oLat, lng: c.tr.lng + oLng },
+        { lat: c.br.lat + oLat, lng: c.br.lng + oLng },
+        { lat: c.bl.lat + oLat, lng: c.bl.lng + oLng }
+      ];
+      return _pointInPolygonLL(lat, lng, quad);
+    }) || null;
+}
 function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
 
 // =====================================================
@@ -1703,15 +1738,28 @@ function initMap(refPhoto){
     renderMeasures();updateStats();
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-  map.on('click',function(e){
-    if(_treeMode==='add'){addTree(e.latlng.lat,e.latlng.lng);return;}
-    if(_dragModeActive&&!_dragPhoto){
-      // Klik area kosong = batal pilihan
-      _clearDragSelection();
-      _updateDragModeInfo();
-      map.dragging.enable();
+  map.on('click', function(e) {
+    if (_treeMode === 'add') { addTree(e.latlng.lat, e.latlng.lng); return; }
+    if (_dragModeActive && !_dragPhoto) {
+        var hit = _findPhotoAtLatLng(e.latlng.lat, e.latlng.lng);
+        if (hit) {
+            // Klik di atas foto — pilih foto ini
+            _selectedDragPhoto = hit;
+            _updateDragModeInfo();
+            // Ubah kursor canvas foto terpilih jadi grab
+            photos.forEach(function(p) {
+                if (p.overlay && p.overlay._canvas)
+                    p.overlay._canvas.style.cursor =
+                        (p.id === hit.id) ? 'grab' : 'default';
+            });
+        } else {
+            // Klik di area kosong — batal pilihan
+            _clearDragSelection();
+            _updateDragModeInfo();
+            map.dragging.enable();
+        }
     }
-  });
+});
   _smartViewReattach();
 }
 
