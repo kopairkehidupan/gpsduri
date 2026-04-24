@@ -603,6 +603,7 @@ var _panelVersion=0,_abortCtrl=null;
 
 var _showPhotoOutlines=false;
 var _seamlineMode=false; // Voronoi seamline aktif
+var _drawActive=false;   // true saat Leaflet.Draw sedang menggambar/edit — blokir addTree
 
 // SENSUS STATE
 var trees=[];
@@ -1590,8 +1591,15 @@ function initMap(refPhoto){
     e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});
     renderMeasures();updateStats();
   });
+  // Blokir addTree saat Leaflet.Draw aktif menggambar/edit/hapus
+  map.on(L.Draw.Event.DRAWSTART,function(){_drawActive=true;});
+  map.on(L.Draw.Event.DRAWSTOP,function(){_drawActive=false;});
+  map.on(L.Draw.Event.EDITSTART,function(){_drawActive=true;});
+  map.on(L.Draw.Event.EDITSTOP,function(){_drawActive=false;});
+  map.on(L.Draw.Event.DELETESTART,function(){_drawActive=true;});
+  map.on(L.Draw.Event.DELETESTOP,function(){_drawActive=false;});
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-  map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
+  map.on('click',function(e){if(_treeMode!=='add'||_drawActive)return;addTree(e.latlng.lat,e.latlng.lng);});
 }
 
 // =====================================================
@@ -2317,8 +2325,14 @@ function exitSplitView(){
       map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
       map.on(L.Draw.Event.EDITED,refreshMeasures);
       map.on(L.Draw.Event.DELETED,function(e){e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});renderMeasures();updateStats();});
+      map.on(L.Draw.Event.DRAWSTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.DRAWSTOP,function(){_drawActive=false;});
+      map.on(L.Draw.Event.EDITSTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.EDITSTOP,function(){_drawActive=false;});
+      map.on(L.Draw.Event.DELETESTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.DELETESTOP,function(){_drawActive=false;});
       map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-      map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
+      map.on('click',function(e){if(_treeMode!=='add'||_drawActive)return;addTree(e.latlng.lat,e.latlng.lng);});
       photos.forEach(function(ph){
         if(ph.georef&&ph.gcps.length>=3){
           var tg=buildAffine(ph.gcps);ph.overlay=createRotatedOverlay(ph,tg);
