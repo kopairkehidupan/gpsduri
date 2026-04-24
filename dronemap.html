@@ -324,22 +324,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
   <!-- TAB LAYERS -->
   <div class="tabpane" id="tab-layers">
     <div class="sbody">
-      <div class="s-sec">
-        <div class="s-ttl">Smart Nadir View</div>
-        <button class="btn btn-full drag-btn" id="btnSmartView" onclick="toggleSmartView(this)" style="margin-bottom:5px">🔍 Aktifkan Smart Nadir View</button>
-        <div style="font-size:9px;color:var(--mu);line-height:1.8;margin-bottom:6px">Foto yang <b style="color:var(--tx)">pusatnya paling dekat tengah peta</b> tampil dominan saat peta digeser. Foto lain diredupkan. Geser kursor tidak berpengaruh.</div>
-        <div class="slider-row">
-          <label class="adj-lbl">Min Opacity</label>
-          <input type="range" min="0" max="60" value="8" id="smartMinOpacity" oninput="updateSmartMinOpacity(this)">
-          <span class="slider-val" id="smartMinOpacityVal">8%</span>
-        </div>
-        <div style="margin-top:5px;display:flex;gap:4px;">
-          <button class="btn btn-sc btn-sm" onclick="smartViewShowAll()">👁 Tampil Semua</button>
-          <button class="btn btn-sc btn-sm" onclick="smartViewPinActive()">📌 Pin Foto Ini</button>
-        </div>
-        <div id="smartViewInfo" style="display:none;margin-top:5px;font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);background:rgba(90,158,53,.07);border-radius:4px;padding:4px 8px;line-height:1.8"></div>
-      </div>
-      <div class="s-sec">
+<div class="s-sec">
         <div class="s-ttl">Basemap</div>
         <div class="bmap-row">
           <button class="bmap-btn active" onclick="setBasemap('esri',this)">Satellite</button>
@@ -349,14 +334,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <button class="bmap-btn" onclick="setBasemap('none',this)">None</button>
         </div>
       </div>
-      <div class="s-sec">
-        <div class="s-ttl">Mode Geser Foto</div>
-        <button class="btn btn-full drag-btn" id="btnDragMode" onclick="toggleDragMode(this)" style="margin-bottom:5px">✋ Aktifkan Mode Geser Foto</button>
-        <div style="font-size:9px;color:var(--mu);line-height:1.7">Saat aktif: klik &amp; drag foto di peta untuk menyesuaikan posisi.</div>
-        <!-- TAMBAHKAN setelah div info Mode Geser Foto -->
-        <div id="dragSelectedInfo" style="display:none;margin-top:6px;background:rgba(90,158,53,.08);border:1px solid rgba(90,158,53,.25);border-radius:5px;padding:6px 9px;font-size:9px;font-family:'Space Mono',monospace;line-height:1.8"></div>
-      </div>
-      <div class="s-sec" style="padding-bottom:8px">
+<div class="s-sec" style="padding-bottom:8px">
         <div class="s-ttl">Overlay Foto &amp; Z-Order</div>
         <div id="layerList"><div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div></div>
       </div>
@@ -374,11 +352,7 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
           <span style="font-size:10px;color:var(--tx)">Marker Pokok Sawit</span>
           <label class="toggle"><input type="checkbox" id="togTrees" checked onchange="toggleLayerGroup('trees',this.checked)"><span class="toggle-sl"></span></label>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
-          <span style="font-size:10px;color:var(--tx)">Tampilkan Batas Foto</span>
-          <label class="toggle"><input type="checkbox" id="togOutlines" onchange="toggleOutlines(this.checked)"><span class="toggle-sl"></span></label>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;margin-top:2px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;margin-top:2px">
           <div>
             <span style="font-size:10px;color:var(--tx)">✂ Seamline Otomatis</span>
             <div style="font-size:9px;color:var(--mu);line-height:1.5;max-width:190px">Potong tiap foto ke area terdekat kameranya — hilangkan bayangan tumpang tindih</div>
@@ -626,7 +600,7 @@ var imgEl=null,canvasEl=null,gcpOverlayEl=null,scale=1,offX=0,offY=0;
 var isDragging=false,_drag=false,dragStart={x:0,y:0},_mx=0,_my=0;
 var pendingPx=null;
 var _panelVersion=0,_abortCtrl=null;
-var _dragModeActive=false,_dragPhoto=null,_dragStartLatLng=null,_dragStartOffset=null;
+
 var _showPhotoOutlines=false;
 var _seamlineMode=false; // Voronoi seamline aktif
 
@@ -649,7 +623,7 @@ var _batasKebunPolygon=null;    // Digunakan oleh renderAerialToCanvas (single c
 var _batasKebunId=null;         // Deprecated — gunakan _batasKebunIds
 
 // NADIR MODE STATE
-var _nadirMode=false;
+
 var _nadirMoveHandler=null;
 
 // =====================================================
@@ -1264,20 +1238,6 @@ function createRotatedOverlay(photo,toGeo){
       map.getPanes().overlayPane.appendChild(this._canvas);
       var self=this;
       buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
-      this._canvas.addEventListener('mousedown', function(e) {
-          if (!_dragModeActive) return;
-          if (!_selectedDragPhoto || _selectedDragPhoto.id !== photo.id) return;
-          // Konfirmasi ini memang foto yang terpilih — mulai drag
-          e.stopPropagation();
-          e.preventDefault();
-          var r = map.getContainer().getBoundingClientRect();
-          var cp = map.containerPointToLatLng([e.clientX - r.left, e.clientY - r.top]);
-          _dragPhoto = photo;
-          _dragStartLatLng = cp;
-          _dragStartOffset = { lat: photo.offsetLat, lng: photo.offsetLng };
-          map.dragging.disable();
-          document.body.style.cursor = 'grabbing';
-      });
       map.on('zoom viewreset move zoomend moveend resize',this._update,this);
     },
     onRemove:function(map){
@@ -1296,7 +1256,6 @@ function createRotatedOverlay(photo,toGeo){
       this._canvas.style.left=topLeft.x+'px';this._canvas.style.top=topLeft.y+'px';
       this._canvas.width=mapSize.x;this._canvas.height=mapSize.y;
       this._canvas.style.zIndex=(photo.zOrder||0)+10;
-      this._canvas.style.pointerEvents=_dragModeActive?'auto':'none';
       var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
       var pts=[
         map.latLngToLayerPoint(L.latLng(tl.lat+oLat,tl.lng+oLng)),
@@ -1310,19 +1269,12 @@ function createRotatedOverlay(photo,toGeo){
       var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
       var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
       var e2=cpts[0].x,f2=cpts[0].y;
-      var isSelected=_dragModeActive&&_selectedDragPhoto&&_selectedDragPhoto.id===photo.id; 
-        if(_showPhotoOutlines||_dragModeActive){
-          ctx.save();
-          ctx.globalAlpha=isSelected?1.0:(_dragModeActive?0.4:0.5);
-          ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
-          ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
-          ctx.strokeStyle=isSelected?'#7dc455':'#5a9e35';
-          ctx.lineWidth=isSelected?3:(_dragModeActive?1.5:1.5);
-          if(isSelected){ctx.shadowColor='#5a9e35';ctx.shadowBlur=6;}
-          ctx.stroke();
-          if(isSelected){ctx.shadowBlur=0;}
-          ctx.restore();
-        }
+      if(_showPhotoOutlines){
+        ctx.save();ctx.globalAlpha=0.5;
+        ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
+        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
+        ctx.strokeStyle='#5a9e35';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+      }
       // === CLIP PATH: Owner BK eksplisit > auto-nearest > Voronoi > 4 sudut foto ===
       var clipPts;
       var activeBK=_batasKebunPolygons;
@@ -1403,7 +1355,6 @@ function setPhotoBlend(pid,val){var p=getPhoto(pid);if(!p)return;p.blendMode=val
 function setPhotoBrightness(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.brightness=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
 function setPhotoContrast(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.contrast=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
 function setPhotoSaturation(pid,val,inputEl){var p=getPhoto(pid);if(!p)return;p.saturation=parseInt(val);if(p.overlay&&p.overlay.setColorAdj)p.overlay.setColorAdj(p.brightness,p.contrast,p.saturation);if(inputEl){var sv=inputEl.parentNode.querySelector('.slider-val');if(sv)sv.textContent=val+'%';}}
-function toggleOutlines(checked){_showPhotoOutlines=!!checked;photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});}
 
 // =====================================================
 // VORONOI SEAMLINE (auto-seamline dari center foto)
@@ -1594,105 +1545,6 @@ function gcpSpreadScoreForPhoto(photo){
 }
 
 // =====================================================
-// DRAG MODE
-// =====================================================
-var _selectedDragPhoto = null; // foto yang sedang dipilih untuk digeser
-
-function toggleDragMode(btn){
-  _dragModeActive=!_dragModeActive;
-  btn.classList.toggle('active',_dragModeActive);
-  btn.textContent=_dragModeActive?'✋ Mode Geser AKTIF — Klik foto dulu':'✋ Aktifkan Mode Geser Foto';
-  if(map){
-    map.getContainer().style.cursor=_dragModeActive?'default':'';
-    if(!_dragModeActive){
-      map.dragging.enable();
-      _dragPhoto=null;
-      _selectedDragPhoto=null;
-      _clearDragSelection();
-      // Tambahkan di dalam blok `if(!_dragModeActive)` setelah _clearDragSelection():
-      photos.forEach(function(p) {
-          if (p.overlay && p.overlay._canvas)
-              p.overlay._canvas.style.cursor = '';
-      });
-    }
-  }
-  photos.forEach(function(p){if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();});
-  _updateDragModeInfo();
-}
-
-function _clearDragSelection(){
-  _selectedDragPhoto=null;
-  var info=document.getElementById('dragSelectedInfo');
-  if(info)info.style.display='none';
-  if(map)map.dragging.enable();
-}
-
-function _updateDragModeInfo(){
-  var info=document.getElementById('dragSelectedInfo');
-  if(!info)return;
-  if(!_dragModeActive){info.style.display='none';return;}
-  if(_selectedDragPhoto){
-    info.style.display='';
-    info.innerHTML='<span style="color:var(--saw2)">✓ Terpilih: <b>'+_selectedDragPhoto.name+'</b></span><br>'
-      +'<span style="font-size:8px;color:var(--mu)">Drag untuk geser · Klik area kosong untuk batal</span>';
-  } else {
-    info.style.display='';
-    info.innerHTML='<span style="color:var(--mu)">Klik foto di peta untuk memilihnya</span>';
-  }
-}
-document.addEventListener('mousemove',function(e){
-  if(!_dragModeActive||!_dragPhoto||!map||!_dragStartLatLng)return;
-  var r=map.getContainer().getBoundingClientRect();
-  var cur=map.containerPointToLatLng([e.clientX-r.left,e.clientY-r.top]);
-  _dragPhoto.offsetLat=_dragStartOffset.lat+(cur.lat-_dragStartLatLng.lat);
-  _dragPhoto.offsetLng=_dragStartOffset.lng+(cur.lng-_dragStartLatLng.lng);
-  if(_dragPhoto.overlay&&_dragPhoto.overlay.forceUpdate)_dragPhoto.overlay.forceUpdate();
-  updateOffsetDisplay(_dragPhoto);
-});
-document.addEventListener('mouseup',function(){
-  if(!_dragModeActive||!_dragPhoto)return;
-  if(map)map.dragging.enable(); // map bisa digeser lagi, tapi foto masih terpilih
-  document.body.style.cursor='';
-  _dragPhoto=null;_dragStartLatLng=null;_dragStartOffset=null;
-  renderLayerList();
-});
-function updateOffsetDisplay(photo){var el=document.getElementById('offset_'+photo.id);if(el)el.textContent='Δ '+photo.offsetLat.toFixed(6)+' / '+photo.offsetLng.toFixed(6);}
-// =====================================================
-// DRAG MODE — GEO HIT TEST
-// =====================================================
-function _pointInPolygonLL(lat, lng, poly) {
-  // poly: array of {lat, lng}
-  var inside = false, n = poly.length;
-  for (var i = 0, j = n - 1; i < n; j = i++) {
-    var xi = poly[i].lng, yi = poly[i].lat;
-    var xj = poly[j].lng, yj = poly[j].lat;
-    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi))
-      inside = !inside;
-  }
-  return inside;
-}
-
-function _findPhotoAtLatLng(lat, lng) {
-  // Cari foto georef yang quad-nya mengandung titik ini,
-  // diurutkan z-order tertinggi dulu (foto "paling atas" yang dipilih)
-  return photos
-    .filter(function(p) { return p.georef && p.visible && p.corners; })
-    .sort(function(a, b) { return (b.zOrder || 0) - (a.zOrder || 0); })
-    .find(function(p) {
-      var oLat = p.offsetLat || 0, oLng = p.offsetLng || 0;
-      var c = p.corners;
-      var quad = [
-        { lat: c.tl.lat + oLat, lng: c.tl.lng + oLng },
-        { lat: c.tr.lat + oLat, lng: c.tr.lng + oLng },
-        { lat: c.br.lat + oLat, lng: c.br.lng + oLng },
-        { lat: c.bl.lat + oLat, lng: c.bl.lng + oLng }
-      ];
-      return _pointInPolygonLL(lat, lng, quad);
-    }) || null;
-}
-function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
-
-// =====================================================
 // Z-ORDER
 // =====================================================
 function movePhotoUp(pid){
@@ -1738,29 +1590,7 @@ function initMap(refPhoto){
     renderMeasures();updateStats();
   });
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-  map.on('click', function(e) {
-    if (_treeMode === 'add') { addTree(e.latlng.lat, e.latlng.lng); return; }
-    if (_dragModeActive && !_dragPhoto) {
-        var hit = _findPhotoAtLatLng(e.latlng.lat, e.latlng.lng);
-        if (hit) {
-            // Klik di atas foto — pilih foto ini
-            _selectedDragPhoto = hit;
-            _updateDragModeInfo();
-            // Ubah kursor canvas foto terpilih jadi grab
-            photos.forEach(function(p) {
-                if (p.overlay && p.overlay._canvas)
-                    p.overlay._canvas.style.cursor =
-                        (p.id === hit.id) ? 'grab' : 'default';
-            });
-        } else {
-            // Klik di area kosong — batal pilihan
-            _clearDragSelection();
-            _updateDragModeInfo();
-            map.dragging.enable();
-        }
-    }
-});
-  _smartViewReattach();
+  map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
 }
 
 // =====================================================
@@ -2394,193 +2224,6 @@ function showCopyModal(content,filename){
   setTimeout(function(){ta.select();},100);
 }
 // =====================================================
-// *** SMART NADIR VIEW ***
-// =====================================================
-var _smartViewActive=false;
-var _smartViewPinned=null; // null=auto, id=pinned
-var _smartMinOpacity=0.08;
-var _smartCurrentId=null;
-
-function toggleSmartView(btn){
-  _smartViewActive=!_smartViewActive;
-  btn.classList.toggle('active',_smartViewActive);
-  btn.textContent=_smartViewActive?'🔍 Smart Nadir AKTIF — Geser peta':'🔍 Aktifkan Smart Nadir View';
-  var info=document.getElementById('smartViewInfo');
-  if(!_smartViewActive){
-    if(map){map.off('moveend',_smartOnMapMove);map.off('zoomend',_smartOnMapMove);}
-    _smartCurrentId=null;_smartViewPinned=null;
-    photos.forEach(function(p){if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);});
-    if(info)info.style.display='none';
-    setStatus('Smart Nadir View dinonaktifkan','amber');
-  } else {
-    if(!map){setStatus('Lakukan georef foto dulu!','amber');_smartViewActive=false;btn.classList.remove('active');btn.textContent='🔍 Aktifkan Smart Nadir View';return;}
-    map.on('moveend',_smartOnMapMove);
-    map.on('zoomend',_smartOnMapMove);
-    if(info)info.style.display='';
-    setStatus('Smart Nadir View aktif — geser/zoom peta untuk berganti foto','green');
-    // Langsung jalankan sekali pakai posisi tengah peta saat ini
-    _smartOnMapMove();
-  }
-}
-
-function _smartOnMapMove(){
-  if(_smartViewPinned)return;
-  if(!map)return;
-  var c=map.getCenter();
-  _smartApply(c.lat,c.lng);
-}
-
-function updateSmartMinOpacity(el){
-  _smartMinOpacity=parseInt(el.value)/100;
-  document.getElementById('smartMinOpacityVal').textContent=el.value+'%';
-  if(_smartViewActive&&_smartCurrentId)_smartApply_refresh();
-}
-
-function _smartApply(lat,lng){
-  var visible=photos.filter(function(p){return p.georef&&p.visible&&p.corners;});
-  if(visible.length===0)return;
-  var nearest=null,minDist=Infinity;
-  visible.forEach(function(p){
-    var oLat=p.offsetLat||0,oLng=p.offsetLng||0;
-    var cLat=(p.corners.tl.lat+p.corners.tr.lat+p.corners.br.lat+p.corners.bl.lat)/4+oLat;
-    var cLng=(p.corners.tl.lng+p.corners.tr.lng+p.corners.br.lng+p.corners.bl.lng)/4+oLng;
-    var dlat=lat-cLat,dlng=lng-cLng;
-    var dist=dlat*dlat+dlng*dlng;
-    if(dist<minDist){minDist=dist;nearest=p;}
-  });
-  if(!nearest)return;
-  if(nearest.id===_smartCurrentId)return; // no change needed
-  _smartCurrentId=nearest.id;
-  _smartApply_refresh();
-  // Update info panel
-  var info=document.getElementById('smartViewInfo');
-  if(info)info.innerHTML='📷 Aktif: <b>'+nearest.name+'</b><br>'+visible.length+' foto georef | '+(_smartViewPinned?'📌 Dipasak':'🔄 Auto-switch');
-}
-
-function _smartApply_refresh(){
-  var visible=photos.filter(function(p){return p.georef&&p.visible&&p.corners;});
-  visible.forEach(function(p){
-    if(!p.overlay||!p.overlay.setOpacityVal)return;
-    var activeId=_smartViewPinned||_smartCurrentId;
-    if(p.id===activeId){
-      p.overlay.setOpacityVal(p.opacity); // full saved opacity
-    } else {
-      p.overlay.setOpacityVal(_smartMinOpacity);
-    }
-  });
-}
-
-function smartViewShowAll(){
-  // Temporarily show all at full opacity
-  _smartCurrentId=null;_smartViewPinned=null;
-  photos.forEach(function(p){if(p.overlay&&p.overlay.setOpacityVal)p.overlay.setOpacityVal(p.opacity);});
-  var info=document.getElementById('smartViewInfo');
-  if(info)info.innerHTML='👁 Semua foto ditampilkan penuh';
-}
-
-function smartViewPinActive(){
-  if(!_smartCurrentId){setStatus('Arahkan kursor ke foto dulu','amber');return;}
-  if(_smartViewPinned===_smartCurrentId){
-    _smartViewPinned=null;
-    setStatus('Pin dilepas — kembali ke mode auto','amber');
-  } else {
-    _smartViewPinned=_smartCurrentId;
-    var p=getPhoto(_smartCurrentId);
-    setStatus('📌 Foto '+( p?p.name:'') +' dipasak','green');
-  }
-  var info=document.getElementById('smartViewInfo');
-  var p=getPhoto(_smartCurrentId);
-  if(info&&p)info.innerHTML='📷 Aktif: <b>'+p.name+'</b><br>'+(_smartViewPinned?'📌 Dipasak (klik lagi untuk lepas)':'🔄 Auto-switch');
-  _smartApply_refresh();
-}
-
-function _smartViewReattach(){
-  if(_smartViewActive&&map){
-    map.off('moveend',_smartOnMapMove);
-    map.off('zoomend',_smartOnMapMove);
-    map.on('moveend',_smartOnMapMove);
-    map.on('zoomend',_smartOnMapMove);
-    // Langsung update berdasarkan posisi peta saat ini
-    _smartOnMapMove();
-  }
-}
-
-// =====================================================
-// *** NADIR MODE — Smart Photo Switching ***
-// =====================================================
-function toggleNadirMode(btn){
-  _nadirMode=!_nadirMode;
-  btn.classList.toggle('active',_nadirMode);
-  btn.textContent=_nadirMode?'🎯 Mode Nadir AKTIF — Geser kursor':'🎯 Mode Nadir (Smart Photo)';
-
-  if(_nadirMode){
-    if(map){
-      _nadirMoveHandler=function(e){_updateNadirPhoto(e.latlng);};
-      map.on('mousemove',_nadirMoveHandler);
-      // Juga saat kursor keluar dari peta, restore semua
-      map.on('mouseout',_restoreNadirOpacity);
-      setStatus('Mode Nadir aktif — geser kursor di peta untuk melihat foto terdekat','info');
-    }
-  } else {
-    _exitNadirMode();
-    setStatus('Mode Nadir dinonaktifkan','amber');
-  }
-}
-
-function _exitNadirMode(){
-  if(map){
-    if(_nadirMoveHandler){map.off('mousemove',_nadirMoveHandler);_nadirMoveHandler=null;}
-    map.off('mouseout',_restoreNadirOpacity);
-  }
-  _restoreNadirOpacity();
-}
-
-function _restoreNadirOpacity(){
-  photos.forEach(function(p){
-    if(p.overlay&&p.overlay.clearNadirOpacity)p.overlay.clearNadirOpacity();
-  });
-}
-
-function _updateNadirPhoto(latlng){
-  var georefPhotos=photos.filter(function(p){return p.georef&&p.corners&&p.visible;});
-  if(georefPhotos.length===0)return;
-
-  // Hitung jarak kursor ke pusat masing-masing foto (pusat nadir kamera)
-  var best=null,minDist=Infinity;
-  georefPhotos.forEach(function(p){
-    var c=p.corners;
-    // Pusat foto = rata-rata 4 sudut
-    var cLat=(c.tl.lat+c.tr.lat+c.br.lat+c.bl.lat)/4;
-    var cLng=(c.tl.lng+c.tr.lng+c.br.lng+c.bl.lng)/4;
-    // Normalisasi dengan cos(lat) agar tidak bias ns vs ew
-    var dLat=(latlng.lat-cLat)*111320;
-    var dLng=(latlng.lng-cLng)*111320*Math.cos(latlng.lat*Math.PI/180);
-    var dist=Math.sqrt(dLat*dLat+dLng*dLng);
-    if(dist<minDist){minDist=dist;best=p;}
-  });
-
-  // Foto terdekat = tampil penuh, lainnya hampir transparan
-  georefPhotos.forEach(function(p){
-    var op=(p===best)?p.opacity:0.06;
-    if(p.overlay&&p.overlay.setNadirOpacity)p.overlay.setNadirOpacity(op);
-  });
-
-  // Update badge nama foto aktif di status bar
-  if(best){
-    document.getElementById('statusText').textContent=
-      '🎯 Nadir: '+best.name+' | Geser kursor untuk pindah foto';
-  }
-}
-
-function setStatus(msg,color){
-  document.getElementById('statusText').textContent=msg;
-  document.getElementById('statusDot').className='s-dot '+(color==='green'?'dot-g':color==='info'?'dot-i':color==='saw'?'dot-saw':'dot-a');
-}
-function updateStep(n){
-  [1,2,3].forEach(function(i){var el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');});
-}
-
-// =====================================================
 // SPLIT VIEW
 // =====================================================
 var _splitMap=null,_splitPhotoClick=null,_splitStep='photo',_splitGcpNum=1;
@@ -2648,8 +2291,6 @@ function exitSplitView(){
   var content=document.querySelector('.content');
   content.innerHTML='<div id="mapPanel"></div><div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;"><div class="welcome" id="welcomeMsg"><div class="welcome-icon">🌴</div><h2>DroneMap v3 Pro</h2><p>Upload foto drone, tandai GCP di objek yang kamu kenali, lakukan georeferencing.</p></div></div>';
   map=null;
-  // Reset nadir mode karena map lama sudah dihapus
-  if(_nadirMode){_nadirMode=false;_nadirMoveHandler=null;var nb=document.getElementById('btnNadirMode');if(nb){nb.classList.remove('active');nb.textContent='🎯 Mode Nadir (Smart Photo)';}}
   var hasGeoref=photos.some(function(ph){return ph.georef});
   if(hasGeoref){
     var firstGeoref=photos.find(function(ph){return ph.georef&&ph.bounds});
@@ -2668,15 +2309,7 @@ function exitSplitView(){
       map.on(L.Draw.Event.EDITED,refreshMeasures);
       map.on(L.Draw.Event.DELETED,function(e){e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid})});renderMeasures();updateStats();});
       map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
-      map.on('click',function(e){
-        if(_treeMode==='add'){addTree(e.latlng.lat,e.latlng.lng);return;}
-        if(_dragModeActive&&!_dragPhoto){
-          // Klik area kosong = batal pilihan
-          _clearDragSelection();
-          _updateDragModeInfo();
-          map.dragging.enable();
-        }
-      });
+      map.on('click',function(e){if(_treeMode!=='add')return;addTree(e.latlng.lat,e.latlng.lng);});
       photos.forEach(function(ph){
         if(ph.georef&&ph.gcps.length>=3){
           var tg=buildAffine(ph.gcps);ph.overlay=createRotatedOverlay(ph,tg);
@@ -2690,8 +2323,7 @@ function exitSplitView(){
       var allBounds=photos.filter(function(p){return p.georef&&p.bounds}).map(function(p){return p.bounds});
       if(allBounds.length>0){var allLats=[],allLngs=[];allBounds.forEach(function(b){allLats.push(b[0][0],b[1][0]);allLngs.push(b[0][1],b[1][1])});map.fitBounds([[Math.min.apply(null,allLats),Math.min.apply(null,allLngs)],[Math.max.apply(null,allLats),Math.max.apply(null,allLngs)]],{padding:[20,20]});}
       updateGcpCoverageBox();
-      _smartViewReattach();
-    }
+        }
   }
   var p=getPhoto(currentPhotoId);
   if(p&&p.src){showImagePanel();buildImagePanel(p);}else hideImagePanel();
