@@ -1754,7 +1754,7 @@ function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
-  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
+  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(map);
   // Pane khusus GCP marker — selalu di atas photo overlay
   map.createPane('gcpPane');
   map.getPane('gcpPane').style.zIndex=650;
