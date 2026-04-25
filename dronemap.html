@@ -3164,15 +3164,22 @@ function runGeneratePdf(){
 async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
   // clipPolygon: array of {lat,lng} atau null
   // bkId: ID blok kebun (opsional) — jika ada, gunakan _bkOwnerMap untuk filter foto
+  // RS = Render Scale: canvas di-render 3× lebih besar dari ukuran PDF point
+  // sehingga kualitas foto di PDF setara ~216 DPI (sangat tajam untuk cetak)
+  var RS=3;
   var canvas=document.createElement('canvas');
-  canvas.width=mapW;canvas.height=mapH;
+  canvas.width=mapW*RS;canvas.height=mapH*RS;
   var ctx=canvas.getContext('2d');
+  // Aktifkan interpolasi terbaik untuk downscaling
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
 
+  // pdfToCanvas: konversi koordinat PDF point → piksel canvas (skala RS)
   function pdfToCanvas(pt){
-    return [pt[0]-_pdfMapX, mapH-(pt[1]-_pdfMapY)];
+    return [(pt[0]-_pdfMapX)*RS, (mapH-(pt[1]-_pdfMapY))*RS];
   }
 
-  // Tentukan clip region
+  // Tentukan clip region (skala RS otomatis karena pdfToCanvas sudah dikali RS)
   var useClip=clipPolygon&&clipPolygon.length>=3;
   if(useClip){
     ctx.beginPath();
@@ -3221,11 +3228,14 @@ async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
     var tlP=projectFn(photo.corners.tl.lat+oLat,photo.corners.tl.lng+oLng);
     var trP=projectFn(photo.corners.tr.lat+oLat,photo.corners.tr.lng+oLng);
     var blP=projectFn(photo.corners.bl.lat+oLat,photo.corners.bl.lng+oLng);
+    // Koordinat canvas sudah di-scale RS melalui pdfToCanvas
     var tlC=pdfToCanvas(tlP),trC=pdfToCanvas(trP),blC=pdfToCanvas(blP);
     var W=photo.w,H=photo.h;
+    // Affine transform: memetakan piksel foto (W×H) ke area canvas yang sudah RS-scaled
     var a=(trC[0]-tlC[0])/W,b_=(trC[1]-tlC[1])/W;
     var c_=(blC[0]-tlC[0])/H,d_=(blC[1]-tlC[1])/H;
     var e_=tlC[0],f_=tlC[1];
+    // Load foto asli (full resolution dari base64)
     var img=await (function(src){
       return new Promise(function(res,rej){
         var im=new Image();im.onload=function(){res(im);};im.onerror=rej;im.src=src;
@@ -3235,6 +3245,9 @@ async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
     ctx.globalAlpha=Math.min(photo.opacity||0.9,1);
     var br=photo.brightness||100,ct=photo.contrast||100,sat=photo.saturation||100;
     ctx.filter='brightness('+br+'%) contrast('+ct+'%) saturate('+sat+'%)';
+    // Set imageSmoothingQuality sebelum transform (beberapa browser butuh ini)
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
     ctx.transform(a,b_,c_,d_,e_,f_);
     ctx.drawImage(img,0,0,W,H);
     ctx.restore();
@@ -3409,20 +3422,23 @@ async function generateDroneMapPDF(){
           for(var bki=0;bki<selectedBkPolygons.length;bki++){
             var bkPoly=selectedBkPolygons[bki];
             if(!bkPoly.foto)continue; // skip blok yang foto=false
+            showToast('⏳ Me-render foto udara blok "'+(bkPoly.label||'')+'"... (resolusi tinggi)');
             var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,bkPoly.verts,bkPoly.id);
-            var aerialDataUrl=aerialCanvas.toDataURL('image/png');
+            // JPEG 92% — jauh lebih kecil dari PNG, kualitas visual sangat baik untuk foto
+            var aerialDataUrl=aerialCanvas.toDataURL('image/jpeg',0.92);
             var aerialB64=aerialDataUrl.split(',')[1];
             var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
-            var aerialImg=await pdfDoc.embedPng(aerialBytes);
+            var aerialImg=await pdfDoc.embedJpg(aerialBytes);
             page.drawImage(aerialImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
           }
         } else {
           // Tidak ada BK — render semua foto tanpa clip
+          showToast('⏳ Me-render foto udara... (resolusi tinggi 3×)');
           var aerialCanvas=await renderAerialToCanvas(MAP_W,MAP_H,project,null);
-          var aerialDataUrl=aerialCanvas.toDataURL('image/png');
+          var aerialDataUrl=aerialCanvas.toDataURL('image/jpeg',0.92);
           var aerialB64=aerialDataUrl.split(',')[1];
           var aerialBytes=Uint8Array.from(atob(aerialB64),function(c){return c.charCodeAt(0);});
-          var aerialImg=await pdfDoc.embedPng(aerialBytes);
+          var aerialImg=await pdfDoc.embedJpg(aerialBytes);
           page.drawImage(aerialImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
         }
       }catch(aerr){
