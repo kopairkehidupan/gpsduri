@@ -3404,6 +3404,15 @@ async function generateDroneMapPDF(){
       }
     }
 
+    // ── TREE MARKERS (digambar SEBELUM label agar label tidak tertutup) ───
+    var treeColors={normal:{r:0.18,g:0.63,b:0.26},sakit:{r:0.94,g:0.65,b:0},mati:{r:0.97,g:0.32,b:0.29},kosong:{r:0.49,g:0.52,b:0.56}};
+    trees.forEach(function(t){
+      var pt=project(t.lat,t.lng);
+      if(pt[0]<MAP_X||pt[0]>MAP_X+MAP_W||pt[1]<MAP_Y||pt[1]>MAP_Y+MAP_H)return;
+      var col=treeColors[t.status]||treeColors.normal;
+      page.drawCircle({x:pt[0],y:pt[1],size:1.4,color:rgb(col.r,col.g,col.b)});
+    });
+
     // ── GAMBAR POLYGON & POLYLINE ───────────────────────
     var polLeg=[];
     measures.forEach(function(m){
@@ -3503,62 +3512,76 @@ async function generateDroneMapPDF(){
       }
     });
 
-    // ── TREE MARKERS ───────────────────────────────────
-    var treeColors={normal:{r:0.18,g:0.63,b:0.26},sakit:{r:0.94,g:0.65,b:0},mati:{r:0.97,g:0.32,b:0.29},kosong:{r:0.49,g:0.52,b:0.56}};
-    trees.forEach(function(t){
-      var pt=project(t.lat,t.lng);
-      if(pt[0]<MAP_X||pt[0]>MAP_X+MAP_W||pt[1]<MAP_Y||pt[1]>MAP_Y+MAP_H)return;
-      var col=treeColors[t.status]||treeColors.normal;
-      page.drawCircle({x:pt[0],y:pt[1],size:1.4,color:rgb(col.r,col.g,col.b)});
-    });
-
     // ── SIDEBAR KANAN ─────────────────────────────────
     var yPos=MAP_Y+MAP_H; // mulai dari atas area peta
 
     // --- BOX 1: JUDUL ---
-    var box1H=subtitle?52:40;
-    page.drawRectangle({x:SB_X,y:yPos-box1H,width:SB_W,height:box1H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    var box1H=subtitle?58:46;
+    page.drawRectangle({x:SB_X,y:yPos-box1H,width:SB_W,height:box1H,color:rgb(0.98,0.99,0.98),borderColor:rgb(0.2,0.2,0.2),borderWidth:1.2});
+    // Header strip hijau tipis di atas kotak judul
+    page.drawRectangle({x:SB_X,y:yPos-7,width:SB_W,height:7,color:rgb(0.1,0.42,0.19)});
     var tSize=title.length>28?7.5:title.length>20?9:11;
-    page.drawText(title,{x:SB_X+SB_W/2-(title.length*tSize*0.3),y:yPos-16,size:tSize,color:rgb(0,0,0),font:fontBold});
+    var titleY=subtitle?(yPos-22):(yPos-box1H/2-tSize/2+2);
+    page.drawText(title,{x:SB_X+SB_W/2-(title.length*tSize*0.3),y:titleY,size:tSize,color:rgb(0,0,0),font:fontBold});
     if(subtitle){
-      page.drawText(subtitle,{x:SB_X+SB_W/2-(subtitle.length*6.5*0.29),y:yPos-30,size:7,color:rgb(0.35,0.35,0.35),font:fontNorm});
+      page.drawText(subtitle,{x:SB_X+SB_W/2-(subtitle.length*6.5*0.29),y:yPos-37,size:7,color:rgb(0.35,0.35,0.35),font:fontNorm});
     }
     yPos-=box1H;
 
     // --- BOX 2: KOMPAS (atas) + SKALA (bawah) ---
-    var box2H=90;
-    page.drawRectangle({x:SB_X,y:yPos-box2H,width:SB_W,height:box2H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
+    // Box lebih tinggi agar kompas+label U tidak mepet ke kotak judul
+    var box2H=110;
+    var divY=yPos-box2H/2; // garis pembagi tepat di tengah box2
+    page.drawRectangle({x:SB_X,y:yPos-box2H,width:SB_W,height:box2H,color:rgb(1,1,1),borderColor:rgb(0.2,0.2,0.2),borderWidth:1.2});
     // Divider line
-    page.drawLine({start:{x:SB_X,y:yPos-box2H/2},end:{x:SB_X+SB_W,y:yPos-box2H/2},thickness:0.5,color:rgb(0.75,0.75,0.75)});
+    page.drawLine({start:{x:SB_X+4,y:divY},end:{x:SB_X+SB_W-4,y:divY},thickness:0.5,color:rgb(0.75,0.75,0.75)});
 
-    // ATAS: Kompas tengah horizontal
-    var cmpX=SB_X+SB_W/2,cmpY=yPos-box2H/4;
-    page.drawCircle({x:cmpX,y:cmpY,size:16,borderColor:rgb(0,0,0),borderWidth:1.2});
-    // Panah Utara
-    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY+14},thickness:2.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:cmpX,y:cmpY+14},end:{x:cmpX-4,y:cmpY+8},thickness:2.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:cmpX,y:cmpY+14},end:{x:cmpX+4,y:cmpY+8},thickness:2.5,color:rgb(0,0,0)});
-    // Panah Selatan
-    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY-14},thickness:1.8,color:rgb(0.65,0.65,0.65)});
-    page.drawText('U',{x:cmpX-4,y:cmpY+18,size:9,color:rgb(0,0,0),font:fontBold});
+    // ATAS: Kompas — area atas = yPos ke divY, center di tengahnya
+    var cmpAreaTop=yPos,cmpAreaBot=divY;
+    var cmpAreaH=cmpAreaTop-cmpAreaBot; // tinggi area kompas (pt)
+    var cmpX=SB_X+SB_W/2;
+    // Center kompas di area atas, sisakan 5pt untuk huruf U di atas lingkaran
+    var cmpY=cmpAreaBot+(cmpAreaH-5)/2; // center lingkaran
+    var cmpR=16; // radius lingkaran kompas
+    page.drawCircle({x:cmpX,y:cmpY,size:cmpR,borderColor:rgb(0,0,0),borderWidth:1.2});
+    // Panah Utara (terisi hitam)
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY+cmpR-2},thickness:2.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-2},end:{x:cmpX-4,y:cmpY+cmpR-8},thickness:2.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-2},end:{x:cmpX+4,y:cmpY+cmpR-8},thickness:2.5,color:rgb(0,0,0)});
+    // Panah Selatan (abu)
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY-(cmpR-2)},thickness:1.8,color:rgb(0.65,0.65,0.65)});
+    // Huruf U — di ATAS lingkaran, dalam area atas, tidak menyentuh border
+    var uY=cmpY+cmpR+3; // 3pt di atas top lingkaran
+    if(uY>cmpAreaTop-4)uY=cmpAreaTop-4; // clamp agar tidak melewati border atas
+    page.drawText('U',{x:cmpX-3.5,y:uY,size:8,color:rgb(0,0,0),font:fontBold});
 
-    // BAWAH: Skala bar
+    // BAWAH: Skala bar — area bawah = divY ke (yPos-box2H)
+    var scaleAreaTop=divY,scaleAreaBot=yPos-box2H;
+    var scaleAreaH=scaleAreaTop-scaleAreaBot;
     var realDist=(maxLng-minLng)*cosLat*111320;
     var pdfWidthPt=MAP_W;
     var scaleRatio=Math.round(realDist/pdfWidthPt*72*2.54/100*100);
     var s10=Math.pow(10,Math.floor(Math.log10(Math.max(scaleRatio,1))));
     scaleRatio=Math.round(scaleRatio/s10)*s10;
     var scaleStr='Skala 1 : '+(scaleRatio||6000).toLocaleString('id-ID');
-    var sbX=SB_X+8,sbY=yPos-box2H*3/4;
-    var sbW=SB_W-16;
-    page.drawText(scaleStr,{x:SB_X+SB_W/2-(scaleStr.length*3.2),y:sbY+12,size:7,color:rgb(0,0,0),font:fontBold});
-    page.drawLine({start:{x:sbX,y:sbY},end:{x:sbX+sbW,y:sbY},thickness:1.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX,y:sbY-4},end:{x:sbX,y:sbY+4},thickness:1.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX+sbW/2,y:sbY-3},end:{x:sbX+sbW/2,y:sbY+3},thickness:1,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX+sbW,y:sbY-4},end:{x:sbX+sbW,y:sbY+4},thickness:1.5,color:rgb(0,0,0)});
-    page.drawText('0',{x:sbX-3,y:sbY-9,size:6,color:rgb(0,0,0),font:fontNorm});
-    page.drawText((scaleRatio/2/1000).toFixed(1)+'km',{x:sbX+sbW/2-8,y:sbY-9,size:6,color:rgb(0,0,0),font:fontNorm});
-    page.drawText((scaleRatio/1000).toFixed(1)+'km',{x:sbX+sbW-10,y:sbY-9,size:6,color:rgb(0,0,0),font:fontNorm});
+    // Posisi Y: teks skala di atas bar, bar di tengah area bawah
+    var barY=scaleAreaBot+scaleAreaH*0.42; // garis bar ~42% dari bawah area skala
+    var sbX=SB_X+10,sbW=SB_W-20;
+    // *** TEKS SKALA: rata tengah yang presisi ***
+    // Lebar estimasi Helvetica Bold 7pt ≈ 0.52×size per karakter
+    var scaleTxtW=scaleStr.length*7*0.52;
+    var scaleTxtX=SB_X+SB_W/2-scaleTxtW/2;
+    page.drawText(scaleStr,{x:scaleTxtX,y:barY+10,size:7,color:rgb(0,0,0),font:fontBold});
+    // Bar skala
+    page.drawLine({start:{x:sbX,y:barY},end:{x:sbX+sbW,y:barY},thickness:1.8,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX,y:barY-5},end:{x:sbX,y:barY+5},thickness:1.8,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW/2,y:barY-3.5},end:{x:sbX+sbW/2,y:barY+3.5},thickness:1.2,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW,y:barY-5},end:{x:sbX+sbW,y:barY+5},thickness:1.8,color:rgb(0,0,0)});
+    // Label angka bar: rata tengah di bawah tiap titik
+    var lbl0='0',lblMid=(scaleRatio/2/1000).toFixed(1)+'km',lblEnd=(scaleRatio/1000).toFixed(1)+'km';
+    page.drawText(lbl0,{x:sbX-lbl0.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
+    page.drawText(lblMid,{x:sbX+sbW/2-lblMid.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
+    page.drawText(lblEnd,{x:sbX+sbW-lblEnd.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
     yPos-=box2H;
 
     // --- BOX 3: STATISTIK SENSUS (hanya jika ada data sensus) ---
