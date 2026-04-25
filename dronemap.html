@@ -464,12 +464,69 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
         <div style="background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:9px 11px;margin-bottom:10px">
           <div style="font-size:8px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin-bottom:6px">Opsi Cetak PDF</div>
           <!-- Legenda kolom -->
-          <div style="display:flex;gap:10px;font-size:9px;color:var(--mu);flex-wrap:wrap;margin-bottom:5px">
+          <div style="display:flex;gap:10px;font-size:9px;color:var(--mu);flex-wrap:wrap;margin-bottom:8px">
             <span>✓ = Cetak</span>
             <span style="color:var(--in)">📷 = Foto</span>
             <span style="color:var(--saw2)">▣ = Batas</span>
             <span style="color:var(--ac)">T = Label</span>
           </div>
+
+          <!-- ─── STYLE BATAS ─── -->
+          <div style="border:1px solid rgba(90,158,53,.3);border-radius:5px;padding:7px 9px;margin-bottom:8px;background:rgba(90,158,53,.04)">
+            <div style="font-size:8px;color:var(--saw2);font-family:'Space Mono',monospace;text-transform:uppercase;margin-bottom:6px">▣ Gaya Garis Batas</div>
+            <!-- Warna batas -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Warna</span>
+              <div id="batasColorSwatches" style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
+                <!-- diisi JS -->
+              </div>
+              <input type="color" id="batasColorPicker" value="#2e8024" oninput="setPdfBatasColor(this.value)" style="width:22px;height:22px;border:none;border-radius:3px;cursor:pointer;padding:0;background:none">
+            </div>
+            <!-- Ketebalan -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Tebal</span>
+              <input type="range" id="batasThicknessSlider" min="0.5" max="5" step="0.5" value="1.8" oninput="document.getElementById('batasThicknessVal').textContent=this.value+'pt';_pdfBatasThickness=parseFloat(this.value)" style="flex:1;accent-color:var(--saw)">
+              <span id="batasThicknessVal" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--saw2);min-width:26px">1.8pt</span>
+            </div>
+            <!-- Pola garis -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Pola</span>
+              <div style="display:flex;gap:4px;flex:1">
+                <button onclick="setPdfBatasStyle('solid',this)" class="pdf-style-btn active" data-style="solid" style="flex:1;padding:3px 0;font-size:9px;border-radius:3px;border:1px solid var(--saw);background:rgba(90,158,53,.15);color:var(--saw2);cursor:pointer">——</button>
+                <button onclick="setPdfBatasStyle('dashed',this)" class="pdf-style-btn" data-style="dashed" style="flex:1;padding:3px 0;font-size:9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">- - -</button>
+                <button onclick="setPdfBatasStyle('dotted',this)" class="pdf-style-btn" data-style="dotted" style="flex:1;padding:3px 0;font-size:9px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">· · ·</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── STYLE LABEL ─── -->
+          <div style="border:1px solid rgba(240,165,0,.3);border-radius:5px;padding:7px 9px;margin-bottom:8px;background:rgba(240,165,0,.04)">
+            <div style="font-size:8px;color:var(--ac);font-family:'Space Mono',monospace;text-transform:uppercase;margin-bottom:6px">T Gaya Label Teks</div>
+            <!-- Warna label -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Warna</span>
+              <div id="labelColorSwatches" style="display:flex;gap:3px;flex-wrap:wrap;flex:1">
+                <!-- diisi JS -->
+              </div>
+              <input type="color" id="labelColorPicker" value="#1a4d00" oninput="setPdfLabelColor(this.value)" style="width:22px;height:22px;border:none;border-radius:3px;cursor:pointer;padding:0;background:none">
+            </div>
+            <!-- Ukuran font -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Ukuran</span>
+              <input type="range" id="labelSizeSlider" min="5" max="14" step="0.5" value="6" oninput="document.getElementById('labelSizeVal').textContent=this.value+'pt';_pdfLabelSize=parseFloat(this.value)" style="flex:1;accent-color:var(--ac)">
+              <span id="labelSizeVal" style="font-size:9px;font-family:'Space Mono',monospace;color:var(--ac);min-width:26px">6pt</span>
+            </div>
+            <!-- Alignment -->
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:9px;color:var(--mu);min-width:50px">Rata</span>
+              <div style="display:flex;gap:4px;flex:1">
+                <button onclick="setPdfLabelAlign('left',this)" class="pdf-align-btn" style="flex:1;padding:3px 0;font-size:11px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">⬅</button>
+                <button onclick="setPdfLabelAlign('center',this)" class="pdf-align-btn active" style="flex:1;padding:3px 0;font-size:11px;border-radius:3px;border:1px solid var(--ac);background:rgba(240,165,0,.15);color:var(--ac);cursor:pointer">⬌</button>
+                <button onclick="setPdfLabelAlign('right',this)" class="pdf-align-btn" style="flex:1;padding:3px 0;font-size:11px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">➡</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Label draggable hint -->
           <div style="font-size:9px;color:var(--mu);line-height:1.6;font-family:'Space Mono',monospace;padding:4px 7px;background:rgba(240,165,0,.05);border-radius:4px;border:1px solid rgba(240,165,0,.2)">
             💡 Aktifkan <b style="color:var(--ac)">T</b> → muncul <b style="color:var(--ac)">marker L</b> kuning di peta.<br>Drag marker untuk geser posisi label di PDF.
@@ -699,6 +756,62 @@ var _labelDragMarkers={};   // {measureId: L.Marker} — marker drag untuk posis
 var _exportBatasShow={};    // {measureId: bool} — tampilkan garis batas polygon di PDF (default true)
 var _exportLabelShow={};    // {measureId: bool} — tampilkan label per-polygon di PDF (default true)
 
+// PDF STYLE STATE
+var _pdfBatasColor='#2e8024';   // warna garis batas
+var _pdfBatasThickness=1.8;     // ketebalan pt
+var _pdfBatasStyle='solid';     // 'solid' | 'dashed' | 'dotted'
+var _pdfLabelColor='#1a4d00';   // warna teks label
+var _pdfLabelSize=6;            // ukuran font pt
+var _pdfLabelAlign='center';    // 'left' | 'center' | 'right'
+
+// Palet warna cepat untuk PDF
+var _pdfColorSwatches=[
+  '#1a4d00','#2e8024','#0a3d62','#1565C0','#6a1b9a',
+  '#880e4f','#bf360c','#e65100','#f57f17','#000000',
+  '#ffffff','#546e7a','#c62828','#00838f','#2e7d32'
+];
+
+function _initPdfStyleSwatches(){
+  function makeSwatch(containerId,currentColor,onSelect){
+    var el=document.getElementById(containerId);if(!el)return;
+    el.innerHTML=_pdfColorSwatches.map(function(c){
+      var sel=c===currentColor?' box-shadow:0 0 0 2px #fff,0 0 0 3.5px '+c+';':'';
+      return '<div onclick="'+onSelect+'(\''+c+'\')" title="'+c+'" style="width:14px;height:14px;border-radius:3px;background:'+c+';cursor:pointer;border:1px solid rgba(255,255,255,.25);flex-shrink:0;'+sel+'"></div>';
+    }).join('');
+  }
+  makeSwatch('batasColorSwatches',_pdfBatasColor,'setPdfBatasColor');
+  makeSwatch('labelColorSwatches',_pdfLabelColor,'setPdfLabelColor');
+}
+
+function setPdfBatasColor(hex){
+  _pdfBatasColor=hex;
+  var picker=document.getElementById('batasColorPicker');if(picker)picker.value=hex;
+  _initPdfStyleSwatches();
+}
+function setPdfLabelColor(hex){
+  _pdfLabelColor=hex;
+  var picker=document.getElementById('labelColorPicker');if(picker)picker.value=hex;
+  _initPdfStyleSwatches();
+}
+function setPdfBatasStyle(style,btn){
+  _pdfBatasStyle=style;
+  document.querySelectorAll('.pdf-style-btn').forEach(function(b){
+    var active=b.getAttribute('data-style')===style;
+    b.style.border=active?'1px solid var(--saw)':'1px solid var(--bd)';
+    b.style.background=active?'rgba(90,158,53,.15)':'var(--s3)';
+    b.style.color=active?'var(--saw2)':'var(--mu)';
+  });
+}
+function setPdfLabelAlign(align,btn){
+  _pdfLabelAlign=align;
+  document.querySelectorAll('.pdf-align-btn').forEach(function(b){
+    var active=b===btn;
+    b.style.border=active?'1px solid var(--ac)':'1px solid var(--bd)';
+    b.style.background=active?'rgba(240,165,0,.15)':'var(--s3)';
+    b.style.color=active?'var(--ac)':'var(--mu)';
+  });
+}
+
 // =====================================================
 // *** PATCH 1: CONVEX HULL UTILITIES ***
 // =====================================================
@@ -749,6 +862,7 @@ function switchTab(id,el){
     var hasRows=bl&&bl.querySelector('.expBkCb');
     if(!hasRows)renderExportBlokList();
     _updateLabelDragMarkers();
+    _initPdfStyleSwatches();
   }
 }
 
@@ -3123,6 +3237,17 @@ async function generateDroneMapPDF(){
       }
     }
 
+    function strokePolygonStyled(pts,strokeRgb,lineWidth,dashArr){
+      var opts={thickness:lineWidth,color:rgb(strokeRgb.r,strokeRgb.g,strokeRgb.b),opacity:1};
+      if(dashArr)opts.dashArray=dashArr;
+      for(var i=0;i<pts.length-1;i++){
+        page.drawLine(Object.assign({},opts,{start:{x:pts[i][0],y:pts[i][1]},end:{x:pts[i+1][0],y:pts[i+1][1]}}));
+      }
+      if(pts.length>1){
+        page.drawLine(Object.assign({},opts,{start:{x:pts[pts.length-1][0],y:pts[pts.length-1][1]},end:{x:pts[0][0],y:pts[0][1]}}));
+      }
+    }
+
     // ── HEADER MINIMAL (tanpa judul — sudah ada di sidebar) ─
     var fontBold=await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
     var fontNorm=await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
@@ -3210,7 +3335,7 @@ async function generateDroneMapPDF(){
           thisBkFoto=bkEntry?bkEntry.foto:false;
         }
         // Warna stroke: gunakan BK color jika BK aktif
-        var sHex=isBK?_getBkColor(m.id):'#1a6bcc';
+        var sHex=isBK?(_pdfBatasColor||_getBkColor(m.id)):'#1a6bcc';
         var fHex=isBK?_getBkColor(m.id):'#58a6ff';
         var sRgb=hexToRgb(sHex),fRgb=hexToRgb(fHex);
         var pts=m.coords.map(function(c){return project(c[1],c[0]);});
@@ -3220,11 +3345,12 @@ async function generateDroneMapPDF(){
           if(!thisBkFoto){
             fillPolygon(pts,fRgb,isBK?0.28:0.18);
           }
-          // Stroke
-          var strokeW=thisBkFoto?2.5:(isBK?1.8:0.8);
-          strokePolygon(pts,sRgb,strokeW);
+          // Stroke dengan style settings
+          var strokeW=thisBkFoto?_pdfBatasThickness:(isBK?_pdfBatasThickness:Math.min(_pdfBatasThickness,0.8));
+          var dashArr=_pdfBatasStyle==='dashed'?[6,4]:_pdfBatasStyle==='dotted'?[1.5,3.5]:null;
+          strokePolygonStyled(pts,sRgb,strokeW,dashArr);
         }
-        // Label per-polygon
+        // Label per-polygon dengan style settings
         if(showLabel){
           var off=_labelOffsets[m.id]||{dlat:0,dlng:0};
           var cLat0=m.coords.reduce(function(s,c){return s+c[1];},0)/m.coords.length;
@@ -3234,12 +3360,30 @@ async function generateDroneMapPDF(){
           if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
             var lbl=m.label||'Blok';
             var aHa=(m.area/10000).toFixed(2)+' Ha';
-            var tw=Math.max(lbl.length*4.2, aHa.length*3.8);
-            page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,color:rgb(1,1,1),opacity:0.92});
-            var bRgb=hexToRgb(isBK?sHex:'#1a6bcc');
-            page.drawRectangle({x:cx-tw/2-3,y:cy-7,width:tw+6,height:17,borderColor:rgb(bRgb.r,bRgb.g,bRgb.b),borderWidth:0.5,opacity:0.6});
-            page.drawText(lbl,{x:cx-lbl.length*4.2/2,y:cy+4,size:6,color:rgb(bRgb.r,bRgb.g,bRgb.b),font:fontBold});
-            page.drawText(aHa,{x:cx-aHa.length*3.8/2,y:cy-4.5,size:5.5,color:rgb(0.2,0.2,0.2),font:fontNorm});
+            var fs=_pdfLabelSize||6;
+            var fs2=Math.max(fs*0.85,4.5);
+            // Estimasi lebar teks berdasarkan font size (0.55 * size per karakter Helvetica)
+            var charW=fs*0.55;
+            var charW2=fs2*0.55;
+            var tw=Math.max(lbl.length*charW,aHa.length*charW2);
+            // Alignment x
+            var boxX=cx-tw/2-4;
+            if(_pdfLabelAlign==='left')boxX=cx-tw-4;
+            if(_pdfLabelAlign==='right')boxX=cx+4;
+            var lblX=boxX+4;
+            if(_pdfLabelAlign==='center')lblX=cx-lbl.length*charW/2;
+            if(_pdfLabelAlign==='right')lblX=cx+8;
+            var aHaX=boxX+4;
+            if(_pdfLabelAlign==='center')aHaX=cx-aHa.length*charW2/2;
+            if(_pdfLabelAlign==='right')aHaX=cx+8;
+            // Background box
+            page.drawRectangle({x:boxX,y:cy-fs2-2,width:tw+8,height:fs+fs2+8,color:rgb(1,1,1),opacity:0.92});
+            var lbRgb=hexToRgb(_pdfLabelColor||'#1a4d00');
+            page.drawRectangle({x:boxX,y:cy-fs2-2,width:tw+8,height:fs+fs2+8,borderColor:rgb(lbRgb.r,lbRgb.g,lbRgb.b),borderWidth:0.5,opacity:0.6});
+            // Nama blok
+            page.drawText(lbl,{x:lblX,y:cy+3,size:fs,color:rgb(lbRgb.r,lbRgb.g,lbRgb.b),font:fontBold});
+            // Luas
+            page.drawText(aHa,{x:aHaX,y:cy-fs2-0.5,size:fs2,color:rgb(0.25,0.25,0.25),font:fontNorm});
           }
         }
         if(showBatas)polLeg.push({label:m.label||'Blok',area:m.area,isBK:isBK,fHex:fHex,sHex:sHex,trees:m.treesInside||0,density:m.density||'-'});
@@ -3252,13 +3396,16 @@ async function generateDroneMapPDF(){
         if(lineBatasCb)showLineBatas=lineBatasCb.checked;
         else if(_exportBatasShow[m.id]!==undefined)showLineBatas=_exportBatasShow[m.id];
         if(showLineBatas){
-          var lRgb=hexToRgb('#3580d8');
+          var lRgb=hexToRgb(_pdfBatasColor||'#3580d8');
+          var lineDash=_pdfBatasStyle==='dashed'?[6,4]:_pdfBatasStyle==='dotted'?[1.5,3.5]:[5,3];
           for(var li=0;li<m.coords.length-1;li++){
             var pa=project(m.coords[li][1],m.coords[li][0]);
             var pb=project(m.coords[li+1][1],m.coords[li+1][0]);
-            page.drawLine({start:{x:pa[0],y:pa[1]},end:{x:pb[0],y:pb[1]},thickness:1.0,color:rgb(lRgb.r,lRgb.g,lRgb.b),opacity:0.85,dashArray:[5,3],dashPhase:0});
+            var lineOpts={start:{x:pa[0],y:pa[1]},end:{x:pb[0],y:pb[1]},thickness:_pdfBatasThickness,color:rgb(lRgb.r,lRgb.g,lRgb.b),opacity:0.9};
+            if(_pdfBatasStyle!=='solid')lineOpts.dashArray=lineDash;
+            page.drawLine(lineOpts);
           }
-          polLeg.push({label:m.label||'Line',isLine:true,fHex:'#3580d8',sHex:'#3580d8',len:m.len});
+          polLeg.push({label:m.label||'Line',isLine:true,fHex:_pdfBatasColor||'#3580d8',sHex:_pdfBatasColor||'#3580d8',len:m.len});
         }
       }
     });
