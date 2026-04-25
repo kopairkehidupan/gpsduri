@@ -773,6 +773,9 @@ var _pdfLabelColor='#1a4d00';   // warna teks label
 var _pdfLabelSize=6;            // ukuran font pt
 var _pdfLabelAlign='center';    // 'left' | 'center' | 'right'
 
+// LUAS MANUAL STATE — override luas polygon di PDF
+var _manualAreaHa={};  // {measureId: string} — nilai Ha manual; kosong = ikut polygon
+
 // Palet warna cepat untuk PDF
 var _pdfColorSwatches=[
   '#1a4d00','#2e8024','#0a3d62','#1565C0','#6a1b9a',
@@ -2922,25 +2925,33 @@ function exitSplitView(){
 
 <!-- ===== PDF MODAL ===== -->
 <div id="pdfModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;backdrop-filter:blur(6px)">
-  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:400px;max-width:95vw;font-family:'DM Sans',sans-serif">
-    <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:16px">📄 Pengaturan Laporan PDF</div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Judul Peta</label>
-      <input id="pdfTitle" type="text" value="PETA AREAL KEBUN SAWIT" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:430px;max-width:95vw;font-family:'DM Sans',sans-serif;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:14px">📄 Pengaturan Laporan PDF</div>
+    <div style="overflow-y:auto;flex:1;min-height:0;padding-right:2px">
+      <div style="margin-bottom:11px">
+        <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Judul Peta</label>
+        <input id="pdfTitle" type="text" value="PETA AREAL KEBUN SAWIT" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:9px">
+        <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Subtitle (opsional)</label>
+        <input id="pdfSubtitle" type="text" placeholder="Nama Kebun / Lokasi" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="margin-bottom:11px">
+        <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Nama Pengecek / Mandor</label>
+        <input id="pdfPengecek" type="text" placeholder="Opsional" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <!-- EDITOR LUAS MANUAL per blok -->
+      <div style="margin-bottom:11px">
+        <div style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📐 Luas Blok di PDF
+          <span style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;text-transform:none;font-weight:400;letter-spacing:0">(edit manual jika tidak sesuai lapangan)</span>
+        </div>
+        <div id="pdfAreaEditor" style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;max-height:200px;overflow-y:auto">
+          <!-- diisi JS saat modal dibuka -->
+        </div>
+      </div>
     </div>
-    <div style="margin-bottom:10px">
-      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Subtitle (opsional)</label>
-      <input id="pdfSubtitle" type="text" placeholder="Nama Kebun / Lokasi" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
-    </div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Nama Pengecek / Mandor</label>
-      <input id="pdfPengecek" type="text" placeholder="Opsional" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:9px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
-    </div>
-    <!-- Ringkasan pilihan blok yang sudah dikonfigurasi di tab Export -->
-    <div id="pdfModalSummary" style="margin-bottom:14px;background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 13px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;line-height:1.8">
-      Konfigurasi blok & foto sudah diatur di tab Export.
-    </div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--bd);flex-shrink:0">
       <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
       <button onclick="runGeneratePdf()" style="flex:2;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#2E7D32,#43A047);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">📄 Cetak PDF</button>
     </div>
@@ -3135,10 +3146,109 @@ function _updatePdfModalSummary(){
 
 function openPdfModal(){
   if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
-  // Jangan rebuild list di sini! State toggle sudah diatur user di tab Export.
-  // Hanya update summary untuk tampilkan ringkasan terkini.
-  _updatePdfModalSummary();
+  _renderPdfAreaEditor();
   document.getElementById('pdfModal').style.display='flex';
+}
+
+// Render editor luas manual per blok di dalam modal PDF
+function _renderPdfAreaEditor(){
+  var el=document.getElementById('pdfAreaEditor');if(!el)return;
+  // Ambil polygon yang dipilih cetak di tab Export
+  var selected=measures.filter(function(m){
+    if(m.type!=='polygon')return false;
+    var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+    return cb&&cb.checked;
+  });
+  if(selected.length===0){
+    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:8px 0">Belum ada polygon yang dipilih di tab Export.</div>';
+    return;
+  }
+  // Cek apakah semua masih ikut polygon (tidak ada manual)
+  var allFollowPoly=selected.every(function(m){var v=_manualAreaHa[m.id];return !v||v==='';});
+  var html='<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:5px 7px;background:rgba(90,158,53,.07);border-radius:5px;border:1px solid rgba(90,158,53,.2)">'
+    +'<input type="checkbox" id="cbAllFollowPoly" '+(allFollowPoly?'checked':'')+' onchange="_onAllFollowPolyChange(this.checked)" style="width:13px;height:13px;accent-color:var(--saw);cursor:pointer">'
+    +'<label for="cbAllFollowPoly" style="font-size:9px;color:var(--saw2);cursor:pointer;flex:1;line-height:1.4">Semua luas ikut polygon (auto)<br><span style="color:var(--mu);font-size:8px;font-family:\'Space Mono\',monospace">Centang = tidak ada override manual</span></label>'
+    +'</div>';
+  // Grid: [warna+nama] [input Ha]
+  html+='<div style="display:flex;flex-direction:column;gap:4px">';
+  selected.forEach(function(m){
+    var polyHa=(m.area/10000).toFixed(2);
+    var manualVal=(_manualAreaHa[m.id]!==undefined)?_manualAreaHa[m.id]:'';
+    var isManual=manualVal!=='';
+    var bkColor=_batasKebunIds.has(m.id)?_getBkColor(m.id):'var(--saw2)';
+    html+='<div style="display:flex;align-items:center;gap:7px;padding:4px 6px;border-radius:4px;background:var(--sf);border:1px solid var(--bd)">'
+      +'<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+bkColor+';flex-shrink:0"></span>'
+      +'<span style="flex:1;font-size:9px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px" title="'+m.label+'">'+m.label+'</span>'
+      +'<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;flex-shrink:0;min-width:50px;text-align:right">'+(isManual?'':'poly: '+polyHa)+'</span>'
+      +'<input type="number" step="0.01" min="0" id="manualHa_'+m.id+'" value="'+manualVal+'"'
+        +' placeholder="'+polyHa+'"'
+        +' oninput="_onManualHaChange('+m.id+',this.value)"'
+        +' title="Kosong = ikut polygon ('+polyHa+' Ha)"'
+        +' style="width:70px;background:var(--s2);border:1.5px solid '+(isManual?'var(--ac)':'var(--bd)')+';border-radius:4px;color:'+(isManual?'var(--ac)':'var(--mu)')+';font-family:\'Space Mono\',monospace;font-size:10px;padding:3px 6px;outline:none;text-align:right;flex-shrink:0">'
+      +'<span style="font-size:8px;color:var(--mu);flex-shrink:0">Ha</span>'
+      +'</div>';
+  });
+  html+='</div>';
+  // Info total
+  var totalEff=selected.reduce(function(s,m){
+    var v=_manualAreaHa[m.id];
+    return s+(v&&v!==''&&!isNaN(parseFloat(v))?parseFloat(v)*10000:m.area);
+  },0);
+  html+='<div style="margin-top:7px;padding:4px 8px;background:rgba(90,158,53,.08);border-radius:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--saw2);text-align:right">Total Luas PDF: '+(totalEff/10000).toFixed(2)+' Ha</div>';
+  el.innerHTML=html;
+}
+
+function _onAllFollowPolyChange(checked){
+  if(checked){
+    // Hapus semua override manual
+    _manualAreaHa={};
+    document.querySelectorAll('[id^="manualHa_"]').forEach(function(inp){
+      inp.value='';
+      inp.style.borderColor='var(--bd)';
+      inp.style.color='var(--mu)';
+    });
+    // Update total display
+    _refreshAreaEditorTotal();
+  }
+}
+
+function _onManualHaChange(id,val){
+  _manualAreaHa[id]=val;
+  var inp=document.getElementById('manualHa_'+id);
+  if(inp){
+    var isManual=val!=='';
+    inp.style.borderColor=isManual?'var(--ac)':'var(--bd)';
+    inp.style.color=isManual?'var(--ac)':'var(--mu)';
+    // Update poly hint
+    var row=inp.parentNode;
+    if(row){var hint=row.querySelector('span:nth-child(3)');if(hint)hint.textContent=isManual?'manual':'poly: '+(measures.find(function(m){return m.id===id;})||{area:0}).area/10000|0+'...';}
+  }
+  // Uncheck "all follow poly" jika ada manual
+  var cb=document.getElementById('cbAllFollowPoly');
+  if(cb&&val!=='')cb.checked=false;
+  _refreshAreaEditorTotal();
+}
+
+function _refreshAreaEditorTotal(){
+  var selected=measures.filter(function(m){
+    if(m.type!=='polygon')return false;
+    var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+    return cb&&cb.checked;
+  });
+  var totalEff=selected.reduce(function(s,m){
+    var v=_manualAreaHa[m.id];
+    return s+(v&&v!==''&&!isNaN(parseFloat(v))?parseFloat(v)*10000:m.area);
+  },0);
+  // Update total display di area editor
+  var el=document.getElementById('pdfAreaEditor');
+  if(el){var tot=el.querySelector('div:last-child');if(tot&&tot.textContent.startsWith('Total Luas PDF'))tot.textContent='Total Luas PDF: '+(totalEff/10000).toFixed(2)+' Ha';}
+}
+
+// Helper: dapatkan luas efektif (manual jika ada, polygon jika tidak)
+function _getEffectiveAreaM2(m){
+  var v=_manualAreaHa[m.id];
+  if(v!==undefined&&v!==''&&!isNaN(parseFloat(v)))return parseFloat(v)*10000;
+  return m.area||0;
 }
 
 function pdfBkSelectAll(val){} // legacy — tidak dipakai lagi
@@ -3162,8 +3272,8 @@ function runGeneratePdf(){
 // Mengembalikan HTMLCanvasElement berisi mosaik aerial
 // ──────────────────────────────────────────────────────────────
 async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
-  // RS = Render Scale: canvas 3× lebih besar dari PDF point → ~216 DPI (tajam untuk cetak)
-  var RS=3;
+  // RS = Render Scale: canvas 4× lebih besar dari PDF point → ~288 DPI (mendekati print quality)
+  var RS=4;
   var canvas=document.createElement('canvas');
   canvas.width=mapW*RS;canvas.height=mapH*RS;
   var ctx=canvas.getContext('2d');
@@ -3406,13 +3516,14 @@ async function generateDroneMapPDF(){
     // ── EMBED FOTO UDARA — satu canvas gabungan, clip per blok ─
     if(includeFoto){
       try{
-        // RS=3 → canvas ~216 DPI, jauh lebih tajam dari sebelumnya
-        var RS_AERIAL=3;
+        // RS=4 → canvas ~288 DPI (mendekati print quality 300 DPI)
+        // Naik dari RS=3 (216 DPI) → jauh lebih tajam di PDF viewer & printer
+        var RS_AERIAL=4;
         var aCanvas=document.createElement('canvas');
         aCanvas.width=MAP_W*RS_AERIAL; aCanvas.height=MAP_H*RS_AERIAL;
         var actx=aCanvas.getContext('2d');
         actx.imageSmoothingEnabled=true; actx.imageSmoothingQuality='high';
-        // Putih dulu SEBELUM drawing — area kosong = putih (bukan hitam di JPEG)
+        // Putih dulu SEBELUM drawing — area kosong = putih (WAJIB untuk JPEG, cegah area hitam)
         actx.fillStyle='#ffffff';
         actx.fillRect(0,0,aCanvas.width,aCanvas.height);
 
@@ -3470,12 +3581,14 @@ async function generateDroneMapPDF(){
           }
         }
 
-        // Export SATU canvas gabungan sebagai PNG (mendukung transparansi/putih dengan benar di PDF)
-        var aDataUrl=aCanvas.toDataURL('image/png');
+        // Export sebagai JPEG 92% — format NATIVE di PDF, lebih tajam & file lebih kecil dari PNG
+        // Background sudah putih (fillRect di atas) → tidak ada area hitam
+        showToast('⏳ Encoding foto ke PDF (JPEG 92%)...');
+        var aDataUrl=aCanvas.toDataURL('image/jpeg',0.92);
         var aB64=aDataUrl.split(',')[1];
         var aBytes=Uint8Array.from(atob(aB64),function(c){return c.charCodeAt(0);});
-        var aPngImg=await pdfDoc.embedPng(aBytes);
-        page.drawImage(aPngImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
+        var aJpgImg=await pdfDoc.embedJpg(aBytes);
+        page.drawImage(aJpgImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
       }catch(aerr){
         console.warn('Aerial render error:',aerr);
         showToast('⚠ Foto udara gagal dirender, melanjutkan tanpa foto...');
@@ -3539,7 +3652,9 @@ async function generateDroneMapPDF(){
           var cx=lpt[0],cy=lpt[1];
           if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
             var lbl=m.label||'Blok';
-            var aHa=(m.area/10000).toFixed(2)+' Ha';
+            // Gunakan luas efektif (manual jika ada)
+            var effM2=_getEffectiveAreaM2(m);
+            var aHa=(effM2/10000).toFixed(2)+' Ha';
             var fs=_pdfLabelSize||6;
             var fs2=Math.max(fs*0.85,4.5);
             // Estimasi lebar teks berdasarkan font size (0.55 * size per karakter Helvetica)
@@ -3566,7 +3681,7 @@ async function generateDroneMapPDF(){
             page.drawText(aHa,{x:aHaX,y:cy-fs2-0.5,size:fs2,color:rgb(0.25,0.25,0.25),font:fontNorm});
           }
         }
-        if(showBatas)polLeg.push({label:m.label||'Blok',area:m.area,isBK:isBK,fHex:fHex,sHex:sHex,trees:m.treesInside||0,density:m.density||'-'});
+        if(showBatas)polLeg.push({label:m.label||'Blok',area:m.area,effectiveArea:_getEffectiveAreaM2(m),isBK:isBK,fHex:fHex,sHex:sHex,trees:m.treesInside||0,density:m.density||'-'});
       } else if(m.type==='line'&&m.coords&&m.coords.length>=2){
         var isSelectedLine=selectedIds.size===0||selectedIds.has(m.id);
         if(!isSelectedLine)return;
@@ -3700,13 +3815,15 @@ async function generateDroneMapPDF(){
       if(p.isLine){
         legItems.push({isLine:true,fHex:p.fHex,sHex:p.sHex,lbl:p.label+(p.len?' ('+fmtLen(p.len)+')':'')});
       } else {
-        var aHaStr=(p.area/10000).toFixed(2)+' Ha';
-        var treeTxt=p.trees>0?'  '+p.trees+' pokok':'';
-        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:p.label,sub:aHaStr+treeTxt});
+        // Gunakan luas efektif (manual jika ada, polygon jika tidak)
+        var effM2=p.effectiveArea!==undefined?p.effectiveArea:p.area;
+        var aHaStr=(effM2/10000).toFixed(2)+' Ha';
+        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:p.label,aHa:aHaStr});
       }
     });
 
-    var legRowH=13,box4H=18+legItems.length*legRowH+18;
+    // legRowH dikurangi agar 1 baris saja (label + luas) — tidak ada sub-baris
+    var legRowH=10,box4H=18+legItems.length*legRowH+18;
     var remainH=yPos-MAP_Y;
     if(box4H>remainH)box4H=remainH;
     page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:box4H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
@@ -3717,26 +3834,30 @@ async function generateDroneMapPDF(){
       if(ky-legRowH<yPos-box4H+18)return;
       var fRgb=hexToRgb(item.fHex||'#888');
       var sRgb=hexToRgb(item.sHex||item.fHex||'#888');
+      var midY=ky-legRowH/2; // pusat vertikal baris
       if(item.isLine){
-        page.drawLine({start:{x:SB_X+3,y:ky-legRowH/2},end:{x:SB_X+13,y:ky-legRowH/2},thickness:1.5,color:rgb(fRgb.r,fRgb.g,fRgb.b),dashArray:[4,2],dashPhase:0});
+        page.drawLine({start:{x:SB_X+3,y:midY},end:{x:SB_X+13,y:midY},thickness:1.5,color:rgb(fRgb.r,fRgb.g,fRgb.b),dashArray:[4,2],dashPhase:0});
       } else {
-        page.drawRectangle({x:SB_X+3,y:ky-legRowH+3,width:10,height:8,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.7,opacity:0.8});
+        // Kotak warna kecil, ukurannya proporsional dengan rowH
+        page.drawRectangle({x:SB_X+3,y:midY-3.5,width:8,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.85});
       }
-      // Nama blok
-      var lblText=item.lbl;if(lblText.length>18)lblText=lblText.substring(0,17)+'..';
-      page.drawText(lblText,{x:SB_X+16,y:ky-6,size:7,color:rgb(0.05,0.05,0.05),font:fontBold});
-      // Luas sub-text
-      if(item.sub){
-        var subText=item.sub;if(subText.length>24)subText=subText.substring(0,22)+'..';
-        page.drawText(subText,{x:SB_X+16,y:ky-12.5,size:5.5,color:rgb(0.35,0.35,0.35),font:fontNorm});
+      // SATU BARIS: nama blok (kiri) + luas (kanan)
+      var lblText=item.lbl;if(lblText.length>14)lblText=lblText.substring(0,13)+'..';
+      page.drawText(lblText,{x:SB_X+14,y:midY-2.5,size:6.5,color:rgb(0.05,0.05,0.05),font:fontBold});
+      if(item.aHa){
+        // Luas rata kanan
+        var aHaW=item.aHa.length*6.5*0.52;
+        page.drawText(item.aHa,{x:SB_X+SB_W-4-aHaW,y:midY-2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
       }
       ky-=legRowH;
     });
-    // Total luas
-    var totalArea=polLeg.reduce(function(s,p){return s+(p.isLine?0:(p.area||0));},0);
+    // Total luas — rata tengah yang benar (Helvetica Bold 7.5pt ≈ 4.0pt per char)
+    var totalArea=polLeg.reduce(function(s,p){return s+(p.isLine?0:(p.effectiveArea!==undefined?p.effectiveArea:(p.area||0)));},0);
     page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:14,color:rgb(0.1,0.42,0.19)});
     var totalStr='Total Luas: '+(totalArea/10000).toFixed(2)+' Ha';
-    page.drawText(totalStr,{x:SB_X+SB_W/2-(totalStr.length*3.5),y:yPos-box4H+4,size:7.5,color:rgb(1,1,1),font:fontBold});
+    var totalStrW=totalStr.length*7.5*0.52; // estimasi lebar teks
+    var totalStrX=SB_X+SB_W/2-totalStrW/2;
+    page.drawText(totalStr,{x:totalStrX,y:yPos-box4H+4,size:7.5,color:rgb(1,1,1),font:fontBold});
 
     // ── FOOTER ─────────────────────────────────────────
     page.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
