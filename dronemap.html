@@ -3648,6 +3648,9 @@ async function generateDroneMapPDF(){
         var aBytes=Uint8Array.from(atob(aB64),function(c){return c.charCodeAt(0);});
         var aJpgImg=await pdfDoc.embedJpg(aBytes);
         page.drawImage(aJpgImg,{x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H});
+      }catch(aerr){
+        console.warn('Aerial render error:',aerr);
+        showToast('⚠ Foto udara gagal dirender, melanjutkan tanpa foto...');
       }
     }
 
