@@ -224,7 +224,10 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 </div>
 
 <header>
-  <div class="logo">🌴 Drone<span>Map</span><small>v3 Pro</small></div>
+  <div class="logo" style="display:flex;flex-direction:column;gap:0">
+    <span>🌴 Drone<span>Map</span><small>v3 Pro</small></span>
+    <span style="font-size:7px;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;font-weight:400;letter-spacing:.02em;margin-top:1px">Design By Erik Simarmata</span>
+  </div>
   <div class="steps">
     <div class="step active" id="step1"><div class="step-num">1</div>Foto &amp; GCP</div>
     <div style="color:var(--bd);font-size:12px">›</div>
@@ -1754,7 +1757,7 @@ function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
-  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(map);
+  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
   // Pane khusus GCP marker — selalu di atas photo overlay
   map.createPane('gcpPane');
   map.getPane('gcpPane').style.zIndex=650;
