@@ -752,6 +752,12 @@ function _applyBkColors(){
 
 var _nadirMoveHandler=null;
 
+// GESER FOTO STATE
+var _geserPhotoId=null;       // ID foto yang sedang di-geser
+var _geserMarkers={};         // {photoId: L.Marker} marker drag untuk geser foto
+var _geserStartLatLng=null;   // posisi awal drag
+var _geserStartOffset=null;   // offset awal foto saat drag dimulai
+
 // PDF OPTIONS STATE
 var _pdfShowLabels=true;    // toggle label blok di PDF (global, masih dipakai _updateLabelDragMarkers)
 var _labelOffsets={};       // {measureId: {dlat,dlng}} — offset label dalam satuan derajat lat/lng
@@ -1754,6 +1760,80 @@ function movePhotoDown(pid){
 }
 function resetPhotoOffset(pid){var p=getPhoto(pid);if(!p)return;p.offsetLat=0;p.offsetLng=0;if(p.overlay&&p.overlay.forceUpdate)p.overlay.forceUpdate();renderLayerList();}
 
+// =====================================================
+// GESER FOTO — drag marker untuk geser overlay foto
+// =====================================================
+function toggleGeserMode(pid,btn){
+  if(_geserPhotoId===pid){
+    // Matikan mode geser
+    _stopGeserMode();
+  } else {
+    // Aktifkan mode geser untuk foto ini
+    if(_geserPhotoId)_stopGeserMode();
+    _startGeserMode(pid);
+  }
+  renderLayerList();
+}
+
+function _startGeserMode(pid){
+  var p=getPhoto(pid);if(!p||!p.corners||!map)return;
+  _geserPhotoId=pid;
+  // Hitung posisi center foto (termasuk offset yang sudah ada)
+  var oLat=p.offsetLat||0,oLng=p.offsetLng||0;
+  var cLat=(p.corners.tl.lat+p.corners.tr.lat+p.corners.br.lat+p.corners.bl.lat)/4+oLat;
+  var cLng=(p.corners.tl.lng+p.corners.tr.lng+p.corners.br.lng+p.corners.bl.lng)/4+oLng;
+  // Buat drag marker
+  var icon=L.divIcon({
+    className:'',
+    html:'<div style="width:34px;height:34px;border-radius:50%;background:rgba(240,165,0,.9);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:move;user-select:none">✥</div>',
+    iconSize:[34,34],iconAnchor:[17,17]
+  });
+  var marker=L.marker([cLat,cLng],{icon:icon,draggable:true,zIndexOffset:2000});
+  // Saat drag mulai — simpan offset awal
+  marker.on('dragstart',function(e){
+    var pp=getPhoto(_geserPhotoId);if(!pp)return;
+    _geserStartLatLng=e.target.getLatLng();
+    _geserStartOffset={lat:pp.offsetLat||0,lng:pp.offsetLng||0};
+  });
+  // Saat drag berlangsung — update offset real-time
+  marker.on('drag',function(e){
+    var pp=getPhoto(_geserPhotoId);if(!pp||!_geserStartLatLng||!_geserStartOffset)return;
+    var ll=e.target.getLatLng();
+    var dLat=ll.lat-_geserStartLatLng.lat;
+    var dLng=ll.lng-_geserStartLatLng.lng;
+    pp.offsetLat=_geserStartOffset.lat+dLat;
+    pp.offsetLng=_geserStartOffset.lng+dLng;
+    if(pp.overlay&&pp.overlay.forceUpdate)pp.overlay.forceUpdate();
+    // Update offset display
+    var ofEl=document.getElementById('offset_'+_geserPhotoId);
+    if(ofEl)ofEl.textContent=pp.offsetLat.toFixed(6)+' / '+pp.offsetLng.toFixed(6);
+  });
+  // Saat drag selesai
+  marker.on('dragend',function(){
+    var pp=getPhoto(_geserPhotoId);if(!pp)return;
+    _geserStartLatLng=null;_geserStartOffset=null;
+    // Refresh BK jika ada
+    if(_batasKebunIds.size>0)_rebuildBkOwnerMap();
+    setStatus('Foto "'+pp.name+'" digeser: Δlat='+pp.offsetLat.toFixed(6)+' Δlng='+pp.offsetLng.toFixed(6),'green');
+  });
+  marker.bindTooltip(p.name+' — Drag untuk geser',{permanent:false,direction:'top',offset:[0,-20]});
+  marker.addTo(map);
+  _geserMarkers[pid]=marker;
+  map.getContainer().style.cursor='';
+  setStatus('Mode Geser Foto aktif: "'+p.name+'" — Drag marker ✥ di peta','amber');
+}
+
+function _stopGeserMode(){
+  if(_geserPhotoId&&_geserMarkers[_geserPhotoId]){
+    try{map.removeLayer(_geserMarkers[_geserPhotoId]);}catch(e){}
+    delete _geserMarkers[_geserPhotoId];
+  }
+  _geserPhotoId=null;
+  _geserStartLatLng=null;
+  _geserStartOffset=null;
+  setStatus('Mode Geser selesai','green');
+}
+
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
@@ -1828,6 +1908,10 @@ function renderLayerList(){
       '</div>'+
       '<div class="lay-offset" style="margin-top:3px">Δ <span id="offset_'+p.id+'">'+(hasOffset?p.offsetLat.toFixed(6)+' / '+p.offsetLng.toFixed(6):'0 / 0')+'</span>'+
       (hasOffset?' <button onclick="resetPhotoOffset('+p.id+')" style="font-size:8px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">↺ Reset</button>':'')+
+      '</div>'+
+      '<div style="margin-top:5px">'+
+        '<button onclick="toggleGeserMode('+p.id+',this)" id="btnGeser_'+p.id+'" style="width:100%;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer;font-family:\'Space Mono\',monospace;transition:.15s"'+(_geserPhotoId===p.id?' style="border-color:var(--ac);background:rgba(240,165,0,.15);color:var(--ac)"':'')+'>✥ Geser Foto</button>'+
+        (_geserPhotoId===p.id?'<div style="margin-top:4px;font-size:9px;color:var(--ac);font-family:\'Space Mono\',monospace;text-align:center;background:rgba(240,165,0,.07);border-radius:3px;padding:3px 6px">Drag marker ✥ di peta untuk geser foto</div>':'')+
       '</div>'+
     '</div>';
   }).join('');
@@ -2499,6 +2583,12 @@ function _doLoadSession(data,statusEl){
     if(p.overlay&&map)try{map.removeLayer(p.overlay);}catch(e){}
     if(p.gcpLayer&&map)try{map.removeLayer(p.gcpLayer);}catch(e){}
   });
+  // Hapus geser markers
+  if(_geserPhotoId)_stopGeserMode();
+  Object.keys(_geserMarkers).forEach(function(id){
+    if(_geserMarkers[id]&&map)try{map.removeLayer(_geserMarkers[id]);}catch(e){}
+  });
+  _geserMarkers={};
   // Hapus tree markers
   if(_treeLayer)_treeLayer.clearLayers();
   // Hapus label drag markers
