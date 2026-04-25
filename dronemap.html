@@ -2329,17 +2329,37 @@ function clearAllTrees(){
     trees.forEach(function(t){if(t.marker&&_treeLayer)_treeLayer.removeLayer(t.marker)});
     trees=[];renderTreeList();updateSensusStats();updateStats();
     document.getElementById('hdrTreeCount').textContent='🌴 0 pokok';
+    _treePage=0;
     showToast('Semua data pokok dihapus');
   });
 }
+
+// Paging state untuk daftar pohon
+var _treePage=0;
+var _treePageSize=15;
 
 function renderTreeList(){
   var el=document.getElementById('treeList');
   document.getElementById('treeCountBadge').textContent=trees.length;
   if(trees.length===0){el.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Aktifkan mode "Tandai Pokok"<br>lalu klik di peta.</div>';return;}
-  var shown=trees.slice(-20).reverse();
-  el.innerHTML=(trees.length>20?'<div style="font-size:9px;color:var(--mu);text-align:center;padding:4px 0">Menampilkan 20 terbaru dari '+trees.length+'</div>':'')+
-  shown.map(function(t){
+
+  var totalPages=Math.ceil(trees.length/_treePageSize);
+  // Clamp page
+  if(_treePage>=totalPages)_treePage=totalPages-1;
+  if(_treePage<0)_treePage=0;
+
+  var startIdx=_treePage*_treePageSize;
+  var endIdx=Math.min(startIdx+_treePageSize,trees.length);
+  var shown=trees.slice(startIdx,endIdx);
+
+  // Paging info + nav buttons
+  var pagingHtml='<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;margin-bottom:4px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu)">'
+    +'<button onclick="treePageGo(-1)" '+((_treePage===0)?'disabled style="opacity:.3"':'')+' style="padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:9px">‹ Prev</button>'
+    +'<span>'+(_treePage+1)+'/'+totalPages+' ('+startIdx+1+'–'+endIdx+' dari '+trees.length+')</span>'
+    +'<button onclick="treePageGo(1)" '+(_treePage>=totalPages-1?'disabled style="opacity:.3"':'')+' style="padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:9px">Next ›</button>'
+    +'</div>';
+
+  var listHtml=shown.map(function(t){
     var cls='tree-'+t.status,pillCls='pill-'+t.status;
     var labels={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
     return '<div class="tree-item">'+
@@ -2350,6 +2370,13 @@ function renderTreeList(){
       '<button class="btn btn-sc btn-sm" onclick="openTreeEdit('+t.id+')" style="font-size:9px;padding:2px 5px;margin-right:3px">✏</button>'+
       '<button class="tree-del" onclick="deleteTree('+t.id+')">✕</button></div>';
   }).join('');
+
+  el.innerHTML=pagingHtml+listHtml;
+}
+
+function treePageGo(dir){
+  _treePage+=dir;
+  renderTreeList();
 }
 
 function updateSensusStats(){
@@ -3591,10 +3618,6 @@ async function generateDroneMapPDF(){
     var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
     var nMati=trees.filter(function(t){return t.status==='mati';}).length;
     var nKosong=trees.filter(function(t){return t.status==='kosong';}).length;
-    var DI=nTotal>0?((nSakit+nMati+nKosong)/nTotal*100):0;
-    var DSI=nTotal>0?((nSakit*1+nMati*2+nKosong*1)/(nTotal*2)*100):0;
-    var statusLabel=DI>20?'ENDEMIK':DI>10?'WASPADA':'TERKENDALI';
-    var statusRgb=DI>20?{r:0.72,g:0.11,b:0.11}:DI>10?{r:0.7,g:0.3,b:0}:{r:0.1,g:0.42,b:0.19};
     var statRows=[
       ['Total Pokok',nTotal,rgb(0,0,0)],
       ['Normal',nNormal,rgb(0.1,0.45,0.15)],
@@ -3602,7 +3625,7 @@ async function generateDroneMapPDF(){
       ['Mati',nMati,rgb(0.65,0.1,0.1)],
       ['Kosong',nKosong,rgb(0.45,0.45,0.45)]
     ];
-    var rowH=11,box3H=20+statRows.length*rowH+14;
+    var rowH=11,box3H=20+statRows.length*rowH+4;
     page.drawRectangle({x:SB_X,y:yPos-box3H,width:SB_W,height:box3H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
     page.drawRectangle({x:SB_X,y:yPos-12,width:SB_W,height:12,color:rgb(0.04,0.15,0.08)});
     page.drawText('STATISTIK SENSUS',{x:SB_X+SB_W/2-36,y:yPos-9,size:7,color:rgb(1,1,1),font:fontBold});
@@ -3617,10 +3640,6 @@ async function generateDroneMapPDF(){
       page.drawText(valStr,{x:SB_X+SB_W-3-valStr.length*4.5,y:sy-rowH+3,size:7,color:row[2],font:fontBold});
       sy-=rowH;
     });
-    // DI/DSI bar
-    page.drawRectangle({x:SB_X,y:sy-13,width:SB_W,height:13,color:rgb(statusRgb.r,statusRgb.g,statusRgb.b)});
-    var diStr='DI: '+DI.toFixed(1)+'%   DSI: '+DSI.toFixed(1)+'%   '+statusLabel;
-    page.drawText(diStr,{x:SB_X+SB_W/2-(diStr.length*3),y:sy-9,size:6.5,color:rgb(1,1,1),font:fontBold});
     yPos-=box3H;
     } // end if(nTotal>0)
 
@@ -3674,44 +3693,59 @@ async function generateDroneMapPDF(){
     if(pengecek)page.drawText('Pengecek: '+pengecek,{x:PW/2-pengecek.length*3,y:2,size:6,color:rgb(0.4,0.4,0.4),font:fontNorm});
     page.drawText('Hal. 1',{x:PW-30,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
 
-    // ── HALAMAN 2: TABEL DATA (jika ada pokok) ──────────
+    // ── HALAMAN 2+: TABEL DATA (jika ada pokok) — semua status, multi-halaman ──
     if(trees.length>0){
-      var page2=pdfDoc.addPage([842,595]);
-      page2.drawRectangle({x:0,y:PH-28,width:PW,height:28,color:rgb(0.04,0.15,0.08)});
-      page2.drawText(title+' — Data Sensus Pokok Sawit',{x:MAP_X,y:PH-19,size:11,color:rgb(1,1,1),font:fontBold});
-
       var tHdr=['No Pokok','Blok/Baris','Status','Latitude','Longitude','Catatan'];
-      var colW=[55,55,45,80,80,160];
+      var colW=[55,55,50,80,80,155];
       var colX=[MAP_X];
       for(var ci=0;ci<colW.length-1;ci++)colX.push(colX[ci]+colW[ci]+3);
-      var tY=PH-42,tRowH=13;
+      var tRowH=13;
+      var sColors2={normal:rgb(0.1,0.45,0.15),sakit:rgb(0.65,0.35,0),mati:rgb(0.65,0.1,0.1),kosong:rgb(0.45,0.45,0.45)};
+      var labels2={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
 
-      // Header tabel
-      page2.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:rgb(0.1,0.42,0.19)});
-      tHdr.forEach(function(h,i){page2.drawText(h,{x:colX[i]+2,y:tY-tRowH+3,size:7,color:rgb(1,1,1),font:fontBold});});
-      tY-=tRowH;
+      // Hitung total halaman
+      var rowsPerPage=Math.floor((PH-42-10)/tRowH);
+      var totalPages=Math.ceil(trees.length/rowsPerPage);
+      var pageNum=2;
 
-      var sColors={normal:rgb(0.1,0.45,0.15),sakit:rgb(0.65,0.35,0),mati:rgb(0.65,0.1,0.1),kosong:rgb(0.45,0.45,0.45)};
-      trees.forEach(function(t,i){
-        if(tY-tRowH<15){return;} // clip — halaman 3 tidak diimpl
-        var bg=i%2===0?rgb(0.96,0.99,0.96):rgb(1,1,1);
-        page2.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:bg});
-        var labels={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
-        var row=[t.no,t.block||'—',labels[t.status]||t.status,t.lat.toFixed(6),t.lng.toFixed(6),t.note||'—'];
-        row.forEach(function(val,j){
-          var col=j===2?(sColors[t.status]||rgb(0,0,0)):rgb(0.15,0.15,0.15);
-          var fnt=j===2?fontBold:fontNorm;
-          var str=String(val);if(str.length>22)str=str.substring(0,20)+'..';
-          page2.drawText(str,{x:colX[j]+2,y:tY-tRowH+3,size:7,color:col,font:fnt});
-        });
-        // Row border
-        page2.drawLine({start:{x:MAP_X,y:tY-tRowH},end:{x:PW-MAP_X,y:tY-tRowH},thickness:0.3,color:rgb(0.8,0.8,0.8)});
+      for(var tp=0;tp<totalPages;tp++){
+        var curPage=pdfDoc.addPage([842,595]);
+        // Header halaman
+        curPage.drawRectangle({x:0,y:PH-28,width:PW,height:28,color:rgb(0.04,0.15,0.08)});
+        curPage.drawText(title+' — Data Sensus Pokok Sawit',{x:MAP_X,y:PH-19,size:11,color:rgb(1,1,1),font:fontBold});
+        // Info halaman & total pokok
+        var pgInfo='Hal. '+pageNum+' / '+(totalPages+1)+'   |   Total: '+trees.length+' pokok';
+        curPage.drawText(pgInfo,{x:PW-pgInfo.length*3.5-10,y:PH-19,size:6,color:rgb(0.7,0.9,0.7),font:fontNorm});
+
+        var tY=PH-42;
+        // Header kolom
+        curPage.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:rgb(0.1,0.42,0.19)});
+        tHdr.forEach(function(h,i){curPage.drawText(h,{x:colX[i]+2,y:tY-tRowH+3,size:7,color:rgb(1,1,1),font:fontBold});});
         tY-=tRowH;
-      });
-      // Footer page 2
-      page2.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
-      page2.drawText('DroneMap v3 Pro',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
-      page2.drawText('Hal. 2 / 2',{x:PW-35,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+
+        var startIdx=tp*rowsPerPage;
+        var endIdx=Math.min(startIdx+rowsPerPage,trees.length);
+        for(var ri=startIdx;ri<endIdx;ri++){
+          var t2=trees[ri];
+          var rowIdx=ri-startIdx;
+          var bg2=rowIdx%2===0?rgb(0.96,0.99,0.96):rgb(1,1,1);
+          curPage.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:bg2});
+          var tRow=[t2.no,t2.block||'—',labels2[t2.status]||t2.status,t2.lat.toFixed(6),t2.lng.toFixed(6),t2.note||'—'];
+          tRow.forEach(function(val,j){
+            var col2=j===2?(sColors2[t2.status]||rgb(0,0,0)):rgb(0.15,0.15,0.15);
+            var fnt2=j===2?fontBold:fontNorm;
+            var str2=String(val);if(str2.length>22)str2=str2.substring(0,20)+'..';
+            curPage.drawText(str2,{x:colX[j]+2,y:tY-tRowH+3,size:7,color:col2,font:fnt2});
+          });
+          curPage.drawLine({start:{x:MAP_X,y:tY-tRowH},end:{x:PW-MAP_X,y:tY-tRowH},thickness:0.3,color:rgb(0.8,0.8,0.8)});
+          tY-=tRowH;
+        }
+        // Footer
+        curPage.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
+        curPage.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
+        curPage.drawText('Hal. '+pageNum+' / '+(totalPages+1),{x:PW-50,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+        pageNum++;
+      }
     }
 
     // ── Simpan & Download ────────────────────────────────
