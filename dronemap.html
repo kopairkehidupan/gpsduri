@@ -3145,6 +3145,11 @@ function openPdfModal(){
 // ── Style Editor di Tab Export (live preview) ────────────────
 function _renderExportStylePanel(){
   var el=document.getElementById('exportStylePanel');if(!el)return;
+  // Simpan state open sebelum rebuild
+  var openIds=new Set();
+  el.querySelectorAll('details[data-mid]').forEach(function(d){
+    if(d.open)openIds.add(d.getAttribute('data-mid'));
+  });
   var items=measures.filter(function(m){return m.type==='polygon'||m.type==='line';});
   if(items.length===0){
     el.innerHTML='<div style="text-align:center;padding:8px 0;font-size:9px;color:var(--mu)">Belum ada polygon/line.</div>';
@@ -3161,17 +3166,15 @@ function _renderExportStylePanel(){
     var dashBtns=['solid','dashed','dotted'].map(function(d){
       var lbl=d==='solid'?'——':d==='dashed'?'- -':'·····';
       var ac=st.batasDash===d;
-      return '<button onclick="_setBlokStyle('+m.id+',\'batasDash\',\''+d+'\')" style="flex:1;padding:2px 0;font-size:9px;border-radius:3px;border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.15)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+';cursor:pointer">'+lbl+'</button>';
+      return '<button class="dash-btn" data-dash="'+d+'" onclick="_setBlokStyle('+m.id+',\'batasDash\',\''+d+'\')" style="flex:1;padding:2px 0;font-size:9px;border-radius:3px;border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.15)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+';cursor:pointer">'+lbl+'</button>';
     }).join('');
-    html+='<details style="border:1px solid var(--bd);border-radius:5px;overflow:hidden;margin-bottom:4px">'
-      +'<summary style="padding:5px 8px;background:var(--s3);cursor:pointer;font-size:9px;font-weight:500;color:var(--tx);display:flex;align-items:center;gap:5px;list-style:none">'
-        +'<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+st.batasColor+';flex-shrink:0;border:1px solid rgba(255,255,255,.2)"></span>'
-        +ltDef.icon+' <span style="flex:1">'+m.label+'</span>'
+    html+='<details data-mid="'+m.id+'" style="border:1px solid var(--bd);border-radius:5px;overflow:hidden;margin-bottom:4px">'
+      +'<summary style="padding:5px 8px;background:var(--s3);cursor:pointer;font-size:9px;font-weight:500;color:var(--tx);display:flex;align-items:center;gap:5px;list-style:none;-webkit-appearance:none">'
+        +'<span class="style-color-sq" style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+st.batasColor+';flex-shrink:0;border:1px solid rgba(255,255,255,.2)"></span>'
+        +'<span style="flex:1">'+ltDef.label+' — '+m.label+'</span>'
         +(isBK?'<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:'+bkColor+'33;color:'+bkColor+';font-family:\'Space Mono\',monospace;border:1px solid '+bkColor+'55">BLOK</span>':'')
-        +'<span style="font-size:8px;color:var(--mu);margin-left:2px">▾</span>'
       +'</summary>'
-      +'<div style="padding:8px 9px;display:flex;flex-direction:column;gap:6px;background:var(--sf)">'
-        // Warna batas + Tebal
+      +'<div style="padding:8px 9px;display:flex;flex-direction:column;gap:6px;background:var(--sf)" onclick="event.stopPropagation()">'
         +'<div style="display:flex;align-items:center;gap:5px">'
           +'<span style="font-size:8px;color:var(--mu);min-width:56px">Warna Batas</span>'
           +'<input type="color" value="'+st.batasColor+'" oninput="_setBlokStyle('+m.id+',\'batasColor\',this.value)" style="width:26px;height:20px;border:none;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0">'
@@ -3179,18 +3182,15 @@ function _renderExportStylePanel(){
           +'<input type="range" min="0.5" max="5" step="0.5" value="'+st.batasThickness+'" oninput="_setBlokStyle('+m.id+',\'batasThickness\',parseFloat(this.value));this.nextElementSibling.textContent=this.value+\'pt\'" style="flex:1;accent-color:var(--saw)">'
           +'<span style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--saw2);min-width:24px">'+st.batasThickness+'pt</span>'
         +'</div>'
-        // Pola garis
         +'<div style="display:flex;align-items:center;gap:5px">'
           +'<span style="font-size:8px;color:var(--mu);min-width:56px">Pola</span>'
           +'<div style="display:flex;gap:3px;flex:1">'+dashBtns+'</div>'
         +'</div>'
-        // Fill (polygon saja)
         +(isPoly?'<div style="display:flex;align-items:center;gap:5px">'
           +'<span style="font-size:8px;color:var(--mu);min-width:56px">Fill</span>'
           +'<input type="color" value="'+st.fillColor+'" oninput="_setBlokStyle('+m.id+',\'fillColor\',this.value)" style="width:26px;height:20px;border:none;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0">'
-          +'<span style="font-size:8px;color:var(--mu);margin-left:4px">(background tanpa foto)</span>'
+          +'<span style="font-size:8px;color:var(--mu);margin-left:4px">(tanpa foto)</span>'
         +'</div>':'')
-        // Label color + size (polygon saja)
         +(isPoly?'<div style="display:flex;align-items:center;gap:5px">'
           +'<span style="font-size:8px;color:var(--mu);min-width:56px">Warna Label</span>'
           +'<input type="color" value="'+st.labelColor+'" oninput="_setBlokStyle('+m.id+',\'labelColor\',this.value)" style="width:26px;height:20px;border:none;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0">'
@@ -3198,12 +3198,15 @@ function _renderExportStylePanel(){
           +'<input type="range" min="5" max="14" step="0.5" value="'+st.labelSize+'" oninput="_setBlokStyle('+m.id+',\'labelSize\',parseFloat(this.value));this.nextElementSibling.textContent=this.value+\'pt\'" style="flex:1;accent-color:var(--ac)">'
           +'<span style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--ac);min-width:24px">'+st.labelSize+'pt</span>'
         +'</div>':'')
-        // Reset button
-        +'<button onclick="_resetBlokStyle('+m.id+')" style="align-self:flex-start;font-size:8px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ Reset default</button>'
+        +'<button onclick="_resetBlokStyle('+m.id+')" style="align-self:flex-start;font-size:8px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">&#8634; Reset default</button>'
       +'</div>'
       +'</details>';
   });
   el.innerHTML=html;
+  // Kembalikan state open
+  el.querySelectorAll('details[data-mid]').forEach(function(d){
+    if(openIds.has(d.getAttribute('data-mid')))d.open=true;
+  });
 }
 
 // Live preview: update Leaflet layer di peta saat style berubah
@@ -3212,7 +3215,6 @@ function _applyBlokStyleToLayer(id){
   var m=measures.find(function(x){return x.id===id;});
   if(!m)return;
   var st=_getBlokStyle(m);
-  var isBK=_batasKebunIds.has(id);
   drawnItems.eachLayer(function(layer){
     if(layer._mid!==id||!layer.setStyle)return;
     var dashArr=st.batasDash==='dashed'?'8 4':st.batasDash==='dotted'?'2 4':null;
@@ -3226,13 +3228,31 @@ function _applyBlokStyleToLayer(id){
   });
 }
 
+// TIDAK full re-render agar <details> tetap open saat user mengedit
 function _setBlokStyle(id,key,val){
   if(!_blokStyles[id])_blokStyles[id]={};
   _blokStyles[id][key]=val;
   // Live preview di peta
   _applyBlokStyleToLayer(id);
-  // Re-render panel (untuk update active state tombol pola)
-  _renderExportStylePanel();
+  // Update DOM spesifik — TANPA full re-render (jaga <details> tetap terbuka)
+  var panel=document.getElementById('exportStylePanel');
+  if(panel){
+    var det=panel.querySelector('details[data-mid="'+id+'"]');
+    if(det){
+      if(key==='batasDash'){
+        det.querySelectorAll('.dash-btn[data-dash]').forEach(function(btn){
+          var ac=btn.getAttribute('data-dash')===val;
+          btn.style.border='1px solid '+(ac?'var(--saw)':'var(--bd)');
+          btn.style.background=ac?'rgba(90,158,53,.15)':'var(--s3)';
+          btn.style.color=ac?'var(--saw2)':'var(--mu)';
+        });
+      }
+      if(key==='batasColor'){
+        var sq=det.querySelector('.style-color-sq');
+        if(sq)sq.style.background=val;
+      }
+    }
+  }
 }
 
 function _resetBlokStyle(id){
@@ -3471,6 +3491,19 @@ async function renderAerialToCanvas(mapW, mapH, projectFn, clipPolygon, bkId){
 }
 // Simpan MAP_X MAP_Y agar renderAerialToCanvas bisa akses
 var _pdfMapX=45,_pdfMapY=50;
+
+// Helper: sanitize string agar bisa dirender oleh pdf-lib Helvetica (WinAnsi)
+// Karakter di luar WinAnsi (seperti ═ ≈ ▣ ⌂ ┤├ ⬡ ○ dll) menyebabkan error encoding
+function _pdfSafeStr(s){
+  if(!s)return '';
+  return String(s)
+    .replace(/▣/g,'[B]').replace(/≈/g,'~').replace(/═/g,'=')
+    .replace(/⌂/g,'[H]').replace(/┤├/g,'|').replace(/┤/g,'|').replace(/├/g,'|')
+    .replace(/⬡/g,'[O]').replace(/○/g,'o').replace(/◆/g,'*')
+    .replace(/▲/g,'^').replace(/▼/g,'v').replace(/►/g,'>')
+    .replace(/🌴/g,'[T]').replace(/📷/g,'[F]')
+    .replace(/[^\x00-\xFF]/g,'?');
+}
 
 async function generateDroneMapPDF(){
   try{
@@ -3758,7 +3791,7 @@ async function generateDroneMapPDF(){
           var lpt=project(cLat0+off.dlat,cLng0+off.dlng);
           var cx=lpt[0],cy=lpt[1];
           if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
-            var lbl=m.label||'Blok';
+            var lbl=_pdfSafeStr(m.label||'Blok');
             var lt=_getLayerType(m);
             var ltDef=_layerTypes[lt]||_layerTypes.blok;
             // Tampilkan luas hanya untuk tipe area (blok, perumahan, batas_kawasan)
@@ -3917,11 +3950,11 @@ async function generateDroneMapPDF(){
     var legItems=[];
     polLeg.forEach(function(p){
       if(p.isLine){
-        legItems.push({isLine:true,fHex:p.fHex,sHex:p.sHex,lbl:p.ltIcon+' '+p.label,aHa:null});
+        legItems.push({isLine:true,fHex:p.fHex,sHex:p.sHex,lbl:_pdfSafeStr(p.label),aHa:null});
       } else {
         // Tampilkan luas hanya untuk tipe area
         var aHaStr=p.isArea?(p.effectiveArea/10000).toFixed(2)+' Ha':null;
-        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:p.label,aHa:aHaStr,ltIcon:p.ltIcon,isArea:p.isArea});
+        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:_pdfSafeStr(p.label),aHa:aHaStr,ltIcon:p.ltIcon,isArea:p.isArea});
       }
     });
 
@@ -3945,7 +3978,7 @@ async function generateDroneMapPDF(){
         page.drawRectangle({x:SB_X+3,y:midY-3.5,width:8,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.85});
       }
       // SATU BARIS: nama blok (kiri) + luas (kanan)
-      var lblText=item.lbl;if(lblText.length>14)lblText=lblText.substring(0,13)+'..';
+      var lblText=_pdfSafeStr(item.lbl);if(lblText.length>16)lblText=lblText.substring(0,15)+'..';
       page.drawText(lblText,{x:SB_X+14,y:midY-2.5,size:6.5,color:rgb(0.05,0.05,0.05),font:fontBold});
       if(item.aHa){
         // Luas rata kanan
