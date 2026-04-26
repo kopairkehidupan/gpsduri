@@ -3268,14 +3268,19 @@ function _renderPdfStyleEditor(){}
 // Render editor luas manual per blok di dalam modal PDF
 function _renderPdfAreaEditor(){
   var el=document.getElementById('pdfAreaEditor');if(!el)return;
-  // Ambil polygon yang dipilih cetak di tab Export
+  // Ambil polygon yang dipilih cetak di tab Export DAN bertipe area (isArea=true)
+  // Non-area polygon (sungai, jalan, jembatan, lainnya) tidak perlu input luas
   var selected=measures.filter(function(m){
     if(m.type!=='polygon')return false;
     var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
-    return cb&&cb.checked;
+    if(!cb||!cb.checked)return false;
+    // Filter: hanya tampilkan tipe yang memiliki area (blok, perumahan, batas_kawasan)
+    var lt=_getLayerType(m);
+    var ltDef=_layerTypes[lt]||_layerTypes.blok;
+    return ltDef.isArea;
   });
   if(selected.length===0){
-    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:8px 0">Belum ada polygon yang dipilih di tab Export.</div>';
+    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:8px 0">Belum ada polygon tipe area (Blok/Perumahan/Batas Kawasan) yang dipilih.<br><span style="font-size:8px;font-family:\'Space Mono\',monospace">Polygon non-area (Sungai, Jalan, dll) tidak memiliki luas.</span></div>';
     return;
   }
   // Cek apakah semua masih ikut polygon (tidak ada manual)
@@ -3345,10 +3350,14 @@ function _onManualHaChange(id,val){
 }
 
 function _refreshAreaEditorTotal(){
+  // Hanya hitung polygon isArea=true (sama dengan filter di _renderPdfAreaEditor)
   var selected=measures.filter(function(m){
     if(m.type!=='polygon')return false;
     var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
-    return cb&&cb.checked;
+    if(!cb||!cb.checked)return false;
+    var lt=_getLayerType(m);
+    var ltDef=_layerTypes[lt]||_layerTypes.blok;
+    return ltDef.isArea;
   });
   var totalEff=selected.reduce(function(s,m){
     var v=_manualAreaHa[m.id];
@@ -3977,11 +3986,11 @@ async function generateDroneMapPDF(){
         // Kotak warna kecil, ukurannya proporsional dengan rowH
         page.drawRectangle({x:SB_X+3,y:midY-3.5,width:8,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.85});
       }
-      // SATU BARIS: nama blok (kiri) + luas (kanan)
+      // SATU BARIS: nama blok (kiri) + luas atau tipe (kanan)
       var lblText=_pdfSafeStr(item.lbl);if(lblText.length>16)lblText=lblText.substring(0,15)+'..';
       page.drawText(lblText,{x:SB_X+14,y:midY-2.5,size:6.5,color:rgb(0.05,0.05,0.05),font:fontBold});
       if(item.aHa){
-        // Luas rata kanan
+        // Luas rata kanan (hanya tipe area)
         var aHaW=item.aHa.length*6.5*0.52;
         page.drawText(item.aHa,{x:SB_X+SB_W-4-aHaW,y:midY-2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
       }
