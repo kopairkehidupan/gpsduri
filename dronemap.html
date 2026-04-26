@@ -2950,7 +2950,7 @@ function exitSplitView(){
           📋 Legenda Rincian Areal
           <span style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;text-transform:none;font-weight:400;letter-spacing:0">(atur simbol &amp; nilai setiap layer)</span>
         </div>
-        <div id="pdfLegendEditor" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:2px 1px">
+        <div id="pdfLegendEditor" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:0;padding:4px 2px">
         </div>
       </div>
     </div>
@@ -3474,12 +3474,12 @@ function _renderPdfLegendEditor(){
     var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
     var prevVal=ls.customVal&&ls.customVal!==''?ls.customVal+uL:_legAutoVal(m.id);
     var prevColor=ls.customVal&&ls.customVal!==''?'var(--ac)':'var(--saw2)';
-    html+='<details data-legid="'+m.id+'" style="border:1px solid '+(ls.showInLegend?'var(--bd)':'rgba(125,133,144,.3)')+';border-radius:5px;overflow:hidden">'
-      +'<summary style="padding:9px 11px;background:var(--s2);cursor:pointer;display:flex;align-items:center;gap:8px;list-style:none;-webkit-appearance:none;min-height:38px">'
+    html+='<details data-legid="'+m.id+'" style="border:1px solid '+(ls.showInLegend?'var(--bd)':'rgba(125,133,144,.3)')+';border-radius:7px;overflow:hidden;background:var(--s2);margin-bottom:8px">'
+      +'<summary style="padding:11px 13px;background:var(--s2);cursor:pointer;display:flex;align-items:center;gap:10px;list-style:none;-webkit-appearance:none;min-height:44px;border-radius:7px">'
         +symHtml
         +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:10.5px;font-weight:500;color:'+(ls.showInLegend?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">'+m.label+'</div>'
-          +'<div style="font-size:8.5px;color:var(--mu);font-family:monospace;line-height:1.4">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
+          +'<div style="font-size:11px;font-weight:500;color:'+(ls.showInLegend?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">'+m.label+'</div>'
+          +'<div style="font-size:9px;color:var(--mu);font-family:monospace;line-height:1.5">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
         +'</div>'
         +'<label class="toggle" title="Tampil di legenda" onclick="event.stopPropagation()">'
           +'<input type="checkbox" '+(ls.showInLegend?'checked':'')+' onchange="_legendSettings['+m.id+'].showInLegend=this.checked;_renderPdfLegendEditor()">'
