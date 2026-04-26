@@ -208,6 +208,81 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 /* === GCP HULL LEGEND === */
 .hull-legend{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;margin-top:5px;padding:4px 8px;background:var(--s2);border-radius:4px;border:1px solid var(--bd)}
 .hull-legend-line{width:22px;height:2px;background:var(--saw);opacity:.6;border-radius:1px;border:1px dashed var(--saw)}
+/* === PERBAIKAN RINCIAN AREAL DI MODAL PDF === */
+
+/* Container utama rincian */
+.export-blok-item{
+  background: var(--s2);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* tambah jarak antar elemen */
+}
+
+/* Header blok (judul + checkbox) */
+.export-blok-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.export-blok-title{
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx);
+}
+
+/* Sub info (luas, jumlah pokok, dll) */
+.export-blok-meta{
+  font-size: 9px;
+  color: var(--mu);
+  line-height: 1.6; /* lebih lega */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px; /* jarak horizontal & vertikal */
+}
+
+/* Row opsi (checkbox foto, label, dll) */
+.export-blok-options{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px; /* biar tidak numpuk */
+  margin-top: 4px;
+}
+
+/* Checkbox item */
+.export-opt{
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--tx);
+}
+
+/* Hover biar lebih clean */
+.export-blok-item:hover{
+  border-color: var(--saw);
+  background: rgba(90,158,53,0.05);
+}
+
+/* Divider halus antar bagian */
+.export-divider{
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  margin: 6px 0;
+}
+
+/* Label kecil biar gak terlalu padat */
+.export-label{
+  font-size: 8px;
+  color: var(--mu);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 </style>
 </head>
 <body>
