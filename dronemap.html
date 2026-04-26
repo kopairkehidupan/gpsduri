@@ -208,81 +208,6 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 /* === GCP HULL LEGEND === */
 .hull-legend{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;margin-top:5px;padding:4px 8px;background:var(--s2);border-radius:4px;border:1px solid var(--bd)}
 .hull-legend-line{width:22px;height:2px;background:var(--saw);opacity:.6;border-radius:1px;border:1px dashed var(--saw)}
-/* === PERBAIKAN RINCIAN AREAL DI MODAL PDF === */
-
-/* Container utama rincian */
-.export-blok-item{
-  background: var(--s2);
-  border: 1px solid var(--bd);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px; /* tambah jarak antar elemen */
-}
-
-/* Header blok (judul + checkbox) */
-.export-blok-head{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.export-blok-title{
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--tx);
-}
-
-/* Sub info (luas, jumlah pokok, dll) */
-.export-blok-meta{
-  font-size: 9px;
-  color: var(--mu);
-  line-height: 1.6; /* lebih lega */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px; /* jarak horizontal & vertikal */
-}
-
-/* Row opsi (checkbox foto, label, dll) */
-.export-blok-options{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px; /* biar tidak numpuk */
-  margin-top: 4px;
-}
-
-/* Checkbox item */
-.export-opt{
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  color: var(--tx);
-}
-
-/* Hover biar lebih clean */
-.export-blok-item:hover{
-  border-color: var(--saw);
-  background: rgba(90,158,53,0.05);
-}
-
-/* Divider halus antar bagian */
-.export-divider{
-  height: 1px;
-  background: rgba(255,255,255,0.05);
-  margin: 6px 0;
-}
-
-/* Label kecil biar gak terlalu padat */
-.export-label{
-  font-size: 8px;
-  color: var(--mu);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 </style>
 </head>
 <body>
@@ -3023,7 +2948,7 @@ function exitSplitView(){
           📋 Legenda Rincian Areal
           <span style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;text-transform:none;font-weight:400;letter-spacing:0">(atur simbol &amp; nilai setiap layer)</span>
         </div>
-        <div id="pdfLegendEditor" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px">
+        <div id="pdfLegendEditor" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:3px">
         </div>
       </div>
     </div>
@@ -3514,7 +3439,7 @@ function _renderPdfLegendEditor(){
     return cb&&cb.checked;
   });
   if(selected.length===0){
-    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:14px 0">Belum ada layer yang dipilih di tab Export.</div>';
+    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:8px 0">Belum ada layer yang dipilih di tab Export.</div>';
     return;
   }
   // Simpan open state sebelum rebuild
@@ -3530,90 +3455,54 @@ function _renderPdfLegendEditor(){
     var st=_getBlokStyle(m);
     var ls=_legendSettings[m.id]||{showInLegend:true,showValue:true,customVal:'',unit:isPoly?'ha':'m'};
     var bkColor=isBK?_getBkColor(m.id):'';
-    var isOn=ls.showInLegend;
-
-    // Symbol — lebih besar dan jelas
+    // Symbol
     var symHtml=isLine
-      ?'<div style="width:26px;height:3px;'+(st.batasDash==='dashed'?'border-top:2.5px dashed '+st.batasColor:st.batasDash==='dotted'?'border-top:2.5px dotted '+st.batasColor:'background:'+st.batasColor)+';flex-shrink:0;align-self:center;border-radius:1px"></div>'
-      :'<div style="width:16px;height:16px;border-radius:3px;background:'+st.fillColor+';border:2.5px solid '+st.batasColor+';flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>';
-
-    // Badge jenis layer
-    var typeBadge=isBK
-      ?'<span style="font-size:7px;padding:1px 5px;border-radius:3px;background:'+bkColor+'22;color:'+bkColor+';border:1px solid '+bkColor+'55;font-family:monospace;flex-shrink:0">BLOK</span>'
-      :'<span style="font-size:7px;padding:1px 5px;border-radius:3px;background:rgba(125,133,144,.12);color:var(--mu);border:1px solid rgba(125,133,144,.25);font-family:monospace;flex-shrink:0">'+ltDef.label+'</span>';
-
-    // Effective value string for preview
-    var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
-    var prevVal=ls.customVal&&ls.customVal!==''?ls.customVal+uL:_legAutoVal(m.id);
-    var prevColor=ls.customVal&&ls.customVal!==''?'var(--ac)':'var(--saw2)';
-
+      ?'<div style="width:22px;height:0;border-top:2.5px '+(st.batasDash==='dashed'?'dashed':st.batasDash==='dotted'?'dotted':'solid')+' '+st.batasColor+';flex-shrink:0;margin:auto 0"></div>'
+      :'<div style="width:12px;height:12px;border-radius:2px;background:'+st.fillColor+';border:2px solid '+st.batasColor+';flex-shrink:0"></div>';
     // Unit buttons
     var unitBtns=['ha','pkk','m'].map(function(u){
       var ac=ls.unit===u;
       var lbl=u==='ha'?'Ha':u==='pkk'?'Pkk':'Meter';
       var borderC=ac?'var(--saw)':'var(--bd)';
-      var bgC=ac?'rgba(90,158,53,.18)':'var(--s2)';
+      var bgC=ac?'rgba(90,158,53,.15)':'var(--s3)';
       var txtC=ac?'var(--saw2)':'var(--mu)';
-      return '<button onclick="_legSetUnit('+m.id+',\''+u+'\')" style="padding:3px 8px;font-size:8px;border-radius:3px;border:1px solid '+borderC+';background:'+bgC+';color:'+txtC+';cursor:pointer;font-family:monospace;font-weight:'+(ac?'700':'400')+'">'+lbl+'</button>';
+      return '<button onclick="_legSetUnit('+m.id+',\''+u+'\')" style="padding:2px 6px;font-size:8px;border-radius:3px;border:1px solid '+borderC+';background:'+bgC+';color:'+txtC+';cursor:pointer">'+lbl+'</button>';
     }).join('');
-
-    // Card per item — bukan <details> tapi flat card jika collapsed, expand jika open
-    var cardBorder=isOn?'var(--bd)':'rgba(125,133,144,.25)';
-    var cardBg=isOn?'var(--s2)':'rgba(22,27,34,.5)';
-    var accentLine=isOn?(isBK?bkColor:'var(--saw)'):'var(--bd)';
-
-    html+='<details data-legid="'+m.id+'" style="border:1px solid '+cardBorder+';border-left:3px solid '+accentLine+';border-radius:6px;overflow:hidden;background:'+cardBg+';transition:border-color .2s">'
-      // ── SUMMARY ROW ──────────────────────────────────
-      +'<summary style="padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:11px;list-style:none;-webkit-appearance:none;user-select:none">'
-        // Simbol warna
+    // Effective value string for preview
+    var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
+    var prevVal=ls.customVal&&ls.customVal!==''?ls.customVal+uL:_legAutoVal(m.id);
+    var prevColor=ls.customVal&&ls.customVal!==''?'var(--ac)':'var(--saw2)';
+    html+='<details data-legid="'+m.id+'" style="border:1px solid '+(ls.showInLegend?'var(--bd)':'rgba(125,133,144,.3)')+';border-radius:5px;overflow:hidden">'
+      +'<summary style="padding:5px 8px;background:var(--s2);cursor:pointer;display:flex;align-items:center;gap:6px;list-style:none;-webkit-appearance:none">'
         +symHtml
-        // Info teks
-        +'<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">'
-          +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-            +'<span style="font-size:10px;font-weight:600;color:'+(isOn?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">'+m.label+'</span>'
-            +typeBadge
-          +'</div>'
-          +(isOn&&ls.showValue
-            ?'<div style="font-size:8px;color:'+prevColor+';font-family:monospace;font-weight:500">'+prevVal+'</div>'
-            :'<div style="font-size:8px;color:var(--mu)">'+(isOn?'Nilai disembunyikan':'Tidak tampil di legenda')+'</div>'
-          )
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:9px;font-weight:500;color:'+(ls.showInLegend?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.label+'</div>'
+          +'<div style="font-size:7px;color:var(--mu);font-family:monospace">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
         +'</div>'
-        // Toggle tampil
-        +'<label class="toggle" title="Tampil di legenda" onclick="event.stopPropagation()" style="flex-shrink:0">'
-          +'<input type="checkbox" '+(isOn?'checked':'')+' onchange="_legendSettings['+m.id+'].showInLegend=this.checked;_renderPdfLegendEditor()">'
+        +'<label class="toggle" title="Tampil di legenda" onclick="event.stopPropagation()">'
+          +'<input type="checkbox" '+(ls.showInLegend?'checked':'')+' onchange="_legendSettings['+m.id+'].showInLegend=this.checked;_renderPdfLegendEditor()">'
           +'<span class="toggle-sl"></span>'
         +'</label>'
       +'</summary>'
-      // ── EXPANDED BODY ─────────────────────────────────
-      +(isOn?
-        '<div style="padding:10px 12px 12px;display:flex;flex-direction:column;gap:9px;background:var(--sf);border-top:1px solid var(--bd)" onclick="event.stopPropagation()">'
-          // Toggle nilai
-          +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
-            +'<div>'
-              +'<div style="font-size:9px;color:var(--tx);font-weight:500">Tampilkan nilai di kanan</div>'
-              +'<div style="font-size:8px;color:var(--mu);margin-top:1px">Angka luas / pokok / jarak di baris legenda</div>'
-            +'</div>'
-            +'<label class="toggle" style="flex-shrink:0"><input type="checkbox" '+(ls.showValue?'checked':'')+' onchange="_legendSettings['+m.id+'].showValue=this.checked;_renderPdfLegendEditor()"><span class="toggle-sl" style="background:var(--in)"></span></label>'
+      +(ls.showInLegend?
+        '<div style="padding:7px 9px;display:flex;flex-direction:column;gap:5px;background:var(--sf)" onclick="event.stopPropagation()">'
+          +'<div style="display:flex;align-items:center;gap:5px">'
+            +'<span style="font-size:8px;color:var(--mu);flex:1">Tampilkan nilai di kanan</span>'
+            +'<label class="toggle"><input type="checkbox" '+(ls.showValue?'checked':'')+' onchange="_legendSettings['+m.id+'].showValue=this.checked;_renderPdfLegendEditor()"><span class="toggle-sl" style="background:var(--in)"></span></label>'
           +'</div>'
           +(ls.showValue?
-            // Input nilai + unit
-            '<div style="background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:7px">'
-              +'<div style="display:flex;align-items:center;gap:6px">'
-                +'<span style="font-size:8px;color:var(--mu);flex-shrink:0;min-width:36px">Nilai</span>'
-                +'<input type="number" step="0.01" min="0" id="legVal_'+m.id+'" placeholder="auto" value="'+ls.customVal+'" oninput="_legUpdate('+m.id+',\'customVal\',this.value)" style="flex:1;min-width:0;background:var(--s3);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-family:monospace;font-size:10px;padding:5px 8px;outline:none;text-align:right">'
+            '<div style="display:flex;flex-direction:column;gap:3px">'
+              +'<div style="display:flex;align-items:center;gap:4px">'
+                +'<input type="number" step="0.01" min="0" id="legVal_'+m.id+'" placeholder="auto" value="'+ls.customVal+'" oninput="_legUpdate('+m.id+',\'customVal\',this.value)" style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9px;padding:3px 6px;outline:none;text-align:right">'
+                +'<div style="display:flex;gap:2px;flex-shrink:0">'+unitBtns+'</div>'
               +'</div>'
-              +'<div style="display:flex;align-items:center;gap:6px">'
-                +'<span style="font-size:8px;color:var(--mu);flex-shrink:0;min-width:36px">Satuan</span>'
-                +'<div style="display:flex;gap:4px">'+unitBtns+'</div>'
-              +'</div>'
-              // Preview row
-              +'<div style="display:flex;align-items:center;gap:6px;padding-top:2px;border-top:1px solid rgba(255,255,255,.06)">'
-                +'<span style="font-size:8px;color:var(--mu);flex-shrink:0;min-width:36px">Preview</span>'
-                +'<span id="legPrev_'+m.id+'" style="font-size:9px;font-family:monospace;font-weight:600;color:'+prevColor+'">'+prevVal+'</span>'
-                +(ls.customVal?'<button onclick="_legendSettings['+m.id+'].customVal=\'\';_renderPdfLegendEditor()" style="margin-left:auto;font-size:8px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ auto</button>':'')
+              +'<div style="display:flex;align-items:center;gap:4px">'
+                +'<span style="font-size:8px;color:var(--mu)">Preview:</span>'
+                +'<span id="legPrev_'+m.id+'" style="font-size:8px;font-family:monospace;color:'+prevColor+'">'+prevVal+'</span>'
+                +(ls.customVal?'<button onclick="_legendSettings['+m.id+'].customVal=\'\';_renderPdfLegendEditor()" style="font-size:7px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ auto</button>':'')
               +'</div>'
             +'</div>'
-          :'<div style="font-size:8px;color:var(--mu);padding:6px 8px;background:var(--s2);border-radius:4px;border-left:2px solid var(--bd)">Hanya nama yang tampil di legenda PDF, tanpa angka.</div>')
+          :'<div style="font-size:8px;color:var(--mu)">Hanya nama tampil di legenda</div>')
         +'</div>'
       :'')
       +'</details>';
