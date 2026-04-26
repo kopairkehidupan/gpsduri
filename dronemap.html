@@ -731,6 +731,7 @@ var _manualAreaHa={};  // {measureId: string} — nilai Ha manual; kosong = ikut
 
 // PER-BLOK STYLE STATE — style batas, label, fill per polygon/line
 var _blokStyles={};  // {measureId: {batasColor,batasThickness,batasDash,labelColor,labelSize,fillColor}}
+var _legendSettings={};  // {measureId: {showInLegend,showValue,customVal,unit}}
 
 // LAYER TYPE STATE — jenis layer untuk penanda (sungai, jalan, dll)
 var _measureLayerType={};  // {measureId: string} — default 'blok' untuk polygon, 'jalan' untuk line
@@ -2941,6 +2942,15 @@ function exitSplitView(){
         <div id="pdfAreaEditor" style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;max-height:220px;overflow-y:auto">
         </div>
       </div>
+      <!-- EDITOR LEGENDA RINCIAN AREAL -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          📋 Legenda Rincian Areal
+          <span style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;text-transform:none;font-weight:400;letter-spacing:0">(atur simbol &amp; nilai setiap layer)</span>
+        </div>
+        <div id="pdfLegendEditor" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:3px">
+        </div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--bd);flex-shrink:0">
       <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
@@ -3139,6 +3149,8 @@ function _updatePdfModalSummary(){
 function openPdfModal(){
   if(measures.length===0&&trees.length===0){showToast('⚠ Belum ada data pengukuran atau sensus');return;}
   _renderPdfAreaEditor();
+  _initLegendSettings();
+  _renderPdfLegendEditor();
   document.getElementById('pdfModal').style.display='flex';
 }
 
@@ -3366,6 +3378,128 @@ function _refreshAreaEditorTotal(){
   // Update total display di area editor
   var el=document.getElementById('pdfAreaEditor');
   if(el){var tot=el.querySelector('div:last-child');if(tot&&tot.textContent.startsWith('Total Luas PDF'))tot.textContent='Total Luas PDF: '+(totalEff/10000).toFixed(2)+' Ha';}
+}
+
+// ── Legenda Rincian Areal — inisialisasi setting ──────────────
+function _initLegendSettings(){
+  var selected=measures.filter(function(m){
+    if(m.type!=='polygon'&&m.type!=='line')return false;
+    var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+    return cb&&cb.checked;
+  });
+  selected.forEach(function(m){
+    if(!_legendSettings[m.id]){
+      _legendSettings[m.id]={
+        showInLegend:true,
+        showValue:true,
+        customVal:'',
+        unit:m.type==='line'?'m':'ha'
+      };
+    }
+  });
+}
+
+// Helper: hitung nilai auto untuk legenda
+function _legAutoVal(id){
+  var m=measures.find(function(x){return x.id===id;});
+  if(!m)return '--';
+  var ls=_legendSettings[id];if(!ls)return '--';
+  if(ls.unit==='ha'&&m.type==='polygon')return (_getEffectiveAreaM2(m)/10000).toFixed(2)+' Ha';
+  if(ls.unit==='pkk')return (m.treesInside||0)+' Pkk';
+  if(ls.unit==='m'){var v=m.type==='polygon'?(m.perim||0):(m.len||0);return v>=1000?(v/1000).toFixed(2)+' km':Math.round(v)+' m';}
+  return '--';
+}
+
+// Helper: update state legenda dan preview text tanpa full re-render
+function _legUpdate(id,key,val){
+  if(!_legendSettings[id])return;
+  _legendSettings[id][key]=val;
+  var prev=document.getElementById('legPrev_'+id);
+  if(prev){
+    var ls=_legendSettings[id];
+    var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':ls.unit==='m'?' m':'';
+    prev.textContent=ls.customVal&&ls.customVal!==''?ls.customVal+uL:_legAutoVal(id);
+    prev.style.color=ls.customVal&&ls.customVal!==''?'var(--ac)':'var(--saw2)';
+  }
+}
+
+// Render editor legenda di modal PDF
+function _renderPdfLegendEditor(){
+  var el=document.getElementById('pdfLegendEditor');if(!el)return;
+  var selected=measures.filter(function(m){
+    if(m.type!=='polygon'&&m.type!=='line')return false;
+    var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+    return cb&&cb.checked;
+  });
+  if(selected.length===0){
+    el.innerHTML='<div style="font-size:9px;color:var(--mu);text-align:center;padding:8px 0">Belum ada layer yang dipilih di tab Export.</div>';
+    return;
+  }
+  // Simpan open state sebelum rebuild
+  var openIds=new Set();
+  el.querySelectorAll('details[data-legid]').forEach(function(d){if(d.open)openIds.add(d.getAttribute('data-legid'));});
+  var html='';
+  selected.forEach(function(m){
+    var isPoly=m.type==='polygon';
+    var isLine=m.type==='line';
+    var lt=_getLayerType(m);
+    var ltDef=_layerTypes[lt]||_layerTypes.blok;
+    var isBK=isPoly&&_batasKebunIds.has(m.id);
+    var st=_getBlokStyle(m);
+    var ls=_legendSettings[m.id]||{showInLegend:true,showValue:true,customVal:'',unit:isPoly?'ha':'m'};
+    var bkColor=isBK?_getBkColor(m.id):'';
+    // Symbol
+    var symHtml=isLine
+      ?'<div style="width:22px;height:0;border-top:2.5px '+(st.batasDash==='dashed'?'dashed':st.batasDash==='dotted'?'dotted':'solid')+' '+st.batasColor+';flex-shrink:0;margin:auto 0"></div>'
+      :'<div style="width:12px;height:12px;border-radius:2px;background:'+st.fillColor+';border:2px solid '+st.batasColor+';flex-shrink:0"></div>';
+    // Unit buttons
+    var unitBtns=['ha','pkk','m'].map(function(u){
+      var ac=ls.unit===u;
+      var lbl=u==='ha'?'Ha':u==='pkk'?'Pkk':'Meter';
+      return '<button onclick="_legendSettings['+m.id+'].unit=''+u+'';_renderPdfLegendEditor()" style="padding:2px 6px;font-size:8px;border-radius:3px;border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.15)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+';cursor:pointer;font-family:'Space Mono',monospace">'+lbl+'</button>';
+    }).join('');
+    // Effective value string for preview
+    var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
+    var prevVal=ls.customVal&&ls.customVal!==''?ls.customVal+uL:_legAutoVal(m.id);
+    var prevColor=ls.customVal&&ls.customVal!==''?'var(--ac)':'var(--saw2)';
+    html+='<details data-legid="'+m.id+'" style="border:1px solid '+(ls.showInLegend?'var(--bd)':'rgba(125,133,144,.3)')+';border-radius:5px;overflow:hidden">'
+      +'<summary style="padding:5px 8px;background:var(--s2);cursor:pointer;display:flex;align-items:center;gap:6px;list-style:none;-webkit-appearance:none">'
+        +symHtml
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:9px;font-weight:500;color:'+(ls.showInLegend?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.label+'</div>'
+          +'<div style="font-size:7px;color:var(--mu);font-family:'Space Mono',monospace">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
+        +'</div>'
+        +'<label class="toggle" title="Tampil di legenda" onclick="event.stopPropagation()">'
+          +'<input type="checkbox" '+(ls.showInLegend?'checked':'')+' onchange="_legendSettings['+m.id+'].showInLegend=this.checked;_renderPdfLegendEditor()">'
+          +'<span class="toggle-sl"></span>'
+        +'</label>'
+      +'</summary>'
+      +(ls.showInLegend?
+        '<div style="padding:7px 9px;display:flex;flex-direction:column;gap:5px;background:var(--sf)" onclick="event.stopPropagation()">'
+          +'<div style="display:flex;align-items:center;gap:5px">'
+            +'<span style="font-size:8px;color:var(--mu);flex:1">Tampilkan nilai di kanan</span>'
+            +'<label class="toggle"><input type="checkbox" '+(ls.showValue?'checked':'')+' onchange="_legendSettings['+m.id+'].showValue=this.checked;_renderPdfLegendEditor()"><span class="toggle-sl" style="background:var(--in)"></span></label>'
+          +'</div>'
+          +(ls.showValue?
+            '<div style="display:flex;flex-direction:column;gap:3px">'
+              +'<div style="display:flex;align-items:center;gap:4px">'
+                +'<input type="number" step="0.01" min="0" id="legVal_'+m.id+'" placeholder="auto" value="'+ls.customVal+'" oninput="_legUpdate('+m.id+','customVal',this.value)" style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-family:'Space Mono',monospace;font-size:9px;padding:3px 6px;outline:none;text-align:right">'
+                +'<div style="display:flex;gap:2px;flex-shrink:0">'+unitBtns+'</div>'
+              +'</div>'
+              +'<div style="display:flex;align-items:center;gap:4px">'
+                +'<span style="font-size:8px;color:var(--mu)">Preview:</span>'
+                +'<span id="legPrev_'+m.id+'" style="font-size:8px;font-family:'Space Mono',monospace;color:'+prevColor+'">'+prevVal+'</span>'
+                +(ls.customVal?'<button onclick="_legendSettings['+m.id+'].customVal='';_renderPdfLegendEditor()" style="font-size:7px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ auto</button>':'')
+              +'</div>'
+            +'</div>'
+          :'<div style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace">Hanya nama tampil di legenda</div>')
+        +'</div>'
+      :'')
+      +'</details>';
+  });
+  el.innerHTML=html;
+  // Kembalikan open state
+  el.querySelectorAll('details[data-legid]').forEach(function(d){if(openIds.has(d.getAttribute('data-legid')))d.open=true;});
 }
 
 // Helper: dapatkan luas efektif (manual jika ada, polygon jika tidak)
@@ -3956,15 +4090,43 @@ async function generateDroneMapPDF(){
     } // end if(nTotal>0)
 
     // --- BOX 4: RINCIAN AREAL ---
+    // Build legend from _legendSettings — covers ALL selected layers (not just showBatas=true)
     var legItems=[];
-    polLeg.forEach(function(p){
-      if(p.isLine){
-        legItems.push({isLine:true,fHex:p.fHex,sHex:p.sHex,lbl:_pdfSafeStr(p.label),aHa:null});
-      } else {
-        // Tampilkan luas hanya untuk tipe area
-        var aHaStr=p.isArea?(p.effectiveArea/10000).toFixed(2)+' Ha':null;
-        legItems.push({rect:true,fHex:p.fHex,sHex:p.sHex,isBK:p.isBK,lbl:_pdfSafeStr(p.label),aHa:aHaStr,ltIcon:p.ltIcon,isArea:p.isArea});
+    measures.filter(function(m){
+      if(m.type!=='polygon'&&m.type!=='line')return false;
+      var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
+      return cb&&cb.checked;
+    }).forEach(function(m){
+      var ls=_legendSettings[m.id];
+      if(!ls||!ls.showInLegend)return;
+      var isPoly=m.type==='polygon';
+      var isLine=m.type==='line';
+      var st=_getBlokStyle(m);
+      var lt=_getLayerType(m);
+      var ltDef=_layerTypes[lt]||_layerTypes.blok;
+      var isBK=isPoly&&_batasKebunIds.has(m.id);
+      // Build value string
+      var valStr=null;
+      if(ls.showValue){
+        if(ls.customVal&&ls.customVal!==''){
+          var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
+          valStr=ls.customVal+uL;
+        } else {
+          if(ls.unit==='ha'&&isPoly){valStr=(_getEffectiveAreaM2(m)/10000).toFixed(2)+' Ha';}
+          else if(ls.unit==='pkk'){valStr=(m.treesInside||0)+' Pkk';}
+          else if(ls.unit==='m'){var v=isPoly?(m.perim||0):(m.len||0);valStr=v>=1000?(v/1000).toFixed(2)+' km':Math.round(v)+' m';}
+        }
       }
+      legItems.push({
+        isLine:isLine,
+        fHex:isLine?st.batasColor:st.fillColor,
+        sHex:st.batasColor,
+        isBK:isBK,
+        lbl:_pdfSafeStr(m.label||'Layer'),
+        valStr:valStr,
+        ltIcon:ltDef.icon,
+        isArea:ltDef.isArea
+      });
     });
 
     // legRowH dikurangi agar 1 baris saja (label + luas) — tidak ada sub-baris
@@ -3986,18 +4148,22 @@ async function generateDroneMapPDF(){
         // Kotak warna kecil, ukurannya proporsional dengan rowH
         page.drawRectangle({x:SB_X+3,y:midY-3.5,width:8,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.85});
       }
-      // SATU BARIS: nama blok (kiri) + luas atau tipe (kanan)
+      // SATU BARIS: nama blok (kiri) + nilai (kanan)
       var lblText=_pdfSafeStr(item.lbl);if(lblText.length>16)lblText=lblText.substring(0,15)+'..';
       page.drawText(lblText,{x:SB_X+14,y:midY-2.5,size:6.5,color:rgb(0.05,0.05,0.05),font:fontBold});
-      if(item.aHa){
-        // Luas rata kanan (hanya tipe area)
-        var aHaW=item.aHa.length*6.5*0.52;
-        page.drawText(item.aHa,{x:SB_X+SB_W-4-aHaW,y:midY-2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
+      if(item.valStr){
+        var valW=item.valStr.length*6.5*0.52;
+        page.drawText(_pdfSafeStr(item.valStr),{x:SB_X+SB_W-4-valW,y:midY-2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
       }
       ky-=legRowH;
     });
-    // Total luas — hanya dari tipe area (blok, perumahan, dll) — rata tengah
-    var totalArea=polLeg.reduce(function(s,p){return s+(p.isLine||!p.isArea?0:(p.effectiveArea!==undefined?p.effectiveArea:(p.area||0)));},0);
+    // Total luas — hanya dari tipe area yang ada nilai Ha
+    var totalArea=0;
+    legItems.forEach(function(item){
+      if(item.isLine||!item.valStr)return;
+      var haMatch=item.valStr.match(/^([\d.]+)\s*Ha$/);
+      if(haMatch)totalArea+=parseFloat(haMatch[1])*10000;
+    });
     page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:14,color:rgb(0.1,0.42,0.19)});
     var totalStr='Total Luas: '+(totalArea/10000).toFixed(2)+' Ha';
     var totalStrW=totalStr.length*7.5*0.52; // estimasi lebar teks
