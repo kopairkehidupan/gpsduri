@@ -3380,6 +3380,13 @@ function _refreshAreaEditorTotal(){
   if(el){var tot=el.querySelector('div:last-child');if(tot&&tot.textContent.startsWith('Total Luas PDF'))tot.textContent='Total Luas PDF: '+(totalEff/10000).toFixed(2)+' Ha';}
 }
 
+// Helper: set unit dari tombol (menghindari quoting kompleks di onclick inline)
+function _legSetUnit(id,unit){
+  if(!_legendSettings[id])return;
+  _legendSettings[id].unit=unit;
+  _renderPdfLegendEditor();
+}
+
 // ── Legenda Rincian Areal — inisialisasi setting ──────────────
 function _initLegendSettings(){
   var selected=measures.filter(function(m){
@@ -3456,7 +3463,10 @@ function _renderPdfLegendEditor(){
     var unitBtns=['ha','pkk','m'].map(function(u){
       var ac=ls.unit===u;
       var lbl=u==='ha'?'Ha':u==='pkk'?'Pkk':'Meter';
-      return '<button onclick="_legendSettings['+m.id+'].unit=''+u+'';_renderPdfLegendEditor()" style="padding:2px 6px;font-size:8px;border-radius:3px;border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.15)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+';cursor:pointer;font-family:'Space Mono',monospace">'+lbl+'</button>';
+      var borderC=ac?'var(--saw)':'var(--bd)';
+      var bgC=ac?'rgba(90,158,53,.15)':'var(--s3)';
+      var txtC=ac?'var(--saw2)':'var(--mu)';
+      return '<button onclick="_legSetUnit('+m.id+',\''+u+'\')" style="padding:2px 6px;font-size:8px;border-radius:3px;border:1px solid '+borderC+';background:'+bgC+';color:'+txtC+';cursor:pointer">'+lbl+'</button>';
     }).join('');
     // Effective value string for preview
     var uL=ls.unit==='ha'?' Ha':ls.unit==='pkk'?' Pkk':' m';
@@ -3467,7 +3477,7 @@ function _renderPdfLegendEditor(){
         +symHtml
         +'<div style="flex:1;min-width:0">'
           +'<div style="font-size:9px;font-weight:500;color:'+(ls.showInLegend?'var(--tx)':'var(--mu)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.label+'</div>'
-          +'<div style="font-size:7px;color:var(--mu);font-family:'Space Mono',monospace">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
+          +'<div style="font-size:7px;color:var(--mu);font-family:monospace">'+ltDef.label+(isBK?' · BLOK':'')+(ls.showInLegend&&ls.showValue?' · '+prevVal:'')+'</div>'
         +'</div>'
         +'<label class="toggle" title="Tampil di legenda" onclick="event.stopPropagation()">'
           +'<input type="checkbox" '+(ls.showInLegend?'checked':'')+' onchange="_legendSettings['+m.id+'].showInLegend=this.checked;_renderPdfLegendEditor()">'
@@ -3483,16 +3493,16 @@ function _renderPdfLegendEditor(){
           +(ls.showValue?
             '<div style="display:flex;flex-direction:column;gap:3px">'
               +'<div style="display:flex;align-items:center;gap:4px">'
-                +'<input type="number" step="0.01" min="0" id="legVal_'+m.id+'" placeholder="auto" value="'+ls.customVal+'" oninput="_legUpdate('+m.id+','customVal',this.value)" style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-family:'Space Mono',monospace;font-size:9px;padding:3px 6px;outline:none;text-align:right">'
+                +'<input type="number" step="0.01" min="0" id="legVal_'+m.id+'" placeholder="auto" value="'+ls.customVal+'" oninput="_legUpdate('+m.id+',\'customVal\',this.value)" style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9px;padding:3px 6px;outline:none;text-align:right">'
                 +'<div style="display:flex;gap:2px;flex-shrink:0">'+unitBtns+'</div>'
               +'</div>'
               +'<div style="display:flex;align-items:center;gap:4px">'
                 +'<span style="font-size:8px;color:var(--mu)">Preview:</span>'
-                +'<span id="legPrev_'+m.id+'" style="font-size:8px;font-family:'Space Mono',monospace;color:'+prevColor+'">'+prevVal+'</span>'
-                +(ls.customVal?'<button onclick="_legendSettings['+m.id+'].customVal='';_renderPdfLegendEditor()" style="font-size:7px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ auto</button>':'')
+                +'<span id="legPrev_'+m.id+'" style="font-size:8px;font-family:monospace;color:'+prevColor+'">'+prevVal+'</span>'
+                +(ls.customVal?'<button onclick="_legendSettings['+m.id+'].customVal=\'\';_renderPdfLegendEditor()" style="font-size:7px;padding:1px 5px;border-radius:3px;border:1px solid var(--bd);background:var(--s3);color:var(--mu);cursor:pointer">↺ auto</button>':'')
               +'</div>'
             +'</div>'
-          :'<div style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace">Hanya nama tampil di legenda</div>')
+          :'<div style="font-size:8px;color:var(--mu)">Hanya nama tampil di legenda</div>')
         +'</div>'
       :'')
       +'</details>';
