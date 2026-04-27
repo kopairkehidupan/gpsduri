@@ -2918,9 +2918,9 @@ function exitSplitView(){
 
 <!-- ===== PDF MODAL ===== -->
 <div id="pdfModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);align-items:center;justify-content:center;backdrop-filter:blur(6px)">
-  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:430px;max-width:95vw;font-family:'DM Sans',sans-serif;max-height:92vh;display:flex;flex-direction:column;overflow:hidden">
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:22px;width:430px;max-width:95vw;font-family:'DM Sans',sans-serif;max-height:92vh;display:flex;flex-direction:column">
     <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:14px">📄 Pengaturan Laporan PDF</div>
-    <div style="overflow-y:auto;flex:1;min-height:0;padding-right:2px">
+    <div style="overflow-y:auto;flex:1;min-height:0;padding-right:2px;overflow-x:visible">
       <div style="margin-bottom:11px">
         <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.7px;display:block;margin-bottom:5px">Judul Peta</label>
         <input id="pdfTitle" type="text" value="PETA AREAL KEBUN SAWIT" oninput="this.value=this.value.toUpperCase()" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:7px;padding:8px 11px;color:var(--tx);font-family:'Space Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
@@ -2948,7 +2948,7 @@ function exitSplitView(){
           📋 Legenda Rincian Areal
           <span style="font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;text-transform:none;font-weight:400;letter-spacing:0">(atur simbol &amp; nilai setiap layer)</span>
         </div>
-        <div id="pdfLegendEditor" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:3px">
+        <div id="pdfLegendEditor" style="display:flex;flex-direction:column;gap:3px">
         </div>
       </div>
     </div>
