@@ -3945,24 +3945,16 @@ async function generateDroneMapPDF(){
           var cx=lpt[0],cy=lpt[1];
           if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
             var lbl=_pdfSafeStr(m.label||'Blok');
-            var lt=_getLayerType(m);
-            var ltDef=_layerTypes[lt]||_layerTypes.blok;
-            // Tampilkan luas hanya untuk tipe area (blok, perumahan, batas_kawasan)
-            var isAreaType=ltDef.isArea;
-            var effM2=_getEffectiveAreaM2(m);
-            var aHa=isAreaType?(effM2/10000).toFixed(2)+' Ha':'';
             var fs=bStyle.labelSize||6;
-            var fs2=Math.max(fs*0.85,4.5);
-            var charW=fs*0.55,charW2=fs2*0.55;
-            var tw=aHa?Math.max(lbl.length*charW,aHa.length*charW2):lbl.length*charW;
-            var boxH=aHa?(fs+fs2+8):(fs+6);
+            var charW=fs*0.55;
+            var tw=lbl.length*charW;
+            var boxH=fs+6;
             var boxX=cx-tw/2-4;
             var lblX=cx-lbl.length*charW/2;
-            page.drawRectangle({x:boxX,y:cy-(aHa?fs2+2:2),width:tw+8,height:boxH,color:rgb(1,1,1),opacity:0.92});
+            page.drawRectangle({x:boxX,y:cy-2,width:tw+8,height:boxH,color:rgb(1,1,1),opacity:0.92});
             var lbRgb=hexToRgb(bStyle.labelColor||'#1a4d00');
-            page.drawRectangle({x:boxX,y:cy-(aHa?fs2+2:2),width:tw+8,height:boxH,borderColor:rgb(lbRgb.r,lbRgb.g,lbRgb.b),borderWidth:0.5,opacity:0.6});
+            page.drawRectangle({x:boxX,y:cy-2,width:tw+8,height:boxH,borderColor:rgb(lbRgb.r,lbRgb.g,lbRgb.b),borderWidth:0.5,opacity:0.6});
             page.drawText(lbl,{x:lblX,y:cy+3,size:fs,color:rgb(lbRgb.r,lbRgb.g,lbRgb.b),font:fontBold});
-            if(aHa)page.drawText(aHa,{x:cx-aHa.length*charW2/2,y:cy-fs2-0.5,size:fs2,color:rgb(0.25,0.25,0.25),font:fontNorm});
           }
         }
         if(showBatas){
