@@ -2504,99 +2504,174 @@ function updateExportPerPhoto(){
 // =====================================================
 // SIMPAN & PULIHKAN SESI
 // =====================================================
-function saveSession(){
-  if(photos.length===0&&measures.length===0&&trees.length===0){
-    showToast('⚠ Tidak ada data untuk disimpan');return;
+function saveSession() {
+  if (photos.length === 0 && measures.length === 0 && trees.length === 0) {
+    showToast('⚠ Tidak ada data untuk disimpan');
+    return;
   }
-  showToast('⏳ Menyiapkan file sesi...');
-  setTimeout(function(){
-    try{
-      var data={
-        version:'2',
-        savedAt:new Date().toISOString(),
-        tool:'DroneMap v3 Pro',
-        // ── FOTO (termasuk base64 src) ──────────────────
-        photos:photos.map(function(p){
-          return{
-            id:p.id,name:p.name,src:p.src,w:p.w,h:p.h,
-            gcps:p.gcps,georef:p.georef,
-            bounds:p.bounds,corners:p.corners,
-            visible:p.visible,opacity:p.opacity,
-            feather:p.feather,blendMode:p.blendMode,
-            offsetLat:p.offsetLat||0,offsetLng:p.offsetLng||0,
-            zOrder:p.zOrder||0,
-            brightness:p.brightness||100,contrast:p.contrast||100,
-            saturation:p.saturation||100,
-            colorNormApplied:p.colorNormApplied||false
+ 
+  // Cek estimasi ukuran (base64 ≈ 1.37× ukuran biner foto asli)
+  var estimateMB = photos.reduce(function(s, p) {
+    return s + (p.src ? p.src.length * 0.75 / 1024 / 1024 : 0);
+  }, 0);
+ 
+  var warnMsg = estimateMB > 100
+    ? '\n⚠ Estimasi ukuran file: ' + estimateMB.toFixed(0) + ' MB\nMungkin lambat di komputer spek rendah.'
+    : '';
+ 
+  showToast('⏳ Menyiapkan file sesi...' + warnMsg);
+ 
+  setTimeout(function() {
+    try {
+      var data = {
+        version: '2',
+        savedAt: new Date().toISOString(),
+        tool: 'DroneMap v3 Pro',
+        photos: photos.map(function(p) {
+          // Hanya simpan field yang tidak null/default untuk hemat ukuran
+          var obj = {
+            id: p.id, name: p.name, src: p.src,
+            w: p.w, h: p.h, gcps: p.gcps,
+            georef: p.georef
           };
+          // Field opsional — hanya simpan jika bukan default
+          if (p.bounds) obj.bounds = p.bounds;
+          if (p.corners) obj.corners = p.corners;
+          if (p.visible === false) obj.visible = false;
+          if (p.opacity !== 1) obj.opacity = p.opacity;
+          if (p.feather) obj.feather = p.feather;
+          if (p.blendMode && p.blendMode !== 'normal') obj.blendMode = p.blendMode;
+          if (p.offsetLat) obj.offsetLat = p.offsetLat;
+          if (p.offsetLng) obj.offsetLng = p.offsetLng;
+          if (p.zOrder) obj.zOrder = p.zOrder;
+          if (p.brightness && p.brightness !== 100) obj.brightness = p.brightness;
+          if (p.contrast && p.contrast !== 100) obj.contrast = p.contrast;
+          if (p.saturation && p.saturation !== 100) obj.saturation = p.saturation;
+          if (p.colorNormApplied) obj.colorNormApplied = true;
+          return obj;
         }),
-        // ── PENGUKURAN ──────────────────────────────────
-        measures:measures.map(function(m){
-          return{
-            id:m.id,type:m.type,label:m.label,
-            area:m.area,perim:m.perim,coords:m.coords,
-            len:m.len,lat:m.lat,lng:m.lng,
-            treesInside:m.treesInside,density:m.density,
-            isBatasKebun:m.isBatasKebun||false,
-            outsideWarning:m.outsideWarning||''
-          };
+        measures: measures.map(function(m) {
+          var obj = { id: m.id, type: m.type, label: m.label };
+          if (m.area !== undefined) obj.area = m.area;
+          if (m.perim !== undefined) obj.perim = m.perim;
+          if (m.coords) obj.coords = m.coords;
+          if (m.len !== undefined) obj.len = m.len;
+          if (m.lat !== undefined) obj.lat = m.lat;
+          if (m.lng !== undefined) obj.lng = m.lng;
+          if (m.treesInside) obj.treesInside = m.treesInside;
+          if (m.density) obj.density = m.density;
+          if (m.isBatasKebun) obj.isBatasKebun = true;
+          if (m.outsideWarning) obj.outsideWarning = m.outsideWarning;
+          return obj;
         }),
-        shapeId:shapeId,
-        // ── SENSUS POKOK ────────────────────────────────
-        trees:trees.map(function(t){
-          return{id:t.id,lat:t.lat,lng:t.lng,no:t.no,block:t.block,status:t.status,note:t.note};
+        shapeId: shapeId,
+        trees: trees.map(function(t) {
+          return { id: t.id, lat: t.lat, lng: t.lng, no: t.no, block: t.block, status: t.status, note: t.note };
         }),
-        treeId:treeId,
-        // ── BATAS KEBUN STATE ───────────────────────────
-        batasKebunIds:Array.from(_batasKebunIds),
-        bkOwnerMapExplicit:_bkOwnerMapExplicit,
-        bkColorMap:_bkColorMap,
-        // ── PDF OPTIONS ─────────────────────────────────
-        labelOffsets:_labelOffsets,
-        exportBatasShow:_exportBatasShow,
-        exportLabelShow:_exportLabelShow,
-        // ── SATUAN ──────────────────────────────────────
-        areaUnit:areaUnit,
-        lenUnit:lenUnit
+        treeId: treeId,
+        batasKebunIds: Array.from(_batasKebunIds),
+        bkOwnerMapExplicit: _bkOwnerMapExplicit,
+        bkColorMap: _bkColorMap,
+        labelOffsets: _labelOffsets,
+        exportBatasShow: _exportBatasShow,
+        exportLabelShow: _exportLabelShow,
+        areaUnit: areaUnit,
+        lenUnit: lenUnit
       };
-      var json=JSON.stringify(data);
-      var sizeMB=(new Blob([json]).size/1024/1024).toFixed(1);
-      var now=new Date();
-      var dateStr=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
-      safeDownload(json,'application/json','DroneMap_Sesi_'+dateStr+'.dmsession');
-      showToast('✅ Sesi disimpan! ('+sizeMB+' MB)\nSimpan file .dmsession ini untuk lanjut kapanpun.');
-    }catch(err){
-      showToast('❌ Gagal menyimpan: '+err.message);
+ 
+      var json = JSON.stringify(data);
+      var sizeMB = (new Blob([json]).size / 1024 / 1024).toFixed(1);
+      var now = new Date();
+      var dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+      safeDownload(json, 'application/json', 'DroneMap_Sesi_' + dateStr + '.dmsession');
+      showToast('✅ Sesi disimpan! (' + sizeMB + ' MB)\n'
+        + (parseFloat(sizeMB) > 80 ? '💡 File besar: gunakan PC dengan RAM ≥4GB untuk muat ulang.' : 'Simpan file ini untuk lanjut kapanpun.'));
+    } catch (err) {
+      showToast('❌ Gagal menyimpan: ' + err.message);
     }
-  },100);
+  }, 100);
 }
 
 // File input listener untuk load sesi
-document.getElementById('sessionFileInput').addEventListener('change',function(e){
-  var f=e.target.files[0];if(!f)return;
-  var statusEl=document.getElementById('sessionLoadStatus');
-  statusEl.style.display='';
-  statusEl.style.background='rgba(88,166,255,.08)';
-  statusEl.style.color='var(--in)';
-  statusEl.style.border='1px solid rgba(88,166,255,.25)';
-  statusEl.textContent='⏳ Memuat file sesi...';
-  var reader=new FileReader();
-  reader.onload=function(ev){
-    try{
-      var data=JSON.parse(ev.target.result);
-      if(!data.version||!data.photos){
-        statusEl.textContent='❌ Format file tidak valid. Pastikan file .dmsession dari DroneMap v3 Pro.';
-        statusEl.style.background='rgba(248,81,73,.08)';statusEl.style.color='var(--er)';statusEl.style.border='1px solid rgba(248,81,73,.3)';
-        return;
-      }
-      _doLoadSession(data,statusEl);
-    }catch(err){
-      statusEl.textContent='❌ Error: '+err.message;
-      statusEl.style.background='rgba(248,81,73,.08)';statusEl.style.color='var(--er)';statusEl.style.border='1px solid rgba(248,81,73,.3)';
+document.getElementById('sessionFileInput').addEventListener('change', function(e) {
+  var f = e.target.files[0];
+  if (!f) return;
+ 
+  var statusEl = document.getElementById('sessionLoadStatus');
+  statusEl.style.display = '';
+  statusEl.style.background = 'rgba(88,166,255,.08)';
+  statusEl.style.color = 'var(--in)';
+  statusEl.style.border = '1px solid rgba(88,166,255,.25)';
+ 
+  var sizeMB = (f.size / 1024 / 1024).toFixed(1);
+  statusEl.innerHTML = '⏳ Membaca file sesi (' + sizeMB + ' MB)...<br>'
+    + '<div style="width:100%;height:4px;background:var(--bd);border-radius:2px;margin-top:5px">'
+    + '<div id="sessLoadBar" style="height:100%;width:0%;background:var(--in);border-radius:2px;transition:width .3s"></div></div>'
+    + '<div id="sessLoadMsg" style="font-size:8px;color:var(--mu);margin-top:3px">Parsing JSON...</div>';
+ 
+  // Baca file sebagai ArrayBuffer untuk file besar — lebih efisien dari readAsText
+  // lalu decode manual agar garbage collector bisa bekerja lebih baik
+  var reader = new FileReader();
+ 
+  reader.onprogress = function(ev) {
+    if (ev.lengthComputable) {
+      var pct = Math.round(ev.loaded / ev.total * 40); // 0-40% = baca file
+      var bar = document.getElementById('sessLoadBar');
+      if (bar) bar.style.width = pct + '%';
     }
   };
-  reader.readAsText(f);
-  e.target.value='';
+ 
+  reader.onload = function(ev) {
+    var bar = document.getElementById('sessLoadBar');
+    var msg = document.getElementById('sessLoadMsg');
+    if (bar) bar.style.width = '45%';
+    if (msg) msg.textContent = 'Parsing data...';
+ 
+    // Gunakan setTimeout agar UI bisa update dulu sebelum JSON.parse berat
+    setTimeout(function() {
+      try {
+        var data = JSON.parse(ev.target.result);
+        ev.target.result = null; // Bebaskan memori string JSON asap
+        reader.result && (reader.result = null);
+ 
+        if (!data.version || !data.photos) {
+          statusEl.innerHTML = '❌ Format file tidak valid.';
+          statusEl.style.background = 'rgba(248,81,73,.08)';
+          statusEl.style.color = 'var(--er)';
+          statusEl.style.border = '1px solid rgba(248,81,73,.3)';
+          return;
+        }
+ 
+        if (bar) bar.style.width = '50%';
+        if (msg) msg.textContent = 'Memuat data sesi...';
+ 
+        // Cek estimasi memori yang dibutuhkan
+        var photoCount = data.photos ? data.photos.length : 0;
+        var georefCount = data.photos ? data.photos.filter(function(p) { return p.georef; }).length : 0;
+        var estimatedMB = f.size / 1024 / 1024;
+ 
+        // Untuk file > 80MB, gunakan sequential loader
+        if (estimatedMB > 80 || photoCount > 5) {
+          _doLoadSessionSequential(data, statusEl, bar, msg);
+        } else {
+          _doLoadSession(data, statusEl);
+        }
+      } catch (err) {
+        statusEl.innerHTML = '❌ Error parsing: ' + err.message + '<br>'
+          + '<span style="font-size:8px;color:var(--mu)">File mungkin rusak atau bukan format .dmsession</span>';
+        statusEl.style.background = 'rgba(248,81,73,.08)';
+        statusEl.style.color = 'var(--er)';
+        statusEl.style.border = '1px solid rgba(248,81,73,.3)';
+      }
+    }, 50);
+  };
+ 
+  reader.onerror = function() {
+    statusEl.innerHTML = '❌ Gagal membaca file.';
+  };
+ 
+  reader.readAsText(f, 'utf-8');
+  e.target.value = '';
 });
 
 function _doLoadSession(data,statusEl){
@@ -2747,6 +2822,313 @@ function _doLoadSession(data,statusEl){
     statusEl.innerHTML='✅ Sesi dipulihkan!<br>'+georefPhotos.length+' foto georef · '+measures.length+' pengukuran · '+trees.length+' pokok sawit';
   }
   showToast('✅ Sesi berhasil dipulihkan!\n'+georefPhotos.length+' foto, '+measures.length+' pengukuran, '+trees.length+' pokok');
+}
+
+async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
+  function setBar(pct, msg) {
+    if (barEl) barEl.style.width = pct + '%';
+    if (msgEl) msgEl.textContent = msg || '';
+  }
+ 
+  try {
+    // ── Hapus state lama (sama seperti _doLoadSession) ──
+    photos.forEach(function(p) {
+      if (p.overlay && map) try { map.removeLayer(p.overlay); } catch (e) {}
+      if (p.gcpLayer && map) try { map.removeLayer(p.gcpLayer); } catch (e) {}
+    });
+    if (_geserPhotoId) _stopGeserMode();
+    Object.keys(_geserMarkers).forEach(function(id) {
+      if (_geserMarkers[id] && map) try { map.removeLayer(_geserMarkers[id]); } catch (e) {}
+    });
+    _geserMarkers = {};
+    if (_treeLayer) _treeLayer.clearLayers();
+    Object.keys(_labelDragMarkers).forEach(function(id) {
+      if (_labelDragMarkers[id] && map) try { map.removeLayer(_labelDragMarkers[id]); } catch (e) {}
+    });
+    _labelDragMarkers = {};
+ 
+    setBar(55, 'Restore variabel...');
+    await _yieldToUI();
+ 
+    // ── Restore state non-foto dulu (ringan) ──
+    // Simpan data foto terpisah agar bisa di-GC
+    var photoDataArray = data.photos;
+    data.photos = null; // izinkan GC pada array foto asli
+ 
+    measures = data.measures || [];
+    shapeId = data.shapeId || 0;
+    trees = (data.trees || []).map(function(t) { return Object.assign({}, t, { marker: null }); });
+    treeId = data.treeId || 0;
+    _batasKebunIds = new Set(data.batasKebunIds || []);
+    _bkOwnerMapExplicit = data.bkOwnerMapExplicit || {};
+    _bkColorMap = data.bkColorMap || {};
+    _labelOffsets = data.labelOffsets || {};
+    _exportBatasShow = data.exportBatasShow || {};
+    _exportLabelShow = data.exportLabelShow || {};
+    _bkOwnerMap = {};
+    _batasKebunPolygons = [];
+    areaUnit = data.areaUnit || 'auto';
+    lenUnit = data.lenUnit || 'auto';
+ 
+    // Bersihkan data yang tidak dibutuhkan lagi
+    data = null;
+ 
+    setBar(58, 'Inisialisasi peta...');
+    await _yieldToUI();
+ 
+    // ── Rebuild foto array tanpa src dulu (hemat RAM) ──
+    photos = photoDataArray.map(function(p) {
+      return {
+        id: p.id, name: p.name,
+        src: null,          // ← src belum diload, diisi nanti satu per satu
+        _srcPending: p.src, // ← simpan sementara, akan di-consume & dibuang
+        w: p.w, h: p.h,
+        gcps: p.gcps || [],
+        georef: p.georef || false,
+        bounds: p.bounds || null,
+        corners: p.corners || null,
+        overlay: null, gcpLayer: null,
+        visible: p.visible !== false,
+        opacity: p.opacity || 1,
+        feather: p.feather || 0,
+        blendMode: p.blendMode || 'normal',
+        offsetLat: p.offsetLat || 0,
+        offsetLng: p.offsetLng || 0,
+        zOrder: p.zOrder || 0,
+        brightness: p.brightness || 100,
+        contrast: p.contrast || 100,
+        saturation: p.saturation || 100,
+        colorNormApplied: p.colorNormApplied || false
+      };
+    });
+ 
+    // Bersihkan photoDataArray setelah copy (base64 besar masih ada di _srcPending)
+    photoDataArray = null;
+    if (typeof gc === 'function') gc(); // Chrome DevTools gc jika tersedia
+ 
+    // ── Init peta ──
+    var georefPhotos = photos.filter(function(p) { return p.georef && p.gcps && p.gcps.length >= 3; });
+    if (georefPhotos.length > 0) {
+      if (!map) {
+        _initMapFromPhoto(georefPhotos[0]);
+      } else {
+        if (drawnItems) drawnItems.clearLayers();
+      }
+    }
+ 
+    // ── Tambah measure layers ke peta (tidak butuh banyak RAM) ──
+    setBar(62, 'Restore pengukuran...');
+    await _yieldToUI();
+    _restoreMeasureLayers();
+ 
+    // ── Load foto SATU PER SATU secara sequential ──
+    // Ini kunci anti-OOM: browser tidak perlu handle semua base64 sekaligus
+    var total = photos.length;
+    for (var i = 0; i < photos.length; i++) {
+      var photo = photos[i];
+      var pct = 62 + Math.round((i / total) * 30); // 62% - 92%
+      setBar(pct, 'Memuat foto ' + (i + 1) + '/' + total + ': ' + photo.name);
+      await _yieldToUI();
+ 
+      if (photo._srcPending) {
+        // Transfer src dari pending (supaya GC bisa bekerja per-foto)
+        photo.src = photo._srcPending;
+        photo._srcPending = null; // segera bebaskan referensi
+ 
+        if (photo.georef && photo.gcps.length >= 3) {
+          try {
+            // Buat overlay untuk foto ini
+            var toGeo = buildAffine(photo.gcps);
+ 
+            // Tunggu image load untuk dapat dimensi (jika w/h belum ada)
+            if (!photo.w || !photo.h) {
+              await new Promise(function(resolve) {
+                var img = new Image();
+                img.onload = function() { photo.w = img.naturalWidth; photo.h = img.naturalHeight; resolve(); };
+                img.onerror = resolve;
+                img.src = photo.src;
+              });
+            }
+ 
+            photo.overlay = createRotatedOverlay(photo, toGeo);
+            if (photo.visible && map) photo.overlay.addTo(map);
+ 
+            // GCP markers
+            photo.gcpLayer = L.featureGroup();
+            photo.gcps.forEach(function(g, gi) {
+              L.circleMarker([g.lat, g.lng], {
+                radius: 7, fillColor: '#f0a500', color: '#000',
+                weight: 2, fillOpacity: 1, pane: 'gcpPane'
+              }).addTo(photo.gcpLayer).bindPopup('<b>' + photo.name + '</b><br>GCP ' + (gi + 1));
+            });
+            var togGCP = document.getElementById('togGCP');
+            if (togGCP && togGCP.checked && map) photo.gcpLayer.addTo(map);
+          } catch (photoErr) {
+            console.warn('Gagal load foto ' + photo.name + ':', photoErr);
+          }
+        }
+ 
+        // Yield lagi setelah canvas dibuat (berat)
+        await _yieldToUI();
+      }
+    }
+ 
+    setBar(93, 'Restore pokok sawit...');
+    await _yieldToUI();
+ 
+    // ── Tree markers ──
+    if (_treeLayer) _treeLayer.clearLayers();
+    trees.forEach(function(t) { addTreeMarker(t); });
+ 
+    setBar(96, 'Finalisasi...');
+    await _yieldToUI();
+ 
+    // ── Fit bounds ──
+    var allBounds = photos.filter(function(p) { return p.georef && p.bounds; }).map(function(p) { return p.bounds; });
+    if (allBounds.length > 0 && map) {
+      var aLats = [], aLngs = [];
+      allBounds.forEach(function(b) { aLats.push(b[0][0], b[1][0]); aLngs.push(b[0][1], b[1][1]); });
+      map.fitBounds([
+        [Math.min.apply(null, aLats), Math.min.apply(null, aLngs)],
+        [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]
+      ], { padding: [20, 20] });
+    }
+ 
+    // ── Rebuild BK state ──
+    _rebuildBatasKebunPolygons();
+    _updateBatasKebunInfoPanel();
+    updateGcpCoverageBox();
+    hideImagePanel();
+    updateStep(3);
+ 
+    // ── Update semua UI ──
+    setBar(99, 'Update tampilan...');
+    await _yieldToUI();
+ 
+    renderPhotoList();
+    renderLayerList();
+    renderMeasures();
+    renderTreeList();
+    updateStats();
+    updateSensusStats();
+    renderExportBlokList();
+ 
+    document.getElementById('hdrPhotoCount').textContent = photos.length + ' foto';
+    document.getElementById('hdrTreeCount').textContent = '🌴 ' + trees.length + ' pokok';
+ 
+    var georefDone = photos.filter(function(p) { return p.georef; }).length;
+    if (georefDone > 0) {
+      document.getElementById('hdrRotTag').style.display = '';
+      document.getElementById('hdrRotTag').textContent = '✓ ' + georefDone + ' foto georef';
+    }
+ 
+    // Switch ke tab Ukur
+    document.querySelectorAll('.stab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tabpane').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.stab')[4].classList.add('active');
+    document.getElementById('tab-measure').classList.add('active');
+ 
+    setBar(100, 'Selesai!');
+ 
+    var georefCount2 = photos.filter(function(p) { return p.georef; }).length;
+    if (statusEl) {
+      statusEl.style.background = 'rgba(63,185,80,.08)';
+      statusEl.style.color = 'var(--ok)';
+      statusEl.style.border = '1px solid rgba(63,185,80,.25)';
+      statusEl.innerHTML = '✅ Sesi dipulihkan!<br>'
+        + georefCount2 + ' foto georef · '
+        + measures.length + ' pengukuran · '
+        + trees.length + ' pokok sawit';
+    }
+    showToast('✅ Sesi berhasil dipulihkan!\n' + georefCount2 + ' foto, ' + measures.length + ' pengukuran, ' + trees.length + ' pokok');
+ 
+  } catch (err) {
+    console.error('Load session error:', err);
+    if (statusEl) {
+      statusEl.style.background = 'rgba(248,81,73,.08)';
+      statusEl.style.color = 'var(--er)';
+      statusEl.style.border = '1px solid rgba(248,81,73,.3)';
+      statusEl.innerHTML = '❌ Gagal memuat sesi: ' + err.message
+        + '<br><span style="font-size:8px;color:var(--mu)">Coba tutup tab lain &amp; reload halaman</span>';
+    }
+  }
+}
+
+function _yieldToUI(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms || 16); });
+}
+
+function _initMapFromPhoto(refPhoto) {
+  var toGeo0 = buildAffine(refPhoto.gcps);
+  var c0 = toGeo0(refPhoto.w / 2, refPhoto.h / 2);
+  map = L.map('mapPanel', { zoomControl: true }).setView([c0.lat, c0.lng], 17);
+  baseTile = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Esri Satellite', maxZoom: 22, maxNativeZoom: 19 }
+  ).addTo(map);
+  map.createPane('gcpPane');
+  map.getPane('gcpPane').style.zIndex = 650;
+  map.getPane('gcpPane').style.pointerEvents = 'none';
+  drawnItems = new L.FeatureGroup().addTo(map);
+  _treeLayer = L.featureGroup().addTo(map);
+ 
+  var drawCtrl = new L.Control.Draw({
+    position: 'topright',
+    edit: { featureGroup: drawnItems, remove: true },
+    draw: {
+      polygon: { showArea: true, shapeOptions: { color: '#5a9e35', weight: 2, fillOpacity: .14 } },
+      polyline: { shapeOptions: { color: '#58a6ff', weight: 3 } },
+      rectangle: { shapeOptions: { color: '#3fb950', weight: 2, fillOpacity: .12 } },
+      circle: false, circlemarker: false,
+      marker: { icon: L.divIcon({ className: '', html: '<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>' }) }
+    }
+  });
+  map.addControl(drawCtrl);
+  map.on(L.Draw.Event.CREATED, function(e) { onDrawCreated(e); _lastPolygonLayer = e.layer; });
+  map.on(L.Draw.Event.EDITED, refreshMeasures);
+  map.on(L.Draw.Event.DELETED, function(e) {
+    e.layers.eachLayer(function(l) { if (l._mid) measures = measures.filter(function(m) { return m.id !== l._mid; }); });
+    renderMeasures(); updateStats();
+  });
+  map.on(L.Draw.Event.DRAWSTART, function() { _drawActive = true; });
+  map.on(L.Draw.Event.DRAWSTOP, function() { _drawActive = false; });
+  map.on(L.Draw.Event.EDITSTART, function() { _drawActive = true; });
+  map.on(L.Draw.Event.EDITSTOP, function() { _drawActive = false; });
+  map.on(L.Draw.Event.DELETESTART, function() { _drawActive = true; });
+  map.on(L.Draw.Event.DELETESTOP, function() { _drawActive = false; });
+  map.on('mousemove', function(e) {
+    document.getElementById('cursorCoord').textContent = e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6);
+  });
+  map.on('click', function(e) { if (_treeMode !== 'add' || _drawActive) return; addTree(e.latlng.lat, e.latlng.lng); });
+}
+ 
+ 
+// ─────────────────────────────────────────────────────
+// 5. HELPER: _restoreMeasureLayers — rebuild Leaflet layers dari measures[]
+// ─────────────────────────────────────────────────────
+ 
+function _restoreMeasureLayers() {
+  if (!drawnItems || !map) return;
+  measures.forEach(function(m) {
+    var layer = null;
+    if (m.type === 'polygon' && m.coords && m.coords.length >= 3) {
+      var lls = m.coords.map(function(c) { return [c[1], c[0]]; });
+      var isBK = _batasKebunIds.has(m.id);
+      var col = isBK ? (_bkColorMap[m.id] || '#e74c3c') : '#5a9e35';
+      layer = L.polygon(lls, { color: col, fillColor: col, weight: isBK ? 2.5 : 2, fillOpacity: isBK ? 0.18 : 0.14 });
+      layer.bindPopup('<b>' + m.label + '</b><br>Luas: ' + fmtArea(m.area) + '<br>Keliling: ' + fmtLen(m.perim));
+    } else if (m.type === 'line' && m.coords && m.coords.length >= 2) {
+      var lls2 = m.coords.map(function(c) { return [c[1], c[0]]; });
+      layer = L.polyline(lls2, { color: '#58a6ff', weight: 3 });
+      layer.bindPopup('<b>' + m.label + '</b><br>Panjang: ' + fmtLen(m.len));
+    } else if (m.type === 'marker' && m.lat !== undefined) {
+      layer = L.marker([m.lat, m.lng], {
+        icon: L.divIcon({ className: '', html: '<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>' })
+      });
+      layer.bindPopup('<b>' + m.label + '</b><br>' + m.lat.toFixed(6) + ', ' + m.lng.toFixed(6));
+    }
+    if (layer) { layer._mid = m.id; drawnItems.addLayer(layer); }
+  });
 }
 
 // =====================================================
