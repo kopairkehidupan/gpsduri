@@ -1373,149 +1373,287 @@ function buildAffine(gcps){
 // =====================================================
 // FEATHERED CANVAS OVERLAY
 // =====================================================
-function buildFeatheredCanvas(imgSrc,w,h,featherAmt,brightness,contrast,saturation,callback){
-  var img=new Image();
-  img.onload=function(){
-    var ofc=document.createElement('canvas');ofc.width=w;ofc.height=h;
-    var ctx=ofc.getContext('2d');
-    var br=brightness||100,ct=contrast||100,sat=saturation||100;
-    ctx.filter='brightness('+br+'%) contrast('+ct+'%) saturate('+sat+'%)';
-    ctx.drawImage(img,0,0,w,h);ctx.filter='none';
-    if(featherAmt>0){
-      var mask=document.createElement('canvas');mask.width=w;mask.height=h;
-      var mctx=mask.getContext('2d');
-      var cx=w/2,cy=h/2,eb=featherAmt;
-      var grad=mctx.createRadialGradient(cx,cy,Math.min(cx,cy)*(1-eb*1.5),cx,cy,Math.max(cx,cy)*1.05);
-      grad.addColorStop(0,'rgba(0,0,0,1)');grad.addColorStop(1,'rgba(0,0,0,0)');
-      mctx.fillStyle=grad;mctx.fillRect(0,0,w,h);
-      ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0);ctx.globalCompositeOperation='source-over';
+function buildFeatheredCanvas(imgSrc, w, h, featherAmt, brightness, contrast, saturation, callback) {
+  var img = new Image();
+  img.onload = function() {
+    // ── DOWNSCALE: max 2048px sisi terpanjang ──────────────
+    // Ini kunci utama anti-OOM: foto 20MP jadi ~2MP di offscreen canvas
+    // Kualitas visual di peta tidak berubah karena peta jarang zoom >2048px
+    var MAX_DIM = 2048;
+    var scale = 1;
+    if (w > MAX_DIM || h > MAX_DIM) {
+      scale = Math.min(MAX_DIM / w, MAX_DIM / h);
     }
-    callback(ofc,img);
+    var ow = Math.round(w * scale);  // offscreen width
+    var oh = Math.round(h * scale);  // offscreen height
+ 
+    var ofc = document.createElement('canvas');
+    ofc.width = ow;
+    ofc.height = oh;
+    var ctx = ofc.getContext('2d');
+ 
+    var br = brightness || 100, ct = contrast || 100, sat = saturation || 100;
+    ctx.filter = 'brightness(' + br + '%) contrast(' + ct + '%) saturate(' + sat + '%)';
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, ow, oh);  // ← gambar ke ukuran yang sudah di-downscale
+    ctx.filter = 'none';
+ 
+    if (featherAmt > 0) {
+      var mask = document.createElement('canvas');
+      mask.width = ow; mask.height = oh;
+      var mctx = mask.getContext('2d');
+      var cx = ow / 2, cy = oh / 2, eb = featherAmt;
+      var grad = mctx.createRadialGradient(
+        cx, cy, Math.min(cx, cy) * (1 - eb * 1.5),
+        cx, cy, Math.max(cx, cy) * 1.05
+      );
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      mctx.fillStyle = grad;
+      mctx.fillRect(0, 0, ow, oh);
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.drawImage(mask, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      // Bebaskan mask canvas segera
+      mask.width = 1; mask.height = 1;
+    }
+ 
+    // Simpan dimensi asli di ofc untuk transform di _update
+    ofc._origW = w;
+    ofc._origH = h;
+ 
+    callback(ofc, img);
+ 
+    // Bebaskan img dari memori setelah callback (img sudah ada di ofc canvas)
+    // img = null; // Tidak di-null karena _ofcImg masih menyimpan referensi untuk _rebuildOfc
   };
-  img.src=imgSrc;
+  img.src = imgSrc;
 }
 
-function createRotatedOverlay(photo,toGeo){
-  var tl=toGeo(0,0),tr=toGeo(photo.w,0),br=toGeo(photo.w,photo.h),bl=toGeo(0,photo.h);
-  photo.corners={tl:tl,tr:tr,br:br,bl:bl};
-  var lats=[tl.lat,tr.lat,br.lat,bl.lat],lngs=[tl.lng,tr.lng,br.lng,bl.lng];
-  photo.bounds=[[Math.min.apply(null,lats),Math.min.apply(null,lngs)],[Math.max.apply(null,lats),Math.max.apply(null,lngs)]];
-  if(photo.offsetLat===undefined)photo.offsetLat=0;if(photo.offsetLng===undefined)photo.offsetLng=0;
-  if(photo.feather===undefined)photo.feather=0.12;if(photo.blendMode===undefined)photo.blendMode='normal';
-  var RotatedLayer=L.Layer.extend({
-    _ofc:null,_ofcImg:null,_canvas:null,
-    onAdd:function(map){
-      this._map=map;this._canvas=document.createElement('canvas');
-      this._canvas.style.cssText='position:absolute;top:0;left:0;pointer-events:none;transition:opacity 0.35s ease;';
+function createRotatedOverlay(photo, toGeo) {
+  var tl = toGeo(0, 0), tr = toGeo(photo.w, 0), br = toGeo(photo.w, photo.h), bl = toGeo(0, photo.h);
+  photo.corners = { tl: tl, tr: tr, br: br, bl: bl };
+  var lats = [tl.lat, tr.lat, br.lat, bl.lat], lngs = [tl.lng, tr.lng, br.lng, bl.lng];
+  photo.bounds = [
+    [Math.min.apply(null, lats), Math.min.apply(null, lngs)],
+    [Math.max.apply(null, lats), Math.max.apply(null, lngs)]
+  ];
+  if (photo.offsetLat === undefined) photo.offsetLat = 0;
+  if (photo.offsetLng === undefined) photo.offsetLng = 0;
+  if (photo.feather === undefined) photo.feather = 0.12;
+  if (photo.blendMode === undefined) photo.blendMode = 'normal';
+ 
+  var RotatedLayer = L.Layer.extend({
+    _ofc: null, _ofcImg: null, _canvas: null,
+    _ofcBuilding: false,  // flag: sedang membangun ofc (async)
+ 
+    onAdd: function(map) {
+      this._map = map;
+      this._canvas = document.createElement('canvas');
+      this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;transition:opacity 0.35s ease;';
       map.getPanes().overlayPane.appendChild(this._canvas);
-      var self=this;
-      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
-      map.on('zoom viewreset move zoomend moveend resize',this._update,this);
-    },
-    onRemove:function(map){
-      if(this._canvas&&this._canvas.parentNode)this._canvas.parentNode.removeChild(this._canvas);
-      map.off('zoom viewreset move zoomend moveend resize',this._update,this);
-      this._ofc=null;this._ofcImg=null;
-    },
-    _rebuildOfc:function(){
-      if(!this._ofcImg)return;var self=this;
-      buildFeatheredCanvas(photo.src,photo.w,photo.h,photo.feather,photo.brightness,photo.contrast,photo.saturation,function(ofc,rawImg){self._ofc=ofc;self._ofcImg=rawImg;self._update();});
-    },
-    _update:function(){
-      if(!this._ofc)return;var map=this._map;if(!map)return;
-      var mapSize=map.getSize();var topLeft=map.containerPointToLayerPoint([0,0]);
-      this._canvas.style.width=mapSize.x+'px';this._canvas.style.height=mapSize.y+'px';
-      this._canvas.style.left=topLeft.x+'px';this._canvas.style.top=topLeft.y+'px';
-      this._canvas.width=mapSize.x;this._canvas.height=mapSize.y;
-      this._canvas.style.zIndex=(photo.zOrder||0)+10;
-      var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
-      var pts=[
-        map.latLngToLayerPoint(L.latLng(tl.lat+oLat,tl.lng+oLng)),
-        map.latLngToLayerPoint(L.latLng(tr.lat+oLat,tr.lng+oLng)),
-        map.latLngToLayerPoint(L.latLng(br.lat+oLat,br.lng+oLng)),
-        map.latLngToLayerPoint(L.latLng(bl.lat+oLat,bl.lng+oLng))
-      ];
-      var off=topLeft;var cpts=pts.map(function(p){return{x:p.x-off.x,y:p.y-off.y}});
-      var ctx=this._canvas.getContext('2d');ctx.clearRect(0,0,this._canvas.width,this._canvas.height);
-      var W2=photo.w,H2=photo.h;
-      var a=(cpts[1].x-cpts[0].x)/W2,b=(cpts[3].x-cpts[0].x)/H2;
-      var c=(cpts[1].y-cpts[0].y)/W2,d=(cpts[3].y-cpts[0].y)/H2;
-      var e2=cpts[0].x,f2=cpts[0].y;
-      if(_showPhotoOutlines){
-        ctx.save();ctx.globalAlpha=0.5;
-        ctx.beginPath();ctx.moveTo(cpts[0].x,cpts[0].y);ctx.lineTo(cpts[1].x,cpts[1].y);
-        ctx.lineTo(cpts[2].x,cpts[2].y);ctx.lineTo(cpts[3].x,cpts[3].y);ctx.closePath();
-        ctx.strokeStyle='#5a9e35';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
-      }
-      // === CLIP PATH: Owner BK eksplisit > auto-nearest > Voronoi > 4 sudut foto ===
-      var clipPts;
-      var activeBK=_batasKebunPolygons;
-      var ownedBK=null; // BK yang dimiliki foto ini
-      if(activeBK&&activeBK.length>0){
-        // Cari BK yang owner-nya adalah foto ini (berdasarkan _bkOwnerMap)
-        for(var _bki=0;_bki<activeBK.length;_bki++){
-          if(_bkOwnerMap[activeBK[_bki].id]===photo.id){
-            ownedBK=activeBK[_bki];break;
-          }
-        }
-        if(ownedBK){
-          // Clip foto ini ke polygon BK miliknya
-          clipPts=ownedBK.verts.map(function(v){
-            var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
-            return{x:lp.x-off.x,y:lp.y-off.y};
-          });
-        }
-        // else: foto ini tidak punya BK → fallback Voronoi atau 4 sudut
-      }
-      if(!clipPts&&_seamlineMode&&photo.voronoiCell&&photo.voronoiCell.length>=3){
-        clipPts=photo.voronoiCell.map(function(v){
-          var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
-          return{x:lp.x-off.x,y:lp.y-off.y};
+ 
+      var self = this;
+      // ── LAZY OFC: buat canvas hanya jika belum ada & foto visible ──
+      // Ini mencegah OOM saat load sesi — tidak semua foto di-render sekaligus
+      if (!this._ofc && !this._ofcBuilding) {
+        this._buildOfc(function() {
+          self._update();
         });
       }
-      if(!clipPts){
-        clipPts=cpts; // Default: 4 sudut foto
+ 
+      map.on('zoom viewreset move zoomend moveend resize', this._update, this);
+    },
+ 
+    onRemove: function(map) {
+      if (this._canvas && this._canvas.parentNode) {
+        this._canvas.parentNode.removeChild(this._canvas);
       }
-      this._canvas.style.opacity=this._nadirOp!==undefined?this._nadirOp:photo.opacity;
-      ctx.save();ctx.globalAlpha=1;ctx.globalCompositeOperation=photo.blendMode||'normal';
-      ctx.beginPath();ctx.moveTo(clipPts[0].x,clipPts[0].y);
-      for(var ci=1;ci<clipPts.length;ci++)ctx.lineTo(clipPts[ci].x,clipPts[ci].y);
-      ctx.closePath();ctx.clip();
-      ctx.transform(a,c,b,d,e2,f2);ctx.drawImage(this._ofc,0,0,W2,H2);ctx.restore();
-      // === PUNCH-OUT: Jika foto ini tidak memiliki BK, hapus area BK milik foto lain ===
-      if(activeBK&&activeBK.length>0&&!ownedBK){
-        activeBK.forEach(function(bk){
-          if(!bk.verts||bk.verts.length<3)return;
-          var bkPts=bk.verts.map(function(v){
-            var lp=map.latLngToLayerPoint(L.latLng(v.lat,v.lng));
-            return{x:lp.x-off.x,y:lp.y-off.y};
+      map.off('zoom viewreset move zoomend moveend resize', this._update, this);
+      // ── MEMORY FREE: reset canvas size sebelum GC ──
+      if (this._ofc) {
+        try { this._ofc.width = 1; this._ofc.height = 1; } catch(e) {}
+        this._ofc = null;
+      }
+      this._ofcImg = null;
+      this._canvas = null;
+    },
+ 
+    _buildOfc: function(cb) {
+      if (this._ofcBuilding) return;
+      this._ofcBuilding = true;
+      var self = this;
+      buildFeatheredCanvas(
+        photo.src, photo.w, photo.h,
+        photo.feather, photo.brightness, photo.contrast, photo.saturation,
+        function(ofc, rawImg) {
+          self._ofc = ofc;
+          self._ofcImg = rawImg;
+          self._ofcBuilding = false;
+          if (cb) cb();
+        }
+      );
+    },
+ 
+    _rebuildOfc: function() {
+      if (!photo.src) return;
+      var self = this;
+      // Bebaskan canvas lama dulu untuk GC
+      if (this._ofc) {
+        try { this._ofc.width = 1; this._ofc.height = 1; } catch(e) {}
+        this._ofc = null;
+      }
+      this._buildOfc(function() { self._update(); });
+    },
+ 
+    _update: function() {
+      // Jika ofc belum siap, trigger build dan tunggu
+      if (!this._ofc) {
+        if (!this._ofcBuilding) {
+          var self = this;
+          this._buildOfc(function() { self._update(); });
+        }
+        return;
+      }
+ 
+      var map = this._map; if (!map) return;
+      var mapSize = map.getSize();
+      var topLeft = map.containerPointToLayerPoint([0, 0]);
+ 
+      this._canvas.style.width = mapSize.x + 'px';
+      this._canvas.style.height = mapSize.y + 'px';
+      this._canvas.style.left = topLeft.x + 'px';
+      this._canvas.style.top = topLeft.y + 'px';
+      this._canvas.width = mapSize.x;
+      this._canvas.height = mapSize.y;
+      this._canvas.style.zIndex = (photo.zOrder || 0) + 10;
+ 
+      var oLat = photo.offsetLat || 0, oLng = photo.offsetLng || 0;
+      var pts = [
+        map.latLngToLayerPoint(L.latLng(tl.lat + oLat, tl.lng + oLng)),
+        map.latLngToLayerPoint(L.latLng(tr.lat + oLat, tr.lng + oLng)),
+        map.latLngToLayerPoint(L.latLng(br.lat + oLat, br.lng + oLng)),
+        map.latLngToLayerPoint(L.latLng(bl.lat + oLat, bl.lng + oLng))
+      ];
+      var off = topLeft;
+      var cpts = pts.map(function(p) { return { x: p.x - off.x, y: p.y - off.y }; });
+      var ctx = this._canvas.getContext('2d');
+      ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+ 
+      // ── Gunakan dimensi OFC (yang sudah di-downscale) untuk transform ──
+      // _ofc._origW = foto.w asli; _ofc.width = downscaled width
+      var W2 = this._ofc._origW || photo.w;
+      var H2 = this._ofc._origH || photo.h;
+      // Faktor koreksi: ofc sudah di-downscale, transform harus pakai ukuran asli
+      var ofcScaleX = (this._ofc._origW || photo.w) / this._ofc.width;
+      var ofcScaleY = (this._ofc._origH || photo.h) / this._ofc.height;
+ 
+      if (_showPhotoOutlines) {
+        ctx.save(); ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cpts[0].x, cpts[0].y); ctx.lineTo(cpts[1].x, cpts[1].y);
+        ctx.lineTo(cpts[2].x, cpts[2].y); ctx.lineTo(cpts[3].x, cpts[3].y);
+        ctx.closePath();
+        ctx.strokeStyle = '#5a9e35'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.restore();
+      }
+ 
+      // Transform: dari koordinat ASLI foto (w×h) ke layar
+      // Karena ofc sudah downscale, transform ke ofc.width/height lalu scale balik
+      var a = (cpts[1].x - cpts[0].x) / W2;
+      var b = (cpts[3].x - cpts[0].x) / H2;
+      var c = (cpts[1].y - cpts[0].y) / W2;
+      var d = (cpts[3].y - cpts[0].y) / H2;
+      var e2 = cpts[0].x, f2 = cpts[0].y;
+ 
+      // ── Clip path (BK / Voronoi / default) ──
+      var clipPts;
+      var activeBK = _batasKebunPolygons;
+      var ownedBK = null;
+      if (activeBK && activeBK.length > 0) {
+        for (var _bki = 0; _bki < activeBK.length; _bki++) {
+          if (_bkOwnerMap[activeBK[_bki].id] === photo.id) {
+            ownedBK = activeBK[_bki]; break;
+          }
+        }
+        if (ownedBK) {
+          clipPts = ownedBK.verts.map(function(v) {
+            var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
+            return { x: lp.x - off.x, y: lp.y - off.y };
+          });
+        }
+      }
+      if (!clipPts && _seamlineMode && photo.voronoiCell && photo.voronoiCell.length >= 3) {
+        clipPts = photo.voronoiCell.map(function(v) {
+          var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
+          return { x: lp.x - off.x, y: lp.y - off.y };
+        });
+      }
+      if (!clipPts) { clipPts = cpts; }
+ 
+      this._canvas.style.opacity = this._nadirOp !== undefined ? this._nadirOp : photo.opacity;
+ 
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = photo.blendMode || 'normal';
+      ctx.beginPath();
+      ctx.moveTo(clipPts[0].x, clipPts[0].y);
+      for (var ci = 1; ci < clipPts.length; ci++) ctx.lineTo(clipPts[ci].x, clipPts[ci].y);
+      ctx.closePath(); ctx.clip();
+ 
+      // ── Gambar ofc ke canvas layar ──
+      // Transform ke ukuran asli foto (W2×H2), bukan ofc.width×ofc.height
+      // ctx.transform mengatur skala dari "koordinat gambar" ke "koordinat layar"
+      // drawImage otomatis stretch ofc ke W2×H2 karena kita pakai ctx.transform + drawImage(ofc, 0,0,W2,H2)
+      ctx.transform(a, c, b, d, e2, f2);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      // Gambar ofc seolah berukuran W2×H2 (koordinat foto asli)
+      ctx.drawImage(this._ofc, 0, 0, W2, H2);
+      ctx.restore();
+ 
+      // ── Punch-out untuk foto tanpa BK ──
+      if (activeBK && activeBK.length > 0 && !ownedBK) {
+        activeBK.forEach(function(bk) {
+          if (!bk.verts || bk.verts.length < 3) return;
+          var bkPts = bk.verts.map(function(v) {
+            var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
+            return { x: lp.x - off.x, y: lp.y - off.y };
           });
           ctx.save();
-          ctx.globalCompositeOperation='destination-out';
-          ctx.globalAlpha=1;
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.globalAlpha = 1;
           ctx.beginPath();
-          ctx.moveTo(bkPts[0].x,bkPts[0].y);
-          for(var _pi=1;_pi<bkPts.length;_pi++)ctx.lineTo(bkPts[_pi].x,bkPts[_pi].y);
-          ctx.closePath();ctx.fill();
+          ctx.moveTo(bkPts[0].x, bkPts[0].y);
+          for (var _pi = 1; _pi < bkPts.length; _pi++) ctx.lineTo(bkPts[_pi].x, bkPts[_pi].y);
+          ctx.closePath(); ctx.fill();
           ctx.restore();
         });
       }
     },
-    setOpacityVal:function(op){photo.opacity=op;if(this._canvas&&this._nadirOp===undefined)this._canvas.style.opacity=op;},
-    setNadirOpacity:function(op){
-      // Temporary opacity for nadir mode — tidak mengubah photo.opacity yang tersimpan
-      this._nadirOp=op;
-      if(this._canvas)this._canvas.style.opacity=op;
+ 
+    setOpacityVal: function(op) {
+      photo.opacity = op;
+      if (this._canvas && this._nadirOp === undefined) this._canvas.style.opacity = op;
     },
-    clearNadirOpacity:function(){
-      this._nadirOp=undefined;
-      if(this._canvas)this._canvas.style.opacity=photo.opacity;
+    setNadirOpacity: function(op) {
+      this._nadirOp = op;
+      if (this._canvas) this._canvas.style.opacity = op;
     },
-    setFeatherVal:function(v){photo.feather=v;this._rebuildOfc();},
-    setBlendMode:function(m){photo.blendMode=m;this._update();},
-    setColorAdj:function(br,ct,sat){photo.brightness=br||100;photo.contrast=ct||100;photo.saturation=sat||100;this._rebuildOfc();},
-    forceUpdate:function(){this._update();}
+    clearNadirOpacity: function() {
+      this._nadirOp = undefined;
+      if (this._canvas) this._canvas.style.opacity = photo.opacity;
+    },
+    setFeatherVal: function(v) { photo.feather = v; this._rebuildOfc(); },
+    setBlendMode: function(m) { photo.blendMode = m; this._update(); },
+    setColorAdj: function(br, ct, sat) {
+      photo.brightness = br || 100; photo.contrast = ct || 100; photo.saturation = sat || 100;
+      this._rebuildOfc();
+    },
+    forceUpdate: function() { this._update(); }
   });
+ 
   return new RotatedLayer();
 }
 
@@ -2831,29 +2969,28 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
   }
  
   try {
-    // ── Hapus state lama (sama seperti _doLoadSession) ──
+    // ── Bersihkan state lama ──────────────────────────
     photos.forEach(function(p) {
-      if (p.overlay && map) try { map.removeLayer(p.overlay); } catch (e) {}
-      if (p.gcpLayer && map) try { map.removeLayer(p.gcpLayer); } catch (e) {}
+      if (p.overlay && map) try { map.removeLayer(p.overlay); } catch(e) {}
+      if (p.gcpLayer && map) try { map.removeLayer(p.gcpLayer); } catch(e) {}
     });
     if (_geserPhotoId) _stopGeserMode();
     Object.keys(_geserMarkers).forEach(function(id) {
-      if (_geserMarkers[id] && map) try { map.removeLayer(_geserMarkers[id]); } catch (e) {}
+      if (_geserMarkers[id] && map) try { map.removeLayer(_geserMarkers[id]); } catch(e) {}
     });
     _geserMarkers = {};
     if (_treeLayer) _treeLayer.clearLayers();
     Object.keys(_labelDragMarkers).forEach(function(id) {
-      if (_labelDragMarkers[id] && map) try { map.removeLayer(_labelDragMarkers[id]); } catch (e) {}
+      if (_labelDragMarkers[id] && map) try { map.removeLayer(_labelDragMarkers[id]); } catch(e) {}
     });
     _labelDragMarkers = {};
  
-    setBar(55, 'Restore variabel...');
-    await _yieldToUI();
+    setBar(52, 'Restore variabel...');
+    await _yieldToUI(30);
  
-    // ── Restore state non-foto dulu (ringan) ──
-    // Simpan data foto terpisah agar bisa di-GC
+    // ── Pisahkan data foto dari data utama ──────────
     var photoDataArray = data.photos;
-    data.photos = null; // izinkan GC pada array foto asli
+    data.photos = null;
  
     measures = data.measures || [];
     shapeId = data.shapeId || 0;
@@ -2870,26 +3007,28 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     areaUnit = data.areaUnit || 'auto';
     lenUnit = data.lenUnit || 'auto';
  
-    // Bersihkan data yang tidak dibutuhkan lagi
+    // Bebaskan objek data utama
     data = null;
  
-    setBar(58, 'Inisialisasi peta...');
-    await _yieldToUI();
+    setBar(55, 'Inisialisasi peta...');
+    await _yieldToUI(30);
  
-    // ── Rebuild foto array tanpa src dulu (hemat RAM) ──
+    // ── Rebuild array foto — src disimpan di _srcPending ──
+    // Kunci: src TIDAK langsung di-assign ke photo.src
+    // sehingga semua base64 tidak ada di memori sekaligus
     photos = photoDataArray.map(function(p) {
       return {
         id: p.id, name: p.name,
-        src: null,          // ← src belum diload, diisi nanti satu per satu
-        _srcPending: p.src, // ← simpan sementara, akan di-consume & dibuang
-        w: p.w, h: p.h,
+        src: null,
+        _srcPending: p.src,  // ← base64 ada di sini dulu
+        w: p.w || 0, h: p.h || 0,
         gcps: p.gcps || [],
         georef: p.georef || false,
         bounds: p.bounds || null,
         corners: p.corners || null,
         overlay: null, gcpLayer: null,
         visible: p.visible !== false,
-        opacity: p.opacity || 1,
+        opacity: p.opacity !== undefined ? p.opacity : 1,
         feather: p.feather || 0,
         blendMode: p.blendMode || 'normal',
         offsetLat: p.offsetLat || 0,
@@ -2902,108 +3041,132 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       };
     });
  
-    // Bersihkan photoDataArray setelah copy (base64 besar masih ada di _srcPending)
+    // Bebaskan array foto asli (base64 masih ada di _srcPending di atas)
     photoDataArray = null;
-    if (typeof gc === 'function') gc(); // Chrome DevTools gc jika tersedia
  
-    // ── Init peta ──
+    setBar(58, 'Inisialisasi peta...');
+    await _yieldToUI(30);
+ 
+    // ── Init peta ─────────────────────────────────────
     var georefPhotos = photos.filter(function(p) { return p.georef && p.gcps && p.gcps.length >= 3; });
     if (georefPhotos.length > 0) {
       if (!map) {
         _initMapFromPhoto(georefPhotos[0]);
+        await _yieldToUI(50); // beri Leaflet waktu init
       } else {
         if (drawnItems) drawnItems.clearLayers();
       }
     }
  
-    // ── Tambah measure layers ke peta (tidak butuh banyak RAM) ──
+    // ── Restore polygon/line layers (ringan, tidak butuh foto) ──
     setBar(62, 'Restore pengukuran...');
-    await _yieldToUI();
+    await _yieldToUI(20);
     _restoreMeasureLayers();
  
-    // ── Load foto SATU PER SATU secara sequential ──
-    // Ini kunci anti-OOM: browser tidak perlu handle semua base64 sekaligus
+    // ── Load foto SATU PER SATU — kunci anti-OOM ─────
     var total = photos.length;
     for (var i = 0; i < photos.length; i++) {
       var photo = photos[i];
-      var pct = 62 + Math.round((i / total) * 30); // 62% - 92%
-      setBar(pct, 'Memuat foto ' + (i + 1) + '/' + total + ': ' + photo.name);
-      await _yieldToUI();
  
-      if (photo._srcPending) {
-        // Transfer src dari pending (supaya GC bisa bekerja per-foto)
-        photo.src = photo._srcPending;
-        photo._srcPending = null; // segera bebaskan referensi
+      var pct = 62 + Math.round((i / Math.max(total, 1)) * 28); // 62% → 90%
+      setBar(pct, 'Foto ' + (i + 1) + '/' + total + ': ' + photo.name);
+      await _yieldToUI(20);
  
-        if (photo.georef && photo.gcps.length >= 3) {
-          try {
-            // Buat overlay untuk foto ini
-            var toGeo = buildAffine(photo.gcps);
+      if (!photo._srcPending) continue;
  
-            // Tunggu image load untuk dapat dimensi (jika w/h belum ada)
-            if (!photo.w || !photo.h) {
-              await new Promise(function(resolve) {
-                var img = new Image();
-                img.onload = function() { photo.w = img.naturalWidth; photo.h = img.naturalHeight; resolve(); };
-                img.onerror = resolve;
-                img.src = photo.src;
-              });
-            }
+      // Transfer src — bebaskan _srcPending segera
+      photo.src = photo._srcPending;
+      photo._srcPending = null;
  
-            photo.overlay = createRotatedOverlay(photo, toGeo);
-            if (photo.visible && map) photo.overlay.addTo(map);
+      if (!photo.georef || photo.gcps.length < 3) continue;
  
-            // GCP markers
-            photo.gcpLayer = L.featureGroup();
-            photo.gcps.forEach(function(g, gi) {
-              L.circleMarker([g.lat, g.lng], {
-                radius: 7, fillColor: '#f0a500', color: '#000',
-                weight: 2, fillOpacity: 1, pane: 'gcpPane'
-              }).addTo(photo.gcpLayer).bindPopup('<b>' + photo.name + '</b><br>GCP ' + (gi + 1));
-            });
-            var togGCP = document.getElementById('togGCP');
-            if (togGCP && togGCP.checked && map) photo.gcpLayer.addTo(map);
-          } catch (photoErr) {
-            console.warn('Gagal load foto ' + photo.name + ':', photoErr);
-          }
+      try {
+        // Dapatkan dimensi jika belum ada
+        if (!photo.w || !photo.h) {
+          await new Promise(function(resolve) {
+            var imgTmp = new Image();
+            imgTmp.onload = function() {
+              photo.w = imgTmp.naturalWidth;
+              photo.h = imgTmp.naturalHeight;
+              resolve();
+            };
+            imgTmp.onerror = resolve;
+            imgTmp.src = photo.src;
+          });
+          await _yieldToUI(16);
         }
  
-        // Yield lagi setelah canvas dibuat (berat)
-        await _yieldToUI();
+        var toGeo = buildAffine(photo.gcps);
+ 
+        // createRotatedOverlay sekarang LAZY: tidak langsung buat canvas besar
+        // Canvas besar (buildFeatheredCanvas) hanya dibuat saat _update dipanggil
+        photo.overlay = createRotatedOverlay(photo, toGeo);
+ 
+        if (photo.visible && map) {
+          photo.overlay.addTo(map);
+          // Yield lebih lama: beri buildFeatheredCanvas (yang async via img.onload)
+          // waktu untuk selesai sebelum foto berikutnya mulai
+          // Ini mencegah 5 foto sekaligus buat canvas → OOM
+          await _yieldToUI(120);
+        }
+        // Foto tidak-visible: overlay dibuat tapi tidak ditambah ke peta
+        // _ofc TIDAK dibuat (lazy) → tidak ada canvas besar di RAM
+ 
+        // GCP markers
+        photo.gcpLayer = L.featureGroup();
+        photo.gcps.forEach(function(g, gi) {
+          L.circleMarker([g.lat, g.lng], {
+            radius: 7, fillColor: '#f0a500', color: '#000',
+            weight: 2, fillOpacity: 1, pane: 'gcpPane'
+          }).addTo(photo.gcpLayer)
+            .bindPopup('<b>' + photo.name + '</b><br>GCP ' + (gi + 1));
+        });
+        var togGCP = document.getElementById('togGCP');
+        if (togGCP && togGCP.checked && map) photo.gcpLayer.addTo(map);
+ 
+      } catch (photoErr) {
+        console.warn('Gagal load foto "' + photo.name + '":', photoErr);
+        // Jangan crash seluruh proses karena 1 foto gagal
       }
+ 
+      // Yield tambahan setelah setiap foto — beri GC waktu kerja
+      await _yieldToUI(60);
     }
  
-    setBar(93, 'Restore pokok sawit...');
-    await _yieldToUI();
- 
-    // ── Tree markers ──
+    // ── Tree markers ──────────────────────────────────
+    setBar(91, 'Restore pokok sawit...');
+    await _yieldToUI(20);
     if (_treeLayer) _treeLayer.clearLayers();
     trees.forEach(function(t) { addTreeMarker(t); });
  
-    setBar(96, 'Finalisasi...');
-    await _yieldToUI();
+    // ── Fit bounds ────────────────────────────────────
+    setBar(94, 'Finalisasi peta...');
+    await _yieldToUI(20);
  
-    // ── Fit bounds ──
-    var allBounds = photos.filter(function(p) { return p.georef && p.bounds; }).map(function(p) { return p.bounds; });
+    var allBounds = photos.filter(function(p) { return p.georef && p.bounds; })
+      .map(function(p) { return p.bounds; });
     if (allBounds.length > 0 && map) {
       var aLats = [], aLngs = [];
-      allBounds.forEach(function(b) { aLats.push(b[0][0], b[1][0]); aLngs.push(b[0][1], b[1][1]); });
+      allBounds.forEach(function(b) {
+        aLats.push(b[0][0], b[1][0]);
+        aLngs.push(b[0][1], b[1][1]);
+      });
       map.fitBounds([
         [Math.min.apply(null, aLats), Math.min.apply(null, aLngs)],
         [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]
       ], { padding: [20, 20] });
     }
  
-    // ── Rebuild BK state ──
+    // ── Rebuild BK state ──────────────────────────────
     _rebuildBatasKebunPolygons();
     _updateBatasKebunInfoPanel();
     updateGcpCoverageBox();
     hideImagePanel();
     updateStep(3);
  
-    // ── Update semua UI ──
-    setBar(99, 'Update tampilan...');
-    await _yieldToUI();
+    // ── Update UI ─────────────────────────────────────
+    setBar(97, 'Update tampilan...');
+    await _yieldToUI(20);
  
     renderPhotoList();
     renderLayerList();
@@ -3030,17 +3193,19 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
  
     setBar(100, 'Selesai!');
  
-    var georefCount2 = photos.filter(function(p) { return p.georef; }).length;
     if (statusEl) {
       statusEl.style.background = 'rgba(63,185,80,.08)';
       statusEl.style.color = 'var(--ok)';
       statusEl.style.border = '1px solid rgba(63,185,80,.25)';
       statusEl.innerHTML = '✅ Sesi dipulihkan!<br>'
-        + georefCount2 + ' foto georef · '
+        + georefDone + ' foto georef · '
         + measures.length + ' pengukuran · '
         + trees.length + ' pokok sawit';
     }
-    showToast('✅ Sesi berhasil dipulihkan!\n' + georefCount2 + ' foto, ' + measures.length + ' pengukuran, ' + trees.length + ' pokok');
+    showToast('✅ Sesi berhasil dipulihkan!\n'
+      + georefDone + ' foto, '
+      + measures.length + ' pengukuran, '
+      + trees.length + ' pokok');
  
   } catch (err) {
     console.error('Load session error:', err);
@@ -3048,8 +3213,8 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       statusEl.style.background = 'rgba(248,81,73,.08)';
       statusEl.style.color = 'var(--er)';
       statusEl.style.border = '1px solid rgba(248,81,73,.3)';
-      statusEl.innerHTML = '❌ Gagal memuat sesi: ' + err.message
-        + '<br><span style="font-size:8px;color:var(--mu)">Coba tutup tab lain &amp; reload halaman</span>';
+      statusEl.innerHTML = '❌ Gagal: ' + err.message
+        + '<br><span style="font-size:8px;color:var(--mu)">Coba tutup tab lain &amp; reload</span>';
     }
   }
 }
