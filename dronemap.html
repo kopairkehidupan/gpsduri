@@ -952,7 +952,10 @@ function setCurrentPhoto(id){
 function renderPhotoList(){
   var el=document.getElementById('photoList');
   document.getElementById('photoCountBadge').textContent=photos.length;
-  if(photos.length===0){el.innerHTML='<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto".</div>';return;}
+  if(photos.length===0){
+    el.innerHTML='<div style="padding:16px 0;text-align:center;color:var(--mu);font-size:10px;line-height:2">Belum ada foto.<br>Klik "+ Tambah Foto".</div>';
+    return;
+  }
   el.innerHTML=photos.map(function(p){
     var status='';
     if(p.georef)status='<span class="badge badge-ok">✓ Georef</span>';
@@ -960,8 +963,11 @@ function renderPhotoList(){
     else if(p.gcps.length>0)status='<span class="badge badge-gray">'+p.gcps.length+'/3</span>';
     else status='<span class="badge badge-gray">Belum GCP</span>';
     var ac=currentPhotoId===p.id?' active':'';
-    var thumb=p.src?'<img class="photo-thumb" src="'+p.src+'" alt="">':'<div class="photo-thumb"></div>';
     var normTag=p.colorNormApplied?'<span style="font-size:8px;color:var(--in);font-family:\'Space Mono\',monospace"> ✓norm</span>':'';
+    // ← LAZY: gunakan data-src, src diisi setelah DOM render
+    var thumb=p.src
+      ?'<img class="photo-thumb" data-src="'+p.id+'" src="" alt="" style="background:var(--s3)">'
+      :'<div class="photo-thumb"></div>';
     return '<div class="photo-item'+ac+'" onclick="setCurrentPhoto('+p.id+')">'+
       thumb+'<div class="photo-info"><div class="photo-name">'+p.name+normTag+'</div>'+
       '<div class="photo-meta">'+(p.w?p.w+'x'+p.h+' ':'')+status+'</div>'+
@@ -969,6 +975,27 @@ function renderPhotoList(){
       '</div><div class="photo-acts"><button class="photo-del" onclick="event.stopPropagation();removePhoto('+p.id+')" title="Hapus">✕</button></div></div>';
   }).join('');
   document.getElementById('btnGeorefAll').disabled=!photos.some(function(p){return p.gcps.length>=3&&!p.georef});
+  // Isi src satu per satu dengan requestAnimationFrame agar tidak sekaligus
+  _lazyLoadPhotoThumbs(el);
+}
+
+function _lazyLoadPhotoThumbs(container){
+  var imgs=Array.from((container||document.getElementById('photoList')||{querySelectorAll:function(){return[];}}).querySelectorAll('img[data-src]'));
+  if(imgs.length===0)return;
+  var idx=0;
+  function loadNext(){
+    if(idx>=imgs.length)return;
+    var img=imgs[idx++];
+    var pid=parseFloat(img.getAttribute('data-src'));
+    var p=getPhoto(pid);
+    if(p&&p.src){
+      img.src=p.src;
+      img.removeAttribute('data-src');
+    }
+    // Yield ke browser antara tiap gambar agar tidak freeze
+    if(idx<imgs.length)requestAnimationFrame(loadNext);
+  }
+  requestAnimationFrame(loadNext);
 }
 
 function updateStats(){
@@ -1995,16 +2022,21 @@ function initMap(refPhoto){
 function renderLayerList(){
   var el=document.getElementById('layerList');
   var georefPhotos=photos.filter(function(p){return p.georef});
-  if(georefPhotos.length===0){el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div>';return;}
+  if(georefPhotos.length===0){
+    el.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--mu);font-size:10px">Belum ada foto yang di-georeference.</div>';
+    return;
+  }
   var sorted=georefPhotos.slice().sort(function(a,b){return(b.zOrder||0)-(a.zOrder||0)});
   el.innerHTML=sorted.map(function(p,i){
     var isTop=(i===0),isBot=(i===sorted.length-1);
     var hasOffset=(p.offsetLat!==0||p.offsetLng!==0);
     var featherPct=Math.round((p.feather!==undefined&&p.feather!==null?p.feather:0)*100);
     var blendOpts=['normal','multiply','screen','overlay','lighten','darken'];
+    // ← LAZY thumb
+    var thumbHtml='<img class="lay-thumb" data-src="'+p.id+'" src="" alt="" style="background:var(--s3)">';
     return '<div class="lay-row" style="border-left:3px solid '+(hasOffset?'var(--saw)':'var(--bd)')+'">'+
       '<div class="lay-row-head">'+
-        '<img class="lay-thumb" src="'+p.src+'" alt="">'+
+        thumbHtml+
         '<span class="lay-name" title="'+p.name+'">'+p.name+'</span>'+
         '<div style="display:flex;gap:2px;margin-right:4px">'+
           '<button class="zord-btn" onclick="movePhotoUp('+p.id+')" '+(isTop?'disabled style="opacity:.3"':'')+'>▲</button>'+
@@ -2032,6 +2064,8 @@ function renderLayerList(){
       '</div>'+
     '</div>';
   }).join('');
+  // Lazy load thumbs
+  _lazyLoadPhotoThumbs(el);
 }
 
 function togglePhotoLayer(pid,on){var p=getPhoto(pid);if(!p||!p.overlay||!map)return;p.visible=on;if(on)p.overlay.addTo(map);else map.removeLayer(p.overlay);}
@@ -2965,6 +2999,44 @@ function _doLoadSession(data, statusEl) {
   showToast('✅ Sesi berhasil dipulihkan!\n' + georefPhotos.length + ' foto, ' + measures.length + ' pengukuran, ' + trees.length + ' pokok');
 }
 
+async function _doLoadSessionFinalUI(georefDone) {
+  // Render yang RINGAN dulu
+  renderMeasures();
+  renderTreeList();
+  updateStats();
+  updateSensusStats();
+  renderExportBlokList();
+ 
+  // Yield sebelum render daftar foto (yang berat karena ada thumbnail)
+  await _yieldToUI(30);
+ 
+  // renderPhotoList sudah lazy — aman dipanggil
+  renderPhotoList();
+ 
+  await _yieldToUI(30);
+ 
+  // renderLayerList sudah lazy — aman dipanggil
+  renderLayerList();
+ 
+  document.getElementById('hdrPhotoCount').textContent = photos.length + ' foto';
+  document.getElementById('hdrTreeCount').textContent = '🌴 ' + trees.length + ' pokok';
+ 
+  if (georefDone > 0) {
+    document.getElementById('hdrRotTag').style.display = '';
+    document.getElementById('hdrRotTag').textContent = '✓ ' + georefDone + ' foto georef';
+  }
+ 
+  document.querySelectorAll('.stab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tabpane').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.stab')[4].classList.add('active');
+  document.getElementById('tab-measure').classList.add('active');
+}
+ 
+ 
+// ─────────────────────────────────────────────────────
+// VERSI LENGKAP _doLoadSessionSequential yang sudah include semua fix
+// (copy-paste ganti seluruh fungsi lama)
+// ─────────────────────────────────────────────────────
 async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
   function setBar(pct, msg) {
     if (barEl) barEl.style.width = pct + '%';
@@ -3056,16 +3128,15 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     await _yieldToUI(20);
     _restoreMeasureLayers();
  
-    // ── FASE 1: Load foto + build canvas SATU PER SATU ──
+    // ── Load foto SATU PER SATU + await canvas ──
     var total = photos.length;
     for (var i = 0; i < photos.length; i++) {
       var photo = photos[i];
-      var pct = 60 + Math.round((i / Math.max(total, 1)) * 30); // 60% → 90%
+      var pct = 60 + Math.round((i / Math.max(total, 1)) * 28);
       setBar(pct, 'Foto ' + (i + 1) + '/' + total + ': ' + photo.name);
       await _yieldToUI(16);
  
       if (!photo._srcPending) continue;
- 
       photo.src = photo._srcPending;
       photo._srcPending = null;
  
@@ -3075,11 +3146,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
         if (!photo.w || !photo.h) {
           await new Promise(function(resolve) {
             var imgTmp = new Image();
-            imgTmp.onload = function() {
-              photo.w = imgTmp.naturalWidth;
-              photo.h = imgTmp.naturalHeight;
-              resolve();
-            };
+            imgTmp.onload = function() { photo.w = imgTmp.naturalWidth; photo.h = imgTmp.naturalHeight; resolve(); };
             imgTmp.onerror = resolve;
             imgTmp.src = photo.src;
           });
@@ -3090,19 +3157,14 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
  
         if (photo.visible && map) {
           photo.overlay.addTo(map);
-          // Await canvas selesai — SATU PER SATU, tidak bersamaan
-          // _update() dipanggil otomatis di akhir _buildOfc setelah canvas siap
-          await photo.overlay._buildOfc();
-          await _yieldToUI(40);
+          await photo.overlay._buildOfc();  // ← SATU PER SATU
+          await _yieldToUI(50);             // ← GC time
         }
  
         photo.gcpLayer = L.featureGroup();
         photo.gcps.forEach(function(g, gi) {
-          L.circleMarker([g.lat, g.lng], {
-            radius: 7, fillColor: '#f0a500', color: '#000',
-            weight: 2, fillOpacity: 1, pane: 'gcpPane'
-          }).addTo(photo.gcpLayer)
-            .bindPopup('<b>' + photo.name + '</b><br>GCP ' + (gi + 1));
+          L.circleMarker([g.lat, g.lng], { radius: 7, fillColor: '#f0a500', color: '#000', weight: 2, fillOpacity: 1, pane: 'gcpPane' })
+            .addTo(photo.gcpLayer).bindPopup('<b>' + photo.name + '</b><br>GCP ' + (gi + 1));
         });
         var togGCP = document.getElementById('togGCP');
         if (togGCP && togGCP.checked && map) photo.gcpLayer.addTo(map);
@@ -3114,53 +3176,53 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       await _yieldToUI(20);
     }
  
-    // ── FASE 2: Tree markers ──
-    setBar(91, 'Restore pokok sawit...');
+    // ── Tree markers ──
+    setBar(89, 'Restore pokok sawit...');
     await _yieldToUI(20);
     if (_treeLayer) _treeLayer.clearLayers();
     trees.forEach(function(t) { addTreeMarker(t); });
  
-    // ── FASE 3: fitBounds ──
-    // Aman sekarang karena semua _ofc sudah ada → _update() hanya render, tidak build
-    setBar(93, 'Fit bounds peta...');
+    // ── fitBounds — AMAN: semua _ofc sudah ada ──
+    setBar(91, 'Fit bounds peta...');
     await _yieldToUI(20);
- 
-    var allBounds = photos.filter(function(p) { return p.georef && p.bounds; })
-      .map(function(p) { return p.bounds; });
+    var allBounds = photos.filter(function(p) { return p.georef && p.bounds; }).map(function(p) { return p.bounds; });
     if (allBounds.length > 0 && map) {
       var aLats = [], aLngs = [];
       allBounds.forEach(function(b) { aLats.push(b[0][0], b[1][0]); aLngs.push(b[0][1], b[1][1]); });
-      map.fitBounds([
-        [Math.min.apply(null, aLats), Math.min.apply(null, aLngs)],
-        [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]
-      ], { padding: [20, 20] });
+      map.fitBounds([[Math.min.apply(null, aLats), Math.min.apply(null, aLngs)], [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]], { padding: [20, 20] });
     }
  
-    // ── FASE 4: Rebuild state & UI ──
-    setBar(95, 'Finalisasi...');
+    // ── Rebuild BK state ──
+    setBar(93, 'Finalisasi...');
     await _yieldToUI(20);
- 
     _rebuildBatasKebunPolygons();
     _updateBatasKebunInfoPanel();
     updateGcpCoverageBox();
     hideImagePanel();
     updateStep(3);
  
-    setBar(97, 'Update tampilan...');
+    // ── Update UI — LAZY untuk bagian berat ──
+    setBar(95, 'Update tampilan...');
     await _yieldToUI(20);
  
-    renderPhotoList();
-    renderLayerList();
+    var georefDone = photos.filter(function(p) { return p.georef; }).length;
+ 
+    // Render ringan dulu
     renderMeasures();
     renderTreeList();
     updateStats();
     updateSensusStats();
     renderExportBlokList();
  
+    await _yieldToUI(30);
+    renderPhotoList();   // lazy thumbnails — aman
+ 
+    await _yieldToUI(30);
+    renderLayerList();   // lazy thumbnails — aman
+ 
     document.getElementById('hdrPhotoCount').textContent = photos.length + ' foto';
     document.getElementById('hdrTreeCount').textContent = '🌴 ' + trees.length + ' pokok';
  
-    var georefDone = photos.filter(function(p) { return p.georef; }).length;
     if (georefDone > 0) {
       document.getElementById('hdrRotTag').style.display = '';
       document.getElementById('hdrRotTag').textContent = '✓ ' + georefDone + ' foto georef';
@@ -3177,15 +3239,9 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       statusEl.style.background = 'rgba(63,185,80,.08)';
       statusEl.style.color = 'var(--ok)';
       statusEl.style.border = '1px solid rgba(63,185,80,.25)';
-      statusEl.innerHTML = '✅ Sesi dipulihkan!<br>'
-        + georefDone + ' foto georef · '
-        + measures.length + ' pengukuran · '
-        + trees.length + ' pokok sawit';
+      statusEl.innerHTML = '✅ Sesi dipulihkan!<br>' + georefDone + ' foto georef · ' + measures.length + ' pengukuran · ' + trees.length + ' pokok sawit';
     }
-    showToast('✅ Sesi berhasil dipulihkan!\n'
-      + georefDone + ' foto, '
-      + measures.length + ' pengukuran, '
-      + trees.length + ' pokok');
+    showToast('✅ Sesi berhasil dipulihkan!\n' + georefDone + ' foto, ' + measures.length + ' pengukuran, ' + trees.length + ' pokok');
  
   } catch (err) {
     console.error('Load session error:', err);
@@ -3193,8 +3249,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       statusEl.style.background = 'rgba(248,81,73,.08)';
       statusEl.style.color = 'var(--er)';
       statusEl.style.border = '1px solid rgba(248,81,73,.3)';
-      statusEl.innerHTML = '❌ Gagal: ' + err.message
-        + '<br><span style="font-size:8px;color:var(--mu)">Coba tutup tab lain &amp; reload</span>';
+      statusEl.innerHTML = '❌ Gagal: ' + err.message + '<br><span style="font-size:8px;color:var(--mu)">Coba tutup tab lain &amp; reload</span>';
     }
   }
 }
