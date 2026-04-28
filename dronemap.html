@@ -1374,61 +1374,60 @@ function buildAffine(gcps){
 // FEATHERED CANVAS OVERLAY
 // =====================================================
 function buildFeatheredCanvas(imgSrc, w, h, featherAmt, brightness, contrast, saturation, callback) {
-  var img = new Image();
-  img.onload = function() {
-    // ── DOWNSCALE: max 2048px sisi terpanjang ──────────────
-    // Ini kunci utama anti-OOM: foto 20MP jadi ~2MP di offscreen canvas
-    // Kualitas visual di peta tidak berubah karena peta jarang zoom >2048px
-    var MAX_DIM = 2048;
-    var scale = 1;
-    if (w > MAX_DIM || h > MAX_DIM) {
-      scale = Math.min(MAX_DIM / w, MAX_DIM / h);
-    }
-    var ow = Math.round(w * scale);  // offscreen width
-    var oh = Math.round(h * scale);  // offscreen height
+  var MAX_DIM = 2048;
+  var sc = 1;
+  if (w > MAX_DIM || h > MAX_DIM) sc = Math.min(MAX_DIM / w, MAX_DIM / h);
+  var ow = Math.round(w * sc);
+  var oh = Math.round(h * sc);
  
-    var ofc = document.createElement('canvas');
-    ofc.width = ow;
-    ofc.height = oh;
-    var ctx = ofc.getContext('2d');
+  // Selalu kembalikan Promise DAN panggil callback untuk backward compat
+  var p = new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var ofc = document.createElement('canvas');
+        ofc.width = ow; ofc.height = oh;
+        var ctx = ofc.getContext('2d');
+        var br = brightness || 100, ct = contrast || 100, sat2 = saturation || 100;
+        ctx.filter = 'brightness(' + br + '%) contrast(' + ct + '%) saturate(' + sat2 + '%)';
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, ow, oh);
+        ctx.filter = 'none';
  
-    var br = brightness || 100, ct = contrast || 100, sat = saturation || 100;
-    ctx.filter = 'brightness(' + br + '%) contrast(' + ct + '%) saturate(' + sat + '%)';
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, 0, 0, ow, oh);  // ← gambar ke ukuran yang sudah di-downscale
-    ctx.filter = 'none';
+        if (featherAmt > 0) {
+          var mask = document.createElement('canvas');
+          mask.width = ow; mask.height = oh;
+          var mctx = mask.getContext('2d');
+          var cx = ow / 2, cy = oh / 2, eb = featherAmt;
+          var grad = mctx.createRadialGradient(
+            cx, cy, Math.min(cx, cy) * (1 - eb * 1.5),
+            cx, cy, Math.max(cx, cy) * 1.05
+          );
+          grad.addColorStop(0, 'rgba(0,0,0,1)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          mctx.fillStyle = grad;
+          mctx.fillRect(0, 0, ow, oh);
+          ctx.globalCompositeOperation = 'destination-in';
+          ctx.drawImage(mask, 0, 0);
+          ctx.globalCompositeOperation = 'source-over';
+          mask.width = 1; mask.height = 1; // free mask
+        }
  
-    if (featherAmt > 0) {
-      var mask = document.createElement('canvas');
-      mask.width = ow; mask.height = oh;
-      var mctx = mask.getContext('2d');
-      var cx = ow / 2, cy = oh / 2, eb = featherAmt;
-      var grad = mctx.createRadialGradient(
-        cx, cy, Math.min(cx, cy) * (1 - eb * 1.5),
-        cx, cy, Math.max(cx, cy) * 1.05
-      );
-      grad.addColorStop(0, 'rgba(0,0,0,1)');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      mctx.fillStyle = grad;
-      mctx.fillRect(0, 0, ow, oh);
-      ctx.globalCompositeOperation = 'destination-in';
-      ctx.drawImage(mask, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
-      // Bebaskan mask canvas segera
-      mask.width = 1; mask.height = 1;
-    }
+        ofc._origW = w;
+        ofc._origH = h;
  
-    // Simpan dimensi asli di ofc untuk transform di _update
-    ofc._origW = w;
-    ofc._origH = h;
+        if (callback) callback(ofc, img);
+        resolve({ ofc: ofc, img: img });
+      } catch (e) {
+        reject(e);
+      }
+    };
+    img.onerror = function() { reject(new Error('Gagal load gambar')); };
+    img.src = imgSrc;
+  });
  
-    callback(ofc, img);
- 
-    // Bebaskan img dari memori setelah callback (img sudah ada di ofc canvas)
-    // img = null; // Tidak di-null karena _ofcImg masih menyimpan referensi untuk _rebuildOfc
-  };
-  img.src = imgSrc;
+  return p;
 }
 
 function createRotatedOverlay(photo, toGeo) {
@@ -1446,23 +1445,16 @@ function createRotatedOverlay(photo, toGeo) {
  
   var RotatedLayer = L.Layer.extend({
     _ofc: null, _ofcImg: null, _canvas: null,
-    _ofcBuilding: false,  // flag: sedang membangun ofc (async)
+    _ofcBuilding: false,
+    _ofcPromise: null,  // ← NEW: simpan Promise agar bisa di-await dari luar
  
     onAdd: function(map) {
       this._map = map;
       this._canvas = document.createElement('canvas');
       this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;transition:opacity 0.35s ease;';
       map.getPanes().overlayPane.appendChild(this._canvas);
- 
-      var self = this;
-      // ── LAZY OFC: buat canvas hanya jika belum ada & foto visible ──
-      // Ini mencegah OOM saat load sesi — tidak semua foto di-render sekaligus
-      if (!this._ofc && !this._ofcBuilding) {
-        this._buildOfc(function() {
-          self._update();
-        });
-      }
- 
+      // JANGAN langsung build ofc di sini — biarkan caller yang await _buildOfc()
+      // agar tidak semua foto build sekaligus
       map.on('zoom viewreset move zoomend moveend resize', this._update, this);
     },
  
@@ -1471,49 +1463,57 @@ function createRotatedOverlay(photo, toGeo) {
         this._canvas.parentNode.removeChild(this._canvas);
       }
       map.off('zoom viewreset move zoomend moveend resize', this._update, this);
-      // ── MEMORY FREE: reset canvas size sebelum GC ──
       if (this._ofc) {
         try { this._ofc.width = 1; this._ofc.height = 1; } catch(e) {}
         this._ofc = null;
       }
       this._ofcImg = null;
       this._canvas = null;
+      this._ofcPromise = null;
     },
  
-    _buildOfc: function(cb) {
-      if (this._ofcBuilding) return;
+    // ── KUNCI FIX: _buildOfc mengembalikan Promise yang bisa di-await ──
+    _buildOfc: function() {
+      if (this._ofcBuilding) return this._ofcPromise;
+      if (this._ofc) return Promise.resolve({ ofc: this._ofc, img: this._ofcImg });
+ 
       this._ofcBuilding = true;
       var self = this;
-      buildFeatheredCanvas(
+ 
+      this._ofcPromise = buildFeatheredCanvas(
         photo.src, photo.w, photo.h,
-        photo.feather, photo.brightness, photo.contrast, photo.saturation,
-        function(ofc, rawImg) {
-          self._ofc = ofc;
-          self._ofcImg = rawImg;
-          self._ofcBuilding = false;
-          if (cb) cb();
-        }
-      );
+        photo.feather, photo.brightness, photo.contrast, photo.saturation
+      ).then(function(result) {
+        self._ofc = result.ofc;
+        self._ofcImg = result.img;
+        self._ofcBuilding = false;
+        self._ofcPromise = null;
+        return result;
+      }).catch(function(err) {
+        self._ofcBuilding = false;
+        self._ofcPromise = null;
+        console.warn('buildFeatheredCanvas error:', err);
+        throw err;
+      });
+ 
+      return this._ofcPromise;
     },
  
     _rebuildOfc: function() {
       if (!photo.src) return;
       var self = this;
-      // Bebaskan canvas lama dulu untuk GC
       if (this._ofc) {
         try { this._ofc.width = 1; this._ofc.height = 1; } catch(e) {}
         this._ofc = null;
       }
-      this._buildOfc(function() { self._update(); });
+      this._buildOfc().then(function() { self._update(); }).catch(function() {});
     },
  
     _update: function() {
-      // Jika ofc belum siap, trigger build dan tunggu
       if (!this._ofc) {
-        if (!this._ofcBuilding) {
-          var self = this;
-          this._buildOfc(function() { self._update(); });
-        }
+        // Trigger build jika belum ada, update setelah selesai
+        var self = this;
+        this._buildOfc().then(function() { self._update(); }).catch(function() {});
         return;
       }
  
@@ -1541,13 +1541,8 @@ function createRotatedOverlay(photo, toGeo) {
       var ctx = this._canvas.getContext('2d');
       ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
  
-      // ── Gunakan dimensi OFC (yang sudah di-downscale) untuk transform ──
-      // _ofc._origW = foto.w asli; _ofc.width = downscaled width
       var W2 = this._ofc._origW || photo.w;
       var H2 = this._ofc._origH || photo.h;
-      // Faktor koreksi: ofc sudah di-downscale, transform harus pakai ukuran asli
-      var ofcScaleX = (this._ofc._origW || photo.w) / this._ofc.width;
-      var ofcScaleY = (this._ofc._origH || photo.h) / this._ofc.height;
  
       if (_showPhotoOutlines) {
         ctx.save(); ctx.globalAlpha = 0.5;
@@ -1559,15 +1554,12 @@ function createRotatedOverlay(photo, toGeo) {
         ctx.restore();
       }
  
-      // Transform: dari koordinat ASLI foto (w×h) ke layar
-      // Karena ofc sudah downscale, transform ke ofc.width/height lalu scale balik
       var a = (cpts[1].x - cpts[0].x) / W2;
       var b = (cpts[3].x - cpts[0].x) / H2;
       var c = (cpts[1].y - cpts[0].y) / W2;
       var d = (cpts[3].y - cpts[0].y) / H2;
       var e2 = cpts[0].x, f2 = cpts[0].y;
  
-      // ── Clip path (BK / Voronoi / default) ──
       var clipPts;
       var activeBK = _batasKebunPolygons;
       var ownedBK = null;
@@ -1602,18 +1594,12 @@ function createRotatedOverlay(photo, toGeo) {
       for (var ci = 1; ci < clipPts.length; ci++) ctx.lineTo(clipPts[ci].x, clipPts[ci].y);
       ctx.closePath(); ctx.clip();
  
-      // ── Gambar ofc ke canvas layar ──
-      // Transform ke ukuran asli foto (W2×H2), bukan ofc.width×ofc.height
-      // ctx.transform mengatur skala dari "koordinat gambar" ke "koordinat layar"
-      // drawImage otomatis stretch ofc ke W2×H2 karena kita pakai ctx.transform + drawImage(ofc, 0,0,W2,H2)
       ctx.transform(a, c, b, d, e2, f2);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      // Gambar ofc seolah berukuran W2×H2 (koordinat foto asli)
       ctx.drawImage(this._ofc, 0, 0, W2, H2);
       ctx.restore();
  
-      // ── Punch-out untuk foto tanpa BK ──
       if (activeBK && activeBK.length > 0 && !ownedBK) {
         activeBK.forEach(function(bk) {
           if (!bk.verts || bk.verts.length < 3) return;
@@ -2969,7 +2955,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
   }
  
   try {
-    // ── Bersihkan state lama ──────────────────────────
+    // ── Bersihkan state lama ──
     photos.forEach(function(p) {
       if (p.overlay && map) try { map.removeLayer(p.overlay); } catch(e) {}
       if (p.gcpLayer && map) try { map.removeLayer(p.gcpLayer); } catch(e) {}
@@ -2988,7 +2974,6 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     setBar(52, 'Restore variabel...');
     await _yieldToUI(30);
  
-    // ── Pisahkan data foto dari data utama ──────────
     var photoDataArray = data.photos;
     data.photos = null;
  
@@ -3006,21 +2991,16 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     _batasKebunPolygons = [];
     areaUnit = data.areaUnit || 'auto';
     lenUnit = data.lenUnit || 'auto';
- 
-    // Bebaskan objek data utama
     data = null;
  
-    setBar(55, 'Inisialisasi peta...');
+    setBar(55, 'Rebuild foto array...');
     await _yieldToUI(30);
  
-    // ── Rebuild array foto — src disimpan di _srcPending ──
-    // Kunci: src TIDAK langsung di-assign ke photo.src
-    // sehingga semua base64 tidak ada di memori sekaligus
     photos = photoDataArray.map(function(p) {
       return {
         id: p.id, name: p.name,
         src: null,
-        _srcPending: p.src,  // ← base64 ada di sini dulu
+        _srcPending: p.src,
         w: p.w || 0, h: p.h || 0,
         gcps: p.gcps || [],
         georef: p.georef || false,
@@ -3040,48 +3020,43 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
         colorNormApplied: p.colorNormApplied || false
       };
     });
- 
-    // Bebaskan array foto asli (base64 masih ada di _srcPending di atas)
     photoDataArray = null;
  
-    setBar(58, 'Inisialisasi peta...');
+    setBar(58, 'Init peta...');
     await _yieldToUI(30);
  
-    // ── Init peta ─────────────────────────────────────
     var georefPhotos = photos.filter(function(p) { return p.georef && p.gcps && p.gcps.length >= 3; });
     if (georefPhotos.length > 0) {
       if (!map) {
         _initMapFromPhoto(georefPhotos[0]);
-        await _yieldToUI(50); // beri Leaflet waktu init
+        await _yieldToUI(80);
       } else {
         if (drawnItems) drawnItems.clearLayers();
       }
     }
  
-    // ── Restore polygon/line layers (ringan, tidak butuh foto) ──
-    setBar(62, 'Restore pengukuran...');
+    setBar(62, 'Restore polygon...');
     await _yieldToUI(20);
     _restoreMeasureLayers();
  
-    // ── Load foto SATU PER SATU — kunci anti-OOM ─────
+    // ── KUNCI: Load foto SATU PER SATU + await canvas selesai ──
     var total = photos.length;
     for (var i = 0; i < photos.length; i++) {
       var photo = photos[i];
- 
-      var pct = 62 + Math.round((i / Math.max(total, 1)) * 28); // 62% → 90%
+      var pct = 62 + Math.round((i / Math.max(total, 1)) * 28);
       setBar(pct, 'Foto ' + (i + 1) + '/' + total + ': ' + photo.name);
+ 
+      // Yield dulu agar UI update
       await _yieldToUI(20);
  
       if (!photo._srcPending) continue;
  
-      // Transfer src — bebaskan _srcPending segera
       photo.src = photo._srcPending;
       photo._srcPending = null;
  
       if (!photo.georef || photo.gcps.length < 3) continue;
  
       try {
-        // Dapatkan dimensi jika belum ada
         if (!photo.w || !photo.h) {
           await new Promise(function(resolve) {
             var imgTmp = new Image();
@@ -3093,26 +3068,26 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
             imgTmp.onerror = resolve;
             imgTmp.src = photo.src;
           });
-          await _yieldToUI(16);
         }
  
         var toGeo = buildAffine(photo.gcps);
- 
-        // createRotatedOverlay sekarang LAZY: tidak langsung buat canvas besar
-        // Canvas besar (buildFeatheredCanvas) hanya dibuat saat _update dipanggil
         photo.overlay = createRotatedOverlay(photo, toGeo);
  
         if (photo.visible && map) {
           photo.overlay.addTo(map);
-          // Yield lebih lama: beri buildFeatheredCanvas (yang async via img.onload)
-          // waktu untuk selesai sebelum foto berikutnya mulai
-          // Ini mencegah 5 foto sekaligus buat canvas → OOM
-          await _yieldToUI(120);
-        }
-        // Foto tidak-visible: overlay dibuat tapi tidak ditambah ke peta
-        // _ofc TIDAK dibuat (lazy) → tidak ada canvas besar di RAM
  
-        // GCP markers
+          // ════════════════════════════════════════════════
+          // KUNCI FIX DEFINITIF:
+          // await _buildOfc() → tunggu canvas selesai dibuat
+          // sebelum lanjut ke foto berikutnya
+          // Ini menjamin MAX 1 canvas besar di memori sekaligus
+          // ════════════════════════════════════════════════
+          await photo.overlay._buildOfc();
+ 
+          // Yield setelah canvas selesai — beri GC waktu
+          await _yieldToUI(50);
+        }
+ 
         photo.gcpLayer = L.featureGroup();
         photo.gcps.forEach(function(g, gi) {
           L.circleMarker([g.lat, g.lng], {
@@ -3126,45 +3101,37 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
  
       } catch (photoErr) {
         console.warn('Gagal load foto "' + photo.name + '":', photoErr);
-        // Jangan crash seluruh proses karena 1 foto gagal
       }
  
-      // Yield tambahan setelah setiap foto — beri GC waktu kerja
-      await _yieldToUI(60);
+      // Yield tambahan antar foto
+      await _yieldToUI(30);
     }
  
-    // ── Tree markers ──────────────────────────────────
     setBar(91, 'Restore pokok sawit...');
     await _yieldToUI(20);
     if (_treeLayer) _treeLayer.clearLayers();
     trees.forEach(function(t) { addTreeMarker(t); });
  
-    // ── Fit bounds ────────────────────────────────────
-    setBar(94, 'Finalisasi peta...');
+    setBar(94, 'Fit bounds...');
     await _yieldToUI(20);
  
     var allBounds = photos.filter(function(p) { return p.georef && p.bounds; })
       .map(function(p) { return p.bounds; });
     if (allBounds.length > 0 && map) {
       var aLats = [], aLngs = [];
-      allBounds.forEach(function(b) {
-        aLats.push(b[0][0], b[1][0]);
-        aLngs.push(b[0][1], b[1][1]);
-      });
+      allBounds.forEach(function(b) { aLats.push(b[0][0], b[1][0]); aLngs.push(b[0][1], b[1][1]); });
       map.fitBounds([
         [Math.min.apply(null, aLats), Math.min.apply(null, aLngs)],
         [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]
       ], { padding: [20, 20] });
     }
  
-    // ── Rebuild BK state ──────────────────────────────
     _rebuildBatasKebunPolygons();
     _updateBatasKebunInfoPanel();
     updateGcpCoverageBox();
     hideImagePanel();
     updateStep(3);
  
-    // ── Update UI ─────────────────────────────────────
     setBar(97, 'Update tampilan...');
     await _yieldToUI(20);
  
@@ -3185,7 +3152,6 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       document.getElementById('hdrRotTag').textContent = '✓ ' + georefDone + ' foto georef';
     }
  
-    // Switch ke tab Ukur
     document.querySelectorAll('.stab').forEach(function(t) { t.classList.remove('active'); });
     document.querySelectorAll('.tabpane').forEach(function(p) { p.classList.remove('active'); });
     document.querySelectorAll('.stab')[4].classList.add('active');
