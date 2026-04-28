@@ -1446,15 +1446,14 @@ function createRotatedOverlay(photo, toGeo) {
   var RotatedLayer = L.Layer.extend({
     _ofc: null, _ofcImg: null, _canvas: null,
     _ofcBuilding: false,
-    _ofcPromise: null,  // ← NEW: simpan Promise agar bisa di-await dari luar
+    _ofcPromise: null,
  
     onAdd: function(map) {
       this._map = map;
       this._canvas = document.createElement('canvas');
       this._canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;transition:opacity 0.35s ease;';
       map.getPanes().overlayPane.appendChild(this._canvas);
-      // JANGAN langsung build ofc di sini — biarkan caller yang await _buildOfc()
-      // agar tidak semua foto build sekaligus
+      // TIDAK trigger _buildOfc di sini — caller yang bertanggung jawab
       map.on('zoom viewreset move zoomend moveend resize', this._update, this);
     },
  
@@ -1472,7 +1471,6 @@ function createRotatedOverlay(photo, toGeo) {
       this._ofcPromise = null;
     },
  
-    // ── KUNCI FIX: _buildOfc mengembalikan Promise yang bisa di-await ──
     _buildOfc: function() {
       if (this._ofcBuilding) return this._ofcPromise;
       if (this._ofc) return Promise.resolve({ ofc: this._ofc, img: this._ofcImg });
@@ -1488,12 +1486,13 @@ function createRotatedOverlay(photo, toGeo) {
         self._ofcImg = result.img;
         self._ofcBuilding = false;
         self._ofcPromise = null;
+        // Setelah canvas siap, render ke peta
+        self._update();
         return result;
       }).catch(function(err) {
         self._ofcBuilding = false;
         self._ofcPromise = null;
         console.warn('buildFeatheredCanvas error:', err);
-        throw err;
       });
  
       return this._ofcPromise;
@@ -1501,21 +1500,21 @@ function createRotatedOverlay(photo, toGeo) {
  
     _rebuildOfc: function() {
       if (!photo.src) return;
-      var self = this;
       if (this._ofc) {
         try { this._ofc.width = 1; this._ofc.height = 1; } catch(e) {}
         this._ofc = null;
       }
-      this._buildOfc().then(function() { self._update(); }).catch(function() {});
+      this._buildOfc();
     },
  
     _update: function() {
-      if (!this._ofc) {
-        // Trigger build jika belum ada, update setelah selesai
-        var self = this;
-        this._buildOfc().then(function() { self._update(); }).catch(function() {});
-        return;
-      }
+      // ════════════════════════════════════════════════
+      // KRITIS: Jika _ofc belum siap → SKIP (jangan trigger build)
+      // Build akan dipanggil secara eksplisit oleh _doLoadSessionSequential
+      // atau _buildAllOFCSequential setelah fitBounds selesai.
+      // Ini mencegah fitBounds memicu semua foto build sekaligus.
+      // ════════════════════════════════════════════════
+      if (!this._ofc) return;
  
       var map = this._map; if (!map) return;
       var mapSize = map.getSize();
@@ -1641,6 +1640,25 @@ function createRotatedOverlay(photo, toGeo) {
   });
  
   return new RotatedLayer();
+}
+
+async function _buildAllOFCSequential(msgEl, barStartPct) {
+  var overlays = photos.filter(function(p) {
+    return p.georef && p.visible && p.overlay && p.src;
+  });
+ 
+  for (var i = 0; i < overlays.length; i++) {
+    var p = overlays[i];
+    if (p.overlay._ofc) continue; // sudah punya canvas, skip
+ 
+    if (msgEl) msgEl.textContent = 'Render foto ' + (i + 1) + '/' + overlays.length + ': ' + p.name;
+ 
+    // Await canvas selesai dibuat — satu per satu
+    await p.overlay._buildOfc();
+ 
+    // Yield agar GC bisa bekerja sebelum foto berikutnya
+    await _yieldToUI(50);
+  }
 }
 
 // =====================================================
@@ -2971,7 +2989,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     });
     _labelDragMarkers = {};
  
-    setBar(52, 'Restore variabel...');
+    setBar(50, 'Restore variabel...');
     await _yieldToUI(30);
  
     var photoDataArray = data.photos;
@@ -2993,7 +3011,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     lenUnit = data.lenUnit || 'auto';
     data = null;
  
-    setBar(55, 'Rebuild foto array...');
+    setBar(53, 'Rebuild foto array...');
     await _yieldToUI(30);
  
     photos = photoDataArray.map(function(p) {
@@ -3022,7 +3040,7 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
     });
     photoDataArray = null;
  
-    setBar(58, 'Init peta...');
+    setBar(56, 'Init peta...');
     await _yieldToUI(30);
  
     var georefPhotos = photos.filter(function(p) { return p.georef && p.gcps && p.gcps.length >= 3; });
@@ -3035,19 +3053,17 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
       }
     }
  
-    setBar(62, 'Restore polygon...');
+    setBar(60, 'Restore polygon...');
     await _yieldToUI(20);
     _restoreMeasureLayers();
  
-    // ── KUNCI: Load foto SATU PER SATU + await canvas selesai ──
+    // ── FASE 1: Load foto + build canvas SATU PER SATU ──
     var total = photos.length;
     for (var i = 0; i < photos.length; i++) {
       var photo = photos[i];
-      var pct = 62 + Math.round((i / Math.max(total, 1)) * 28);
+      var pct = 60 + Math.round((i / Math.max(total, 1)) * 30); // 60% → 90%
       setBar(pct, 'Foto ' + (i + 1) + '/' + total + ': ' + photo.name);
- 
-      // Yield dulu agar UI update
-      await _yieldToUI(20);
+      await _yieldToUI(16);
  
       if (!photo._srcPending) continue;
  
@@ -3075,17 +3091,10 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
  
         if (photo.visible && map) {
           photo.overlay.addTo(map);
- 
-          // ════════════════════════════════════════════════
-          // KUNCI FIX DEFINITIF:
-          // await _buildOfc() → tunggu canvas selesai dibuat
-          // sebelum lanjut ke foto berikutnya
-          // Ini menjamin MAX 1 canvas besar di memori sekaligus
-          // ════════════════════════════════════════════════
+          // Await canvas selesai — SATU PER SATU, tidak bersamaan
+          // _update() dipanggil otomatis di akhir _buildOfc setelah canvas siap
           await photo.overlay._buildOfc();
- 
-          // Yield setelah canvas selesai — beri GC waktu
-          await _yieldToUI(50);
+          await _yieldToUI(40);
         }
  
         photo.gcpLayer = L.featureGroup();
@@ -3103,16 +3112,18 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
         console.warn('Gagal load foto "' + photo.name + '":', photoErr);
       }
  
-      // Yield tambahan antar foto
-      await _yieldToUI(30);
+      await _yieldToUI(20);
     }
  
+    // ── FASE 2: Tree markers ──
     setBar(91, 'Restore pokok sawit...');
     await _yieldToUI(20);
     if (_treeLayer) _treeLayer.clearLayers();
     trees.forEach(function(t) { addTreeMarker(t); });
  
-    setBar(94, 'Fit bounds...');
+    // ── FASE 3: fitBounds ──
+    // Aman sekarang karena semua _ofc sudah ada → _update() hanya render, tidak build
+    setBar(93, 'Fit bounds peta...');
     await _yieldToUI(20);
  
     var allBounds = photos.filter(function(p) { return p.georef && p.bounds; })
@@ -3125,6 +3136,10 @@ async function _doLoadSessionSequential(data, statusEl, barEl, msgEl) {
         [Math.max.apply(null, aLats), Math.max.apply(null, aLngs)]
       ], { padding: [20, 20] });
     }
+ 
+    // ── FASE 4: Rebuild state & UI ──
+    setBar(95, 'Finalisasi...');
+    await _yieldToUI(20);
  
     _rebuildBatasKebunPolygons();
     _updateBatasKebunInfoPanel();
