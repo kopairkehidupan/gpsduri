@@ -2680,71 +2680,211 @@ function updateExportPerPhoto(){
 // =====================================================
 // SIMPAN & PULIHKAN SESI
 // =====================================================
-function saveSession(){
-  if(photos.length===0&&measures.length===0&&trees.length===0){
-    showToast('⚠ Tidak ada data untuk disimpan');return;
+function saveSession() {
+  if (photos.length === 0 && measures.length === 0 && trees.length === 0) {
+    showToast('⚠ Tidak ada data untuk disimpan');
+    return;
   }
-  showToast('⏳ Menyiapkan file sesi...');
-  setTimeout(function(){
-    try{
-      var data={
-        version:'2',
-        savedAt:new Date().toISOString(),
-        tool:'DroneMap v3 Pro',
-        // ── FOTO (termasuk base64 src) ──────────────────
-        photos:photos.map(function(p){
-          return{
-            id:p.id,name:p.name,src:p.src,w:p.w,h:p.h,
-            gcps:p.gcps,georef:p.georef,
-            bounds:p.bounds,corners:p.corners,
-            visible:p.visible,opacity:p.opacity,
-            feather:p.feather,blendMode:p.blendMode,
-            offsetLat:p.offsetLat||0,offsetLng:p.offsetLng||0,
-            zOrder:p.zOrder||0,
-            brightness:p.brightness||100,contrast:p.contrast||100,
-            saturation:p.saturation||100,
-            colorNormApplied:p.colorNormApplied||false
-          };
-        }),
-        // ── PENGUKURAN ──────────────────────────────────
-        measures:measures.map(function(m){
-          return{
-            id:m.id,type:m.type,label:m.label,
-            area:m.area,perim:m.perim,coords:m.coords,
-            len:m.len,lat:m.lat,lng:m.lng,
-            treesInside:m.treesInside,density:m.density,
-            isBatasKebun:m.isBatasKebun||false,
-            outsideWarning:m.outsideWarning||''
-          };
-        }),
-        shapeId:shapeId,
-        // ── SENSUS POKOK ────────────────────────────────
-        trees:trees.map(function(t){
-          return{id:t.id,lat:t.lat,lng:t.lng,no:t.no,block:t.block,status:t.status,note:t.note};
-        }),
-        treeId:treeId,
-        // ── BATAS KEBUN STATE ───────────────────────────
-        batasKebunIds:Array.from(_batasKebunIds),
-        bkOwnerMapExplicit:_bkOwnerMapExplicit,
-        bkColorMap:_bkColorMap,
-        // ── PDF OPTIONS ─────────────────────────────────
-        labelOffsets:_labelOffsets,
-        exportBatasShow:_exportBatasShow,
-        exportLabelShow:_exportLabelShow,
-        // ── SATUAN ──────────────────────────────────────
-        areaUnit:areaUnit,
-        lenUnit:lenUnit
+ 
+  var estimateMB = photos.reduce(function(s, p) {
+    return s + (p.src ? p.src.length * 0.75 / 1024 / 1024 : 0);
+  }, 0);
+ 
+  // Tampilkan progress overlay
+  var ovHtml = '<div id="_saveOv" style="position:fixed;inset:0;background:rgba(13,17,23,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999999;gap:14px">'
+    + '<div style="width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--saw);border-radius:50%;animation:spin .8s linear infinite"></div>'
+    + '<div style="font-family:\'Space Mono\',monospace;font-size:12px;color:var(--saw2)" id="_saveTxt">Menyiapkan data...</div>'
+    + '<div style="width:260px;height:5px;background:var(--bd);border-radius:4px;overflow:hidden"><div id="_saveBar" style="height:100%;width:0%;background:var(--saw);border-radius:4px;transition:width .3s"></div></div>'
+    + '<div style="font-size:10px;color:var(--mu)" id="_saveSub">Estimasi: ' + estimateMB.toFixed(0) + ' MB</div>'
+    + '</div>';
+  document.body.insertAdjacentHTML('beforeend', ovHtml);
+ 
+  function setProgress(pct, msg) {
+    var bar = document.getElementById('_saveBar');
+    var txt = document.getElementById('_saveTxt');
+    if (bar) bar.style.width = Math.min(pct, 100) + '%';
+    if (txt && msg) txt.textContent = msg;
+  }
+ 
+  function closeOv() {
+    var ov = document.getElementById('_saveOv');
+    if (ov) ov.remove();
+  }
+ 
+  // Async chunked save
+  _doSaveSessionChunked(setProgress, closeOv, estimateMB);
+}
+ 
+async function _doSaveSessionChunked(setProgress, closeOv, estimateMB) {
+  try {
+    await _yieldToUI(30);
+    setProgress(2, 'Menyiapkan metadata...');
+ 
+    // ── 1. Bangun header JSON (tanpa foto) ──
+    var now = new Date();
+    var dateStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
+ 
+    // Kumpulkan measures
+    var measuresArr = measures.map(function(m) {
+      var obj = { id: m.id, type: m.type, label: m.label };
+      if (m.area !== undefined) obj.area = m.area;
+      if (m.perim !== undefined) obj.perim = m.perim;
+      if (m.coords) obj.coords = m.coords;
+      if (m.len !== undefined) obj.len = m.len;
+      if (m.lat !== undefined) obj.lat = m.lat;
+      if (m.lng !== undefined) obj.lng = m.lng;
+      if (m.treesInside) obj.treesInside = m.treesInside;
+      if (m.density) obj.density = m.density;
+      if (m.isBatasKebun) obj.isBatasKebun = true;
+      if (m.outsideWarning) obj.outsideWarning = m.outsideWarning;
+      return obj;
+    });
+ 
+    var treesArr = trees.map(function(t) {
+      return { id: t.id, lat: t.lat, lng: t.lng, no: t.no, block: t.block, status: t.status, note: t.note };
+    });
+ 
+    // Header object — tanpa photos (akan disisipkan manual)
+    var header = {
+      version: '2',
+      savedAt: now.toISOString(),
+      tool: 'DroneMap v3 Pro',
+      measures: measuresArr,
+      shapeId: shapeId,
+      trees: treesArr,
+      treeId: treeId,
+      batasKebunIds: Array.from(_batasKebunIds),
+      bkOwnerMapExplicit: _bkOwnerMapExplicit,
+      bkColorMap: _bkColorMap,
+      labelOffsets: _labelOffsets,
+      exportBatasShow: _exportBatasShow,
+      exportLabelShow: _exportLabelShow,
+      areaUnit: areaUnit,
+      lenUnit: lenUnit
+    };
+ 
+    await _yieldToUI(20);
+    setProgress(5, 'Encode metadata...');
+ 
+    // Stringify header tanpa photos — kecil, aman
+    var headerJson = JSON.stringify(header);
+ 
+    // Kita akan bangun JSON final sebagai array of Blob parts:
+    // { ...header_fields..., "photos": [ {...foto1...}, {...foto2...}, ... ] }
+    // Caranya: potong headerJson di akhir (buang "}" penutup), sisipkan "photos":[...]
+ 
+    // Hapus "}" penutup dari headerJson
+    var headerOpen = headerJson.slice(0, -1); // buang "}"
+ 
+    // ── 2. Bangun chunks array ──
+    var chunks = [];
+    chunks.push(headerOpen + ',"photos":[');
+ 
+    await _yieldToUI(20);
+    setProgress(8, 'Encode foto (0/' + photos.length + ')...');
+ 
+    // ── 3. Serialisasi tiap foto satu per satu ──
+    for (var i = 0; i < photos.length; i++) {
+      var p = photos[i];
+ 
+      // Yield sebelum setiap foto besar — beri kesempatan GC
+      await _yieldToUI(i === 0 ? 30 : 60);
+ 
+      var pct = 8 + Math.round((i / Math.max(photos.length, 1)) * 80);
+      setProgress(pct, 'Encode foto ' + (i + 1) + '/' + photos.length + ': ' + p.name);
+ 
+      // Bangun objek foto (tanpa src dulu)
+      var obj = {
+        id: p.id, name: p.name,
+        w: p.w, h: p.h,
+        gcps: p.gcps,
+        georef: p.georef
       };
-      var json=JSON.stringify(data);
-      var sizeMB=(new Blob([json]).size/1024/1024).toFixed(1);
-      var now=new Date();
-      var dateStr=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
-      safeDownload(json,'application/json','DroneMap_Sesi_'+dateStr+'.dmsession');
-      showToast('✅ Sesi disimpan! ('+sizeMB+' MB)\nSimpan file .dmsession ini untuk lanjut kapanpun.');
-    }catch(err){
-      showToast('❌ Gagal menyimpan: '+err.message);
+      if (p.bounds) obj.bounds = p.bounds;
+      if (p.corners) obj.corners = p.corners;
+      if (p.visible === false) obj.visible = false;
+      if (p.opacity !== 1) obj.opacity = p.opacity;
+      if (p.feather) obj.feather = p.feather;
+      if (p.blendMode && p.blendMode !== 'normal') obj.blendMode = p.blendMode;
+      if (p.offsetLat) obj.offsetLat = p.offsetLat;
+      if (p.offsetLng) obj.offsetLng = p.offsetLng;
+      if (p.zOrder) obj.zOrder = p.zOrder;
+      if (p.brightness && p.brightness !== 100) obj.brightness = p.brightness;
+      if (p.contrast && p.contrast !== 100) obj.contrast = p.contrast;
+      if (p.saturation && p.saturation !== 100) obj.saturation = p.saturation;
+      if (p.colorNormApplied) obj.colorNormApplied = true;
+ 
+      // Stringify bagian non-src
+      var objJson = JSON.stringify(obj);
+ 
+      if (p.src) {
+        // Sisipkan src secara manual — hindari duplikasi di memori
+        // objJson sudah punya "}" di akhir, buang lalu tambah ,"src":"..."
+        var objOpen = objJson.slice(0, -1); // buang "}"
+        // Tambah separator antar foto
+        if (i > 0) chunks.push(',');
+        chunks.push(objOpen + ',"src":');
+        // src sebagai JSON string — perlu di-quote manual (sudah berupa data:image/... string)
+        // JSON.stringify string kecil (hanya quote + escape) tapi src bisa 30MB
+        // → push langsung sebagai JSON string literal
+        chunks.push(JSON.stringify(p.src)); // ini mungkin masih berat untuk foto sangat besar
+        chunks.push('}');
+      } else {
+        if (i > 0) chunks.push(',');
+        chunks.push(objJson);
+      }
+ 
+      // Yield setelah encode foto besar agar GC bisa bekerja
+      if (p.src && p.src.length > 5 * 1024 * 1024) {
+        await _yieldToUI(80);
+      }
     }
-  },100);
+ 
+    chunks.push(']}'); // tutup array photos dan object root
+ 
+    setProgress(90, 'Membuat file...');
+    await _yieldToUI(40);
+ 
+    // ── 4. Buat Blob dari chunks — TIDAK gabungkan jadi 1 string dulu ──
+    // Browser handle Blob([...chunks]) secara streaming internal
+    var blob = new Blob(chunks, { type: 'application/json' });
+    var sizeMB = (blob.size / 1024 / 1024).toFixed(1);
+ 
+    // Bebaskan chunks dari memori sebelum download
+    chunks = null;
+ 
+    setProgress(95, 'Download ' + sizeMB + ' MB...');
+    await _yieldToUI(30);
+ 
+    // ── 5. Download ──
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'DroneMap_Sesi_' + dateStr + '.dmsession';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+ 
+    setTimeout(function() {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      blob = null;
+    }, 2000);
+ 
+    setProgress(100, 'Selesai!');
+    await _yieldToUI(300);
+    closeOv();
+ 
+    showToast('✅ Sesi disimpan! (' + sizeMB + ' MB)\n'
+      + (parseFloat(sizeMB) > 80
+        ? '💡 File besar: gunakan PC dengan RAM ≥4GB untuk muat ulang.'
+        : 'Simpan file ini untuk lanjut kapanpun.'));
+ 
+  } catch (err) {
+    closeOv();
+    console.error('saveSession error:', err);
+    showToast('❌ Gagal menyimpan: ' + err.message);
+  }
 }
 
 // File input listener untuk load sesi
