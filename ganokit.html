@@ -125,6 +125,25 @@
   .empty-state{text-align:center;padding:48px 20px;color:var(--text-muted)}
   .empty-state .ei{font-size:48px;margin-bottom:12px}
   .empty-state p{font-size:14px}
+
+  /* ── PAGING CONTROLS ─────────────────────────────────────── */
+  .paging-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px;margin-top:8px;border:1px solid rgba(0,0,0,0.04);flex-wrap:wrap}
+  .paging-info{font-size:12px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+  .paging-center{display:flex;align-items:center;gap:6px}
+  .paging-page-num{font-size:13px;font-weight:800;color:var(--green-700);padding:0 4px;min-width:60px;text-align:center;white-space:nowrap}
+  .btn-page{display:flex;align-items:center;justify-content:center;gap:4px;padding:8px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-200);background:var(--white);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+  .btn-page:hover:not(:disabled){border-color:var(--green-500);color:var(--green-700);background:var(--green-50)}
+  .btn-page:active:not(:disabled){transform:scale(.97)}
+  .btn-page:disabled{opacity:.3;cursor:not-allowed}
+  .per-page-select{border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:7px 8px;font-family:inherit;font-size:12px;font-weight:700;color:var(--text);background:var(--white);outline:none;cursor:pointer;transition:border-color .15s}
+  .per-page-select:focus{border-color:var(--green-500)}
+  @media(max-width:380px){
+    .paging-bar{padding:8px 10px;gap:6px}
+    .btn-page{padding:7px 10px;font-size:11px}
+    .paging-info{font-size:11px}
+    .paging-page-num{min-width:46px;font-size:12px}
+  }
+
   .btn-kirim-wrap{padding:12px;width:100%;box-sizing:border-box}
   .btn-kirim{width:100%;padding:15px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1A56B0 0%,#2563EB 100%);color:#FFF;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(26,86,176,.35);transition:all .2s}
   .btn-kirim:hover{background:#1A3F8F;transform:translateY(-1px)}
@@ -234,7 +253,6 @@
   .btn-dl-excel:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
   .btn-dl-excel-local{width:100%;padding:13px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#004D40,#00796B);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,77,64,.3);transition:all .2s;margin-top:8px}
   .btn-dl-excel-local:hover{transform:translateY(-1px)}
-  /* ── PDF BUTTONS ─────────────────────────────────────────────── */
   .btn-dl-pdf{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#7B1FA2,#9C27B0);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(123,31,162,.3);transition:all .2s;margin-top:8px}
   .btn-dl-pdf:hover{transform:translateY(-1px)}
   .btn-dl-pdf:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
@@ -247,7 +265,6 @@
     .peta-inputs{grid-template-columns:1fr}
     .peta-input.full{grid-column:1}
   }
-  /* ── PETA FULLSCREEN ───────────────────────────────────────── */
   .peta-wrap { position:relative; }
   .btn-fullscreen-peta {
     position:absolute; top:10px; right:10px; z-index:1000;
@@ -274,8 +291,6 @@
     background:rgba(30,30,30,0.85); color:#FFF;
     border-color:rgba(255,255,255,0.2);
   }
-  
-  /* ── MARKER GANODERMA — compact style ─────────────────────── */
   .gano-marker {
     position:relative;
     width:18px; height:18px;
@@ -294,7 +309,6 @@
     font-size:6px; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.5));
     line-height:1;
   }
-  /* Pastikan Leaflet tidak menembus modal/overlay */
   .leaflet-pane,
   .leaflet-top,
   .leaflet-bottom,
@@ -313,7 +327,7 @@
       <div class="header-logo">🌿</div>
       <div>
         <div class="header-title">GanoKit Ver. 1</div>
-        <div class="header-sub">Sensus & Deteksi Ganoderma</div>
+        <div class="header-sub">Sensus &amp; Deteksi Ganoderma</div>
         <div style="color:rgba(134,239,172,0.55);font-size:8px;font-weight:500;letter-spacing:.5px;margin-top:1px">Design by Erik Simarmata</div>
       </div>
     </div>
@@ -371,7 +385,7 @@
         </button>
         <button class="kondisi-btn" data-val="Tumbang - Bonggol Tidak Ada" onclick="setKondisi(this)">
           <span class="ki">⬜</span>
-          <div class="kt"><strong>Tumbang — Tidak Ada Sisa Bonggol</strong><small>Stadium 4 (Putih) — Sanitasi lanjutan & replanting</small></div>
+          <div class="kt"><strong>Tumbang — Tidak Ada Sisa Bonggol</strong><small>Stadium 4 (Putih) — Sanitasi lanjutan &amp; replanting</small></div>
         </button>
       </div>
     </div>
@@ -384,7 +398,7 @@
       <div class="gejala-list" id="list-akar"></div>
     </div>
     <div class="card" id="card-foto" style="display:none">
-      <div class="card-header"><div class="card-title"><span class="icon">📷</span>Foto Pokok (Opsional)</div><div class="card-note">Foto bonggol/kondisi tumbang untuk Stadium 3 & 4</div></div>
+      <div class="card-header"><div class="card-title"><span class="icon">📷</span>Foto Pokok (Opsional)</div><div class="card-note">Foto bonggol/kondisi tumbang untuk Stadium 3 &amp; 4</div></div>
       <div class="foto-area">
         <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none">
         <button class="btn-camera" onclick="document.getElementById('foto-input').click()">📷 &nbsp;Ambil Foto Pokok</button>
@@ -412,6 +426,22 @@
     </div>
     <div class="summary-strip" id="summary-strip"></div>
     <div class="record-list" id="record-list"></div>
+
+    <!-- ── PAGING BAR ── -->
+    <div class="paging-bar" id="paging-bar" style="display:none">
+      <div class="paging-info" id="paging-info">1–10 dari 0</div>
+      <div class="paging-center">
+        <button class="btn-page" id="btn-prev" onclick="changePage(-1)">◀ Prev</button>
+        <div class="paging-page-num" id="paging-page-num">1 / 1</div>
+        <button class="btn-page" id="btn-next" onclick="changePage(1)">Next ▶</button>
+      </div>
+      <select class="per-page-select" id="per-page-select" onchange="changePerPage(this.value)" title="Item per halaman">
+        <option value="10">10 / hal</option>
+        <option value="20">20 / hal</option>
+        <option value="50">50 / hal</option>
+      </select>
+    </div>
+
     <div class="btn-kirim-wrap">
       <button class="btn-kirim" id="btn-kirim" onclick="kirimKeServer()">📡&nbsp;Kirim ke Server (Google Script)</button>
       <div class="kirim-note" id="kirim-note">Memuat data...</div>
@@ -432,12 +462,12 @@
       <div class="peta-status idle" id="peta-status">Masukkan filter lalu tekan tombol untuk mengambil data dari Google Sheets.</div>
     </div>
     <div class="peta-legend">
-      <div class="legend-item" style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
-      <div class="legend-item" style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
-      <div class="legend-item" style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
-      <div class="legend-item" style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
-      <div class="legend-item" style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
-      <div class="legend-item" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
+      <div class="legend-item" id="leg-0"    style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
+      <div class="legend-item" id="leg-1"    style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
+      <div class="legend-item" id="leg-2"    style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
+      <div class="legend-item" id="leg-3"    style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
+      <div class="legend-item" id="leg-4"    style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
+      <div class="legend-item" id="leg-foto" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
     </div>
     <div class="peta-fs-overlay" id="peta-fs-overlay"></div>
     <div class="peta-wrap">
@@ -493,8 +523,6 @@
         <button class="btn-close" onclick="closeSettings()">✕</button>
       </div>
       <div class="settings-body">
-  
-        <!-- GAS URL — tidak berubah -->
         <div class="settings-section">
           <h4>URL Google Apps Script</h4>
           <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
@@ -503,8 +531,6 @@
             Deploy GAS: <em>Execute as: Me</em> &amp; <em>Who has access: <strong>Anyone</strong></em>.
           </div>
         </div>
-  
-        <!-- [PATCH 1] Sheet ID — BARU untuk Tab Peta -->
         <div class="settings-section">
           <h4>🗂 Google Sheet ID (untuk Tab Peta)</h4>
           <input type="text" id="sheet-id-input" placeholder="Paste URL Sheet atau ID-nya..." style="font-size:12px">
@@ -514,20 +540,17 @@
             <strong>Setup sekali:</strong> Buka Sheet → <em>Share → Anyone with link → Viewer</em> → copy URL → paste di sini.
           </div>
         </div>
-  
         <div style="display:flex;gap:8px">
           <button onclick="saveSettings()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green-700);color:#FFF;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">💾 Simpan</button>
           <button onclick="testKoneksiGAS()" id="btn-test-gas" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--green-600);background:#FFF;color:var(--green-700);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">🔌 Test Koneksi</button>
         </div>
         <div id="test-result" style="display:none;margin-top:0;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:600;line-height:1.65"></div>
-  
         <div class="settings-section">
           <h4>Kode Google Apps Script</h4>
           <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Copy kode → paste di script.google.com → deploy sebagai Web App (Who has access: Anyone).</div>
           <textarea class="gas-code" id="gas-code-block" readonly></textarea>
           <button class="btn-copy" onclick="copyGasCode()">📋 Copy Kode GAS</button>
         </div>
-  
         <div class="settings-section">
           <h4>Data Lokal</h4>
           <button class="btn-hapus-data" onclick="hapusSemuaData()">🗑️ Hapus Semua Data Tersimpan</button>
@@ -566,8 +589,6 @@
   function normalizeGasUrl(url) {
     return (url || '').replace(/\/macros\/u\/\d+\/s\//, '/macros/s/');
   }
-  
-  // ── [PATCH 2] parseSheetId — ekstrak Sheet ID dari URL/ID langsung
   function parseSheetId(input) {
     input = (input || '').trim();
     const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
@@ -591,43 +612,43 @@
   
   const REC_SHORT = {
     0:`SEHAT — PEMELIHARAAN RUTIN:
-  1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.
-  2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.
-  3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.
-  4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.
-  5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
+1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.
+2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.
+3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.
+4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.
+5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
     1:`STADIUM 1 — TINDAKAN PREVENTIF DINI:
-  1. Konfirmasi ulang & survei lebih detail dalam 2–4 minggu ke depan.
-  2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.
-  3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.
-  4. Periksa & perbaiki drainase — lahan tidak boleh tergenang air.
-  5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.
-  6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
+1. Konfirmasi ulang & survei lebih detail dalam 2–4 minggu ke depan.
+2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.
+3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.
+4. Periksa & perbaiki drainase — lahan tidak boleh tergenang air.
+5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.
+6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
     2:`STADIUM 2 — TINDAKAN KURATIF (SURGERY):
-  1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.
-  2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.
-  3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.
-  4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.
-  5. Monitor kondisi pokok intensif setiap 2 minggu.
-  6. Jika dalam 2 bulan tidak membaik atau gejala memburuk ⇒ eskalasi ke ERADIKASI.`,
+1. Lakukan pembedahan batang (surgery): kikis & buang seluruh jaringan busuk hingga bersih.
+2. Aplikasi biofungisida GREEMI-G (PPKS) atau larutan Trichoderma spp. pada luka bekas kikisan.
+3. Buat PARIT ISOLASI sedalam 50 cm di sekeliling pokok untuk memutus penularan lewat akar.
+4. Aplikasi pupuk hayati mikoriza di piringan untuk memperkuat akar tanaman sehat sekitarnya.
+5. Monitor kondisi pokok intensif setiap 2 minggu.
+6. Jika dalam 2 bulan tidak membaik atau gejala memburuk ⇒ eskalasi ke ERADIKASI.`,
     3:`STADIUM 3 — ERADIKASI SEGERA (SANITASI TOTAL):
-  1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.
-  2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.
-     ⚠ JANGAN hanya tebang dengan Chainsaw — bonggol yang tersisa = sumber penularan ke pokok baru!
-  3. Gali lubang min. kedalaman 1 m, luas 1,5 m × 1,5 m. Balik tanah agar spora terpapar sinar UV matahari.
-  4. Cincang batang ketebalan 5–10 cm, sebar MERATA di permukaan — jangan ditumpuk.
-  5. Tabur Dolomit + Trichoderma spp. 200–400 gr ke lubang, campur dengan tanah galian.
-  6. Biarkan lubang BERA 6–12 bulan hingga dekomposisi selesai & inokulum jamur mati.
-  7. Buat parit isolasi di sekeliling pokok sehat terdekat.
-  8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
+1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.
+2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.
+   ⚠ JANGAN hanya tebang dengan Chainsaw — bonggol yang tersisa = sumber penularan ke pokok baru!
+3. Gali lubang min. kedalaman 1 m, luas 1,5 m × 1,5 m. Balik tanah agar spora terpapar sinar UV matahari.
+4. Cincang batang ketebalan 5–10 cm, sebar MERATA di permukaan — jangan ditumpuk.
+5. Tabur Dolomit + Trichoderma spp. 200–400 gr ke lubang, campur dengan tanah galian.
+6. Biarkan lubang BERA 6–12 bulan hingga dekomposisi selesai & inokulum jamur mati.
+7. Buat parit isolasi di sekeliling pokok sehat terdekat.
+8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
     4:`STADIUM 4 — SANITASI LANJUTAN & PERSIAPAN REPLANTING:
-  1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.
-  2. Gali area bekas bonggol sedalam 80–100 cm — ambil sisa akar besar yang masih ada secara manual.
-  3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.
-  4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.
-  5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.
-  6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.
-  7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
+1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.
+2. Gali area bekas bonggol sedalam 80–100 cm — ambil sisa akar besar yang masih ada secara manual.
+3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.
+4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.
+5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.
+6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.
+7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
   };
   
   const GEJALA_DAUN = [
@@ -648,85 +669,78 @@
   ];
   
   const GAS_CODE = `// ===== GOOGLE APPS SCRIPT =====
-  // Deploy: Execute as: Me | Who has access: Anyone
-  // Tidak ada perubahan pada GAS — kode ini sama seperti sebelumnya.
-  
-  var FOLDER_NAME = 'SensusGanoderma_Foto';
-  
-  function doPost(e) {
-    try {
-      var data = JSON.parse(e.postData.contents);
-      var ss   = SpreadsheetApp.getActiveSpreadsheet();
-      var sh   = ss.getSheetByName('SensusGanoderma');
-      if (!sh) {
-        sh = ss.insertSheet('SensusGanoderma');
-        var header = ['ID','Waktu Simpan','Kebun','Tanggal','Divisi','Blok','Mandor','Pengecek','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Link Foto'];
-        sh.getRange(1,1,1,header.length).setValues([header]).setFontWeight('bold');
-        sh.setFrozenRows(1);
-      }
-      var folder = getOrCreateFolder(FOLDER_NAME);
-      var links  = [];
-      for (var i = 0; i < data.length; i++) {
-        var r = data[i];
-        var linkFoto = '';
-        if (r.foto && r.foto.indexOf('data:image') === 0) {
-          try {
-            var base64 = r.foto.split(',')[1];
-            var ext    = r.foto.indexOf('jpeg') > -1 ? 'jpg' : 'png';
-            var fname  = 'Pokok' + (r.no_pokok||'') + '_Baris' + (r.baris||'') + '_Blok' + (r.blok||'') + '_' + new Date().getTime() + '.' + ext;
-            var subFolder = getOrCreateSubFolder(folder, r.kebun || 'Lainnya');
-            var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/' + (ext==='jpg'?'jpeg':'png'), fname);
-            var file = subFolder.createFile(blob);
-            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-            linkFoto = file.getUrl();
-          } catch(fotoErr) { linkFoto = 'Gagal: ' + fotoErr.message; }
-        }
-        links.push(linkFoto);
-        sh.appendRow([r.id||'',r.waktu_simpan||new Date().toLocaleString('id'),r.kebun||'',r.tanggal||'',r.divisi||'',r.blok||'',r.mandor||'',r.pengecek||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium!==undefined?r.skor_stadium:'',r.keparahan||'',r.lat||'',r.lng||'',linkFoto]);
-      }
-      var lastRow = sh.getLastRow();
-      if (lastRow > 1) sh.getRange(2,22,lastRow-1,1).setNumberFormat('0');
-      return buildResponse({status:'ok', n:data.length, links:links});
-    } catch(err) { return buildResponse({status:'error', msg:err.toString()}); }
-  }
-  function buildResponse(obj) { return ContentService.createTextResponse(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
-  function getOrCreateFolder(name) { var f=DriveApp.getFoldersByName(name); return f.hasNext()?f.next():DriveApp.createFolder(name); }
-  function getOrCreateSubFolder(p,n) { var s=p.getFoldersByName(n); return s.hasNext()?s.next():p.createFolder(n); }
-  function doGet(e) {
-    var params=e.parameter, callback=params.callback||'cb', action=params.action||'';
-  
-    // ─── Proxy gambar dari Drive → base64 via JSONP ───────────
-    // Dikembalikan sebagai JSONP (MimeType.JAVASCRIPT) karena GAS
-    // menambahkan Access-Control-Allow-Origin untuk tipe ini.
-    // App memanggil via <script> tag agar tidak diblokir CORS/SW.
-    if (action === 'getImage') {
-      try {
-        var fileId = params.fileId || '';
-        if (!fileId) return wrapJsonp(callback, {status:'error', msg:'No fileId'});
-        var file = DriveApp.getFileById(fileId);
-        var blob = file.getBlob();
-        var mime = blob.getContentType() || 'image/jpeg';
-        var b64  = Utilities.base64Encode(blob.getBytes());
-        return wrapJsonp(callback, {status:'ok', data:'data:'+mime+';base64,'+b64});
-      } catch(err) {
-        return wrapJsonp(callback, {status:'error', msg:err.toString()});
-      }
+// Deploy: Execute as: Me | Who has access: Anyone
+
+var FOLDER_NAME = 'SensusGanoderma_Foto';
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var sh   = ss.getSheetByName('SensusGanoderma');
+    if (!sh) {
+      sh = ss.insertSheet('SensusGanoderma');
+      var header = ['ID','Waktu Simpan','Kebun','Tanggal','Divisi','Blok','Mandor','Pengecek','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Link Foto'];
+      sh.getRange(1,1,1,header.length).setValues([header]).setFontWeight('bold');
+      sh.setFrozenRows(1);
     }
-  
-    if (action!=='getData') return wrapJsonp(callback,{status:'error',msg:'Unknown action'});
+    var folder = getOrCreateFolder(FOLDER_NAME);
+    var links  = [];
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      var linkFoto = '';
+      if (r.foto && r.foto.indexOf('data:image') === 0) {
+        try {
+          var base64 = r.foto.split(',')[1];
+          var ext    = r.foto.indexOf('jpeg') > -1 ? 'jpg' : 'png';
+          var fname  = 'Pokok' + (r.no_pokok||'') + '_Baris' + (r.baris||'') + '_Blok' + (r.blok||'') + '_' + new Date().getTime() + '.' + ext;
+          var subFolder = getOrCreateSubFolder(folder, r.kebun || 'Lainnya');
+          var blob = Utilities.newBlob(Utilities.base64Decode(base64), 'image/' + (ext==='jpg'?'jpeg':'png'), fname);
+          var file = subFolder.createFile(blob);
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          linkFoto = file.getUrl();
+        } catch(fotoErr) { linkFoto = 'Gagal: ' + fotoErr.message; }
+      }
+      links.push(linkFoto);
+      sh.appendRow([r.id||'',r.waktu_simpan||new Date().toLocaleString('id'),r.kebun||'',r.tanggal||'',r.divisi||'',r.blok||'',r.mandor||'',r.pengecek||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium!==undefined?r.skor_stadium:'',r.keparahan||'',r.lat||'',r.lng||'',linkFoto]);
+    }
+    var lastRow = sh.getLastRow();
+    if (lastRow > 1) sh.getRange(2,22,lastRow-1,1).setNumberFormat('0');
+    return buildResponse({status:'ok', n:data.length, links:links});
+  } catch(err) { return buildResponse({status:'error', msg:err.toString()}); }
+}
+function buildResponse(obj) { return ContentService.createTextResponse(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
+function getOrCreateFolder(name) { var f=DriveApp.getFoldersByName(name); return f.hasNext()?f.next():DriveApp.createFolder(name); }
+function getOrCreateSubFolder(p,n) { var s=p.getFoldersByName(n); return s.hasNext()?s.next():p.createFolder(n); }
+function doGet(e) {
+  var params=e.parameter, callback=params.callback||'cb', action=params.action||'';
+  if (action === 'getImage') {
     try {
-      var ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName('SensusGanoderma');
-      if (!sh) return wrapJsonp(callback,{status:'error',msg:'Sheet belum ada.'});
-      var allVals=sh.getDataRange().getValues();
-      if (allVals.length<2) return wrapJsonp(callback,{status:'ok',data:[]});
-      var headers=allVals[0], fKebun=(params.kebun||'').toString().trim().toUpperCase(), fDivisi=(params.divisi||'').toString().trim(), fBlok=(params.blok||'').toString().trim().toUpperCase();
-      var rows=[];
-      for (var i=1;i<allVals.length;i++) { var row={}; for (var j=0;j<headers.length;j++) row[headers[j]]=allVals[i][j]; if(fKebun&&String(row['Kebun']||'').toUpperCase()!==fKebun)continue; if(fDivisi&&String(row['Divisi']||'').toLowerCase()!==fDivisi.toLowerCase())continue; if(fBlok&&String(row['Blok']||'').toUpperCase()!==fBlok)continue; rows.push(row); }
-      return wrapJsonp(callback,{status:'ok',data:rows});
-    } catch(err) { return wrapJsonp(callback,{status:'error',msg:err.toString()}); }
+      var fileId = params.fileId || '';
+      if (!fileId) return wrapJsonp(callback, {status:'error', msg:'No fileId'});
+      var file = DriveApp.getFileById(fileId);
+      var blob = file.getBlob();
+      var mime = blob.getContentType() || 'image/jpeg';
+      var b64  = Utilities.base64Encode(blob.getBytes());
+      return wrapJsonp(callback, {status:'ok', data:'data:'+mime+';base64,'+b64});
+    } catch(err) {
+      return wrapJsonp(callback, {status:'error', msg:err.toString()});
+    }
   }
-  function wrapJsonp(callback,obj) { return ContentService.createTextResponse(callback+'('+JSON.stringify(obj)+');').setMimeType(ContentService.MimeType.JAVASCRIPT); }
-  `;
+  if (action!=='getData') return wrapJsonp(callback,{status:'error',msg:'Unknown action'});
+  try {
+    var ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName('SensusGanoderma');
+    if (!sh) return wrapJsonp(callback,{status:'error',msg:'Sheet belum ada.'});
+    var allVals=sh.getDataRange().getValues();
+    if (allVals.length<2) return wrapJsonp(callback,{status:'ok',data:[]});
+    var headers=allVals[0], fKebun=(params.kebun||'').toString().trim().toUpperCase(), fDivisi=(params.divisi||'').toString().trim(), fBlok=(params.blok||'').toString().trim().toUpperCase();
+    var rows=[];
+    for (var i=1;i<allVals.length;i++) { var row={}; for (var j=0;j<headers.length;j++) row[headers[j]]=allVals[i][j]; if(fKebun&&String(row['Kebun']||'').toUpperCase()!==fKebun)continue; if(fDivisi&&String(row['Divisi']||'').toLowerCase()!==fDivisi.toLowerCase())continue; if(fBlok&&String(row['Blok']||'').toUpperCase()!==fBlok)continue; rows.push(row); }
+    return wrapJsonp(callback,{status:'ok',data:rows});
+  } catch(err) { return wrapJsonp(callback,{status:'error',msg:err.toString()}); }
+}
+function wrapJsonp(callback,obj) { return ContentService.createTextResponse(callback+'('+JSON.stringify(obj)+');').setMimeType(ContentService.MimeType.JAVASCRIPT); }
+`;
   
   // ── STATE ─────────────────────────────────────────────────────
   let db = null;
@@ -734,8 +748,52 @@
   let gejalaState = {};
   let fotoBase64 = null;
   let allRecords = [];
-  
-  // ── DB (tidak berubah) ────────────────────────────────────────
+
+  // ── PAGING STATE ──────────────────────────────────────────────
+  let currentPage    = 1;
+  let itemsPerPage   = 10;
+  let filteredRecords = [];
+
+  function changePerPage(val) {
+    itemsPerPage = parseInt(val);
+    currentPage  = 1;
+    renderPaginated();
+  }
+
+  function changePage(dir) {
+    const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+    renderPaginated();
+  }
+
+  function renderPaginated() {
+    const total      = filteredRecords.length;
+    const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
+    currentPage      = Math.max(1, Math.min(totalPages, currentPage));
+
+    const start = (currentPage - 1) * itemsPerPage;
+    const end   = Math.min(start + itemsPerPage, total);
+    const slice = filteredRecords.slice(start, end);
+
+    renderRecords(slice);
+
+    // Tampilkan/sembunyikan paging bar
+    const bar = document.getElementById('paging-bar');
+    bar.style.display = (total > itemsPerPage) ? 'flex' : 'none';
+
+    // Update label & tombol
+    document.getElementById('paging-info').textContent =
+      total === 0 ? '0 data' : `${start + 1}–${end} dari ${total}`;
+    document.getElementById('paging-page-num').textContent =
+      `${currentPage} / ${totalPages}`;
+    document.getElementById('btn-prev').disabled = (currentPage <= 1);
+    document.getElementById('btn-next').disabled = (currentPage >= totalPages);
+
+    // Sinkronkan dropdown jika berubah dari luar
+    document.getElementById('per-page-select').value = String(itemsPerPage);
+  }
+
+  // ── DB ────────────────────────────────────────────────────────
   function openDB() {
     return new Promise((res,rej) => {
       const req = indexedDB.open(DB_NAME, DB_VER);
@@ -868,15 +926,25 @@
     applyFilter();
   }
   function fillSelect(id,items,placeholder) { const sel=document.getElementById(id),cur=sel.value; sel.innerHTML=`<option value="">${placeholder}</option>`; items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}); if(items.includes(cur)) sel.value=cur; }
+
   function applyFilter() {
-    const fKebun=document.getElementById('flt-kebun').value, fDivisi=document.getElementById('flt-divisi').value, fBlok=document.getElementById('flt-blok').value;
-    let filtered=allRecords;
-    if(fKebun) filtered=filtered.filter(r=>r.kebun===fKebun);
-    if(fDivisi) filtered=filtered.filter(r=>r.divisi===fDivisi);
-    if(fBlok) filtered=filtered.filter(r=>r.blok===fBlok);
-    renderSummary(filtered); renderRecords(filtered); updateKirimNote(filtered);
+    const fKebun  = document.getElementById('flt-kebun').value;
+    const fDivisi = document.getElementById('flt-divisi').value;
+    const fBlok   = document.getElementById('flt-blok').value;
+
+    filteredRecords = allRecords.slice();
+    if (fKebun)  filteredRecords = filteredRecords.filter(r => r.kebun  === fKebun);
+    if (fDivisi) filteredRecords = filteredRecords.filter(r => r.divisi === fDivisi);
+    if (fBlok)   filteredRecords = filteredRecords.filter(r => r.blok   === fBlok);
+
+    currentPage = 1; // Reset ke halaman 1 setiap filter berubah
+    renderSummary(filteredRecords);
+    renderPaginated();
+    updateKirimNote(filteredRecords);
   }
+
   function resetFilter() { document.getElementById('flt-kebun').value=''; document.getElementById('flt-divisi').value=''; document.getElementById('flt-blok').value=''; applyFilter(); }
+
   function renderSummary(records) {
     const counts = {0:0, 1:0, 2:0, 3:0, 4:0, total:records.length};
     records.forEach(r => { if(r.skor_stadium !== undefined) counts[r.skor_stadium]++; });
@@ -902,7 +970,6 @@
       wrap.appendChild(ch);
     });
   
-    // ── Disease Incidence & Severity ────────────────────────────
     const N = records.length;
     const nSakit = counts[1] + counts[2] + counts[3] + counts[4];
     const DI  = N > 0 ? nSakit / N * 100 : 0;
@@ -914,7 +981,6 @@
     const sBdr   = DI > 20 ? '#FFCDD2' : DI > 10 ? '#FFE0B2' : '#C8E6C9';
     const sLabel = DI > 20 ? '⚠ ENDEMIK GANODERMA' : DI > 10 ? '⚠ STATUS WASPADA' : '✓ TERKENDALI';
   
-    // Buat atau reuse elemen stats bar
     let dsEl = document.getElementById('disease-stats-bar');
     if (!dsEl) {
       dsEl = document.createElement('div');
@@ -922,12 +988,8 @@
       wrap.parentNode.insertBefore(dsEl, wrap.nextSibling);
     }
   
-    if (N === 0) {
-      dsEl.style.display = 'none';
-      return;
-    }
+    if (N === 0) { dsEl.style.display = 'none'; return; }
   
-    dsEl.style.display = 'flex';
     dsEl.style.cssText = `
       display:flex; align-items:center; justify-content:space-between;
       flex-wrap:wrap; gap:8px;
@@ -943,6 +1005,7 @@
       <span style="font-size:10px;opacity:.7;font-weight:600">Ambang endemik: DI &gt; 20%</span>
     `;
   }
+
   function renderRecords(records) {
     const list=document.getElementById('record-list');
     if(!records.length){list.innerHTML=`<div class="empty-state"><div class="ei">🌿</div><p>Belum ada data tersimpan</p></div>`;return;}
@@ -955,6 +1018,7 @@
       list.appendChild(card);
     });
   }
+
   function updateKirimNote(records) {
     const belum=records.filter(r=>r.status_kirim==='Belum Dikirim').length, note=document.getElementById('kirim-note'), btn=document.getElementById('btn-kirim');
     if(!belum){note.textContent='✓ Semua data sudah dikirim ke server';btn.disabled=true;}
@@ -991,14 +1055,46 @@
   }
   function closeDetail(e) { if(e&&e.target!==document.getElementById('modal-detail'))return; document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; }
   
-  let _hapusId=null, currentDetailId=null;
-  function hapusRecord(id) { const rec=allRecords.find(r=>r.id===id); const info=rec?`No. ${rec.no_pokok} | Baris ${rec.baris} | Blok ${rec.blok||'—'}`:`ID: ${id}`; document.getElementById('konfirm-info').textContent=info; _hapusId=id; document.getElementById('konfirm-overlay').classList.remove('hidden'); document.body.style.overflow='hidden'; }
-  function tutupKonfirm() { document.getElementById('konfirm-overlay').classList.add('hidden'); document.body.style.overflow=''; _hapusId=null; }
+  let _hapusId=null, currentDetailId=null, _hapusRec=null;
+
+  function hapusRecord(id) {
+    const rec = allRecords.find(r => r.id === id);
+    const info = rec ? `No. ${rec.no_pokok} | Baris ${rec.baris} | Blok ${rec.blok||'—'}` : `ID: ${id}`;
+    document.getElementById('konfirm-info').textContent = info;
+    _hapusId  = id;
+    _hapusRec = rec || null; // simpan record untuk reopen kalau batal
+
+    // Tutup modal detail dulu, baru tampilkan konfirmasi
+    document.getElementById('modal-detail').classList.add('hidden');
+    document.getElementById('konfirm-overlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function tutupKonfirm() {
+    document.getElementById('konfirm-overlay').classList.add('hidden');
+    // Buka kembali modal detail ke record yang sama
+    if (_hapusRec) {
+      showDetail(_hapusRec);
+    } else {
+      document.body.style.overflow = '';
+    }
+    _hapusId  = null;
+    _hapusRec = null;
+  }
+
   async function eksekusiHapus() {
-    if(_hapusId===null) return;
-    const id=_hapusId; tutupKonfirm();
-    try { await dbDelete(id); document.getElementById('modal-detail').classList.add('hidden'); document.body.style.overflow=''; showToast('🗑 Data berhasil dihapus'); await loadDataPage(); }
-    catch(e) { showToast('❌ Gagal hapus: '+e.message); }
+    if (_hapusId === null) return;
+    const id = _hapusId;
+    _hapusId  = null;
+    _hapusRec = null;
+    document.getElementById('konfirm-overlay').classList.add('hidden');
+    try {
+      await dbDelete(id);
+      document.getElementById('modal-detail').classList.add('hidden');
+      document.body.style.overflow = '';
+      showToast('🗑 Data berhasil dihapus');
+      await loadDataPage();
+    } catch(e) { showToast('❌ Gagal hapus: ' + e.message); }
   }
   
   async function kirimKeServer() {
@@ -1025,23 +1121,20 @@
     else showToast('❌ Gagal kirim — periksa koneksi internet');
   }
   
-  // ── [PATCH 3] openSettings — tambah load sheetId ──────────────
   function openSettings() {
     const raw=localStorage.getItem('gasUrl')||'', url=normalizeGasUrl(raw);
     if(url!==raw&&url) localStorage.setItem('gasUrl',url);
     document.getElementById('gas-url').value=url;
-    document.getElementById('sheet-id-input').value=localStorage.getItem('sheetId')||''; // BARU
+    document.getElementById('sheet-id-input').value=localStorage.getItem('sheetId')||'';
     document.getElementById('gas-code-block').value=GAS_CODE;
     document.getElementById('modal-settings').classList.remove('hidden');
     document.body.style.overflow='hidden';
   }
   function closeSettings(e) { if(e&&e.target!==document.getElementById('modal-settings'))return; document.getElementById('modal-settings').classList.add('hidden'); document.body.style.overflow=''; }
   
-  // ── [PATCH 4] saveSettings — tambah save sheetId ─────────────
   function saveSettings() {
     const rawUrl=document.getElementById('gas-url').value.trim(), url=normalizeGasUrl(rawUrl);
     if(url){localStorage.setItem('gasUrl',url);document.getElementById('gas-url').value=url;}
-    // BARU: parse & simpan Sheet ID
     const sheetInput=document.getElementById('sheet-id-input').value.trim(), sheetId=parseSheetId(sheetInput);
     if(sheetId){localStorage.setItem('sheetId',sheetId);document.getElementById('sheet-id-input').value=sheetId;}
     closeSettings();
@@ -1082,41 +1175,35 @@
   let petaMap=null, petaMarkerGroup=null, serverData=[];
   
   function initPetaMap() {
-      if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
-      setTimeout(()=>{
-        petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Desaign by Erik Simarmata',maxZoom:20}).addTo(petaMap);
-        petaMarkerGroup=L.layerGroup().addTo(petaMap);
-      },150);
-    }
-  
-    function toggleFullscreenPeta() {
+    if(petaMap){setTimeout(()=>petaMap.invalidateSize(),200);return;}
+    setTimeout(()=>{
+      petaMap=L.map('peta-map',{center:[0.5,101.4],zoom:13});
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design by Erik Simarmata',maxZoom:20}).addTo(petaMap);
+      petaMarkerGroup=L.layerGroup().addTo(petaMap);
+    },150);
+  }
+
+  function toggleFullscreenPeta() {
     const mapEl    = document.getElementById('peta-map');
     const btn      = document.getElementById('btn-fs-peta');
     const overlay  = document.getElementById('peta-fs-overlay');
     const isFs     = mapEl.classList.contains('fullscreen-mode');
-  
     if (!isFs) {
-      // Masuk fullscreen
       mapEl.classList.add('fullscreen-mode');
       btn.classList.add('fs-active');
       overlay.classList.add('active');
       btn.innerHTML = '✕ Keluar Fullscreen';
       document.body.style.overflow = 'hidden';
     } else {
-      // Keluar fullscreen
       mapEl.classList.remove('fullscreen-mode');
       btn.classList.remove('fs-active');
       overlay.classList.remove('active');
       btn.innerHTML = '⛶ Fullscreen';
       document.body.style.overflow = '';
     }
-  
-    // Paksa Leaflet hitung ulang ukuran setelah transisi CSS selesai
     setTimeout(() => petaMap && petaMap.invalidateSize(), 120);
   }
   
-  // Tekan Escape untuk keluar fullscreen
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       const mapEl = document.getElementById('peta-map');
@@ -1124,39 +1211,29 @@
     }
   });
   
-  // ── [PATCH 5] testKoneksiGAS — ganti JSONP ping → fetch no-cors
-  // Alasan: JSONP muat <script> dari script.google.com → Google
-  // kembalikan HTML redirect → Chrome CORB memblokir.
-  // fetch no-cors tidak baca response, tapi tidak kena CORB.
   async function testKoneksiGAS() {
     const rawUrl = document.getElementById('gas-url').value.trim();
     if (!rawUrl) { showToast('⚠ Isi URL GAS dulu'); return; }
     const url = normalizeGasUrl(rawUrl);
     localStorage.setItem('gasUrl', url);
     document.getElementById('gas-url').value = url;
-  
     const sheetInput = document.getElementById('sheet-id-input').value.trim();
     const sheetId = parseSheetId(sheetInput);
     if (sheetId) localStorage.setItem('sheetId', sheetId);
-  
     const btn = document.getElementById('btn-test-gas'), res = document.getElementById('test-result');
     btn.disabled = true; btn.textContent = '⏳ Testing...';
     res.style.display = 'block'; res.className = 'test-loading';
     res.textContent = '⏳ Menguji koneksi GAS & Google Sheet...';
-  
     let gasOk = false, sheetOk = false, sheetErr = '';
-  
     try {
       const controller = new AbortController(), t = setTimeout(() => controller.abort(), 10000);
       await fetch(url, { mode:'no-cors', credentials:'omit', signal:controller.signal });
       clearTimeout(t); gasOk = true;
     } catch(e) { gasOk = (e.name !== 'AbortError' && e.name !== 'TypeError'); }
-  
     if (sheetId) {
       try { await gvizFetch(sheetId, {}); sheetOk = true; }
       catch(e) { sheetErr = e.message; }
     }
-  
     let html = '';
     html += gasOk
       ? '✅ <b>GAS terhubung</b> — pengiriman data siap<br>'
@@ -1169,36 +1246,29 @@
       html += 'ℹ️ <b>Sheet ID belum diisi</b> — Tab Peta tidak tersedia<br>';
     }
     html += '📷 <b>Foto PDF</b>: dimuat langsung dari Google Drive CDN (tidak perlu GAS)';
-  
     res.className = (gasOk && (!sheetId || sheetOk)) ? 'test-ok' : gasOk ? 'test-warn' : 'test-err';
     res.innerHTML = html;
     btn.disabled = false; btn.textContent = '🔌 Test Koneksi';
   }
   
-  // ── [PATCH 6] gvizFetch — baca Sheet via docs.google.com ──────
-  // Tidak melalui script.google.com → tidak ada /u/N/ & tidak ada CORB
   function gvizFetch(sheetId, params) {
     return new Promise((resolve, reject) => {
       const cbName='gvCb_'+Date.now();
       const timeout=setTimeout(()=>{cleanup();reject(new Error('Timeout 15 detik'));},15000);
       const script=document.createElement('script');
-  
       function cleanup() { clearTimeout(timeout); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
-  
       window[cbName]=function(result) {
         cleanup();
         if(!result||result.status!=='ok') {
           const errMsg=(result&&result.errors&&result.errors[0])?result.errors[0].detailed_message:'Sheet tidak dapat diakses';
           reject(new Error(errMsg)); return;
         }
-        // Parse Google Visualization DataTable
         const table=result.table||{}, cols=(table.cols||[]).map(c=>c.label||c.id||'');
         const rows=(table.rows||[]).map(row=>{
           const obj={};
           (row.c||[]).forEach((cell,i)=>{ obj[cols[i]]=String((cell&&cell.v!==null&&cell.v!==undefined)?cell.v:''); });
           return obj;
         });
-        // Filter client-side
         let filtered=rows;
         const fKebun=(params.kebun||'').trim().toUpperCase(), fDivisi=(params.divisi||'').trim().toLowerCase(), fBlok=(params.blok||'').trim().toUpperCase();
         if(fKebun)  filtered=filtered.filter(r=>(r['Kebun']||'').toUpperCase()===fKebun);
@@ -1206,7 +1276,6 @@
         if(fBlok)   filtered=filtered.filter(r=>(r['Blok']||'').toUpperCase()===fBlok);
         resolve(filtered);
       };
-  
       const tqx=`out:json;responseHandler:${cbName}`;
       script.src=`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=${encodeURIComponent(tqx)}&sheet=SensusGanoderma`;
       script.onerror=()=>{ cleanup(); reject(new Error('Tidak dapat mengakses Sheet — periksa ID & status sharing')); };
@@ -1214,21 +1283,50 @@
     });
   }
   
-  // ── [PATCH 7] ambilDataServer — ganti jsonpFetch → gvizFetch ──
+  function updatePetaLegend(data) {
+    const counts = {0:0, 1:0, 2:0, 3:0, 4:0, foto:0};
+    (data||[]).forEach(r => {
+      const s = Math.min(4, parseInt(r['Skor Stadium']) || 0);
+      counts[s]++;
+      if (r['Link Foto'] && String(r['Link Foto']).startsWith('http')) counts.foto++;
+    });
+
+    const BADGE = (n, fg) => n > 0
+      ? ` <span style="
+            display:inline-flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.18);color:${fg||'inherit'};
+            font-size:10px;font-weight:800;
+            min-width:18px;height:18px;padding:0 4px;
+            border-radius:9px;margin-left:4px;letter-spacing:0">${n}</span>`
+      : '';
+
+    const defs = [
+      {id:'leg-0', label:'⬤ Sehat',       st:0, fg:'#1A5C2A'},
+      {id:'leg-1', label:'⬤ Dini (St.1)', st:1, fg:'#7A5500'},
+      {id:'leg-2', label:'⬤ Sakit (St.2)',st:2, fg:'#7A3A00'},
+      {id:'leg-3', label:'⬤ Tumb-B (St.3)',st:3,fg:'#7B0000'},
+      {id:'leg-4', label:'⬤ Tumb-P (St.4)',st:4,fg:'#FFFFFF'},
+    ];
+    defs.forEach(d => {
+      const el = document.getElementById(d.id);
+      if (el) el.innerHTML = d.label + BADGE(counts[d.st], d.fg);
+    });
+    const fotoEl = document.getElementById('leg-foto');
+    if (fotoEl) fotoEl.innerHTML = '📷 Ada foto' + BADGE(counts.foto, '#424242');
+  }
+
   async function ambilDataServer() {
     const sheetId=localStorage.getItem('sheetId');
     if(!sheetId){showToast('⚠ Sheet ID belum diisi di Pengaturan');openSettings();return;}
-  
     const kebun=document.getElementById('peta-kebun').value.trim(), divisi=document.getElementById('peta-divisi').value.trim(), blok=document.getElementById('peta-blok').value.trim();
     const statusEl=document.getElementById('peta-status'), btnEl=document.getElementById('btn-ambil'), dlBtn=document.getElementById('btn-dl-server');
-  
     statusEl.className='peta-status loading'; statusEl.textContent='⏳ Mengambil data dari Google Sheet…'; btnEl.disabled=true;
-  
     try {
       const data=await gvizFetch(sheetId,{kebun,divisi,blok});
       serverData=data;
       const dgps=data.filter(r=>r['Latitude']&&r['Longitude']&&r['Latitude']!=='').length;
       statusEl.className='peta-status ok'; statusEl.textContent=`✓ ${data.length} data dimuat (${dgps} dengan GPS)`;
+      updatePetaLegend(data);
       renderPetaMarkers(data); dlBtn.disabled=(data.length===0);
     } catch(err) {
       statusEl.className='peta-status err';
@@ -1241,29 +1339,23 @@
     setTimeout(() => {
       petaMarkerGroup.clearLayers();
       const markers = [];
-  
       const ST_STYLE = {
-        0: { bg:'#1A5C2A', fg:'#FFFFFF', border:'#0B2614' }, // Sehat — hijau tua solid
-        1: { bg:'#F5C518', fg:'#4A3500', border:'#B87D00' }, // Dini — kuning
-        2: { bg:'#F4742B', fg:'#FFFFFF', border:'#A84200' }, // Sakit — oranye
-        3: { bg:'#D32F2F', fg:'#FFFFFF', border:'#7B0000' }, // Tumb-B — merah
-        4: { bg:'#FF8A80', fg:'#5A0000', border:'#B71C1C' }, // Tumb-P — merah muda
+        0: { bg:'#1A5C2A', fg:'#FFFFFF', border:'#0B2614' },
+        1: { bg:'#F5C518', fg:'#4A3500', border:'#B87D00' },
+        2: { bg:'#F4742B', fg:'#FFFFFF', border:'#A84200' },
+        3: { bg:'#D32F2F', fg:'#FFFFFF', border:'#7B0000' },
+        4: { bg:'#FF8A80', fg:'#5A0000', border:'#B71C1C' },
       };
-  
       data.forEach(r => {
         const lat = parseFloat(r['Latitude']), lng = parseFloat(r['Longitude']);
         if (!lat || !lng || isNaN(lat) || isNaN(lng)) return;
-  
         const skor    = Math.min(4, parseInt(r['Skor Stadium']) || 0);
         const stInfo  = STADIUM[skor] || STADIUM[0];
         const stStyle = ST_STYLE[skor];
         const noPokok = r['No Pokok'] || '?';
         const hasFoto = !!(r['Link Foto'] && r['Link Foto'].startsWith('http'));
         const fotoUrl = hasFoto ? driveToImgUrl(r['Link Foto']) : null;
-  
-        // Label — jika > 3 digit tampilkan sebagai titik-titik
         const labelText = String(noPokok).length > 3 ? '···' : String(noPokok);
-  
         const iconHtml = `
           <div class="gano-marker${hasFoto ? ' has-foto' : ''}" style="
             background:${stStyle.bg};
@@ -1272,7 +1364,6 @@
             ${hasFoto ? 'outline:2px solid #FF9800; outline-offset:2px;' : ''}
           ">${labelText}</div>
         `;
-  
         const icon = L.divIcon({
           className: '',
           html: iconHtml,
@@ -1280,38 +1371,26 @@
           iconAnchor: [9, 9],
           popupAnchor:[0, -12],
         });
-  
-        // Popup
         const barisTxt  = r['Baris']     || '—';
         const blokTxt   = r['Blok']      || '—';
         const kebunTxt  = r['Kebun']     || '';
         const divisiTxt = r['Divisi']    || '';
         const kepTxt    = r['Keparahan'] || '';
-  
         let popup = `
           <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;line-height:1.5;max-width:200px">
-            <div style="
-              background:${stStyle.bg};color:${stStyle.fg};
-              padding:4px 8px;border-radius:6px;
-              font-size:10px;font-weight:800;letter-spacing:.5px;
-              margin-bottom:6px;display:inline-block
-            ">Stadium ${skor} — ${stInfo.label}</div>
+            <div style="background:${stStyle.bg};color:${stStyle.fg};padding:4px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.5px;margin-bottom:6px;display:inline-block">Stadium ${skor} — ${stInfo.label}</div>
             <div style="font-weight:800;font-size:13px;margin-bottom:2px">Pokok No. ${noPokok}</div>
             <div style="color:#555;font-size:11px">Baris ${barisTxt} &nbsp;|&nbsp; Blok ${blokTxt}</div>
             <div style="color:#888;font-size:10px;margin-top:2px">${kebunTxt}${divisiTxt ? ' · '+divisiTxt : ''}</div>
             ${kepTxt ? `<div style="font-size:10px;margin-top:4px;color:#333">${kepTxt}</div>` : ''}
-            ${fotoUrl ? `<img src="${fotoUrl}" alt="Foto" loading="lazy"
-              onerror="this.style.display='none'"
-              style="width:100%;border-radius:6px;margin-top:6px;display:block;max-height:120px;object-fit:cover">` : ''}
+            ${fotoUrl ? `<img src="${fotoUrl}" alt="Foto" loading="lazy" onerror="this.style.display='none'" style="width:100%;border-radius:6px;margin-top:6px;display:block;max-height:120px;object-fit:cover">` : ''}
           </div>
         `;
-  
         const marker = L.marker([lat, lng], { icon });
         marker.bindPopup(popup, { maxWidth: 210, className: '' });
         petaMarkerGroup.addLayer(marker);
         markers.push(marker);
       });
-  
       if (markers.length > 0) {
         const group = L.featureGroup(markers);
         petaMap.fitBounds(group.getBounds().pad(0.18));
@@ -1324,7 +1403,6 @@
   
   const XL_COLS=['Kebun','Divisi','Blok','Tanggal','No Pokok','Baris','Kondisi Pokok','Daun Tombak','Klorosis','Sengkleh','Skirting','Tajuk','Miselia Awal','Tubuh Buah','Batang Lunak','Akar Busuk','Akar Miselia','Skor Stadium','Keparahan','Latitude','Longitude','Foto'];
   
-  // ── Stadium warna (hex → [R,G,B]) ─────────────────────────────
   const ST_COLORS = {
     '0':{ bg:[212,237,218], fg:[26,92,42]  },
     '1':{ bg:[255,243,176], fg:[122,85,0]  },
@@ -1333,23 +1411,18 @@
     '4':{ bg:[255,138,128], fg:[255,255,255]},
   };
   
-  // ── CORE PDF GENERATOR ────────────────────────────────────────
   async function generatePDF(tableRows, fotoArr, meta, filename) {
     if (!tableRows || !tableRows.length) { showToast('⚠ Tidak ada data untuk dicetak'); return; }
     if (!window.jspdf) { showToast('⚠ Library PDF belum siap, coba lagi'); return; }
-  
     showLoading(true);
     await new Promise(r => setTimeout(r, 50));
-  
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-      const PW = doc.internal.pageSize.getWidth();   // 297
-      const PH = doc.internal.pageSize.getHeight();  // 210
+      const PW = doc.internal.pageSize.getWidth();
+      const PH = doc.internal.pageSize.getHeight();
       const ML = 12, MR = 12;
-      const USABLE = PW - ML - MR; // 273mm
-  
-      // ── Hitung statistik stadium ─────────────────────────────
+      const USABLE = PW - ML - MR;
       const SC = {0:0, 1:0, 2:0, 3:0, 4:0};
       tableRows.forEach(r => {
         const s = Math.min(4, Math.max(0, parseInt(String(r[2]).trim()) || 0));
@@ -1357,33 +1430,22 @@
       });
       const N = tableRows.length;
       const nSakit = SC[1] + SC[2] + SC[3] + SC[4];
-      // Disease Incidence (DI) — Tingkat Serangan
-      const DI = N > 0 ? nSakit / N * 100 : 0;
-      // Disease Severity Index (DSI) — Indeks Keparahan Penyakit
-      // DSI = Σ(ni × vi) / (N × Vmax) × 100  dengan Vmax=4
-      const DSI = N > 0
-        ? (SC[1]*1 + SC[2]*2 + SC[3]*3 + SC[4]*4) / (N * 4) * 100
-        : 0;
-      const isEndemic = DI > 20;
+      const DI  = N > 0 ? nSakit / N * 100 : 0;
+      const DSI = N > 0 ? (SC[1]*1 + SC[2]*2 + SC[3]*3 + SC[4]*4) / (N * 4) * 100 : 0;
       const statusLabel = DI > 20 ? '⚠ ENDEMIK GANODERMA' : DI > 10 ? '⚠ STATUS WASPADA' : '✓ TERKENDALI';
       const statusColor = DI > 20 ? [183,28,28]  : DI > 10 ? [180,76,0]  : [27,107,48];
       const statusBg    = DI > 20 ? [255,235,238] : DI > 10 ? [255,243,224] : [232,245,233];
-  
-      // ── Pre-hitung lebar kolom Keparahan dari teks aktual ────
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
-      let maxKepW = 40; // minimum fallback
+      let maxKepW = 40;
       tableRows.forEach(r => {
         const w = doc.getStringUnitWidth(String(r[3] || '')) * 7.5 / doc.internal.scaleFactor;
         if (w > maxKepW) maxKepW = w;
       });
-      const kepW = Math.min(maxKepW + 8, 85); // padding 8mm, cap 85mm
-  
-      // ── Pre-hitung tinggi baris sesuai ada/tidaknya foto ────
+      const kepW = Math.min(maxKepW + 8, 85);
       const FOTO_COL_W = 38;
       const MAX_FOTO_H = 60;
       const ROW_H_TEXT = 7;
-  
       const rowRenderH = tableRows.map((_, i) => {
         const f = fotoArr ? fotoArr[i] : null;
         if (!f || !f.data) return ROW_H_TEXT;
@@ -1391,44 +1453,31 @@
         const h = Math.min(FOTO_COL_W * aspect, MAX_FOTO_H);
         return Math.max(h + 3, 14);
       });
-  
       const anyFoto = fotoArr && fotoArr.some(f => f && f.data);
       const fotoColW = anyFoto ? FOTO_COL_W : 10;
-  
-      // ── Fixed column widths — No. cukup lebar ────────────────
-      // No(14)+Pokok(20)+Baris(13)+Skor(22)+Lat(26)+Lng(26)+Foto
       const fixedSum = 14 + 20 + 13 + 22 + kepW + 26 + 26 + fotoColW;
-      // Kalau fixedSum < USABLE, bagi kelebihannya ke Lat & Lng
       const extra = Math.max(0, USABLE - fixedSum);
       const latW = 26 + Math.floor(extra / 2);
       const lngW = 26 + Math.ceil(extra / 2);
-  
-      // ── HEADER BAR ───────────────────────────────────────────
       doc.setFillColor(11, 38, 20);
       doc.rect(0, 0, PW, 24, 'F');
       doc.setFillColor(46, 168, 74);
       doc.rect(0, 24, PW, 1.5, 'F');
-  
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
       doc.text('Laporan Hasil Sensus Serangan Ganoderma', ML, 11);
-  
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(134, 239, 172);
       doc.text('GanoKit Ver.1  —  Sistem Deteksi Berbasis Aplikasi', ML, 18);
-  
       doc.setTextColor(180, 220, 180);
       doc.setFontSize(7.5);
       const tglCetak = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
       doc.text(`Dicetak: ${tglCetak}`, PW - MR, 11, {align:'right'});
       doc.text(`${N} pokok`, PW - MR, 18, {align:'right'});
-  
-      // ── INFO BLOCK (Kebun / Divisi / Blok / Tanggal) ─────────
       let y = 31;
       const col2x = ML + 148;
-  
       const infoLabel = (label, val, x) => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(90,90,90);
         doc.text(label, x, y);
@@ -1440,8 +1489,6 @@
       y += 5.5;
       infoLabel('Divisi    :', meta.divisi || '—', ML);
       if (meta.tanggal) infoLabel('Tanggal :', meta.tanggal, col2x);
-  
-      // ── SUMMARY CHIPS ────────────────────────────────────────
       y += 8;
       const chipDefs = [
         { label:`Total: ${N}`,           bg:[238,242,255], fg:[55,48,163]  },
@@ -1464,95 +1511,58 @@
         doc.text(chip.label, cx + chipPadX, y - 0.5);
         cx += chipW + 2.5;
       });
-  
-      // ── DISEASE STATS BAR ────────────────────────────────────
       y += 6;
       doc.setFillColor(...statusBg);
       doc.roundedRect(ML, y - 5.2, USABLE, 7.5, 1, 1, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...statusColor);
       const statsStr = `Tingkat Serangan (DI): ${DI.toFixed(1)}%   |   Indeks Keparahan (DSI): ${DSI.toFixed(1)}%   |   ${statusLabel}   |   Ambang endemik: DI > 20%`;
       doc.text(statsStr, ML + USABLE / 2, y - 0.5, {align:'center'});
-  
-      // ── DIVIDER ──────────────────────────────────────────────
       y += 5;
       doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.4);
       doc.line(ML, y, PW - MR, y);
       y += 4;
-  
-      // ── TABLE ────────────────────────────────────────────────
       const head = [['No.', 'No.\nPokok', 'Baris', 'Skor\nStadium', 'Tingkat Keparahan', 'Latitude', 'Longitude', 'Foto']];
-  
       const body = tableRows.map((r, i) => {
         const skor   = String(r[2] ?? '').trim();
         const latStr = r[4] ? parseFloat(r[4]).toFixed(6) : '—';
         const lngStr = r[5] ? parseFloat(r[5]).toFixed(6) : '—';
         return [i + 1, r[0], r[1], skor, String(r[3] || ''), latStr, lngStr, ''];
       });
-  
       doc.autoTable({
         startY : y,
         head   : head,
         body   : body,
         margin : { left: ML, right: MR },
         theme  : 'grid',
-        styles : {
-          fontSize    : 7.5,
-          cellPadding : { top:2, right:3, bottom:2, left:3 },
-          valign      : 'middle',
-          lineColor   : [210, 215, 210],
-          lineWidth   : 0.25,
-          textColor   : [30, 30, 30],
-          overflow    : 'linebreak',
-        },
-        headStyles : {
-          fillColor    : [27, 107, 48],
-          textColor    : [255, 255, 255],
-          fontStyle    : 'bold',
-          fontSize     : 7.5,
-          halign       : 'center',
-          cellPadding  : 3,
-          minCellHeight: 11,
-        },
+        styles : { fontSize:7.5, cellPadding:{top:2,right:3,bottom:2,left:3}, valign:'middle', lineColor:[210,215,210], lineWidth:0.25, textColor:[30,30,30], overflow:'linebreak' },
+        headStyles : { fillColor:[27,107,48], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:3, minCellHeight:11 },
         alternateRowStyles: { fillColor: [248, 250, 248] },
         columnStyles: {
-          0: { cellWidth: 14,      halign:'center' },   // No. — cukup untuk 3 digit
-          1: { cellWidth: 20,      halign:'center' },   // No. Pokok
-          2: { cellWidth: 13,      halign:'center' },   // Baris
-          3: { cellWidth: 22,      halign:'center' },   // Skor Stadium
-          4: { cellWidth: kepW                     },   // Keparahan — auto-fit teks
-          5: { cellWidth: latW,    halign:'center', fontSize:7 }, // Latitude
-          6: { cellWidth: lngW,    halign:'center', fontSize:7 }, // Longitude
-          7: { cellWidth: fotoColW,halign:'center' },   // Foto
+          0: { cellWidth: 14,      halign:'center' },
+          1: { cellWidth: 20,      halign:'center' },
+          2: { cellWidth: 13,      halign:'center' },
+          3: { cellWidth: 22,      halign:'center' },
+          4: { cellWidth: kepW                     },
+          5: { cellWidth: latW,    halign:'center', fontSize:7 },
+          6: { cellWidth: lngW,    halign:'center', fontSize:7 },
+          7: { cellWidth: fotoColW,halign:'center' },
         },
-  
         didParseCell: function(data) {
           if (data.section !== 'body') return;
           const ri = data.row.index;
-  
-          // Tinggi baris: kecil kalau tidak ada foto, besar kalau ada foto
           data.cell.styles.minCellHeight = rowRenderH[ri];
-  
-          // Warna sel Skor (kol 3) dan Keparahan (kol 4)
           if (data.column.index === 3 || data.column.index === 4) {
             const skor = String(body[ri]?.[3] ?? '').trim();
             const c = ST_COLORS[skor];
-            if (c) {
-              data.cell.styles.fillColor = c.bg;
-              data.cell.styles.textColor = c.fg;
-              data.cell.styles.fontStyle = 'bold';
-            }
+            if (c) { data.cell.styles.fillColor = c.bg; data.cell.styles.textColor = c.fg; data.cell.styles.fontStyle = 'bold'; }
           }
         },
-  
         didDrawCell: function(data) {
           if (data.section !== 'body' || data.column.index !== 7) return;
           const f = fotoArr ? fotoArr[data.row.index] : null;
-  
           if (!f || !f.data) {
             doc.setFontSize(6.5); doc.setTextColor(190,190,190);
-            doc.text('—', data.cell.x + data.cell.width/2,
-                          data.cell.y + data.cell.height/2,
-                          {align:'center', baseline:'middle'});
+            doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
             return;
           }
           try {
@@ -1560,7 +1570,6 @@
             const pad = 1.5;
             const maxW = data.cell.width  - pad * 2;
             const maxH = data.cell.height - pad * 2;
-            // Proporsional: pilih dimensi yang membatasi
             const aspect = f.w / f.h;
             let rW, rH;
             if (maxW / maxH > aspect) { rH = maxH; rW = maxH * aspect; }
@@ -1570,31 +1579,20 @@
             doc.addImage(f.data, imgType, x, y, rW, rH);
           } catch(e) {
             doc.setFontSize(6); doc.setTextColor(180,100,100);
-            doc.text('Err', data.cell.x + data.cell.width/2,
-                            data.cell.y + data.cell.height/2,
-                            {align:'center', baseline:'middle'});
+            doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
           }
         },
       });
 
-      // ── REKOMENDASI TINDAKAN (halaman akhir) ─────────────────
       const stadiumsPresent = [0,1,2,3,4].filter(s => SC[s] > 0);
-
       if (stadiumsPresent.length > 0) {
         let recY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : y) + 10;
-        const LINE_H    = 4.3;   // mm per baris teks 7.5pt
+        const LINE_H    = 4.3;
         const REC_PAD   = 5;
-        const FOOTER_H  = 15;    // ruang untuk footer di bawah
-
-        // Fungsi: tambah halaman baru kalau tidak cukup ruang
+        const FOOTER_H  = 15;
         const ensureSpace = (needed) => {
-          if (recY + needed > PH - FOOTER_H) {
-            doc.addPage();
-            recY = 16;
-          }
+          if (recY + needed > PH - FOOTER_H) { doc.addPage(); recY = 16; }
         };
-
-        // Header seksi
         ensureSpace(18);
         doc.setFillColor(11, 38, 20);
         doc.rect(ML, recY, USABLE, 10, 'F');
@@ -1603,21 +1601,9 @@
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
         doc.text('REKOMENDASI TINDAKAN LAPANGAN', ML + USABLE/2, recY + 7, {align:'center'});
         recY += 14;
-
-        const recBg = {
-          0:[212,237,218], 1:[255,243,176], 2:[255,224,178],
-          3:[255,205,210], 4:[255,138,128],
-        };
-        const recFg = {
-          0:[26,92,42], 1:[122,85,0], 2:[122,58,0],
-          3:[123,0,0],  4:[120,0,0],
-        };
-        const recBorder = {
-          0:[26,92,42], 1:[184,125,0], 2:[230,81,0],
-          3:[198,40,40], 4:[183,28,28],
-        };
-
-        // Teks rekomendasi — versi bersih untuk PDF (tanpa emoji)
+        const recBg = { 0:[212,237,218], 1:[255,243,176], 2:[255,224,178], 3:[255,205,210], 4:[255,138,128] };
+        const recFg = { 0:[26,92,42], 1:[122,85,0], 2:[122,58,0], 3:[123,0,0], 4:[120,0,0] };
+        const recBorder = { 0:[26,92,42], 1:[184,125,0], 2:[230,81,0], 3:[198,40,40], 4:[183,28,28] };
         const REC_PDF = {
           0: `SEHAT - PEMELIHARAAN RUTIN:\n1. Lanjutkan pemupukan & perawatan standar sesuai jadwal blok.\n2. Aplikasi agen hayati Trichoderma spp. secara preventif di piringan setiap 6 bulan.\n3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat akar.\n4. Pastikan drainase lahan baik, tidak ada genangan di sekitar pokok.\n5. Pantau gejala awal (daun tombak, klorosis) di setiap putaran sensus berikutnya.`,
           1: `STADIUM 1 - TINDAKAN PREVENTIF DINI:\n1. Konfirmasi ulang & survei lebih detail dalam 2-4 minggu ke depan.\n2. Aplikasi agen hayati Trichoderma spp. 200 gr di piringan, campur rata dengan tanah.\n3. Aplikasi pupuk hayati mengandung mikoriza untuk memperkuat sistem perakaran.\n4. Periksa & perbaiki drainase - lahan tidak boleh tergenang air.\n5. Tingkatkan dosis pupuk K (Kalium) & Mg (Magnesium) untuk memperkuat ketahanan tanaman.\n6. Tandai & catat nomor pokok untuk pemantauan intensif pada sensus berikutnya.`,
@@ -1625,44 +1611,32 @@
           3: `STADIUM 3 - ERADIKASI SEGERA (SANITASI TOTAL):\n1. Tandai pokok dengan cat silang atau pita untuk operator alat berat.\n2. WAJIB gunakan Excavator (PC200/SK200): cabut & angkat SELURUH bonggol + akar utama.\n   JANGAN hanya tebang dengan Chainsaw - bonggol yang tersisa = sumber penularan ke pokok baru!\n3. Gali lubang min. kedalaman 1 m, luas 1.5 m x 1.5 m. Balik tanah agar spora terpapar sinar UV matahari.\n4. Cincang batang ketebalan 5-10 cm, sebar MERATA di permukaan - jangan ditumpuk.\n5. Tabur Dolomit + Trichoderma spp. 200-400 gr ke lubang, campur dengan tanah galian.\n6. Biarkan lubang BERA 6-12 bulan hingga dekomposisi selesai & inokulum jamur mati.\n7. Buat parit isolasi di sekeliling pokok sehat terdekat.\n8. Laporkan jumlah pokok eradikasi ke Asisten untuk perencanaan replanting.`,
           4: `STADIUM 4 - SANITASI LANJUTAN & PERSIAPAN REPLANTING:\n1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.\n2. Gali area bekas bonggol sedalam 80-100 cm - ambil sisa akar besar yang masih ada secara manual.\n3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.\n4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.\n5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.\n6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.\n7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
         };
-
         stadiumsPresent.forEach((s, idx) => {
           const st = STADIUM[s];
           const txt = REC_PDF[s];
-
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
           const lines = doc.splitTextToSize(txt, USABLE - REC_PAD * 2);
           const blockH = lines.length * LINE_H + 18;
-
           ensureSpace(blockH);
-
-          // Stadium header bar
           doc.setFillColor(...recBg[s]);
           doc.roundedRect(ML, recY, USABLE, 10, 1.5, 1.5, 'F');
           doc.setDrawColor(...recBorder[s]); doc.setLineWidth(0.4);
           doc.roundedRect(ML, recY, USABLE, 10, 1.5, 1.5, 'S');
-
           doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...recFg[s]);
           doc.text(`Stadium ${s} - ${st.label} (${st.code})`, ML + REC_PAD, recY + 7);
           doc.setFontSize(8);
           doc.text(`${SC[s]} pokok ditemukan`, ML + USABLE - REC_PAD, recY + 7, {align:'right'});
           recY += 12;
-
-          // Recommendation text
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(25, 25, 25);
           doc.text(lines, ML + REC_PAD, recY + 1);
           recY += lines.length * LINE_H + 7;
-
-          // Separator line (kecuali item terakhir)
           if (idx < stadiumsPresent.length - 1) {
             doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.25);
             doc.line(ML + 8, recY - 2, ML + USABLE - 8, recY - 2);
           }
         });
       }
-      // ── AKHIR REKOMENDASI ─────────────────────────────────────
-  
-      // ── FOOTER TIAP HALAMAN ──────────────────────────────────
+
       const totalPages = doc.internal.getNumberOfPages();
       for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
@@ -1675,7 +1649,6 @@
         doc.text('GanoKit Ver.1  |  Sistem Sensus Ganoderma — PPKS', ML, PH - 3);
         doc.text(`Halaman ${p} / ${totalPages}`, PW - MR, PH - 3, {align:'right'});
       }
-  
       showLoading(false);
       doc.save(filename);
       showToast(`✅ PDF berhasil didownload`);
@@ -1686,66 +1659,36 @@
     }
   }
   
-  // ── Helper: load URL gambar Drive → base64 ────────────────────
-  // Masalah pokok: sw.js di GitHub Pages mengintersep SEMUA request
-  // (fetch, script tag, blob iframe) dan gagal → CORS error / timeout.
-  //
-  // Solusi: unregister SW sementara sebelum fetch ke GAS, kemudian
-  // re-register setelah selesai. Tanpa SW, fetch cors credentials:omit
-  // ke GAS langsung bisa dibaca responsnya.
-  //
-  // Catatan: SW di-unregister < 1 detik, lalu langsung di-register ulang.
-  // Ini tidak mempengaruhi fungsi lain di luar proses loading foto.
-  // ── Helper: load URL gambar Drive → base64 (JSONP, bukan fetch) ──
-  // GAS mengembalikan MimeType.JAVASCRIPT untuk action=getImage
-  // → fetch() diblokir CORS. Script tag melewati CORS & Service Worker.
-  // ── Helper: load Drive image → base64 via Canvas (tanpa GAS, tanpa JSONP) ──
-  // Menggunakan Google CDN langsung — tidak ada CORB karena CORS header sudah OK
-  // untuk file yang di-share "Anyone with link"
   function loadImageBase64(url) {
     if (!url) return Promise.resolve(null);
-  
-    // data:image lokal — load ke Image untuk dapat dimensi
     if (url.startsWith('data:image')) {
       return new Promise(resolve => {
         const img = new Image();
         img.onload = () => resolve({ data: url, w: img.naturalWidth, h: img.naturalHeight });
-        img.onerror = () => resolve({ data: url, w: 4, h: 3 }); // fallback 4:3
+        img.onerror = () => resolve({ data: url, w: 4, h: 3 });
         img.src = url;
       });
     }
-  
     const driveId = (
       url.match(/\/d\/([a-zA-Z0-9_-]{10,})/) ||
       url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
     )?.[1];
     if (!driveId) return Promise.resolve(null);
-  
     const candidates = [
       `https://lh3.googleusercontent.com/d/${driveId}`,
       `https://drive.google.com/thumbnail?id=${driveId}&sz=w800`,
       `https://drive.google.com/uc?export=view&id=${driveId}`,
     ];
-  
     function tryUrl(idx) {
-      if (idx >= candidates.length) {
-        console.warn('[GanoKit] Semua URL gagal untuk fileId:', driveId);
-        return Promise.resolve(null);
-      }
+      if (idx >= candidates.length) { console.warn('[GanoKit] Semua URL gagal untuk fileId:', driveId); return Promise.resolve(null); }
       return new Promise(resolve => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-  
-        const timer = setTimeout(() => {
-          img.onload = img.onerror = null;
-          console.warn(`[GanoKit] Timeout URL[${idx}]:`, candidates[idx]);
-          resolve(tryUrl(idx + 1));
-        }, 20000);
-  
+        const timer = setTimeout(() => { img.onload = img.onerror = null; resolve(tryUrl(idx + 1)); }, 20000);
         img.onload = () => {
           clearTimeout(timer);
           try {
-            const MAX = 1200; // resolusi lebih tinggi agar foto PDF tajam
+            const MAX = 1200;
             let w = img.naturalWidth, h = img.naturalHeight;
             if (w > MAX || h > MAX) {
               if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -1754,98 +1697,64 @@
             const canvas = document.createElement('canvas');
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            console.log(`[GanoKit] OK URL[${idx}] ${w}×${h} fileId:`, driveId);
             resolve({ data: canvas.toDataURL('image/jpeg', 0.85), w, h });
-          } catch (e) {
-            console.warn(`[GanoKit] Canvas tainted URL[${idx}]:`, e.message);
-            resolve(tryUrl(idx + 1));
-          }
+          } catch (e) { resolve(tryUrl(idx + 1)); }
         };
-  
-        img.onerror = () => {
-          clearTimeout(timer);
-          resolve(tryUrl(idx + 1));
-        };
-  
+        img.onerror = () => { clearTimeout(timer); resolve(tryUrl(idx + 1)); };
         img.src = candidates[idx];
       });
     }
-  
     return tryUrl(0);
   }
   
-  // ── DOWNLOAD PDF LOCAL (dari IndexedDB) ───────────────────────
   async function downloadPdfLocal() {
     if (!allRecords || !allRecords.length) { showToast('⚠ Belum ada data lokal'); return; }
-  
     const kebun  = document.getElementById('flt-kebun').value;
     const divisi = document.getElementById('flt-divisi').value;
     const blok   = document.getElementById('flt-blok').value;
-  
+    // PDF selalu export SEMUA data yang difilter (bukan hanya halaman aktif)
     let filtered = allRecords;
     if (kebun)  filtered = filtered.filter(r => r.kebun  === kebun);
     if (divisi) filtered = filtered.filter(r => r.divisi === divisi);
     if (blok)   filtered = filtered.filter(r => r.blok   === blok);
-  
     if (!filtered.length) { showToast('⚠ Tidak ada data setelah filter'); return; }
-  
     const first = filtered[0];
     const meta  = { kebun: kebun||first.kebun||'—', divisi: divisi||first.divisi||'—', blok: blok||first.blok||'—', tanggal: first.tanggal||'' };
-  
-    // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
     const rows = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
-  
-    // Foto: base64 lokal sudah siap, drive URL perlu di-load
     showToast('⏳ Memuat foto…');
     const rawFotos = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
     const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
-  
     const now     = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     const label   = kebun ? `_${kebun}` : '';
     generatePDF(rows, fotos, meta, `Sensus_Ganoderma${label}_${dateStr}.pdf`);
   }
   
-  // ── DOWNLOAD PDF SERVER (dari data peta) ─────────────────────
   async function downloadPdfServer() {
     if (!serverData || !serverData.length) { showToast('⚠ Ambil data dari server dulu'); return; }
-  
     const kebun  = document.getElementById('peta-kebun').value  || serverData[0]?.['Kebun']  || '—';
     const divisi = document.getElementById('peta-divisi').value || serverData[0]?.['Divisi'] || '—';
     const blok   = document.getElementById('peta-blok').value   || serverData[0]?.['Blok']   || '—';
-  
     const meta = { kebun, divisi, blok, tanggal:'' };
-  
-    // rows: [no_pokok, baris, skor_stadium, keparahan, lat, lng]
     const rows = serverData.map(r => [
       r['No Pokok']||'', r['Baris']||'',
       r['Skor Stadium']||'', r['Keparahan']||'',
       r['Latitude']||'', r['Longitude']||''
     ]);
-  
-    // Hitung berapa baris yang punya foto
     const rawFotos  = serverData.map(r => { const lf = r['Link Foto']; return (lf && lf.startsWith('http')) ? lf : null; });
     const totalFoto = rawFotos.filter(Boolean).length;
-  
-    // Tampilkan loading + info foto
     showLoading(true);
-    if (totalFoto > 0) {
-      showToast(`⏳ Mengambil ${totalFoto} foto dari Google Drive…`, 8000);
-    }
-  
-    // Load foto satu per satu (bukan parallel) agar tidak throttle Drive
+    if (totalFoto > 0) { showToast(`⏳ Mengambil ${totalFoto} foto dari Google Drive…`, 8000); }
     const fotos = [];
     for (let i = 0; i < rawFotos.length; i++) {
       fotos.push(await loadImageBase64(rawFotos[i]));
     }
     showLoading(false);
-  
     const now     = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
     generatePDF(rows, fotos, meta, `Laporan_Ganoderma_${kebun}_${dateStr}.pdf`);
   }
   
-  // ── legacy Excel (tidak lagi dipakai, biarkan ada untuk referensi) ─
   function buildLocalRows(records) {
     return records.map(r=>{let foto='-'; if(r.link_foto&&r.link_foto.startsWith('http')) foto=r.link_foto; else if(r.foto) foto='Ada (lokal)'; return [r.kebun||'',r.divisi||'',r.blok||'',r.tanggal||'',r.no_pokok||'',r.baris||'',r.kondisi_pokok||'',r.daun_tombak||'Tidak',r.daun_klorosis||'Tidak',r.daun_sengkleh||'Tidak',r.daun_skirting||'Tidak',r.daun_tajuk||'Tidak',r.batang_miselia||'Tidak',r.batang_tubuh_buah||'Tidak',r.batang_lunak||'Tidak',r.akar_busuk||'Tidak',r.akar_miselia||'Tidak',r.skor_stadium??'',r.keparahan||'',r.lat||'',r.lng||'',foto];});
   }
