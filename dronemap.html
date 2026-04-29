@@ -4813,10 +4813,10 @@ async function generateDroneMapPDF(){
     page.drawLine({start:{x:SB_X+5,y:divY2},end:{x:SB_X+SB_W-5,y:divY2},thickness:0.5,color:rgb(0.75,0.75,0.75)});
 
     // KOMPAS profesional
+    var cmpR=15;
     var cmpAreaH=(yPos-divY2);
     var cmpX=SB_X+SB_W/2;
     var cmpY=Math.min(divY2+cmpAreaH*0.5,yPos-cmpR-10);
-    var cmpR=15;
     // Background circle
     page.drawCircle({x:cmpX,y:cmpY,size:cmpR,color:rgb(0.97,0.97,0.97),borderColor:rgb(0.7,0.7,0.7),borderWidth:1.2});
     // Inner circle
