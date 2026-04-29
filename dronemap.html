@@ -4359,6 +4359,16 @@ function _pdfSafeStr(s){
     .replace(/[^\x00-\xFF]/g,'?');
 }
 
+// =====================================================
+// PATCH — generateDroneMapPDF (ganti seluruh fungsi lama)
+// Perubahan:
+// 1. Skala adaptif: zoom ke bounding box polygon yang dipilih
+// 2. Koordinat grid lebih besar & tebal (size 8, warna gelap)
+// 3. Posisi benar: Lat (°S/°N) di KIRI, Lng (°E) di BAWAH
+// 4. Legenda lebih besar & tebal di semua bagian
+// 5. Inset peta di antara box skala dan statistik sensus
+// =====================================================
+
 async function generateDroneMapPDF(){
   try{
     if(typeof PDFLib==='undefined'){showToast('⚠ Library pdf-lib belum siap, tunggu sebentar');return;}
@@ -4370,15 +4380,14 @@ async function generateDroneMapPDF(){
     var pengecek=document.getElementById('pdfPengecek').value.trim();
     var includeFoto=photos.some(function(p){return p.georef&&p.visible&&p.corners;});
 
-    // Kumpulkan pilihan dari Export tab (bukan modal lagi)
-    // Semua polygon & line: baca toggle cetak & foto dari Export tab
-    var selectedIds=new Set();  // IDs semua measure yang dipilih untuk cetak
-    var selectedBkIds=new Set();  // IDs polygon yang dipilih untuk cetak
-    var selectedBkPolygons=[];    // [{id,label,verts,foto}] — hanya BK yang dipilih + foto
+    // ── Kumpulkan pilihan dari Export tab ──────────────
+    var selectedIds=new Set();
+    var selectedBkIds=new Set();
+    var selectedBkPolygons=[];
 
     measures.filter(function(m){return m.type==='polygon'||m.type==='line';}).forEach(function(m){
       var cb=document.querySelector('.expBkCb[data-id="'+m.id+'"]');
-      if(!cb||!cb.checked)return; // tidak dipilih
+      if(!cb||!cb.checked)return;
       selectedIds.add(m.id);
       if(m.type==='polygon'){
         selectedBkIds.add(m.id);
@@ -4392,48 +4401,70 @@ async function generateDroneMapPDF(){
       }
     });
 
-    // Ada foto jika ada BK polygon yang foto=true
     includeFoto=includeFoto&&selectedBkPolygons.some(function(bk){return bk.foto;});
 
-    // ── Kumpulkan semua koordinat ───────────────────────
-    var allLats=[],allLngs=[];
+    // ── PATCH 1: Bounding box ADAPTIF — hanya dari polygon/line yang dipilih ──
+    // Jika ada polygon/line yang dipilih, zoom ke mereka
+    // Jika tidak ada, fallback ke semua data
+    var bbLats=[],bbLngs=[];
+
+    // Prioritas: polygon & line yang dipilih
     measures.forEach(function(m){
-      if(m.coords)m.coords.forEach(function(c){allLats.push(c[1]);allLngs.push(c[0]);});
-      else if(m.type==='marker'){allLats.push(m.lat);allLngs.push(m.lng);}
+      if(!selectedIds.has(m.id)&&selectedIds.size>0)return; // skip jika tidak dipilih
+      if(m.coords)m.coords.forEach(function(c){bbLats.push(c[1]);bbLngs.push(c[0]);});
+      else if(m.type==='marker'){bbLats.push(m.lat);bbLngs.push(m.lng);}
     });
-    trees.forEach(function(t){allLats.push(t.lat);allLngs.push(t.lng);});
-    if(allLats.length===0){
+
+    // Tambahkan pokok hanya jika ada dalam area yang dipilih (optional — ikutkan semua jika tidak ada polygon)
+    if(bbLats.length===0){
+      trees.forEach(function(t){bbLats.push(t.lat);bbLngs.push(t.lng);});
+    }
+
+    // Fallback ke foto georef jika masih kosong
+    if(bbLats.length===0){
       photos.filter(function(p){return p.georef&&p.bounds;}).forEach(function(p){
-        allLats.push(p.bounds[0][0],p.bounds[1][0]);
-        allLngs.push(p.bounds[0][1],p.bounds[1][1]);
+        bbLats.push(p.bounds[0][0],p.bounds[1][0]);
+        bbLngs.push(p.bounds[0][1],p.bounds[1][1]);
       });
     }
-    if(allLats.length===0){showToast('⚠ Tidak ada data untuk dicetak');return;}
+    if(bbLats.length===0){showToast('⚠ Tidak ada data untuk dicetak');return;}
 
-    var minLat=Math.min.apply(null,allLats),maxLat=Math.max.apply(null,allLats);
-    var minLng=Math.min.apply(null,allLngs),maxLng=Math.max.apply(null,allLngs);
-    var dLat=(maxLat-minLat)*0.09||0.001,dLng=(maxLng-minLng)*0.09||0.001;
-    minLat-=dLat;maxLat+=dLat;minLng-=dLng;maxLng+=dLng;
+    var minLat=Math.min.apply(null,bbLats),maxLat=Math.max.apply(null,bbLats);
+    var minLng=Math.min.apply(null,bbLngs),maxLng=Math.max.apply(null,bbLngs);
+
+    // ADAPTIF margin — lebih kecil untuk objek kecil agar tidak terlalu banyak ruang kosong
+    // Margin proporsional dengan ukuran objek: 12% dari span
+    var dLat=(maxLat-minLat)||0.001;
+    var dLng=(maxLng-minLng)||0.001;
+    var marginFactor=0.12; // 12% margin di tiap sisi
+    minLat-=dLat*marginFactor; maxLat+=dLat*marginFactor;
+    minLng-=dLng*marginFactor; maxLng+=dLng*marginFactor;
 
     // ── PDF setup (A4 landscape 842x595) ─────────────────
     var pdfDoc=await PDFDoc.create();
     var page=pdfDoc.addPage([842,595]);
     var PW=842,PH=595;
 
-    // Layout — pdf-lib: Y=0 bottom, Y=595 top
-    var MAP_X=40,MAP_Y=20,MAP_W=510,MAP_H=555;
-    var SB_X=MAP_X+MAP_W+12,SB_W=PW-SB_X-8;
+    // Layout
+    // Perbesar area peta dan sisakan ruang untuk label koordinat yang lebih besar
+    var MAP_X=52,MAP_Y=24,MAP_W=500,MAP_H=547;
+    var SB_X=MAP_X+MAP_W+14,SB_W=PW-SB_X-8;
     var cosLat=Math.cos((minLat+maxLat)/2*Math.PI/180);
-    // Sync globals untuk renderAerialToCanvas
     _pdfMapX=MAP_X;_pdfMapY=MAP_Y;
 
+    // PATCH 1: project() menggunakan bounding box ADAPTIF dari polygon yang dipilih
+    // Scale seragam (aspect ratio terjaga) dengan fit ke area peta
+    var scaleX=MAP_W/((maxLng-minLng)*cosLat);
+    var scaleY=MAP_H/(maxLat-minLat);
+    var mapScale=Math.min(scaleX,scaleY)*0.88; // 88% agar ada margin visual di dalam frame
+    var mapCX=MAP_X+MAP_W/2;
+    var mapCY=MAP_Y+MAP_H/2;
+    var midLat=(minLat+maxLat)/2;
+    var midLng=(minLng+maxLng)/2;
+
     function project(lat,lng){
-      var scaleX=MAP_W/((maxLng-minLng)*cosLat);
-      var scaleY=MAP_H/(maxLat-minLat);
-      var sc=Math.min(scaleX,scaleY)*0.9;
-      var cX=MAP_X+MAP_W/2,cY=MAP_Y+MAP_H/2;
-      var x=cX+(lng-(minLng+maxLng)/2)*cosLat*sc;
-      var y=cY+(lat-(minLat+maxLat)/2)*sc; // Y increases upward
+      var x=mapCX+(lng-midLng)*cosLat*mapScale;
+      var y=mapCY+(lat-midLat)*mapScale;
       return[x,y];
     }
 
@@ -4442,7 +4473,7 @@ async function generateDroneMapPDF(){
       return r?{r:parseInt(r[1],16)/255,g:parseInt(r[2],16)/255,b:parseInt(r[3],16)/255}:{r:0,g:0,b:0};
     }
 
-    // Scanline fill polygon (like MiniMapGIS)
+    // Scanline fill polygon
     function fillPolygon(pts,fillRgb,opacity){
       var allY=pts.map(function(p){return p[1];});
       var minYP=Math.min.apply(null,allY),maxYP=Math.max.apply(null,allY);
@@ -4483,43 +4514,37 @@ async function generateDroneMapPDF(){
       }
     }
 
-    // ── HEADER MINIMAL (tanpa judul — sudah ada di sidebar) ─
+    // ── EMBED FONTS ─────────────────────────────────────
     var fontBold=await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
     var fontNorm=await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-    // Hanya tanggal & nama app di sudut kanan atas (kecil)
+
+    // ── Tanggal kecil di sudut kanan atas ───────────────
     var tglStr='Dicetak: '+new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})+'  |  DroneMap v3 Pro';
-    page.drawText(tglStr,{x:PW-10,y:PH-9,size:6,color:rgb(0.55,0.55,0.55),font:fontNorm});
+    page.drawText(tglStr,{x:PW-10-(tglStr.length*5.5*0.45),y:PH-9,size:6.5,color:rgb(0.5,0.5,0.5),font:fontNorm});
 
-    // ── MAP FRAME (latar putih) ─────────────────────────
-    // Background putih dulu, lalu border
+    // ── MAP FRAME ────────────────────────────────────────
     page.drawRectangle({x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H,color:rgb(1,1,1)});
-    page.drawRectangle({x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1.5});
+    page.drawRectangle({x:MAP_X,y:MAP_Y,width:MAP_W,height:MAP_H,borderColor:rgb(0.15,0.15,0.15),borderWidth:2});
 
-    // ── EMBED FOTO UDARA — satu canvas gabungan, clip per blok ─
+    // ── EMBED FOTO UDARA ─────────────────────────────────
     if(includeFoto){
       try{
-        // RS=4 → canvas ~288 DPI (mendekati print quality 300 DPI)
-        // Naik dari RS=3 (216 DPI) → jauh lebih tajam di PDF viewer & printer
         var RS_AERIAL=4;
         var aCanvas=document.createElement('canvas');
         aCanvas.width=MAP_W*RS_AERIAL; aCanvas.height=MAP_H*RS_AERIAL;
         var actx=aCanvas.getContext('2d');
         actx.imageSmoothingEnabled=true; actx.imageSmoothingQuality='high';
-        // Putih dulu SEBELUM drawing — area kosong = putih (WAJIB untuk JPEG, cegah area hitam)
         actx.fillStyle='#ffffff';
         actx.fillRect(0,0,aCanvas.width,aCanvas.height);
 
-        // Konversi PDF point → piksel canvas (skala RS_AERIAL)
         function _a2cv(pt){
           return [(pt[0]-MAP_X)*RS_AERIAL,(MAP_H-(pt[1]-MAP_Y))*RS_AERIAL];
         }
-        // Gambar satu foto ke canvas actx dengan clip polygon opsional
         async function _drawPhotoToCanvas(photo,clipVerts){
           var img=await new Promise(function(r,j){
             var m=new Image();m.onload=function(){r(m);};m.onerror=j;m.src=photo.src;
           });
           actx.save();
-          // Clip ke polygon blok (save/restore agar clip tidak bocor ke blok berikutnya)
           if(clipVerts&&clipVerts.length>=3){
             actx.beginPath();
             clipVerts.forEach(function(v,i){
@@ -4528,7 +4553,6 @@ async function generateDroneMapPDF(){
             });
             actx.closePath(); actx.clip();
           }
-          // Affine transform foto → canvas
           var oLat=photo.offsetLat||0,oLng=photo.offsetLng||0;
           var tlC=_a2cv(project(photo.corners.tl.lat+oLat,photo.corners.tl.lng+oLng));
           var trC=_a2cv(project(photo.corners.tr.lat+oLat,photo.corners.tr.lng+oLng));
@@ -4541,11 +4565,10 @@ async function generateDroneMapPDF(){
           actx.imageSmoothingEnabled=true; actx.imageSmoothingQuality='high';
           actx.transform(ta,tb,tc,td,tlC[0],tlC[1]);
           actx.drawImage(img,0,0,W2,H2);
-          actx.restore(); // hapus clip & transform untuk blok berikutnya
+          actx.restore();
         }
 
         if(selectedBkPolygons.length>0){
-          // Render tiap BK yang foto=true ke canvas gabungan (clip berbeda tiap blok)
           for(var bki=0;bki<selectedBkPolygons.length;bki++){
             var bkPoly=selectedBkPolygons[bki];
             if(!bkPoly.foto)continue;
@@ -4554,8 +4577,7 @@ async function generateDroneMapPDF(){
             if(ownerP)await _drawPhotoToCanvas(ownerP,bkPoly.verts);
           }
         } else {
-          // Tidak ada BK — render semua foto tanpa clip
-          showToast('⏳ Me-render foto udara... (resolusi 3×)');
+          showToast('⏳ Me-render foto udara...');
           var sortedForPdf=photos.filter(function(p){return p.georef&&p.visible&&p.corners&&p.src;})
             .slice().sort(function(a,b){return(a.zOrder||0)-(b.zOrder||0);});
           for(var pi2=0;pi2<sortedForPdf.length;pi2++){
@@ -4563,9 +4585,7 @@ async function generateDroneMapPDF(){
           }
         }
 
-        // Export sebagai JPEG 92% — format NATIVE di PDF, lebih tajam & file lebih kecil dari PNG
-        // Background sudah putih (fillRect di atas) → tidak ada area hitam
-        showToast('⏳ Encoding foto ke PDF (JPEG 92%)...');
+        showToast('⏳ Encoding foto ke PDF...');
         var aDataUrl=aCanvas.toDataURL('image/jpeg',0.92);
         var aB64=aDataUrl.split(',')[1];
         var aBytes=Uint8Array.from(atob(aB64),function(c){return c.charCodeAt(0);});
@@ -4577,24 +4597,71 @@ async function generateDroneMapPDF(){
       }
     }
 
-    // ── Grid garis koordinat — DIGAMBAR SETELAH FOTO agar selalu terlihat ──
-    // Dengan urutan ini grid tampil di atas foto aerial maupun di area putih
+    // ── PATCH 2 & 3: Grid koordinat — ukuran lebih besar, warna tebal ──
+    // BENAR: Latitude (°N/°S) di KIRI, Longitude (°E/°W) di BAWAH
     var nGrid=4;
-    var gridCol=rgb(0.72,0.72,0.72);
-    for(var gi=0;gi<=nGrid;gi++){
-      var lng=minLng+(maxLng-minLng)*gi/nGrid;
-      var gPt=project((minLat+maxLat)/2,lng);
-      if(gPt[0]>=MAP_X&&gPt[0]<=MAP_X+MAP_W){
-        page.drawLine({start:{x:gPt[0],y:MAP_Y},end:{x:gPt[0],y:MAP_Y+MAP_H},thickness:0.5,color:gridCol,dashArray:[3,3],dashPhase:0,opacity:0.7});
-        page.drawText(lng.toFixed(4)+'°E',{x:gPt[0]-12,y:MAP_Y-11,size:6,color:rgb(0.3,0.3,0.3),font:fontNorm});
-      }
-      var lat2=minLat+(maxLat-minLat)*gi/nGrid;
-      var gPtL=project(lat2,minLng);
-      if(gPtL[1]>=MAP_Y&&gPtL[1]<=MAP_Y+MAP_H){
-        page.drawLine({start:{x:MAP_X,y:gPtL[1]},end:{x:MAP_X+MAP_W,y:gPtL[1]},thickness:0.5,color:gridCol,dashArray:[3,3],dashPhase:0,opacity:0.7});
-        page.drawText(lat2.toFixed(4)+'°N',{x:MAP_X-38,y:gPtL[1]-3,size:6,color:rgb(0.3,0.3,0.3),font:fontNorm});
-      }
+    var gridLineCol=rgb(0.6,0.6,0.6);
+    // PATCH 2: font size diperbesar dari 6 → 8.5, warna lebih gelap
+    var gridFontSize=8.5;
+    var gridColor=rgb(0.1,0.1,0.1); // hitam pekat
+
+    // Hitung interval grid yang "cantik" (rounded)
+    var rawLngStep=(maxLng-minLng)/nGrid;
+    var rawLatStep=(maxLat-minLat)/nGrid;
+    function niceStep(s){
+      var mag=Math.pow(10,Math.floor(Math.log10(s)));
+      var norm=s/mag;
+      var nice=norm<=1.5?1:norm<=3?2:norm<=7?5:10;
+      return nice*mag;
     }
+    var lngStep=niceStep(rawLngStep);
+    var latStep=niceStep(rawLatStep);
+    var startLng=Math.ceil(minLng/lngStep)*lngStep;
+    var startLat=Math.ceil(minLat/latStep)*latStep;
+
+    // Kliping grid ke dalam frame peta
+    // Garis vertikal (Longitude) — label di BAWAH peta
+    var lngVal=startLng;
+    while(lngVal<=maxLng+lngStep*0.01){
+      var gPt=project(midLat,lngVal);
+      if(gPt[0]>=MAP_X+2&&gPt[0]<=MAP_X+MAP_W-2){
+        page.drawLine({start:{x:gPt[0],y:MAP_Y},end:{x:gPt[0],y:MAP_Y+MAP_H},thickness:0.4,color:gridLineCol,dashArray:[4,4],dashPhase:0,opacity:0.65});
+        // PATCH 3: Longitude di BAWAH — posisi Y di bawah garis bawah frame
+        var lngLabel=lngVal.toFixed(4)+'°E';
+        var lngLabelW=lngLabel.length*gridFontSize*0.52;
+        page.drawText(lngLabel,{
+          x:gPt[0]-lngLabelW/2,
+          y:MAP_Y-14, // 14pt di bawah frame
+          size:gridFontSize,
+          color:gridColor,
+          font:fontBold
+        });
+      }
+      lngVal=Math.round((lngVal+lngStep)*1e8)/1e8;
+    }
+
+    // Garis horizontal (Latitude) — label di KIRI peta
+    var latVal=startLat;
+    while(latVal<=maxLat+latStep*0.01){
+      var gPtL=project(latVal,midLng);
+      if(gPtL[1]>=MAP_Y+2&&gPtL[1]<=MAP_Y+MAP_H-2){
+        page.drawLine({start:{x:MAP_X,y:gPtL[1]},end:{x:MAP_X+MAP_W,y:gPtL[1]},thickness:0.4,color:gridLineCol,dashArray:[4,4],dashPhase:0,opacity:0.65});
+        // PATCH 3: Latitude di KIRI — label rata kanan ke tepi kiri frame
+        // Standar kartografi: Lat di kiri, Lng di bawah/atas ✓
+        var latLabel=latVal>=0?latVal.toFixed(4)+'°N':Math.abs(latVal).toFixed(4)+'°S';
+        var latLabelW=latLabel.length*gridFontSize*0.52;
+        page.drawText(latLabel,{
+          x:MAP_X-latLabelW-4, // 4pt dari frame kiri
+          y:gPtL[1]-gridFontSize/2+1,
+          size:gridFontSize,
+          color:gridColor,
+          font:fontBold
+        });
+      }
+      latVal=Math.round((latVal+latStep)*1e8)/1e8;
+    }
+
+    // ── Pokok sawit ──────────────────────────────────────
     var treeColors={normal:{r:0.18,g:0.63,b:0.26},sakit:{r:0.94,g:0.65,b:0},mati:{r:0.97,g:0.32,b:0.29},kosong:{r:0.49,g:0.52,b:0.56}};
     trees.forEach(function(t){
       var pt=project(t.lat,t.lng);
@@ -4603,7 +4670,7 @@ async function generateDroneMapPDF(){
       page.drawCircle({x:pt[0],y:pt[1],size:1.4,color:rgb(col.r,col.g,col.b)});
     });
 
-    // ── GAMBAR POLYGON & POLYLINE ───────────────────────
+    // ── GAMBAR POLYGON & POLYLINE ─────────────────────────
     var polLeg=[];
     measures.forEach(function(m){
       if(m.type==='polygon'&&m.coords&&m.coords.length>=3){
@@ -4623,7 +4690,6 @@ async function generateDroneMapPDF(){
           var bkEntry=selectedBkPolygons.find(function(b){return b.id===m.id;});
           thisBkFoto=bkEntry?bkEntry.foto:false;
         }
-        // Gunakan per-blok style
         var bStyle=_getBlokStyle(m);
         var sHex=bStyle.batasColor;
         var fHex=bStyle.fillColor;
@@ -4631,9 +4697,7 @@ async function generateDroneMapPDF(){
         var pts=m.coords.map(function(c){return project(c[1],c[0]);});
         pts.push(pts[0]);
         if(showBatas){
-          if(!thisBkFoto){
-            fillPolygon(pts,fRgb,0.25);
-          }
+          if(!thisBkFoto){fillPolygon(pts,fRgb,0.25);}
           var strokeW=bStyle.batasThickness;
           var dashArr=bStyle.batasDash==='dashed'?[6,4]:bStyle.batasDash==='dotted'?[1.5,3.5]:null;
           strokePolygonStyled(pts,sRgb,strokeW,dashArr);
@@ -4646,15 +4710,16 @@ async function generateDroneMapPDF(){
           var cx=lpt[0],cy=lpt[1];
           if(cx>=MAP_X&&cx<=MAP_X+MAP_W&&cy>=MAP_Y&&cy<=MAP_Y+MAP_H){
             var lbl=_pdfSafeStr(m.label||'Blok');
-            var fs=bStyle.labelSize||6;
-            var charW=fs*0.55;
+            // PATCH 4: label lebih besar (min 7pt)
+            var fs=Math.max(bStyle.labelSize||7,7);
+            var charW=fs*0.56;
             var tw=lbl.length*charW;
-            var boxH=fs+6;
-            var boxX=cx-tw/2-4;
-            var lblX=cx-lbl.length*charW/2;
-            page.drawRectangle({x:boxX,y:cy-2,width:tw+8,height:boxH,color:rgb(1,1,1),opacity:0.92});
+            var boxH=fs+7;
+            var boxX=cx-tw/2-5;
+            var lblX=cx-tw/2;
+            page.drawRectangle({x:boxX,y:cy-2,width:tw+10,height:boxH,color:rgb(1,1,1),opacity:0.93});
             var lbRgb=hexToRgb(bStyle.labelColor||'#1a4d00');
-            page.drawRectangle({x:boxX,y:cy-2,width:tw+8,height:boxH,borderColor:rgb(lbRgb.r,lbRgb.g,lbRgb.b),borderWidth:0.5,opacity:0.6});
+            page.drawRectangle({x:boxX,y:cy-2,width:tw+10,height:boxH,borderColor:rgb(lbRgb.r,lbRgb.g,lbRgb.b),borderWidth:0.7,opacity:0.7});
             page.drawText(lbl,{x:lblX,y:cy+3,size:fs,color:rgb(lbRgb.r,lbRgb.g,lbRgb.b),font:fontBold});
           }
         }
@@ -4688,112 +4753,207 @@ async function generateDroneMapPDF(){
       }
     });
 
-    // ── SIDEBAR KANAN ─────────────────────────────────
-    var yPos=MAP_Y+MAP_H; // mulai dari atas area peta
+    // ── SIDEBAR KANAN ─────────────────────────────────────
+    var yPos=MAP_Y+MAP_H;
 
-    // --- BOX 1: JUDUL ---
-    var box1H=subtitle?58:46;
-    page.drawRectangle({x:SB_X,y:yPos-box1H,width:SB_W,height:box1H,color:rgb(0.98,0.99,0.98),borderColor:rgb(0.2,0.2,0.2),borderWidth:1.2});
-    // Header strip hijau tipis di atas kotak judul
-    page.drawRectangle({x:SB_X,y:yPos-7,width:SB_W,height:7,color:rgb(0.1,0.42,0.19)});
-    var tSize=title.length>28?7.5:title.length>20?9:11;
-    var titleY=subtitle?(yPos-22):(yPos-box1H/2-tSize/2+2);
-    page.drawText(title,{x:SB_X+SB_W/2-(title.length*tSize*0.3),y:titleY,size:tSize,color:rgb(0,0,0),font:fontBold});
+    // ── PATCH 4: BOX 1 — JUDUL (lebih besar & tebal) ─────
+    var box1H=subtitle?64:52;
+    page.drawRectangle({x:SB_X,y:yPos-box1H,width:SB_W,height:box1H,color:rgb(0.97,0.99,0.97),borderColor:rgb(0.15,0.15,0.15),borderWidth:1.5});
+    // Header strip hijau lebih tebal
+    page.drawRectangle({x:SB_X,y:yPos-9,width:SB_W,height:9,color:rgb(0.08,0.38,0.16)});
+    // PATCH 4: judul lebih besar
+    var tSize=title.length>28?9:title.length>20?11:13;
+    var titleY=subtitle?(yPos-25):(yPos-box1H/2-tSize/2+2);
+    var titleW=title.length*tSize*0.55;
+    page.drawText(title,{x:SB_X+SB_W/2-titleW/2,y:titleY,size:tSize,color:rgb(0,0,0),font:fontBold});
     if(subtitle){
-      page.drawText(subtitle,{x:SB_X+SB_W/2-(subtitle.length*6.5*0.29),y:yPos-37,size:7,color:rgb(0.35,0.35,0.35),font:fontNorm});
+      var subW=subtitle.length*8*0.52;
+      page.drawText(subtitle,{x:SB_X+SB_W/2-subW/2,y:yPos-42,size:8,color:rgb(0.25,0.25,0.25),font:fontBold});
     }
     yPos-=box1H;
 
-    // --- BOX 2: KOMPAS (atas) + SKALA (bawah) ---
-    // Box lebih tinggi agar kompas+label U tidak mepet ke kotak judul
-    var box2H=110;
-    var divY=yPos-box2H/2; // garis pembagi tepat di tengah box2
-    page.drawRectangle({x:SB_X,y:yPos-box2H,width:SB_W,height:box2H,color:rgb(1,1,1),borderColor:rgb(0.2,0.2,0.2),borderWidth:1.2});
-    // Divider line
-    page.drawLine({start:{x:SB_X+4,y:divY},end:{x:SB_X+SB_W-4,y:divY},thickness:0.5,color:rgb(0.75,0.75,0.75)});
+    // ── PATCH 4: BOX 2 — KOMPAS + SKALA (lebih besar) ────
+    var box2H=118;
+    var divY=yPos-box2H/2;
+    page.drawRectangle({x:SB_X,y:yPos-box2H,width:SB_W,height:box2H,color:rgb(1,1,1),borderColor:rgb(0.15,0.15,0.15),borderWidth:1.5});
+    page.drawLine({start:{x:SB_X+5,y:divY},end:{x:SB_X+SB_W-5,y:divY},thickness:0.7,color:rgb(0.7,0.7,0.7)});
 
-    // ATAS: Kompas — area atas = yPos ke divY, center di tengahnya
+    // KOMPAS — area atas
     var cmpAreaTop=yPos,cmpAreaBot=divY;
-    var cmpAreaH=cmpAreaTop-cmpAreaBot; // tinggi area kompas (pt)
+    var cmpAreaH=cmpAreaTop-cmpAreaBot;
     var cmpX=SB_X+SB_W/2;
-    // Center kompas di area atas, sisakan 5pt untuk huruf U di atas lingkaran
-    var cmpY=cmpAreaBot+(cmpAreaH-5)/2; // center lingkaran
-    var cmpR=16; // radius lingkaran kompas
-    page.drawCircle({x:cmpX,y:cmpY,size:cmpR,borderColor:rgb(0,0,0),borderWidth:1.2});
-    // Panah Utara (terisi hitam)
-    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY+cmpR-2},thickness:2.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-2},end:{x:cmpX-4,y:cmpY+cmpR-8},thickness:2.5,color:rgb(0,0,0)});
-    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-2},end:{x:cmpX+4,y:cmpY+cmpR-8},thickness:2.5,color:rgb(0,0,0)});
-    // Panah Selatan (abu)
-    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY-(cmpR-2)},thickness:1.8,color:rgb(0.65,0.65,0.65)});
-    // Huruf U — di ATAS lingkaran, dalam area atas, tidak menyentuh border
-    var uY=cmpY+cmpR+3; // 3pt di atas top lingkaran
-    if(uY>cmpAreaTop-4)uY=cmpAreaTop-4; // clamp agar tidak melewati border atas
-    page.drawText('U',{x:cmpX-3.5,y:uY,size:8,color:rgb(0,0,0),font:fontBold});
+    var cmpY=cmpAreaBot+cmpAreaH*0.5;
+    var cmpR=19; // sedikit lebih besar
+    page.drawCircle({x:cmpX,y:cmpY,size:cmpR,borderColor:rgb(0,0,0),borderWidth:1.5});
+    // Panah Utara
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY+cmpR-3},thickness:3,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-3},end:{x:cmpX-5,y:cmpY+cmpR-10},thickness:3,color:rgb(0,0,0)});
+    page.drawLine({start:{x:cmpX,y:cmpY+cmpR-3},end:{x:cmpX+5,y:cmpY+cmpR-10},thickness:3,color:rgb(0,0,0)});
+    // Panah Selatan
+    page.drawLine({start:{x:cmpX,y:cmpY},end:{x:cmpX,y:cmpY-(cmpR-3)},thickness:2,color:rgb(0.6,0.6,0.6)});
+    // Huruf U — lebih besar
+    var uY=Math.min(cmpY+cmpR+4, cmpAreaTop-5);
+    page.drawText('U',{x:cmpX-4.5,y:uY,size:10,color:rgb(0,0,0),font:fontBold});
 
-    // BAWAH: Skala bar — area bawah = divY ke (yPos-box2H)
-    var scaleAreaTop=divY,scaleAreaBot=yPos-box2H;
-    var scaleAreaH=scaleAreaTop-scaleAreaBot;
-    var realDist=(maxLng-minLng)*cosLat*111320;
-    var pdfWidthPt=MAP_W;
-    var scaleRatio=Math.round(realDist/pdfWidthPt*72*2.54/100*100);
-    var s10=Math.pow(10,Math.floor(Math.log10(Math.max(scaleRatio,1))));
-    scaleRatio=Math.round(scaleRatio/s10)*s10;
-    var scaleStr='Skala 1 : '+(scaleRatio||6000).toLocaleString('id-ID');
-    // Posisi Y: teks skala di atas bar, bar di tengah area bawah
-    var barY=scaleAreaBot+scaleAreaH*0.42; // garis bar ~42% dari bawah area skala
-    var sbX=SB_X+10,sbW=SB_W-20;
-    // *** TEKS SKALA: rata tengah yang presisi ***
-    // Lebar estimasi Helvetica Bold 7pt ≈ 0.52×size per karakter
-    var scaleTxtW=scaleStr.length*7*0.52;
-    var scaleTxtX=SB_X+SB_W/2-scaleTxtW/2;
-    page.drawText(scaleStr,{x:scaleTxtX,y:barY+10,size:7,color:rgb(0,0,0),font:fontBold});
+    // SKALA — area bawah
+    var scaleAreaBot=yPos-box2H;
+    var scaleAreaH=divY-scaleAreaBot;
+    // PATCH 1: Hitung skala dari project() yang baru (adaptif)
+    // realDistPerPt = jarak nyata (meter) per PDF point
+    var realDistPerPt=(1/mapScale)/cosLat*111320; // meter per PDF point (di equator equiv)
+    // Buat nilai skala yang "cantik"
+    var rawScaleRatio=Math.round(realDistPerPt*72/25.4*1000); // 1pt = 1/72 inch = 25.4/72 mm
+    // Round ke angka cantik
+    function niceScaleRatio(r){
+      var mag=Math.pow(10,Math.floor(Math.log10(Math.max(r,1))));
+      var norm=r/mag;
+      var nice=norm<1.5?1:norm<3.5?2:norm<7.5?5:10;
+      return nice*mag;
+    }
+    var scaleRatio=niceScaleRatio(rawScaleRatio)||1000;
+    var scaleStr='Skala 1 : '+scaleRatio.toLocaleString('id-ID');
+    var barY=scaleAreaBot+scaleAreaH*0.55;
+    var sbX=SB_X+8,sbW=SB_W-16;
+    // PATCH 4: skala lebih besar
+    var scaleStrW=scaleStr.length*8.5*0.52;
+    page.drawText(scaleStr,{x:SB_X+SB_W/2-scaleStrW/2,y:barY+12,size:8.5,color:rgb(0,0,0),font:fontBold});
     // Bar skala
-    page.drawLine({start:{x:sbX,y:barY},end:{x:sbX+sbW,y:barY},thickness:1.8,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX,y:barY-5},end:{x:sbX,y:barY+5},thickness:1.8,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX+sbW/2,y:barY-3.5},end:{x:sbX+sbW/2,y:barY+3.5},thickness:1.2,color:rgb(0,0,0)});
-    page.drawLine({start:{x:sbX+sbW,y:barY-5},end:{x:sbX+sbW,y:barY+5},thickness:1.8,color:rgb(0,0,0)});
-    // Label angka bar: rata tengah di bawah tiap titik
-    var lbl0='0',lblMid=(scaleRatio/2/1000).toFixed(1)+'km',lblEnd=(scaleRatio/1000).toFixed(1)+'km';
-    page.drawText(lbl0,{x:sbX-lbl0.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
-    page.drawText(lblMid,{x:sbX+sbW/2-lblMid.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
-    page.drawText(lblEnd,{x:sbX+sbW-lblEnd.length*3,y:barY-9,size:6,color:rgb(0,0,0),font:fontNorm});
+    page.drawLine({start:{x:sbX,y:barY},end:{x:sbX+sbW,y:barY},thickness:2,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX,y:barY-6},end:{x:sbX,y:barY+6},thickness:2,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW/2,y:barY-4},end:{x:sbX+sbW/2,y:barY+4},thickness:1.5,color:rgb(0,0,0)});
+    page.drawLine({start:{x:sbX+sbW,y:barY-6},end:{x:sbX+sbW,y:barY+6},thickness:2,color:rgb(0,0,0)});
+    // Label skala (meter/km) — hitung dari scaleRatio
+    // sbW pt = scaleRatio meter di dunia nyata
+    var halfScaleM=scaleRatio/2;
+    var halfScaleStr=halfScaleM>=1000?(halfScaleM/1000).toFixed(1)+'km':halfScaleM+'m';
+    var fullScaleStr=scaleRatio>=1000?(scaleRatio/1000).toFixed(1)+'km':scaleRatio+'m';
+    page.drawText('0',{x:sbX-3,y:barY-11,size:7,color:rgb(0,0,0),font:fontBold});
+    page.drawText(halfScaleStr,{x:sbX+sbW/2-halfScaleStr.length*3.5,y:barY-11,size:7,color:rgb(0,0,0),font:fontBold});
+    page.drawText(fullScaleStr,{x:sbX+sbW-fullScaleStr.length*3.5,y:barY-11,size:7,color:rgb(0,0,0),font:fontBold});
     yPos-=box2H;
 
-    // --- BOX 3: STATISTIK SENSUS (hanya jika ada data sensus) ---
+    // ── PATCH 5: INSET PETA ────────────────────────────────
+    // Mini-map menampilkan letak area yang diprint terhadap konteks yang lebih luas
+    // Posisi: antara box skala (yPos sekarang) dan statistik sensus (atau legenda)
+    var insetH=90;
+    var insetW=SB_W;
+    page.drawRectangle({x:SB_X,y:yPos-insetH,width:insetW,height:insetH,color:rgb(0.93,0.97,1.0),borderColor:rgb(0.15,0.15,0.15),borderWidth:1.5});
+    // Header inset
+    page.drawRectangle({x:SB_X,y:yPos-11,width:insetW,height:11,color:rgb(0.08,0.38,0.16)});
+    page.drawText('INSET PETA',{x:SB_X+insetW/2-25,y:yPos-8,size:7.5,color:rgb(1,1,1),font:fontBold});
+
+    // Area gambar inset (di dalam box, exclude header)
+    var insX=SB_X+4,insY=yPos-insetH+4,insW=insetW-8,insH=insetH-15;
+
+    // Tentukan extent inset: 5× lebih luas dari area yang diprint
+    var insetExpand=5.0;
+    var insetSpanLat=(maxLat-minLat)*insetExpand;
+    var insetSpanLng=(maxLng-minLng)*insetExpand;
+    var insetMinLat=midLat-insetSpanLat/2;
+    var insetMaxLat=midLat+insetSpanLat/2;
+    var insetMinLng=midLng-insetSpanLng/2;
+    var insetMaxLng=midLng+insetSpanLng/2;
+    var insetCosLat=Math.cos(midLat*Math.PI/180);
+
+    function projectInset(lat,lng){
+      var scIX=insW/((insetMaxLng-insetMinLng)*insetCosLat);
+      var scIY=insH/(insetMaxLat-insetMinLat);
+      var scI=Math.min(scIX,scIY)*0.88;
+      var cIX=insX+insW/2;var cIY=insY+insH/2;
+      var x=cIX+(lng-midLng)*insetCosLat*scI;
+      var y=cIY+(lat-midLat)*scI;
+      return[x,y];
+    }
+
+    // Gambar semua polygon yang ada sebagai konteks (abu-abu tipis)
+    measures.forEach(function(m){
+      if(m.type!=='polygon'||!m.coords||m.coords.length<3)return;
+      var ipts=m.coords.map(function(c){return projectInset(c[1],c[0]);});
+      ipts.push(ipts[0]);
+      for(var i=0;i<ipts.length-1;i++){
+        // Cek batas inset
+        var ax=ipts[i][0],ay=ipts[i][1],bx=ipts[i+1][0],by=ipts[i+1][1];
+        if(Math.max(ax,bx)>=insX&&Math.min(ax,bx)<=insX+insW&&
+           Math.max(ay,by)>=insY&&Math.min(ay,by)<=insY+insH){
+          page.drawLine({start:{x:ax,y:ay},end:{x:bx,y:by},thickness:0.6,color:rgb(0.5,0.5,0.5),opacity:0.7});
+        }
+      }
+    });
+
+    // Gambar polygon YANG DIPILIH dengan warna cerah
+    measures.forEach(function(m){
+      if(m.type!=='polygon'||!m.coords||m.coords.length<3)return;
+      if(selectedIds.size>0&&!selectedIds.has(m.id))return;
+      var bStyle=_getBlokStyle(m);
+      var sRgbI=hexToRgb(bStyle.batasColor);
+      var ipts=m.coords.map(function(c){return projectInset(c[1],c[0]);});
+      ipts.push(ipts[0]);
+      for(var i=0;i<ipts.length-1;i++){
+        var ax=ipts[i][0],ay=ipts[i][1],bx=ipts[i+1][0],by=ipts[i+1][1];
+        if(Math.max(ax,bx)>=insX&&Math.min(ax,bx)<=insX+insW&&
+           Math.max(ay,by)>=insY&&Math.min(ay,by)<=insY+insH){
+          page.drawLine({start:{x:ax,y:ay},end:{x:bx,y:by},thickness:1.5,color:rgb(sRgbI.r,sRgbI.g,sRgbI.b),opacity:1});
+        }
+      }
+    });
+
+    // Kotak merah "area yang diprint" (extent dari bounding box adaptif)
+    var tl_i=projectInset(maxLat,minLng);
+    var tr_i=projectInset(maxLat,maxLng);
+    var br_i=projectInset(minLat,maxLng);
+    var bl_i=projectInset(minLat,minLng);
+    // Klip ke dalam area inset
+    function clampPt(pt){return[Math.max(insX,Math.min(insX+insW,pt[0])),Math.max(insY,Math.min(insY+insH,pt[1]))];}
+    var tl_c=clampPt(tl_i),tr_c=clampPt(tr_i),br_c=clampPt(br_i),bl_c=clampPt(bl_i);
+    var extPts=[[tl_c,tr_c],[tr_c,br_c],[br_c,bl_c],[bl_c,tl_c]];
+    extPts.forEach(function(seg){
+      page.drawLine({start:{x:seg[0][0],y:seg[0][1]},end:{x:seg[1][0],y:seg[1][1]},thickness:1.2,color:rgb(0.85,0.1,0.1),dashArray:[3,2],dashPhase:0,opacity:0.9});
+    });
+
+    // Label koordinat pusat inset (kecil, di pojok bawah inset)
+    var insetCoordStr=midLat.toFixed(3)+(midLat>=0?'°N':'°S')+' / '+midLng.toFixed(3)+'°E';
+    page.drawText(insetCoordStr,{x:insX+1,y:insY-1,size:5.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
+
+    // Garis batas inset frame
+    page.drawRectangle({x:insX,y:insY,width:insW,height:insH,borderColor:rgb(0.5,0.5,0.5),borderWidth:0.5});
+
+    yPos-=insetH;
+
+    // ── PATCH 4: BOX 3 — STATISTIK SENSUS ────────────────
     var nTotal=trees.length;
     if(nTotal>0){
-    var nNormal=trees.filter(function(t){return t.status==='normal';}).length;
-    var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
-    var nMati=trees.filter(function(t){return t.status==='mati';}).length;
-    var nKosong=trees.filter(function(t){return t.status==='kosong';}).length;
-    var statRows=[
-      ['Total Pokok',nTotal,rgb(0,0,0)],
-      ['Normal',nNormal,rgb(0.1,0.45,0.15)],
-      ['Sakit',nSakit,rgb(0.65,0.38,0)],
-      ['Mati',nMati,rgb(0.65,0.1,0.1)],
-      ['Kosong',nKosong,rgb(0.45,0.45,0.45)]
-    ];
-    var rowH=11,box3H=20+statRows.length*rowH+4;
-    page.drawRectangle({x:SB_X,y:yPos-box3H,width:SB_W,height:box3H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
-    page.drawRectangle({x:SB_X,y:yPos-12,width:SB_W,height:12,color:rgb(0.04,0.15,0.08)});
-    page.drawText('STATISTIK SENSUS',{x:SB_X+SB_W/2-36,y:yPos-9,size:7,color:rgb(1,1,1),font:fontBold});
-    var sy=yPos-12;
-    statRows.forEach(function(row,i){
-      var bg=i%2===0?rgb(0.94,0.98,0.94):rgb(1,1,1);
-      page.drawRectangle({x:SB_X,y:sy-rowH,width:SB_W,height:rowH,color:bg});
-      if(i>0){page.drawCircle({x:SB_X+5,y:sy-rowH/2,size:3,color:row[2]});}
-      var lblX=i>0?SB_X+11:SB_X+3;
-      page.drawText(String(row[0]),{x:lblX,y:sy-rowH+3,size:7,color:rgb(0.15,0.15,0.15),font:i===0?fontBold:fontNorm});
-      var valStr=String(row[1]);
-      page.drawText(valStr,{x:SB_X+SB_W-3-valStr.length*4.5,y:sy-rowH+3,size:7,color:row[2],font:fontBold});
-      sy-=rowH;
-    });
-    yPos-=box3H;
-    } // end if(nTotal>0)
+      var nNormal=trees.filter(function(t){return t.status==='normal';}).length;
+      var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
+      var nMati=trees.filter(function(t){return t.status==='mati';}).length;
+      var nKosong=trees.filter(function(t){return t.status==='kosong';}).length;
+      var statRows=[
+        ['Total Pokok',nTotal,rgb(0,0,0)],
+        ['Normal',nNormal,rgb(0.1,0.45,0.15)],
+        ['Sakit',nSakit,rgb(0.65,0.38,0)],
+        ['Mati',nMati,rgb(0.65,0.1,0.1)],
+        ['Kosong',nKosong,rgb(0.45,0.45,0.45)]
+      ];
+      // PATCH 4: row lebih tinggi & font lebih besar
+      var rowH=13,hdrH=14,box3H=hdrH+statRows.length*rowH+4;
+      page.drawRectangle({x:SB_X,y:yPos-box3H,width:SB_W,height:box3H,borderColor:rgb(0.15,0.15,0.15),borderWidth:1.5});
+      page.drawRectangle({x:SB_X,y:yPos-hdrH,width:SB_W,height:hdrH,color:rgb(0.04,0.15,0.08)});
+      page.drawText('STATISTIK SENSUS',{x:SB_X+SB_W/2-45,y:yPos-hdrH+3,size:8.5,color:rgb(1,1,1),font:fontBold});
+      var sy=yPos-hdrH;
+      statRows.forEach(function(row,i){
+        var bg=i%2===0?rgb(0.93,0.98,0.93):rgb(1,1,1);
+        page.drawRectangle({x:SB_X,y:sy-rowH,width:SB_W,height:rowH,color:bg});
+        if(i>0){page.drawCircle({x:SB_X+6,y:sy-rowH/2,size:3.5,color:row[2]});}
+        var lblX=i>0?SB_X+13:SB_X+4;
+        // PATCH 4: font size 8 (naik dari 7)
+        page.drawText(String(row[0]),{x:lblX,y:sy-rowH+3,size:8,color:rgb(0.1,0.1,0.1),font:i===0?fontBold:fontNorm});
+        var valStr=String(row[1]);
+        page.drawText(valStr,{x:SB_X+SB_W-4-valStr.length*5,y:sy-rowH+3,size:8,color:row[2],font:fontBold});
+        sy-=rowH;
+      });
+      yPos-=box3H;
+    }
 
-    // --- BOX 4: RINCIAN AREAL ---
-    // Build legend from _legendSettings — covers ALL selected layers (not just showBatas=true)
+    // ── PATCH 4: BOX 4 — RINCIAN AREAL ────────────────────
     var legItems=[];
     measures.filter(function(m){
       if(m.type!=='polygon'&&m.type!=='line')return false;
@@ -4808,7 +4968,6 @@ async function generateDroneMapPDF(){
       var lt=_getLayerType(m);
       var ltDef=_layerTypes[lt]||_layerTypes.blok;
       var isBK=isPoly&&_batasKebunIds.has(m.id);
-      // Build value string
       var valStr=null;
       if(ls.showValue){
         if(ls.customVal&&ls.customVal!==''){
@@ -4832,81 +4991,75 @@ async function generateDroneMapPDF(){
       });
     });
 
-    // legRowH dikurangi agar 1 baris saja (label + luas) — tidak ada sub-baris
-    var legRowH=10,box4H=18+legItems.length*legRowH+18;
+    // PATCH 4: row lebih tinggi, font lebih besar
+    var legRowH=13,legHdrH=14,box4H=legHdrH+legItems.length*legRowH+18;
     var remainH=yPos-MAP_Y;
     if(box4H>remainH)box4H=remainH;
-    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:box4H,borderColor:rgb(0.2,0.2,0.2),borderWidth:1});
-    page.drawRectangle({x:SB_X,y:yPos-12,width:SB_W,height:12,color:rgb(0.04,0.15,0.08)});
-    page.drawText('RINCIAN AREAL',{x:SB_X+SB_W/2-28,y:yPos-9,size:7,color:rgb(1,1,1),font:fontBold});
-    var ky=yPos-12;
+    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:box4H,borderColor:rgb(0.15,0.15,0.15),borderWidth:1.5});
+    page.drawRectangle({x:SB_X,y:yPos-legHdrH,width:SB_W,height:legHdrH,color:rgb(0.04,0.15,0.08)});
+    page.drawText('RINCIAN AREAL',{x:SB_X+SB_W/2-35,y:yPos-legHdrH+3,size:8.5,color:rgb(1,1,1),font:fontBold});
+    var ky=yPos-legHdrH;
     legItems.forEach(function(item){
       if(ky-legRowH<yPos-box4H+18)return;
       var fRgb=hexToRgb(item.fHex||'#888');
       var sRgb=hexToRgb(item.sHex||item.fHex||'#888');
-      var midY=ky-legRowH/2; // pusat vertikal baris
+      var midY=ky-legRowH/2;
       if(item.isLine){
-        page.drawLine({start:{x:SB_X+3,y:midY},end:{x:SB_X+13,y:midY},thickness:1.5,color:rgb(fRgb.r,fRgb.g,fRgb.b),dashArray:[4,2],dashPhase:0});
+        page.drawLine({start:{x:SB_X+3,y:midY},end:{x:SB_X+15,y:midY},thickness:2,color:rgb(fRgb.r,fRgb.g,fRgb.b),dashArray:[4,2],dashPhase:0});
       } else {
-        // Kotak warna kecil, ukurannya proporsional dengan rowH
-        page.drawRectangle({x:SB_X+3,y:midY-3.5,width:8,height:7,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.6,opacity:0.85});
+        // Kotak simbol lebih besar
+        page.drawRectangle({x:SB_X+3,y:midY-4.5,width:10,height:9,color:rgb(fRgb.r,fRgb.g,fRgb.b),borderColor:rgb(sRgb.r,sRgb.g,sRgb.b),borderWidth:0.8,opacity:0.88});
       }
-      // SATU BARIS: nama blok (kiri) + nilai (kanan)
-      var lblText=_pdfSafeStr(item.lbl);if(lblText.length>16)lblText=lblText.substring(0,15)+'..';
-      page.drawText(lblText,{x:SB_X+14,y:midY-2.5,size:6.5,color:rgb(0.05,0.05,0.05),font:fontBold});
+      // PATCH 4: nama blok font 8 bold (naik dari 6.5)
+      var lblText=_pdfSafeStr(item.lbl);if(lblText.length>15)lblText=lblText.substring(0,14)+'..';
+      page.drawText(lblText,{x:SB_X+16,y:midY-3,size:8,color:rgb(0.05,0.05,0.05),font:fontBold});
       if(item.valStr){
-        var valW=item.valStr.length*6.5*0.52;
-        page.drawText(_pdfSafeStr(item.valStr),{x:SB_X+SB_W-4-valW,y:midY-2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontNorm});
+        var valW=item.valStr.length*8*0.52;
+        page.drawText(_pdfSafeStr(item.valStr),{x:SB_X+SB_W-4-valW,y:midY-3,size:8,color:rgb(0.2,0.2,0.2),font:fontBold});
       }
       ky-=legRowH;
     });
-    // Total luas — hanya dari tipe area yang ada nilai Ha
+    // Total luas
     var totalArea=0;
     legItems.forEach(function(item){
       if(item.isLine||!item.valStr)return;
       var haMatch=item.valStr.match(/^([\d.]+)\s*Ha$/);
       if(haMatch)totalArea+=parseFloat(haMatch[1])*10000;
     });
-    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:14,color:rgb(0.1,0.42,0.19)});
-    var totalStr='Total Luas: '+(totalArea/10000).toFixed(2)+' Ha';
-    var totalStrW=totalStr.length*7.5*0.52; // estimasi lebar teks
-    var totalStrX=SB_X+SB_W/2-totalStrW/2;
-    page.drawText(totalStr,{x:totalStrX,y:yPos-box4H+4,size:7.5,color:rgb(1,1,1),font:fontBold});
+    page.drawRectangle({x:SB_X,y:yPos-box4H,width:SB_W,height:16,color:rgb(0.08,0.38,0.16)});
+    var totalStr='Total: '+(totalArea/10000).toFixed(2)+' Ha';
+    var totalStrW=totalStr.length*8.5*0.55;
+    page.drawText(totalStr,{x:SB_X+SB_W/2-totalStrW/2,y:yPos-box4H+4,size:8.5,color:rgb(1,1,1),font:fontBold});
 
-    // ── FOOTER ─────────────────────────────────────────
-    page.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
-    page.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
-    if(pengecek)page.drawText('Pengecek: '+pengecek,{x:PW/2-pengecek.length*3,y:2,size:6,color:rgb(0.4,0.4,0.4),font:fontNorm});
-    page.drawText('Hal. 1',{x:PW-30,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+    // ── FOOTER ────────────────────────────────────────────
+    page.drawRectangle({x:0,y:0,width:PW,height:11,color:rgb(0.93,0.96,0.93)});
+    page.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2.5,size:6.5,color:rgb(0.4,0.55,0.4),font:fontBold});
+    if(pengecek)page.drawText('Pengecek: '+pengecek,{x:PW/2-pengecek.length*3.5,y:2.5,size:6.5,color:rgb(0.3,0.3,0.3),font:fontBold});
+    page.drawText('Hal. 1',{x:PW-32,y:2.5,size:6.5,color:rgb(0.4,0.4,0.4),font:fontBold});
 
-    // ── HALAMAN 2+: TABEL DATA (jika ada pokok) — semua status, multi-halaman ──
+    // ── HALAMAN 2+: TABEL DATA SENSUS ─────────────────────
     if(trees.length>0){
       var tHdr=['No Pokok','Blok/Baris','Status','Latitude','Longitude','Catatan'];
       var colW=[55,55,50,80,80,155];
       var colX=[MAP_X];
       for(var ci=0;ci<colW.length-1;ci++)colX.push(colX[ci]+colW[ci]+3);
-      var tRowH=13;
+      var tRowH=14; // PATCH 4: lebih tinggi
       var sColors2={normal:rgb(0.1,0.45,0.15),sakit:rgb(0.65,0.35,0),mati:rgb(0.65,0.1,0.1),kosong:rgb(0.45,0.45,0.45)};
       var labels2={normal:'Normal',sakit:'Sakit',mati:'Mati',kosong:'Kosong'};
-
-      // Hitung total halaman
       var rowsPerPage=Math.floor((PH-42-10)/tRowH);
       var totalPages=Math.ceil(trees.length/rowsPerPage);
       var pageNum=2;
 
       for(var tp=0;tp<totalPages;tp++){
         var curPage=pdfDoc.addPage([842,595]);
-        // Header halaman
-        curPage.drawRectangle({x:0,y:PH-28,width:PW,height:28,color:rgb(0.04,0.15,0.08)});
-        curPage.drawText(title+' — Data Sensus Pokok Sawit',{x:MAP_X,y:PH-19,size:11,color:rgb(1,1,1),font:fontBold});
-        // Info halaman & total pokok
+        curPage.drawRectangle({x:0,y:PH-30,width:PW,height:30,color:rgb(0.04,0.15,0.08)});
+        curPage.drawText(title+' — Data Sensus Pokok Sawit',{x:MAP_X,y:PH-21,size:12,color:rgb(1,1,1),font:fontBold});
         var pgInfo='Hal. '+pageNum+' / '+(totalPages+1)+'   |   Total: '+trees.length+' pokok';
-        curPage.drawText(pgInfo,{x:PW-pgInfo.length*3.5-10,y:PH-19,size:6,color:rgb(0.7,0.9,0.7),font:fontNorm});
+        curPage.drawText(pgInfo,{x:PW-pgInfo.length*3.8-10,y:PH-21,size:7,color:rgb(0.7,0.9,0.7),font:fontBold});
 
-        var tY=PH-42;
-        // Header kolom
+        var tY=PH-44;
         curPage.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:rgb(0.1,0.42,0.19)});
-        tHdr.forEach(function(h,i){curPage.drawText(h,{x:colX[i]+2,y:tY-tRowH+3,size:7,color:rgb(1,1,1),font:fontBold});});
+        tHdr.forEach(function(h,i){curPage.drawText(h,{x:colX[i]+2,y:tY-tRowH+4,size:8,color:rgb(1,1,1),font:fontBold});});
         tY-=tRowH;
 
         var startIdx=tp*rowsPerPage;
@@ -4914,27 +5067,26 @@ async function generateDroneMapPDF(){
         for(var ri=startIdx;ri<endIdx;ri++){
           var t2=trees[ri];
           var rowIdx=ri-startIdx;
-          var bg2=rowIdx%2===0?rgb(0.96,0.99,0.96):rgb(1,1,1);
+          var bg2=rowIdx%2===0?rgb(0.95,0.99,0.95):rgb(1,1,1);
           curPage.drawRectangle({x:MAP_X,y:tY-tRowH,width:PW-MAP_X*2,height:tRowH,color:bg2});
           var tRow=[t2.no,t2.block||'—',labels2[t2.status]||t2.status,t2.lat.toFixed(6),t2.lng.toFixed(6),t2.note||'—'];
           tRow.forEach(function(val,j){
-            var col2=j===2?(sColors2[t2.status]||rgb(0,0,0)):rgb(0.15,0.15,0.15);
+            var col2=j===2?(sColors2[t2.status]||rgb(0,0,0)):rgb(0.1,0.1,0.1);
             var fnt2=j===2?fontBold:fontNorm;
             var str2=String(val);if(str2.length>22)str2=str2.substring(0,20)+'..';
-            curPage.drawText(str2,{x:colX[j]+2,y:tY-tRowH+3,size:7,color:col2,font:fnt2});
+            curPage.drawText(str2,{x:colX[j]+2,y:tY-tRowH+4,size:8,color:col2,font:fnt2});
           });
           curPage.drawLine({start:{x:MAP_X,y:tY-tRowH},end:{x:PW-MAP_X,y:tY-tRowH},thickness:0.3,color:rgb(0.8,0.8,0.8)});
           tY-=tRowH;
         }
-        // Footer
-        curPage.drawRectangle({x:0,y:0,width:PW,height:10,color:rgb(0.95,0.97,0.95)});
-        curPage.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2,size:6,color:rgb(0.5,0.6,0.5),font:fontNorm});
-        curPage.drawText('Hal. '+pageNum+' / '+(totalPages+1),{x:PW-50,y:2,size:6,color:rgb(0.5,0.5,0.5),font:fontNorm});
+        curPage.drawRectangle({x:0,y:0,width:PW,height:11,color:rgb(0.93,0.96,0.93)});
+        curPage.drawText('DroneMap v3 Pro  |  Sensus & Pemetaan Perkebunan Sawit',{x:MAP_X,y:2.5,size:6.5,color:rgb(0.4,0.55,0.4),font:fontBold});
+        curPage.drawText('Hal. '+pageNum+' / '+(totalPages+1),{x:PW-50,y:2.5,size:6.5,color:rgb(0.5,0.5,0.5),font:fontBold});
         pageNum++;
       }
     }
 
-    // ── Simpan & Download ────────────────────────────────
+    // ── Simpan & Download ─────────────────────────────────
     var pdfBytes=await pdfDoc.save();
     var now=new Date();
     var dateStr=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
