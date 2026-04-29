@@ -4507,13 +4507,6 @@ async function generateDroneMapPDF(){
     // Garis accent emas di bawah header
     page.drawRectangle({x:0,y:PH-hdrH-2,width:PW,height:2,color:rgb(0.82,0.68,0.18)});
 
-    // Judul di header
-    var tSz=title.length>30?9.5:title.length>22?11:13;
-    var titleX=MAP_X;
-    page.drawText(title,{x:titleX,y:PH-hdrH+5,size:tSz,color:rgb(1,1,1),font:fontBold});
-    if(subtitle){
-      page.drawText(subtitle,{x:titleX,y:PH-hdrH+5+tSz+2,size:8,color:rgb(0.75,0.95,0.75),font:fontNorm});
-    }
     // Tanggal kanan header
     var tglStr=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
     var tglW=tglStr.length*6.5*0.52;
@@ -4800,11 +4793,6 @@ async function generateDroneMapPDF(){
     var lngAxisW=lngAxisLabel.length*7*0.52;
     page.drawText(lngAxisLabel,{x:MAP_X+MAP_W/2-lngAxisW/2,y:MAP_Y-26,size:7,color:rgb(0.35,0.35,0.35),font:fontNorm});
 
-    // ── Label "Latitude (°N)" di kiri, rotasi tidak ada di pdf-lib → horizontal kecil ─
-    // Tulis vertikal simulasi dengan teks kecil di kiri atas & bawah
-    var latAxisLabel='Lintang (Lat)';
-    page.drawText(latAxisLabel,{x:2,y:MAP_Y+MAP_H/2-20,size:6,color:rgb(0.35,0.35,0.35),font:fontNorm});
-
     // ── SIDEBAR KANAN ─────────────────────────────────
     var yPos=MAP_Y+MAP_H;
     var sbBg=rgb(0.97,0.98,0.97);
@@ -4889,11 +4877,11 @@ async function generateDroneMapPDF(){
     yPos-=box2H;
 
     // ── FIX 2 & 3: INSET PETA — tanpa judul, pakai tile OSM ──
-    var insetH=88;
-    page.drawRectangle({x:SB_X,y:yPos-insetH,width:SB_W,height:insetH,color:rgb(0.88,0.93,0.97),borderColor:rgb(0.75,0.78,0.75),borderWidth:0.8});
-    // FIX 2: TIDAK ada header "Inset Peta" — langsung gambar inset
+    var insetH=115;
+    var insetPad=10;
+    page.drawRectangle({x:SB_X,y:yPos-insetH,width:SB_W,height:insetH,color:rgb(0.90,0.94,0.98),borderColor:rgb(0.65,0.72,0.78),borderWidth:0.8});
 
-    var insX=SB_X+2,insY=yPos-insetH+2,insW=SB_W-4,insH=insetH-4;
+    var insX=SB_X+insetPad,insY=yPos-insetH+insetPad,insW=SB_W-insetPad*2,insH=insetH-insetPad*2;
 
     // FIX 3: Render tile OSM via canvas untuk inset peta
     var insetExpand=4.5;
