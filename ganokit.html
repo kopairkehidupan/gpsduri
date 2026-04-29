@@ -1470,13 +1470,8 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       const statusColor = DI > 20 ? [183,28,28]  : DI > 10 ? [180,76,0]  : [27,107,48];
       const statusBg    = DI > 20 ? [255,235,238] : DI > 10 ? [255,243,224] : [232,245,233];
 
-      // ── Helper: footer ───────────────────────────────────────
-      function drawFooterPlaceholder() {
-        // footer is drawn in the final pass after totalPages is known
-      }
-
       // ════════════════════════════════════════════════════════
-      // HAL. 1 — RINGKASAN
+      // HAL. 1 — HEADER + RINGKASAN
       // ════════════════════════════════════════════════════════
       doc.setFillColor(11, 38, 20);
       doc.rect(0, 0, PW, 24, 'F');
@@ -1537,141 +1532,143 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...statusColor);
       const statsStr = `Tingkat Serangan (DI): ${DI.toFixed(1)}%   |   Indeks Keparahan (DSI): ${DSI.toFixed(1)}%   |   ${statusLabel}   |   Ambang endemik: DI > 20%`;
       doc.text(statsStr, ML + USABLE / 2, y - 0.5, {align:'center'});
+      y += 6; // sedikit jeda sebelum garis divider
 
-      // Keterangan isi halaman berikutnya
-      y += 10;
-      doc.setDrawColor(200, 210, 200); doc.setLineWidth(0.3);
+      // Garis tipis pemisah antara ringkasan dan foto
+      doc.setDrawColor(180, 200, 180); doc.setLineWidth(0.3);
       doc.line(ML, y, PW - MR, y);
-      y += 6;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(50,80,50);
-      const fotoCount = (fotoArr || []).filter(f => f && f.data).length;
-      let halInfo = 'Halaman berikutnya: ';
-      if (fotoCount > 0) halInfo += `Foto Dokumentasi (${fotoCount} foto)  →  Data Tabel  →  Rekomendasi Tindakan`;
-      else halInfo += 'Data Tabel  →  Rekomendasi Tindakan';
-      doc.text(halInfo, ML + USABLE/2, y, {align:'center'});
+      y += 4; // y ≈ ~66mm — mulai area foto di halaman 1
 
       // ════════════════════════════════════════════════════════
-      // HAL. FOTO — GALLERY GRID (3 × 2 per halaman)
+      // GALLERY FOTO — MULAI DI HALAMAN 1, LANJUT KE HAL. BERIKUTNYA
+      // Urutan: TERLAMA → TERBARU (tableRows sudah diurutkan oleh caller)
       // ════════════════════════════════════════════════════════
       const photoEntries = tableRows
         .map((row, i) => ({ row, foto: fotoArr ? fotoArr[i] : null }))
         .filter(e => e.foto && e.foto.data);
 
       if (photoEntries.length > 0) {
-        const COLS = 3, ROWS = 2, PER_PAGE = COLS * ROWS;
-        const GAP_X = 3, GAP_Y = 4;
-        const CARD_TOP = 10;   // y mulai setelah header kecil
-        const CARD_W = (USABLE - (COLS - 1) * GAP_X) / COLS;     // ~89mm
-        const CARD_H = (BOT - CARD_TOP - (ROWS - 1) * GAP_Y) / ROWS; // ~94mm
-        const ACCENT_H  = 6;    // tinggi bar stadium di atas kartu
-        const PAD       = 2;    // padding kiri-kanan dalam kartu
-        const CAP_H     = 24;   // tinggi area keterangan bawah
-        const PHOTO_H   = CARD_H - ACCENT_H - PAD - CAP_H; // area foto
+        const COLS   = 3;
+        const GAP_X  = 3, GAP_Y = 4;
+        const CARD_W = (USABLE - (COLS - 1) * GAP_X) / COLS;   // ~89mm
+        const ACCENT_H = 6, PAD = 2, CAP_H = 24;
 
-        for (let pi = 0; pi < photoEntries.length; pi++) {
-          // Halaman baru setiap PER_PAGE foto
-          if (pi % PER_PAGE === 0) {
+        // Tinggi kartu standar untuk halaman penuh (2 baris)
+        const CARD_H_STD = (BOT - 10 - GAP_Y) / 2;   // ~94mm
+
+        let pi = 0;
+        let onFirstPhotoPage = true;
+
+        while (pi < photoEntries.length) {
+          let pageY, rowsThisPage, cardH;
+
+          if (onFirstPhotoPage) {
+            // Lanjut di halaman 1 — hitung ruang tersisa
+            pageY = y;
+            const avail = BOT - pageY;
+            rowsThisPage = Math.max(1, Math.floor((avail + GAP_Y) / (CARD_H_STD + GAP_Y)));
+            // Cap at 2 rows max; use standard card height (capped so it fits)
+            rowsThisPage = Math.min(rowsThisPage, 2);
+            cardH = Math.min(CARD_H_STD, (avail - (rowsThisPage - 1) * GAP_Y) / rowsThisPage);
+            onFirstPhotoPage = false;
+          } else {
+            // Halaman baru untuk foto lanjutan
             doc.addPage();
-            const pgFoto = Math.floor(pi / PER_PAGE) + 1;
-            const totFotoPg = Math.ceil(photoEntries.length / PER_PAGE);
-            // header kecil hijau
+            const pgFoto = Math.ceil(pi / (COLS * 2));
+            const totFotoPg = Math.ceil(photoEntries.length / (COLS * 2));
             doc.setFillColor(11, 38, 20);
             doc.rect(0, 0, PW, 8, 'F');
             doc.setFillColor(46, 168, 74);
             doc.rect(0, 8, PW, 1, 'F');
             doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
             doc.text(
-              `FOTO DOKUMENTASI LAPANGAN   (${pi+1} – ${Math.min(pi+PER_PAGE, photoEntries.length)} dari ${photoEntries.length} foto)`,
+              `FOTO DOKUMENTASI LAPANGAN   (${pi+1} – ${Math.min(pi + COLS*2, photoEntries.length)} dari ${photoEntries.length} foto)`,
               ML, 5.5
             );
             doc.setTextColor(134,239,172);
             doc.text(`Hal. Foto ${pgFoto} / ${totFotoPg}`, PW - MR, 5.5, {align:'right'});
+            pageY    = 10;
+            rowsThisPage = 2;
+            cardH    = CARD_H_STD;
           }
 
-          const colIdx = pi % COLS;
-          const rowIdx = Math.floor((pi % PER_PAGE) / COLS);
-          const cardX = ML + colIdx * (CARD_W + GAP_X);
-          const cardY = CARD_TOP + rowIdx * (CARD_H + GAP_Y);
+          const photosOnPage = COLS * rowsThisPage;
+          const PHOTO_H = cardH - ACCENT_H - PAD - CAP_H;
 
-          const { row, foto } = photoEntries[pi];
-          const skor = Math.min(4, parseInt(String(row[2]).trim()) || 0);
-          const stC  = ST_COLORS[String(skor)];
-          const cardBg   = stC ? stC.bg : [212,237,218];
-          const cardFg   = stC ? stC.fg : [26,92,42];
-          const cardBdr  = cardBg.map(v => Math.max(0, v - 50));
+          for (let i = 0; i < photosOnPage && pi < photoEntries.length; i++, pi++) {
+            const colIdx = i % COLS;
+            const rowIdx = Math.floor(i / COLS);
+            const cardX  = ML + colIdx * (CARD_W + GAP_X);
+            const cardY  = pageY + rowIdx * (cardH + GAP_Y);
 
-          // ── Kartu background ──────────────────────────────
-          doc.setFillColor(250, 252, 250);
-          doc.roundedRect(cardX, cardY, CARD_W, CARD_H, 2, 2, 'F');
+            const { row, foto } = photoEntries[pi];
+            const skor   = Math.min(4, parseInt(String(row[2]).trim()) || 0);
+            const stC    = ST_COLORS[String(skor)];
+            const cardBg = stC ? stC.bg : [212,237,218];
+            const cardFg = stC ? stC.fg : [26,92,42];
+            const cardBdr = cardBg.map(v => Math.max(0, v - 50));
 
-          // ── Bar stadium warna di atas ─────────────────────
-          doc.setFillColor(...cardBg);
-          // rounded top, kotak bawah
-          doc.roundedRect(cardX, cardY, CARD_W, ACCENT_H + 2, 2, 2, 'F');
-          doc.rect(cardX, cardY + ACCENT_H - 1, CARD_W, 3, 'F');
+            // ── Background kartu ──
+            doc.setFillColor(250, 252, 250);
+            doc.roundedRect(cardX, cardY, CARD_W, cardH, 2, 2, 'F');
 
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...cardFg);
-          doc.text(
-            `Stadium ${skor}  ${STADIUM[skor]?.label || ''}  (${STADIUM[skor]?.code || ''})`,
-            cardX + PAD, cardY + ACCENT_H - 0.5
-          );
+            // ── Bar stadium (atas) ──
+            doc.setFillColor(...cardBg);
+            doc.roundedRect(cardX, cardY, CARD_W, ACCENT_H + 2, 2, 2, 'F');
+            doc.rect(cardX, cardY + ACCENT_H - 1, CARD_W, 3, 'F');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...cardFg);
+            doc.text(
+              `Stadium ${skor}  ${STADIUM[skor]?.label || ''}  (${STADIUM[skor]?.code || ''})`,
+              cardX + PAD, cardY + ACCENT_H - 0.5
+            );
+            // nomor urut foto
+            doc.setFontSize(5.5); doc.setTextColor(...cardFg.map(v=>Math.min(255,v+60)));
+            doc.text(`#${pi+1}`, cardX + CARD_W - PAD, cardY + ACCENT_H - 0.5, {align:'right'});
 
-          // Nomor urut kecil di pojok kanan atas
-          doc.setFontSize(5.5); doc.setTextColor(...cardFg.map(v=>Math.min(255,v+60)));
-          doc.text(`#${pi+1}`, cardX + CARD_W - PAD, cardY + ACCENT_H - 0.5, {align:'right'});
+            // ── Border kartu ──
+            doc.setDrawColor(...cardBdr); doc.setLineWidth(0.4);
+            doc.roundedRect(cardX, cardY, CARD_W, cardH, 2, 2, 'S');
 
-          // ── Border kartu ──────────────────────────────────
-          doc.setDrawColor(...cardBdr);
-          doc.setLineWidth(0.4);
-          doc.roundedRect(cardX, cardY, CARD_W, CARD_H, 2, 2, 'S');
-
-          // ── Area foto ─────────────────────────────────────
-          const photoX = cardX + PAD;
-          const photoY = cardY + ACCENT_H + PAD;
-          const photoW = CARD_W - PAD * 2;
-
-          if (foto && foto.data) {
-            const aspect = foto.w / foto.h;
-            let rW, rH;
-            if (photoW / PHOTO_H > aspect) { rH = PHOTO_H; rW = PHOTO_H * aspect; }
-            else { rW = photoW; rH = photoW / aspect; }
-            const imgX = photoX + (photoW - rW) / 2;
-            const imgY = photoY + (PHOTO_H - rH) / 2;
-            const imgType = (foto.data.includes('jpeg') || foto.data.includes('jpg')) ? 'JPEG' : 'PNG';
-            try { doc.addImage(foto.data, imgType, imgX, imgY, rW, rH); }
-            catch(e) {
-              doc.setFillColor(230,235,230);
-              doc.rect(photoX, photoY, photoW, PHOTO_H, 'F');
-              doc.setFontSize(6); doc.setTextColor(150,160,150);
-              doc.text('Foto gagal dimuat', photoX+photoW/2, photoY+PHOTO_H/2, {align:'center',baseline:'middle'});
+            // ── Foto ──
+            const photoX  = cardX + PAD;
+            const photoY2 = cardY + ACCENT_H + PAD;
+            const photoW  = CARD_W - PAD * 2;
+            if (foto && foto.data) {
+              const aspect = foto.w / foto.h;
+              let rW, rH;
+              if (photoW / PHOTO_H > aspect) { rH = PHOTO_H; rW = PHOTO_H * aspect; }
+              else { rW = photoW; rH = photoW / aspect; }
+              const imgX = photoX + (photoW - rW) / 2;
+              const imgY = photoY2 + (PHOTO_H - rH) / 2;
+              const imgType = (foto.data.includes('jpeg') || foto.data.includes('jpg')) ? 'JPEG' : 'PNG';
+              try { doc.addImage(foto.data, imgType, imgX, imgY, rW, rH); }
+              catch(e) {
+                doc.setFillColor(230,235,230);
+                doc.rect(photoX, photoY2, photoW, PHOTO_H, 'F');
+                doc.setFontSize(6); doc.setTextColor(150,160,150);
+                doc.text('Foto gagal dimuat', photoX+photoW/2, photoY2+PHOTO_H/2, {align:'center',baseline:'middle'});
+              }
             }
+
+            // ── Garis keterangan ──
+            const capY = cardY + cardH - CAP_H;
+            doc.setDrawColor(...cardBdr); doc.setLineWidth(0.25);
+            doc.line(cardX + PAD, capY, cardX + CARD_W - PAD, capY);
+
+            // ── Teks keterangan ──
+            const capX  = cardX + PAD;
+            const capTW = CARD_W - PAD * 2;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15,25,15);
+            doc.text(`No. ${row[0]}   |   Baris ${row[1]}`, capX, capY + 5);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(45,60,45);
+            const kepLine = doc.splitTextToSize(String(row[3] || '—'), capTW);
+            doc.text(kepLine[0], capX, capY + 11);
+            const latStr = row[4] ? parseFloat(row[4]).toFixed(6) : '—';
+            const lngStr = row[5] ? parseFloat(row[5]).toFixed(6) : '—';
+            doc.setFontSize(6); doc.setTextColor(90, 105, 90);
+            doc.text(`Lat : ${latStr}`, capX, capY + 17);
+            doc.text(`Lng : ${lngStr}`, capX, capY + 21);
           }
-
-          // ── Garis pemisah keterangan ──────────────────────
-          const capY = cardY + CARD_H - CAP_H;
-          doc.setDrawColor(...cardBdr); doc.setLineWidth(0.25);
-          doc.line(cardX + PAD, capY, cardX + CARD_W - PAD, capY);
-
-          // ── Keterangan foto ───────────────────────────────
-          const capX = cardX + PAD;
-          const capTW = CARD_W - PAD * 2;
-
-          // Baris 1: No. Pokok & Baris (bold)
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15,25,15);
-          doc.text(`No. ${row[0]}   |   Baris ${row[1]}`, capX, capY + 5);
-
-          // Baris 2: Keparahan
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(45,60,45);
-          const kepFull = String(row[3] || '—');
-          const kepLines = doc.splitTextToSize(kepFull, capTW);
-          doc.text(kepLines[0], capX, capY + 11);
-
-          // Baris 3 & 4: Latitude & Longitude
-          const latStr = row[4] ? parseFloat(row[4]).toFixed(6) : '—';
-          const lngStr = row[5] ? parseFloat(row[5]).toFixed(6) : '—';
-          doc.setFontSize(6); doc.setTextColor(90, 105, 90);
-          doc.text(`Lat : ${latStr}`, capX, capY + 17);
-          doc.text(`Lng : ${lngStr}`, capX, capY + 21);
         }
       }
 
@@ -1679,8 +1676,6 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       // HAL. TABEL DATA
       // ════════════════════════════════════════════════════════
       doc.addPage();
-
-      // Header kecil tabel
       doc.setFillColor(11, 38, 20);
       doc.rect(0, 0, PW, 8, 'F');
       doc.setFillColor(46, 168, 74);
@@ -1690,7 +1685,6 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       doc.setTextColor(134,239,172);
       doc.text(`${N} pokok`, PW - MR, 5.5, {align:'right'});
 
-      // Pre-hitung lebar kolom
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
       let maxKepW = 40;
       tableRows.forEach(r => {
@@ -1698,7 +1692,6 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
         if (w > maxKepW) maxKepW = w;
       });
       const kepW = Math.min(maxKepW + 8, 85);
-      const anyFoto = fotoArr && fotoArr.some(f => f && f.data);
       const fotoColW = 12;
       const fixedSum = 14 + 20 + 13 + 22 + kepW + 26 + 26 + fotoColW;
       const extra = Math.max(0, USABLE - fixedSum);
@@ -1716,8 +1709,7 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
 
       doc.autoTable({
         startY: 11,
-        head: head,
-        body: body,
+        head: head, body: body,
         margin: { left: ML, right: MR },
         theme: 'grid',
         styles: { fontSize:7.5, cellPadding:{top:2,right:3,bottom:2,left:3}, valign:'middle', lineColor:[210,215,210], lineWidth:0.25, textColor:[30,30,30], overflow:'linebreak', minCellHeight:7 },
@@ -1741,12 +1733,10 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
             const c = ST_COLORS[skor];
             if (c) { data.cell.styles.fillColor = c.bg; data.cell.styles.textColor = c.fg; data.cell.styles.fontStyle = 'bold'; }
           }
-          if (data.column.index === 7) {
-            if (body[ri]?.[7] === 'Ada') {
-              data.cell.styles.fillColor = [232,245,233];
-              data.cell.styles.textColor = [27,94,32];
-              data.cell.styles.fontStyle = 'bold';
-            }
+          if (data.column.index === 7 && body[ri]?.[7] === 'Ada') {
+            data.cell.styles.fillColor = [232,245,233];
+            data.cell.styles.textColor = [27,94,32];
+            data.cell.styles.fontStyle = 'bold';
           }
         },
       });
@@ -1757,12 +1747,10 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       const stadiumsPresent = [0,1,2,3,4].filter(s => SC[s] > 0);
       if (stadiumsPresent.length > 0) {
         let recY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 11) + 10;
-        const LINE_H = 4.3;
-        const REC_PAD = 5;
+        const LINE_H = 4.3, REC_PAD = 5;
         const ensureSpace = (needed) => {
           if (recY + needed > BOT - 5) { doc.addPage(); recY = 12; }
         };
-
         ensureSpace(18);
         doc.setFillColor(11, 38, 20);
         doc.rect(ML, recY, USABLE, 10, 'F');
@@ -1771,7 +1759,6 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
         doc.text('REKOMENDASI TINDAKAN LAPANGAN', ML + USABLE/2, recY + 7, {align:'center'});
         recY += 14;
-
         const recBg = { 0:[212,237,218], 1:[255,243,176], 2:[255,224,178], 3:[255,205,210], 4:[255,138,128] };
         const recFg = { 0:[26,92,42], 1:[122,85,0], 2:[122,58,0], 3:[123,0,0], 4:[120,0,0] };
         const recBorder = { 0:[26,92,42], 1:[184,125,0], 2:[230,81,0], 3:[198,40,40], 4:[183,28,28] };
@@ -1783,8 +1770,7 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
           4: `STADIUM 4 - SANITASI LANJUTAN & PERSIAPAN REPLANTING:\n1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.\n2. Gali area bekas bonggol sedalam 80-100 cm - ambil sisa akar besar yang masih ada secara manual.\n3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.\n4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.\n5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.\n6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.\n7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
         };
         stadiumsPresent.forEach((s, idx) => {
-          const st  = STADIUM[s];
-          const txt = REC_PDF[s];
+          const st = STADIUM[s], txt = REC_PDF[s];
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
           const lines = doc.splitTextToSize(txt, USABLE - REC_PAD * 2);
           const blockH = lines.length * LINE_H + 18;
@@ -1895,9 +1881,11 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
     if (!filtered.length) { showToast('⚠ Tidak ada data setelah filter'); return; }
     const first = filtered[0];
     const meta  = { kebun: kebun||first.kebun||'—', divisi: divisi||first.divisi||'—', blok: blok||first.blok||'—', tanggal: first.tanggal||'' };
-    const rows = filtered.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
+    // Urutkan terlama → terbaru untuk PDF
+    const filteredPdf = [...filtered].reverse();
+    const rows = filteredPdf.map(r => [r.no_pokok||'', r.baris||'', r.skor_stadium??'', r.keparahan||'', r.lat||'', r.lng||'']);
     showToast('⏳ Memuat foto…');
-    const rawFotos = filtered.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
+    const rawFotos = filteredPdf.map(r => r.foto || (r.link_foto && r.link_foto.startsWith('http') ? r.link_foto : null));
     const fotos    = await Promise.all(rawFotos.map(f => loadImageBase64(f)));
     const now     = new Date();
     const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
