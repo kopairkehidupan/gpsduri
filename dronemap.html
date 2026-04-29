@@ -1981,7 +1981,7 @@ function _stopGeserMode(){
 function initMap(refPhoto){
   var toGeo=buildAffine(refPhoto.gcps);var c=toGeo(refPhoto.w/2,refPhoto.h/2);
   map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
-  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
+  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(map);
   // Pane khusus GCP marker — selalu di atas photo overlay
   map.createPane('gcpPane');
   map.getPane('gcpPane').style.zIndex=650;
@@ -2083,7 +2083,7 @@ function toggleLayerGroup(type,on){
 
 var bDefs={
   osm:{url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'OSM',mn:19},
-  esri:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Esri Satellite',mn:19},
+  esri:{url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'Design By Erik Simarmata',mn:19},
   topo:{url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',attr:'Topo',mn:17},
   dark:{url:'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',attr:'Stadia Dark',mn:20}
 };
@@ -3011,7 +3011,7 @@ function _doLoadSession(data, statusEl) {
       var toGeo0 = buildAffine(refP.gcps);
       var c0 = toGeo0(refP.w / 2, refP.h / 2);
       map = L.map('mapPanel', { zoomControl: true }).setView([c0.lat, c0.lng], 17);
-      baseTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri Satellite', maxZoom: 22, maxNativeZoom: 19 }).addTo(map);
+      baseTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Design By Erik Simarmata', maxZoom: 22, maxNativeZoom: 19 }).addTo(map);
       map.createPane('gcpPane');
       map.getPane('gcpPane').style.zIndex = 650;
       map.getPane('gcpPane').style.pointerEvents = 'none';
@@ -3383,7 +3383,7 @@ function _initMapFromPhoto(refPhoto) {
   map = L.map('mapPanel', { zoomControl: true }).setView([c0.lat, c0.lng], 17);
   baseTile = L.tileLayer(
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Esri Satellite', maxZoom: 22, maxNativeZoom: 19 }
+    { attribution: 'Design By Erik Simarmata', maxZoom: 22, maxNativeZoom: 19 }
   ).addTo(map);
   map.createPane('gcpPane');
   map.getPane('gcpPane').style.zIndex = 650;
@@ -3527,7 +3527,7 @@ function enterSplitView(){
   var gp=photos.find(function(ph){return ph.georef&&ph.bounds});
   if(gp){initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2;initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2;}
   _splitMap=L.map(mapPane,{zoomControl:true}).setView([initLat,initLng],18);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(_splitMap);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(_splitMap);
   if(p.gcps.length>0){p.gcps.forEach(function(g,i){L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1}).addTo(_splitMap).bindPopup('GCP '+(i+1));});_splitMap.setView([p.gcps[0].lat,p.gcps[0].lng],18);}
   _splitMap.on('click',function(e){
     if(_splitStep!=='map'||!_splitPhotoClick)return;
@@ -3573,7 +3573,7 @@ function exitSplitView(){
     if(firstGeoref){
       var toGeo=buildAffine(firstGeoref.gcps);var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
       map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
-      baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri Satellite',maxZoom:22,maxNativeZoom:19}).addTo(map);
+      baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(map);
       drawnItems=new L.FeatureGroup().addTo(map);_treeLayer=L.featureGroup().addTo(map);
       // *** RESTORE semua layer yang sudah digambar ke drawnItems baru ***
       savedDrawnLayers.forEach(function(l){try{drawnItems.addLayer(l);}catch(ex){}});
