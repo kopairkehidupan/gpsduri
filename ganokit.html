@@ -1449,10 +1449,14 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-      const PW = doc.internal.pageSize.getWidth();
-      const PH = doc.internal.pageSize.getHeight();
+      const PW = doc.internal.pageSize.getWidth();   // 297
+      const PH = doc.internal.pageSize.getHeight();  // 210
       const ML = 12, MR = 12;
-      const USABLE = PW - ML - MR;
+      const USABLE = PW - ML - MR;                   // 273
+      const FOOTER_H = 8;
+      const BOT = PH - FOOTER_H;                     // 202
+
+      // ── Stat counts ─────────────────────────────────────────
       const SC = {0:0, 1:0, 2:0, 3:0, 4:0};
       tableRows.forEach(r => {
         const s = Math.min(4, Math.max(0, parseInt(String(r[2]).trim()) || 0));
@@ -1462,33 +1466,18 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       const nSakit = SC[1] + SC[2] + SC[3] + SC[4];
       const DI  = N > 0 ? nSakit / N * 100 : 0;
       const DSI = N > 0 ? (SC[1]*1 + SC[2]*2 + SC[3]*3 + SC[4]*4) / (N * 4) * 100 : 0;
-      const statusLabel = DI > 20 ? '⚠ ENDEMIK GANODERMA' : DI > 10 ? '⚠ STATUS WASPADA' : '✓ TERKENDALI';
+      const statusLabel = DI > 20 ? 'ENDEMIK GANODERMA' : DI > 10 ? 'STATUS WASPADA' : 'TERKENDALI';
       const statusColor = DI > 20 ? [183,28,28]  : DI > 10 ? [180,76,0]  : [27,107,48];
       const statusBg    = DI > 20 ? [255,235,238] : DI > 10 ? [255,243,224] : [232,245,233];
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      let maxKepW = 40;
-      tableRows.forEach(r => {
-        const w = doc.getStringUnitWidth(String(r[3] || '')) * 7.5 / doc.internal.scaleFactor;
-        if (w > maxKepW) maxKepW = w;
-      });
-      const kepW = Math.min(maxKepW + 8, 85);
-      const FOTO_COL_W = 38;
-      const MAX_FOTO_H = 60;
-      const ROW_H_TEXT = 7;
-      const rowRenderH = tableRows.map((_, i) => {
-        const f = fotoArr ? fotoArr[i] : null;
-        if (!f || !f.data) return ROW_H_TEXT;
-        const aspect = f.h / f.w;
-        const h = Math.min(FOTO_COL_W * aspect, MAX_FOTO_H);
-        return Math.max(h + 3, 14);
-      });
-      const anyFoto = fotoArr && fotoArr.some(f => f && f.data);
-      const fotoColW = anyFoto ? FOTO_COL_W : 10;
-      const fixedSum = 14 + 20 + 13 + 22 + kepW + 26 + 26 + fotoColW;
-      const extra = Math.max(0, USABLE - fixedSum);
-      const latW = 26 + Math.floor(extra / 2);
-      const lngW = 26 + Math.ceil(extra / 2);
+
+      // ── Helper: footer ───────────────────────────────────────
+      function drawFooterPlaceholder() {
+        // footer is drawn in the final pass after totalPages is known
+      }
+
+      // ════════════════════════════════════════════════════════
+      // HAL. 1 — RINGKASAN
+      // ════════════════════════════════════════════════════════
       doc.setFillColor(11, 38, 20);
       doc.rect(0, 0, PW, 24, 'F');
       doc.setFillColor(46, 168, 74);
@@ -1506,6 +1495,7 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       const tglCetak = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
       doc.text(`Dicetak: ${tglCetak}`, PW - MR, 11, {align:'right'});
       doc.text(`${N} pokok`, PW - MR, 18, {align:'right'});
+
       let y = 31;
       const col2x = ML + 148;
       const infoLabel = (label, val, x) => {
@@ -1519,110 +1509,260 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       y += 5.5;
       infoLabel('Divisi    :', meta.divisi || '—', ML);
       if (meta.tanggal) infoLabel('Tanggal :', meta.tanggal, col2x);
+
       y += 8;
       const chipDefs = [
-        { label:`Total: ${N}`,           bg:[238,242,255], fg:[55,48,163]  },
-        { label:`Sehat: ${SC[0]}`,        bg:[212,237,218], fg:[26,92,42]   },
-        { label:`Dini (St.1): ${SC[1]}`,  bg:[255,243,176], fg:[122,85,0]   },
-        { label:`Sakit (St.2): ${SC[2]}`, bg:[255,224,178], fg:[122,58,0]   },
-        { label:`Tumb-B (St.3): ${SC[3]}`,bg:[255,205,210], fg:[123,0,0]    },
-        { label:`Tumb-P (St.4): ${SC[4]}`,bg:[255,138,128], fg:[120,0,0]    },
+        { label:`Total: ${N}`,            bg:[238,242,255], fg:[55,48,163]  },
+        { label:`Sehat: ${SC[0]}`,         bg:[212,237,218], fg:[26,92,42]   },
+        { label:`Dini (St.1): ${SC[1]}`,   bg:[255,243,176], fg:[122,85,0]   },
+        { label:`Sakit (St.2): ${SC[2]}`,  bg:[255,224,178], fg:[122,58,0]   },
+        { label:`Tumb-B (St.3): ${SC[3]}`, bg:[255,205,210], fg:[123,0,0]    },
+        { label:`Tumb-P (St.4): ${SC[4]}`, bg:[255,138,128], fg:[120,0,0]    },
       ];
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
       let cx = ML;
-      const chipH = 7;
-      const chipPadX = 2.5;
       chipDefs.forEach(chip => {
         const tw = doc.getStringUnitWidth(chip.label) * 7 / doc.internal.scaleFactor;
-        const chipW = tw + chipPadX * 2;
+        const chipW = tw + 5;
         doc.setFillColor(...chip.bg);
-        doc.roundedRect(cx, y - 5.2, chipW, chipH, 1, 1, 'F');
+        doc.roundedRect(cx, y - 5.2, chipW, 7, 1, 1, 'F');
         doc.setTextColor(...chip.fg);
-        doc.text(chip.label, cx + chipPadX, y - 0.5);
+        doc.text(chip.label, cx + 2.5, y - 0.5);
         cx += chipW + 2.5;
       });
+
       y += 6;
       doc.setFillColor(...statusBg);
       doc.roundedRect(ML, y - 5.2, USABLE, 7.5, 1, 1, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...statusColor);
       const statsStr = `Tingkat Serangan (DI): ${DI.toFixed(1)}%   |   Indeks Keparahan (DSI): ${DSI.toFixed(1)}%   |   ${statusLabel}   |   Ambang endemik: DI > 20%`;
       doc.text(statsStr, ML + USABLE / 2, y - 0.5, {align:'center'});
-      y += 5;
-      doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.4);
+
+      // Keterangan isi halaman berikutnya
+      y += 10;
+      doc.setDrawColor(200, 210, 200); doc.setLineWidth(0.3);
       doc.line(ML, y, PW - MR, y);
-      y += 4;
+      y += 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(50,80,50);
+      const fotoCount = (fotoArr || []).filter(f => f && f.data).length;
+      let halInfo = 'Halaman berikutnya: ';
+      if (fotoCount > 0) halInfo += `Foto Dokumentasi (${fotoCount} foto)  →  Data Tabel  →  Rekomendasi Tindakan`;
+      else halInfo += 'Data Tabel  →  Rekomendasi Tindakan';
+      doc.text(halInfo, ML + USABLE/2, y, {align:'center'});
+
+      // ════════════════════════════════════════════════════════
+      // HAL. FOTO — GALLERY GRID (3 × 2 per halaman)
+      // ════════════════════════════════════════════════════════
+      const photoEntries = tableRows
+        .map((row, i) => ({ row, foto: fotoArr ? fotoArr[i] : null }))
+        .filter(e => e.foto && e.foto.data);
+
+      if (photoEntries.length > 0) {
+        const COLS = 3, ROWS = 2, PER_PAGE = COLS * ROWS;
+        const GAP_X = 3, GAP_Y = 4;
+        const CARD_TOP = 10;   // y mulai setelah header kecil
+        const CARD_W = (USABLE - (COLS - 1) * GAP_X) / COLS;     // ~89mm
+        const CARD_H = (BOT - CARD_TOP - (ROWS - 1) * GAP_Y) / ROWS; // ~94mm
+        const ACCENT_H  = 6;    // tinggi bar stadium di atas kartu
+        const PAD       = 2;    // padding kiri-kanan dalam kartu
+        const CAP_H     = 24;   // tinggi area keterangan bawah
+        const PHOTO_H   = CARD_H - ACCENT_H - PAD - CAP_H; // area foto
+
+        for (let pi = 0; pi < photoEntries.length; pi++) {
+          // Halaman baru setiap PER_PAGE foto
+          if (pi % PER_PAGE === 0) {
+            doc.addPage();
+            const pgFoto = Math.floor(pi / PER_PAGE) + 1;
+            const totFotoPg = Math.ceil(photoEntries.length / PER_PAGE);
+            // header kecil hijau
+            doc.setFillColor(11, 38, 20);
+            doc.rect(0, 0, PW, 8, 'F');
+            doc.setFillColor(46, 168, 74);
+            doc.rect(0, 8, PW, 1, 'F');
+            doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
+            doc.text(
+              `FOTO DOKUMENTASI LAPANGAN   (${pi+1} – ${Math.min(pi+PER_PAGE, photoEntries.length)} dari ${photoEntries.length} foto)`,
+              ML, 5.5
+            );
+            doc.setTextColor(134,239,172);
+            doc.text(`Hal. Foto ${pgFoto} / ${totFotoPg}`, PW - MR, 5.5, {align:'right'});
+          }
+
+          const colIdx = pi % COLS;
+          const rowIdx = Math.floor((pi % PER_PAGE) / COLS);
+          const cardX = ML + colIdx * (CARD_W + GAP_X);
+          const cardY = CARD_TOP + rowIdx * (CARD_H + GAP_Y);
+
+          const { row, foto } = photoEntries[pi];
+          const skor = Math.min(4, parseInt(String(row[2]).trim()) || 0);
+          const stC  = ST_COLORS[String(skor)];
+          const cardBg   = stC ? stC.bg : [212,237,218];
+          const cardFg   = stC ? stC.fg : [26,92,42];
+          const cardBdr  = cardBg.map(v => Math.max(0, v - 50));
+
+          // ── Kartu background ──────────────────────────────
+          doc.setFillColor(250, 252, 250);
+          doc.roundedRect(cardX, cardY, CARD_W, CARD_H, 2, 2, 'F');
+
+          // ── Bar stadium warna di atas ─────────────────────
+          doc.setFillColor(...cardBg);
+          // rounded top, kotak bawah
+          doc.roundedRect(cardX, cardY, CARD_W, ACCENT_H + 2, 2, 2, 'F');
+          doc.rect(cardX, cardY + ACCENT_H - 1, CARD_W, 3, 'F');
+
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...cardFg);
+          doc.text(
+            `Stadium ${skor}  ${STADIUM[skor]?.label || ''}  (${STADIUM[skor]?.code || ''})`,
+            cardX + PAD, cardY + ACCENT_H - 0.5
+          );
+
+          // Nomor urut kecil di pojok kanan atas
+          doc.setFontSize(5.5); doc.setTextColor(...cardFg.map(v=>Math.min(255,v+60)));
+          doc.text(`#${pi+1}`, cardX + CARD_W - PAD, cardY + ACCENT_H - 0.5, {align:'right'});
+
+          // ── Border kartu ──────────────────────────────────
+          doc.setDrawColor(...cardBdr);
+          doc.setLineWidth(0.4);
+          doc.roundedRect(cardX, cardY, CARD_W, CARD_H, 2, 2, 'S');
+
+          // ── Area foto ─────────────────────────────────────
+          const photoX = cardX + PAD;
+          const photoY = cardY + ACCENT_H + PAD;
+          const photoW = CARD_W - PAD * 2;
+
+          if (foto && foto.data) {
+            const aspect = foto.w / foto.h;
+            let rW, rH;
+            if (photoW / PHOTO_H > aspect) { rH = PHOTO_H; rW = PHOTO_H * aspect; }
+            else { rW = photoW; rH = photoW / aspect; }
+            const imgX = photoX + (photoW - rW) / 2;
+            const imgY = photoY + (PHOTO_H - rH) / 2;
+            const imgType = (foto.data.includes('jpeg') || foto.data.includes('jpg')) ? 'JPEG' : 'PNG';
+            try { doc.addImage(foto.data, imgType, imgX, imgY, rW, rH); }
+            catch(e) {
+              doc.setFillColor(230,235,230);
+              doc.rect(photoX, photoY, photoW, PHOTO_H, 'F');
+              doc.setFontSize(6); doc.setTextColor(150,160,150);
+              doc.text('Foto gagal dimuat', photoX+photoW/2, photoY+PHOTO_H/2, {align:'center',baseline:'middle'});
+            }
+          }
+
+          // ── Garis pemisah keterangan ──────────────────────
+          const capY = cardY + CARD_H - CAP_H;
+          doc.setDrawColor(...cardBdr); doc.setLineWidth(0.25);
+          doc.line(cardX + PAD, capY, cardX + CARD_W - PAD, capY);
+
+          // ── Keterangan foto ───────────────────────────────
+          const capX = cardX + PAD;
+          const capTW = CARD_W - PAD * 2;
+
+          // Baris 1: No. Pokok & Baris (bold)
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(15,25,15);
+          doc.text(`No. ${row[0]}   |   Baris ${row[1]}`, capX, capY + 5);
+
+          // Baris 2: Keparahan
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(45,60,45);
+          const kepFull = String(row[3] || '—');
+          const kepLines = doc.splitTextToSize(kepFull, capTW);
+          doc.text(kepLines[0], capX, capY + 11);
+
+          // Baris 3 & 4: Latitude & Longitude
+          const latStr = row[4] ? parseFloat(row[4]).toFixed(6) : '—';
+          const lngStr = row[5] ? parseFloat(row[5]).toFixed(6) : '—';
+          doc.setFontSize(6); doc.setTextColor(90, 105, 90);
+          doc.text(`Lat : ${latStr}`, capX, capY + 17);
+          doc.text(`Lng : ${lngStr}`, capX, capY + 21);
+        }
+      }
+
+      // ════════════════════════════════════════════════════════
+      // HAL. TABEL DATA
+      // ════════════════════════════════════════════════════════
+      doc.addPage();
+
+      // Header kecil tabel
+      doc.setFillColor(11, 38, 20);
+      doc.rect(0, 0, PW, 8, 'F');
+      doc.setFillColor(46, 168, 74);
+      doc.rect(0, 8, PW, 1, 'F');
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
+      doc.text(`DATA TABEL SENSUS — ${meta.kebun||''}  ${meta.divisi?'/ '+meta.divisi:''} ${meta.blok?'/ Blok '+meta.blok:''}`.trim(), ML, 5.5);
+      doc.setTextColor(134,239,172);
+      doc.text(`${N} pokok`, PW - MR, 5.5, {align:'right'});
+
+      // Pre-hitung lebar kolom
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+      let maxKepW = 40;
+      tableRows.forEach(r => {
+        const w = doc.getStringUnitWidth(String(r[3] || '')) * 7.5 / doc.internal.scaleFactor;
+        if (w > maxKepW) maxKepW = w;
+      });
+      const kepW = Math.min(maxKepW + 8, 85);
+      const anyFoto = fotoArr && fotoArr.some(f => f && f.data);
+      const fotoColW = 12;
+      const fixedSum = 14 + 20 + 13 + 22 + kepW + 26 + 26 + fotoColW;
+      const extra = Math.max(0, USABLE - fixedSum);
+      const latW = 26 + Math.floor(extra / 2);
+      const lngW = 26 + Math.ceil(extra / 2);
+
       const head = [['No.', 'No.\nPokok', 'Baris', 'Skor\nStadium', 'Tingkat Keparahan', 'Latitude', 'Longitude', 'Foto']];
       const body = tableRows.map((r, i) => {
         const skor   = String(r[2] ?? '').trim();
         const latStr = r[4] ? parseFloat(r[4]).toFixed(6) : '—';
         const lngStr = r[5] ? parseFloat(r[5]).toFixed(6) : '—';
-        return [i + 1, r[0], r[1], skor, String(r[3] || ''), latStr, lngStr, ''];
+        const hasFoto = fotoArr && fotoArr[i] && fotoArr[i].data ? 'Ada' : '—';
+        return [i + 1, r[0], r[1], skor, String(r[3] || ''), latStr, lngStr, hasFoto];
       });
+
       doc.autoTable({
-        startY : y,
-        head   : head,
-        body   : body,
-        margin : { left: ML, right: MR },
-        theme  : 'grid',
-        styles : { fontSize:7.5, cellPadding:{top:2,right:3,bottom:2,left:3}, valign:'middle', lineColor:[210,215,210], lineWidth:0.25, textColor:[30,30,30], overflow:'linebreak' },
-        headStyles : { fillColor:[27,107,48], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:3, minCellHeight:11 },
+        startY: 11,
+        head: head,
+        body: body,
+        margin: { left: ML, right: MR },
+        theme: 'grid',
+        styles: { fontSize:7.5, cellPadding:{top:2,right:3,bottom:2,left:3}, valign:'middle', lineColor:[210,215,210], lineWidth:0.25, textColor:[30,30,30], overflow:'linebreak', minCellHeight:7 },
+        headStyles: { fillColor:[27,107,48], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center', cellPadding:3, minCellHeight:11 },
         alternateRowStyles: { fillColor: [248, 250, 248] },
         columnStyles: {
-          0: { cellWidth: 14,      halign:'center' },
-          1: { cellWidth: 20,      halign:'center' },
-          2: { cellWidth: 13,      halign:'center' },
-          3: { cellWidth: 22,      halign:'center' },
-          4: { cellWidth: kepW                     },
-          5: { cellWidth: latW,    halign:'center', fontSize:7 },
-          6: { cellWidth: lngW,    halign:'center', fontSize:7 },
-          7: { cellWidth: fotoColW,halign:'center' },
+          0: { cellWidth: 14,       halign:'center' },
+          1: { cellWidth: 20,       halign:'center' },
+          2: { cellWidth: 13,       halign:'center' },
+          3: { cellWidth: 22,       halign:'center' },
+          4: { cellWidth: kepW },
+          5: { cellWidth: latW,     halign:'center', fontSize:7 },
+          6: { cellWidth: lngW,     halign:'center', fontSize:7 },
+          7: { cellWidth: fotoColW, halign:'center' },
         },
         didParseCell: function(data) {
           if (data.section !== 'body') return;
           const ri = data.row.index;
-          data.cell.styles.minCellHeight = rowRenderH[ri];
           if (data.column.index === 3 || data.column.index === 4) {
             const skor = String(body[ri]?.[3] ?? '').trim();
             const c = ST_COLORS[skor];
             if (c) { data.cell.styles.fillColor = c.bg; data.cell.styles.textColor = c.fg; data.cell.styles.fontStyle = 'bold'; }
           }
-        },
-        didDrawCell: function(data) {
-          if (data.section !== 'body' || data.column.index !== 7) return;
-          const f = fotoArr ? fotoArr[data.row.index] : null;
-          if (!f || !f.data) {
-            doc.setFontSize(6.5); doc.setTextColor(190,190,190);
-            doc.text('—', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
-            return;
-          }
-          try {
-            const imgType = f.data.toLowerCase().includes('jpeg') || f.data.toLowerCase().includes('jpg') ? 'JPEG' : 'PNG';
-            const pad = 1.5;
-            const maxW = data.cell.width  - pad * 2;
-            const maxH = data.cell.height - pad * 2;
-            const aspect = f.w / f.h;
-            let rW, rH;
-            if (maxW / maxH > aspect) { rH = maxH; rW = maxH * aspect; }
-            else                       { rW = maxW; rH = maxW / aspect; }
-            const x = data.cell.x + pad + (maxW - rW) / 2;
-            const y = data.cell.y + pad + (maxH - rH) / 2;
-            doc.addImage(f.data, imgType, x, y, rW, rH);
-          } catch(e) {
-            doc.setFontSize(6); doc.setTextColor(180,100,100);
-            doc.text('Err', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2, {align:'center', baseline:'middle'});
+          if (data.column.index === 7) {
+            if (body[ri]?.[7] === 'Ada') {
+              data.cell.styles.fillColor = [232,245,233];
+              data.cell.styles.textColor = [27,94,32];
+              data.cell.styles.fontStyle = 'bold';
+            }
           }
         },
       });
 
+      // ════════════════════════════════════════════════════════
+      // HAL. REKOMENDASI
+      // ════════════════════════════════════════════════════════
       const stadiumsPresent = [0,1,2,3,4].filter(s => SC[s] > 0);
       if (stadiumsPresent.length > 0) {
-        let recY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : y) + 10;
-        const LINE_H    = 4.3;
-        const REC_PAD   = 5;
-        const FOOTER_H  = 15;
+        let recY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 11) + 10;
+        const LINE_H = 4.3;
+        const REC_PAD = 5;
         const ensureSpace = (needed) => {
-          if (recY + needed > PH - FOOTER_H) { doc.addPage(); recY = 16; }
+          if (recY + needed > BOT - 5) { doc.addPage(); recY = 12; }
         };
+
         ensureSpace(18);
         doc.setFillColor(11, 38, 20);
         doc.rect(ML, recY, USABLE, 10, 'F');
@@ -1631,6 +1771,7 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(255,255,255);
         doc.text('REKOMENDASI TINDAKAN LAPANGAN', ML + USABLE/2, recY + 7, {align:'center'});
         recY += 14;
+
         const recBg = { 0:[212,237,218], 1:[255,243,176], 2:[255,224,178], 3:[255,205,210], 4:[255,138,128] };
         const recFg = { 0:[26,92,42], 1:[122,85,0], 2:[122,58,0], 3:[123,0,0], 4:[120,0,0] };
         const recBorder = { 0:[26,92,42], 1:[184,125,0], 2:[230,81,0], 3:[198,40,40], 4:[183,28,28] };
@@ -1642,7 +1783,7 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
           4: `STADIUM 4 - SANITASI LANJUTAN & PERSIAPAN REPLANTING:\n1. Identifikasi & tandai koordinat titik bekas pokok di peta blok kebun.\n2. Gali area bekas bonggol sedalam 80-100 cm - ambil sisa akar besar yang masih ada secara manual.\n3. Tabur Trichoderma spp. 400 gr + Dolomit ke dalam lubang, campur merata dengan tanah galian.\n4. Periksa & pantau pokok-pokok dalam radius 9 m (1 pokok ke segala arah) untuk deteksi dini penularan akar.\n5. Biarkan titik kosong BERA minimal 6 bulan sebelum replanting.\n6. Saat replanting: WAJIB gunakan varietas toleran Ganoderma (contoh: PPKS DP 540) + aplikasi Trichoderma 400 gr di lubang tanam.\n7. Laporkan posisi titik ke Asisten untuk update peta sensus dan data replanting blok.`,
         };
         stadiumsPresent.forEach((s, idx) => {
-          const st = STADIUM[s];
+          const st  = STADIUM[s];
           const txt = REC_PDF[s];
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
           const lines = doc.splitTextToSize(txt, USABLE - REC_PAD * 2);
@@ -1667,18 +1808,22 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
         });
       }
 
+      // ════════════════════════════════════════════════════════
+      // FOOTER SEMUA HALAMAN
+      // ════════════════════════════════════════════════════════
       const totalPages = doc.internal.getNumberOfPages();
       for (let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
         doc.setFillColor(245, 247, 245);
-        doc.rect(0, PH - 8, PW, 8, 'F');
+        doc.rect(0, PH - FOOTER_H, PW, FOOTER_H, 'F');
         doc.setDrawColor(220, 230, 220); doc.setLineWidth(0.3);
-        doc.line(0, PH - 8, PW, PH - 8);
+        doc.line(0, PH - FOOTER_H, PW, PH - FOOTER_H);
         doc.setFontSize(6.5); doc.setTextColor(120, 130, 120);
         doc.setFont('helvetica', 'normal');
         doc.text('GanoKit Ver.1  |  Sistem Sensus Ganoderma — PPKS', ML, PH - 3);
         doc.text(`Halaman ${p} / ${totalPages}`, PW - MR, PH - 3, {align:'right'});
       }
+
       showLoading(false);
       doc.save(filename);
       showToast(`✅ PDF berhasil didownload`);
