@@ -4507,11 +4507,6 @@ async function generateDroneMapPDF(){
     // Garis accent emas di bawah header
     page.drawRectangle({x:0,y:PH-hdrH-2,width:PW,height:2,color:rgb(0.82,0.68,0.18)});
 
-    // Tanggal kanan header
-    var tglStr=new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
-    var tglW=tglStr.length*6.5*0.52;
-    page.drawText(tglStr,{x:PW-SB_W-6-tglW,y:PH-hdrH+5,size:7,color:rgb(0.8,0.9,0.8),font:fontNorm});
-
     // ── MAP FRAME dengan shadow effect ───────────────
     // Shadow
     page.drawRectangle({x:MAP_X+2,y:MAP_Y-2,width:MAP_W,height:MAP_H,color:rgb(0.5,0.5,0.5),opacity:0.25});
