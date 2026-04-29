@@ -246,8 +246,6 @@
   .peta-status.loading{background:#E3F2FD;color:#1565C0}
   .peta-status.ok{background:#E8F5E9;color:#1B5E20}
   .peta-status.err{background:#FFEBEE;color:#B71C1C}
-  .peta-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;border:1px solid rgba(0,0,0,0.08)}
   .btn-dl-excel{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#FFF;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(27,94,32,.3);transition:all .2s;margin-top:8px}
   .btn-dl-excel:hover{transform:translateY(-1px)}
   .btn-dl-excel:disabled{background:var(--gray-400);box-shadow:none;cursor:not-allowed;transform:none}
@@ -461,15 +459,6 @@
       <button class="btn-ambil" id="btn-ambil" onclick="ambilDataServer()">📡&nbsp;&nbsp;Ambil Data dari Server</button>
       <div class="peta-status idle" id="peta-status">Masukkan filter lalu tekan tombol untuk mengambil data dari Google Sheets.</div>
     </div>
-    <div class="peta-legend">
-      <div class="legend-item" id="leg-0"    style="background:#D4EDDA;color:#1A5C2A">⬤ Sehat</div>
-      <div class="legend-item" id="leg-1"    style="background:#FFF3B0;color:#7A5500">⬤ Dini (St.1)</div>
-      <div class="legend-item" id="leg-2"    style="background:#FFE0B2;color:#7A3A00">⬤ Sakit (St.2)</div>
-      <div class="legend-item" id="leg-3"    style="background:#FFCDD2;color:#7B0000">⬤ Tumb-B (St.3)</div>
-      <div class="legend-item" id="leg-4"    style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
-      <div class="legend-item" id="leg-foto" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
-    </div>
-
     <!-- Summary strip + disease bar (muncul setelah data diambil) -->
     <div class="summary-strip" id="peta-summary-strip" style="display:none"></div>
     <div id="peta-disease-bar" style="display:none"></div>
@@ -1294,24 +1283,6 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       counts[s]++;
       if (r['Link Foto'] && String(r['Link Foto']).startsWith('http')) counts.foto++;
     });
-
-    // ── Update legend pills (badge count) ────────────────────
-    const BADGE = (n, fg) => n > 0
-      ? ` <span style="display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.18);color:${fg||'inherit'};font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 4px;border-radius:9px;margin-left:4px;letter-spacing:0">${n}</span>`
-      : '';
-    const legDefs = [
-      {id:'leg-0', label:'⬤ Sehat',        st:0, fg:'#1A5C2A'},
-      {id:'leg-1', label:'⬤ Dini (St.1)',  st:1, fg:'#7A5500'},
-      {id:'leg-2', label:'⬤ Sakit (St.2)', st:2, fg:'#7A3A00'},
-      {id:'leg-3', label:'⬤ Tumb-B (St.3)',st:3, fg:'#7B0000'},
-      {id:'leg-4', label:'⬤ Tumb-P (St.4)',st:4, fg:'#FFFFFF'},
-    ];
-    legDefs.forEach(d => {
-      const el = document.getElementById(d.id);
-      if (el) el.innerHTML = d.label + BADGE(counts[d.st], d.fg);
-    });
-    const fotoEl = document.getElementById('leg-foto');
-    if (fotoEl) fotoEl.innerHTML = '📷 Ada foto' + BADGE(counts.foto, '#424242');
 
     const N = (data||[]).length;
 
