@@ -469,6 +469,10 @@
       <div class="legend-item" id="leg-4"    style="background:#FF8A80;color:#FFF">⬤ Tumb-P (St.4)</div>
       <div class="legend-item" id="leg-foto" style="background:#E0E0E0;color:#424242">📷 Ada foto</div>
     </div>
+
+    <!-- Summary strip + disease bar (muncul setelah data diambil) -->
+    <div class="summary-strip" id="peta-summary-strip" style="display:none"></div>
+    <div id="peta-disease-bar" style="display:none"></div>
     <div class="peta-fs-overlay" id="peta-fs-overlay"></div>
     <div class="peta-wrap">
       <div id="peta-map"></div>
@@ -1291,28 +1295,83 @@ function wrapJsonp(callback,obj) { return ContentService.createTextResponse(call
       if (r['Link Foto'] && String(r['Link Foto']).startsWith('http')) counts.foto++;
     });
 
+    // ── Update legend pills (badge count) ────────────────────
     const BADGE = (n, fg) => n > 0
-      ? ` <span style="
-            display:inline-flex;align-items:center;justify-content:center;
-            background:rgba(0,0,0,0.18);color:${fg||'inherit'};
-            font-size:10px;font-weight:800;
-            min-width:18px;height:18px;padding:0 4px;
-            border-radius:9px;margin-left:4px;letter-spacing:0">${n}</span>`
+      ? ` <span style="display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.18);color:${fg||'inherit'};font-size:10px;font-weight:800;min-width:18px;height:18px;padding:0 4px;border-radius:9px;margin-left:4px;letter-spacing:0">${n}</span>`
       : '';
-
-    const defs = [
-      {id:'leg-0', label:'⬤ Sehat',       st:0, fg:'#1A5C2A'},
-      {id:'leg-1', label:'⬤ Dini (St.1)', st:1, fg:'#7A5500'},
-      {id:'leg-2', label:'⬤ Sakit (St.2)',st:2, fg:'#7A3A00'},
-      {id:'leg-3', label:'⬤ Tumb-B (St.3)',st:3,fg:'#7B0000'},
-      {id:'leg-4', label:'⬤ Tumb-P (St.4)',st:4,fg:'#FFFFFF'},
+    const legDefs = [
+      {id:'leg-0', label:'⬤ Sehat',        st:0, fg:'#1A5C2A'},
+      {id:'leg-1', label:'⬤ Dini (St.1)',  st:1, fg:'#7A5500'},
+      {id:'leg-2', label:'⬤ Sakit (St.2)', st:2, fg:'#7A3A00'},
+      {id:'leg-3', label:'⬤ Tumb-B (St.3)',st:3, fg:'#7B0000'},
+      {id:'leg-4', label:'⬤ Tumb-P (St.4)',st:4, fg:'#FFFFFF'},
     ];
-    defs.forEach(d => {
+    legDefs.forEach(d => {
       const el = document.getElementById(d.id);
       if (el) el.innerHTML = d.label + BADGE(counts[d.st], d.fg);
     });
     const fotoEl = document.getElementById('leg-foto');
     if (fotoEl) fotoEl.innerHTML = '📷 Ada foto' + BADGE(counts.foto, '#424242');
+
+    const N = (data||[]).length;
+
+    // ── Summary strip chips (sama persis dengan Data Tersimpan) ─
+    const stripEl = document.getElementById('peta-summary-strip');
+    if (stripEl) {
+      if (N === 0) { stripEl.style.display = 'none'; }
+      else {
+        stripEl.style.display = 'flex';
+        stripEl.innerHTML = '';
+        const chipDefs = [
+          {k:'total', label:'Total',   bg:'#EEF2FF', fg:'#3730A3', val: N},
+          {k:0,       label:'Sehat',   bg:'#D4EDDA', fg:'#1A5C2A', val: counts[0]},
+          {k:1,       label:'Dini',    bg:'#FFF3B0', fg:'#7A5500', val: counts[1]},
+          {k:2,       label:'Sakit',   bg:'#FFE0B2', fg:'#7A3A00', val: counts[2]},
+          {k:3,       label:'Tumb-B',  bg:'#FFCDD2', fg:'#7B0000', val: counts[3]},
+          {k:4,       label:'Tumb-P',  bg:'#FF8A80', fg:'#FFFFFF', val: counts[4]},
+          {k:'foto',  label:'Ada Foto',bg:'#E0E0E0', fg:'#424242', val: counts.foto},
+        ];
+        chipDefs.forEach(d => {
+          const ch = document.createElement('div');
+          ch.className = 'stat-chip';
+          ch.style.cssText = `background:${d.bg};color:${d.fg}`;
+          ch.innerHTML = `<div class="sv">${d.val}</div><div class="sl">${d.label}</div>`;
+          stripEl.appendChild(ch);
+        });
+      }
+    }
+
+    // ── Disease stats bar (sama persis dengan Data Tersimpan) ───
+    const nSakit = counts[1] + counts[2] + counts[3] + counts[4];
+    const DI  = N > 0 ? nSakit / N * 100 : 0;
+    const DSI = N > 0
+      ? (counts[1]*1 + counts[2]*2 + counts[3]*3 + counts[4]*4) / (N * 4) * 100
+      : 0;
+    const sBg  = DI > 20 ? '#FFEBEE' : DI > 10 ? '#FFF3E0' : '#E8F5E9';
+    const sFg  = DI > 20 ? '#B71C1C' : DI > 10 ? '#E65100' : '#1B5E20';
+    const sBdr = DI > 20 ? '#FFCDD2' : DI > 10 ? '#FFE0B2' : '#C8E6C9';
+    const sLabel = DI > 20 ? '⚠ ENDEMIK GANODERMA' : DI > 10 ? '⚠ STATUS WASPADA' : '✓ TERKENDALI';
+
+    const barEl = document.getElementById('peta-disease-bar');
+    if (barEl) {
+      if (N === 0) { barEl.style.display = 'none'; }
+      else {
+        barEl.style.cssText = `
+          display:flex; align-items:center; justify-content:space-between;
+          flex-wrap:wrap; gap:8px;
+          background:${sBg}; color:${sFg};
+          border:1px solid ${sBdr}; border-radius:10px;
+          padding:10px 14px; margin-bottom:10px;
+          font-size:12px; font-weight:700;
+        `;
+        barEl.innerHTML = `
+          <span>📊 Tingkat Serangan (DI): <strong>${DI.toFixed(1)}%</strong></span>
+          <span>📉 Indeks Keparahan (DSI): <strong>${DSI.toFixed(1)}%</strong></span>
+          <span style="background:${sFg};color:#FFF;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:800;white-space:nowrap">${sLabel}</span>
+          <span style="font-size:10px;opacity:.7;font-weight:600">Ambang endemik: DI &gt; 20%</span>
+        `;
+      }
+    }
   }
 
   async function ambilDataServer() {
