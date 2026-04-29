@@ -4438,7 +4438,7 @@ async function generateDroneMapPDF(){
 
     // FIX 4: MAP_Y lebih tinggi (dari 24 → 36) agar label Lng tidak terpotong di bawah
     // MAP_H dikurangi untuk memberi ruang label koordinat di bawah (26px) dan judul di atas
-    var MAP_X=60,MAP_Y=36,MAP_W=490,MAP_H=PH-MAP_Y-30; // 30px bawah untuk label Lng
+    var MAP_X=60,MAP_Y=36,MAP_W=490,MAP_H=PH-MAP_Y-30-8; // 30px bawah untuk label Lng
     var SB_X=MAP_X+MAP_W+14,SB_W=PW-SB_X-8;
     var cosLat=Math.cos((minLat+maxLat)/2*Math.PI/180);
     _pdfMapX=MAP_X;_pdfMapY=MAP_Y;
@@ -4502,10 +4502,11 @@ async function generateDroneMapPDF(){
     page.drawRectangle({x:0,y:0,width:PW,height:PH,color:rgb(0.94,0.94,0.94)});
 
     // ── Header profesional ────────────────────────────
-    var mapTopY=MAP_Y+MAP_H;  // y-koordinat puncak frame peta
-    var hdrH=PH-mapTopY;      // tinggi header = ruang tepat di atas map
-    page.drawRectangle({x:0,y:mapTopY,width:PW,height:hdrH,color:rgb(0.05,0.22,0.10)});
-    page.drawRectangle({x:0,y:mapTopY-2,width:PW,height:2,color:rgb(0.82,0.68,0.18)});
+    var mapTopY=MAP_Y+MAP_H;
+    var HDR_GAP=8;  // celah abu-abu antara header & konten di bawahnya
+    var hdrH=PH-mapTopY;
+    page.drawRectangle({x:0,y:mapTopY+HDR_GAP,width:PW,height:hdrH-HDR_GAP,color:rgb(0.05,0.22,0.10)});
+    page.drawRectangle({x:0,y:mapTopY+HDR_GAP-2,width:PW,height:2,color:rgb(0.82,0.68,0.18)});
 
     // ── MAP FRAME dengan shadow effect ───────────────
     // Shadow
@@ -4814,8 +4815,8 @@ async function generateDroneMapPDF(){
     // KOMPAS profesional
     var cmpAreaH=(yPos-divY2);
     var cmpX=SB_X+SB_W/2;
-    var cmpY=divY2+cmpAreaH*0.5;
-    var cmpR=20;
+    var cmpY=Math.min(divY2+cmpAreaH*0.5,yPos-cmpR-10);
+    var cmpR=15;
     // Background circle
     page.drawCircle({x:cmpX,y:cmpY,size:cmpR,color:rgb(0.97,0.97,0.97),borderColor:rgb(0.7,0.7,0.7),borderWidth:1.2});
     // Inner circle
@@ -4874,13 +4875,13 @@ async function generateDroneMapPDF(){
     var insetPad=10;
     page.drawRectangle({x:SB_X,y:yPos-insetH,width:SB_W,height:insetH,color:rgb(0.90,0.94,0.98),borderColor:rgb(0.65,0.72,0.78),borderWidth:0.8});
 
-    var insHPad=22;
+    var insHPad=10;
     var insX=SB_X+insHPad,insY=yPos-insetH+insetPad,insW=SB_W-insHPad*2,insH=insetH-insetPad*2;
-
+    
     // FIX 3: Render tile OSM via canvas untuk inset peta
-    var insetExpand=2.4;
-    var insetSpanLat=(maxLat-minLat)*insetExpand;
-    var insetSpanLng=(maxLng-minLng)*insetExpand;
+    // Cakupan TETAP level Pulau Sumatera (tidak relatif ke polygon)
+    var insetSpanLat=14.0;   // ~6°S sampai 6°N + margin
+    var insetSpanLng=18.0;   // ~95°E sampai 111°E
     var insetMinLat2=midLat-insetSpanLat/2;
     var insetMaxLat2=midLat+insetSpanLat/2;
     var insetMinLng2=midLng-insetSpanLng/2;
@@ -4910,7 +4911,7 @@ async function generateDroneMapPDF(){
       // Hitung zoom level OSM yang sesuai
       // Tile OSM: 1 tile = 256px, zoom z → tile covers 360/2^z degrees lng
       var spanLngDeg=insetMaxLng2-insetMinLng2;
-      var zoomTile=Math.max(8,Math.min(14,Math.floor(Math.log2(360/spanLngDeg))-1));
+      var zoomTile=Math.max(5,Math.min(7,Math.floor(Math.log2(360/spanLngDeg))));
 
       // Convert lat/lng ke tile number OSM
       function lngToTileX(lng,z){return Math.floor((lng+180)/360*Math.pow(2,z));}
@@ -4941,7 +4942,7 @@ async function generateDroneMapPDF(){
       // Load tiles (max 9 tiles agar tidak terlalu lama)
       var tilePromises=[];
       var totalTiles=(txMax-txMin+1)*(tyMax-tyMin+1);
-      if(totalTiles<=16){
+      if(totalTiles<=36){
         for(var ty=tyMin;ty<=tyMax;ty++){
           for(var tx=txMin;tx<=txMax;tx++){
             tilePromises.push((function(tx2,ty2){
@@ -4992,21 +4993,28 @@ async function generateDroneMapPDF(){
         ictx.restore();
       });
 
-      // Kotak merah extent area yang dicetak
-      var tl_i2=llToCanvas(maxLat,minLng);
-      var tr_i2=llToCanvas(maxLat,maxLng);
-      var br_i2=llToCanvas(minLat,maxLng);
-      var bl_i2=llToCanvas(minLat,minLng);
+      // Titik merah mencolok di pusat lokasi kebun
+      var locPt=llToCanvas(midLat,midLng);
+      var locR=10*insetRS;
       ictx.save();
-      ictx.strokeStyle='#cc1111';
-      ictx.lineWidth=2.5;
-      ictx.setLineDash([5,3]);
+      ictx.shadowColor='rgba(0,0,0,0.55)';
+      ictx.shadowBlur=6;
+      ictx.fillStyle='rgba(220,20,20,0.92)';
       ictx.beginPath();
-      ictx.moveTo(tl_i2[0],tl_i2[1]);
-      ictx.lineTo(tr_i2[0],tr_i2[1]);
-      ictx.lineTo(br_i2[0],br_i2[1]);
-      ictx.lineTo(bl_i2[0],bl_i2[1]);
-      ictx.closePath();
+      ictx.arc(locPt[0],locPt[1],locR,0,Math.PI*2);
+      ictx.fill();
+      ictx.shadowBlur=0;
+      ictx.strokeStyle='#ffffff';
+      ictx.lineWidth=2.5;
+      ictx.setLineDash([]);
+      ictx.stroke();
+      ictx.strokeStyle='#fff';
+      ictx.lineWidth=2;
+      ictx.beginPath();
+      ictx.moveTo(locPt[0]-locR*0.55,locPt[1]);
+      ictx.lineTo(locPt[0]+locR*0.55,locPt[1]);
+      ictx.moveTo(locPt[0],locPt[1]-locR*0.55);
+      ictx.lineTo(locPt[0],locPt[1]+locR*0.55);
       ictx.stroke();
       ictx.restore();
 
