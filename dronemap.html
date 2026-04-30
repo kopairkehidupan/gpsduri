@@ -4427,7 +4427,9 @@ async function generateDroneMapPDF(){
     var minLng=Math.min.apply(null,bbLngs),maxLng=Math.max.apply(null,bbLngs);
     var dLat=(maxLat-minLat)||0.001;
     var dLng=(maxLng-minLng)||0.001;
-    var marginFactor=0.14;
+    
+    // Margin lebih kecil jika hanya 1 blok yang dicetak
+    var marginFactor=selectedIds.size<=1?0.08:0.14;
     minLat-=dLat*marginFactor; maxLat+=dLat*marginFactor;
     minLng-=dLng*marginFactor; maxLng+=dLng*marginFactor;
 
@@ -4446,7 +4448,7 @@ async function generateDroneMapPDF(){
     // Scale adaptif
     var scaleX=MAP_W/((maxLng-minLng)*cosLat);
     var scaleY=MAP_H/(maxLat-minLat);
-    var mapScale=Math.min(scaleX,scaleY)*0.84;
+    var mapScale=Math.min(scaleX,scaleY)*0.93;
     var mapCX=MAP_X+MAP_W/2;
     var mapCY=MAP_Y+MAP_H/2;
     var midLat=(minLat+maxLat)/2;
@@ -4831,7 +4833,7 @@ async function generateDroneMapPDF(){
     // Garis horizontal kompas
     page.drawLine({start:{x:cmpX-cmpR+3,y:cmpY},end:{x:cmpX+cmpR-3,y:cmpY},thickness:0.5,color:rgb(0.75,0.75,0.75)});
     // Huruf U
-    var uY2=Math.min(cmpY+cmpR+5,yPos-4);
+    var uY2=Math.min(cmpY+cmpR+5,yPos-14);
     page.drawText('U',{x:cmpX-5,y:uY2,size:11,color:rgb(0.05,0.22,0.10),font:fontBold});
 
     // SKALA
@@ -4880,8 +4882,8 @@ async function generateDroneMapPDF(){
     
     // FIX 3: Render tile OSM via canvas untuk inset peta
     // Cakupan TETAP level Pulau Sumatera (tidak relatif ke polygon)
-    var insetSpanLat=14.0;   // ~6°S sampai 6°N + margin
-    var insetSpanLng=18.0;   // ~95°E sampai 111°E
+    var insetSpanLat=4.5;    // cakupan 1 provinsi (~4-5 derajat)
+    var insetSpanLng=5.5;    // cakupan 1 provinsi
     var insetMinLat2=midLat-insetSpanLat/2;
     var insetMaxLat2=midLat+insetSpanLat/2;
     var insetMinLng2=midLng-insetSpanLng/2;
