@@ -717,25 +717,6 @@ var _labelOffsets={};       // {measureId: {dlat,dlng}} — offset label dalam s
 var _labelDragMarkers={};   // {measureId: L.Marker} — marker drag untuk posisi label di peta
 var _exportBatasShow={};    // {measureId: bool} — tampilkan garis batas polygon di PDF (default true)
 var _exportLabelShow={};    // {measureId: bool} — tampilkan label per-polygon di PDF (default true)
-var _pdfInsetLevel = 'provinsi'; // 'provinsi' | 'kabupaten' | 'kecamatan'
-
-var _insetLevelDefs = {
-  provinsi:  { lat: 4.5,  lng: 5.5,  zMin: 5,  zMax: 7  },
-  kabupaten: { lat: 1.3,  lng: 1.6,  zMin: 7,  zMax: 9  },
-  kecamatan: { lat: 0.38, lng: 0.48, zMin: 9,  zMax: 11 }
-};
-
-function _setInsetLevel(level, btn) {
-  _pdfInsetLevel = level;
-  document.querySelectorAll('.inset-lvl-btn').forEach(function(b) {
-    var ac = b.getAttribute('data-level') === level;
-    b.style.background  = ac ? 'rgba(90,158,53,.18)' : 'var(--s2)';
-    b.style.borderColor = ac ? 'var(--saw)' : 'var(--bd)';
-    b.style.color       = ac ? 'var(--saw2)' : 'var(--mu)';
-  });
-  var hintEl = document.getElementById('_insetLvlHint');
-  if (hintEl) hintEl.textContent = (_insetLevelDefs[level]||_insetLevelDefs.provinsi).hint;
-}
 
 // PDF STYLE STATE
 var _pdfBatasColor='#2e8024';   // warna garis batas
@@ -3671,31 +3652,6 @@ function exitSplitView(){
         <div id="pdfLegendEditor" style="display:flex;flex-direction:column;gap:3px">
         </div>
       </div>
-      <div style="margin-bottom:11px">
-        <label style="font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;
-          letter-spacing:.7px;display:block;margin-bottom:5px">🗺 Cakupan Inset Peta</label>
-        <div style="display:flex;gap:4px;margin-bottom:5px">
-          <button class="inset-lvl-btn" data-level="provinsi"
-            onclick="_setInsetLevel('provinsi',this)"
-            style="flex:1;padding:5px 3px;font-size:9px;border-radius:4px;cursor:pointer;
-              border:1px solid var(--saw);background:rgba(90,158,53,.18);color:var(--saw2);
-              font-family:'Space Mono',monospace;font-weight:700">Provinsi</button>
-          <button class="inset-lvl-btn" data-level="kabupaten"
-            onclick="_setInsetLevel('kabupaten',this)"
-            style="flex:1;padding:5px 3px;font-size:9px;border-radius:4px;cursor:pointer;
-              border:1px solid var(--bd);background:var(--s2);color:var(--mu);
-              font-family:'Space Mono',monospace">Kabupaten</button>
-          <button class="inset-lvl-btn" data-level="kecamatan"
-            onclick="_setInsetLevel('kecamatan',this)"
-            style="flex:1;padding:5px 3px;font-size:9px;border-radius:4px;cursor:pointer;
-              border:1px solid var(--bd);background:var(--s2);color:var(--mu);
-              font-family:'Space Mono',monospace">Kecamatan</button>
-        </div>
-        <div id="_insetLvlHint" style="font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;
-          padding:3px 6px;background:var(--s3);border-radius:3px;border:1px solid var(--bd)">
-          ~4–5° — Tampak wilayah antar kabupaten
-        </div>
-      </div>
     </div>
     <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--bd);flex-shrink:0">
       <button onclick="closePdfModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;cursor:pointer">Batal</button>
@@ -4930,9 +4886,8 @@ async function generateDroneMapPDF(){
     
     // FIX 3: Render tile OSM via canvas untuk inset peta
     // Cakupan TETAP level Pulau Sumatera (tidak relatif ke polygon)
-    var _iDef=_insetLevelDefs[_pdfInsetLevel]||_insetLevelDefs.provinsi;
-    var insetSpanLat=_iDef.lat;
-    var insetSpanLng=_iDef.lng;
+    var insetSpanLat=4.5;    // cakupan 1 provinsi (~4-5 derajat)
+    var insetSpanLng=5.5;    // cakupan 1 provinsi
     var insetMinLat2=midLat-insetSpanLat/2;
     var insetMaxLat2=midLat+insetSpanLat/2;
     var insetMinLng2=midLng-insetSpanLng/2;
@@ -4962,7 +4917,7 @@ async function generateDroneMapPDF(){
       // Hitung zoom level OSM yang sesuai
       // Tile OSM: 1 tile = 256px, zoom z → tile covers 360/2^z degrees lng
       var spanLngDeg=insetMaxLng2-insetMinLng2;
-      var zoomTile=Math.max(_iDef.zMin,Math.min(_iDef.zMax,Math.floor(Math.log2(360/spanLngDeg))));
+      var zoomTile=Math.max(5,Math.min(7,Math.floor(Math.log2(360/spanLngDeg))));
 
       // Convert lat/lng ke tile number OSM
       function lngToTileX(lng,z){return Math.floor((lng+180)/360*Math.pow(2,z));}
@@ -4993,7 +4948,7 @@ async function generateDroneMapPDF(){
       // Load tiles (max 9 tiles agar tidak terlalu lama)
       var tilePromises=[];
       var totalTiles=(txMax-txMin+1)*(tyMax-tyMin+1);
-      if(totalTiles<=81){
+      if(totalTiles<=36){
         for(var ty=tyMin;ty<=tyMax;ty++){
           for(var tx=txMin;tx<=txMax;tx++){
             tilePromises.push((function(tx2,ty2){
@@ -5114,7 +5069,7 @@ async function generateDroneMapPDF(){
     yPos-=insetH;
 
     // ── BOX STATISTIK SENSUS ─────────────────────────
-    var nTotal=showTreesInPdf?trees.length:0;
+    var nTotal=trees.length;
     if(nTotal>0){
       var nNormal=trees.filter(function(t){return t.status==='normal';}).length;
       var nSakit=trees.filter(function(t){return t.status==='sakit';}).length;
@@ -5290,6 +5245,7 @@ async function generateDroneMapPDF(){
     showToast('❌ Gagal membuat PDF: '+err.message);
   }
 }
+
+
 </script>
-<script src="dronemap_memory_fix.js"></script>
 </body>
