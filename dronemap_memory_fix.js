@@ -429,8 +429,8 @@ function _installSessionFileInputPatch() {
       // Yield ke UI dulu sebelum JSON.parse berat
       setTimeout(function() {
         var jsonText = ev.target.result;
-        // Null segera untuk bebas referensi FileReader
-        ev.target.result = null;
+        // FileReader.result adalah read-only — tidak bisa di-null langsung
+        // Cukup null variabel lokal setelah parse untuk membantu GC
 
         var data;
         try {
