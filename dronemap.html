@@ -1587,62 +1587,77 @@ function createRotatedOverlay(photo, toGeo) {
       var d = (cpts[3].y - cpts[0].y) / H2;
       var e2 = cpts[0].x, f2 = cpts[0].y;
  
-      var clipPts;
+      // FIX v3.1: Multi-BK clipping
       var activeBK = _batasKebunPolygons;
-      var ownedBK = null;
+      var ownedBKs = [];
       if (activeBK && activeBK.length > 0) {
         for (var _bki = 0; _bki < activeBK.length; _bki++) {
           if (_bkOwnerMap[activeBK[_bki].id] === photo.id) {
-            ownedBK = activeBK[_bki]; break;
+            ownedBKs.push(activeBK[_bki]);
           }
         }
-        if (ownedBK) {
-          clipPts = ownedBK.verts.map(function(v) {
-            var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
-            return { x: lp.x - off.x, y: lp.y - off.y };
-          });
-        }
       }
-      if (!clipPts && _seamlineMode && photo.voronoiCell && photo.voronoiCell.length >= 3) {
-        clipPts = photo.voronoiCell.map(function(v) {
-          var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
-          return { x: lp.x - off.x, y: lp.y - off.y };
-        });
-      }
-      if (!clipPts) { clipPts = cpts; }
- 
       this._canvas.style.opacity = this._nadirOp !== undefined ? this._nadirOp : photo.opacity;
- 
-      ctx.save();
-      ctx.globalAlpha = 1;
-      ctx.globalCompositeOperation = photo.blendMode || 'normal';
-      ctx.beginPath();
-      ctx.moveTo(clipPts[0].x, clipPts[0].y);
-      for (var ci = 1; ci < clipPts.length; ci++) ctx.lineTo(clipPts[ci].x, clipPts[ci].y);
-      ctx.closePath(); ctx.clip();
- 
-      ctx.transform(a, c, b, d, e2, f2);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(this._ofc, 0, 0, W2, H2);
-      ctx.restore();
- 
-      if (activeBK && activeBK.length > 0 && !ownedBK) {
-        activeBK.forEach(function(bk) {
-          if (!bk.verts || bk.verts.length < 3) return;
-          var bkPts = bk.verts.map(function(v) {
+      var _self = this;
+      if (ownedBKs.length > 0) {
+        ownedBKs.forEach(function(bk) {
+          var bkClipPts = bk.verts.map(function(v) {
             var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
             return { x: lp.x - off.x, y: lp.y - off.y };
           });
+          if (bkClipPts.length < 3) return;
           ctx.save();
-          ctx.globalCompositeOperation = 'destination-out';
           ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = photo.blendMode || 'normal';
           ctx.beginPath();
-          ctx.moveTo(bkPts[0].x, bkPts[0].y);
-          for (var _pi = 1; _pi < bkPts.length; _pi++) ctx.lineTo(bkPts[_pi].x, bkPts[_pi].y);
-          ctx.closePath(); ctx.fill();
+          ctx.moveTo(bkClipPts[0].x, bkClipPts[0].y);
+          for (var _ci = 1; _ci < bkClipPts.length; _ci++) ctx.lineTo(bkClipPts[_ci].x, bkClipPts[_ci].y);
+          ctx.closePath(); ctx.clip();
+          ctx.transform(a, c, b, d, e2, f2);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(_self._ofc, 0, 0, W2, H2);
           ctx.restore();
         });
+      } else {
+        var clipPts;
+        if (_seamlineMode && photo.voronoiCell && photo.voronoiCell.length >= 3) {
+          clipPts = photo.voronoiCell.map(function(v) {
+            var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
+            return { x: lp.x - off.x, y: lp.y - off.y };
+          });
+        } else {
+          clipPts = cpts;
+        }
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = photo.blendMode || 'normal';
+        ctx.beginPath();
+        ctx.moveTo(clipPts[0].x, clipPts[0].y);
+        for (var ci = 1; ci < clipPts.length; ci++) ctx.lineTo(clipPts[ci].x, clipPts[ci].y);
+        ctx.closePath(); ctx.clip();
+        ctx.transform(a, c, b, d, e2, f2);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(_self._ofc, 0, 0, W2, H2);
+        ctx.restore();
+        if (activeBK && activeBK.length > 0) {
+          activeBK.forEach(function(bk) {
+            if (!bk.verts || bk.verts.length < 3) return;
+            var bkPts = bk.verts.map(function(v) {
+              var lp = map.latLngToLayerPoint(L.latLng(v.lat, v.lng));
+              return { x: lp.x - off.x, y: lp.y - off.y };
+            });
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            ctx.moveTo(bkPts[0].x, bkPts[0].y);
+            for (var _pi = 1; _pi < bkPts.length; _pi++) ctx.lineTo(bkPts[_pi].x, bkPts[_pi].y);
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+          });
+        }
       }
     },
  
