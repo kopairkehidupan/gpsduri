@@ -5283,5 +5283,590 @@ async function generateDroneMapPDF(){
   }
 }
 </script>
-<script src="dronemap_session_layer_patch.js"></script>
+<!-- ============================================================
+     DRONEMAP v3 Pro — PATCH: Lompat ke Koordinat + Basemap Switcher
+     Tambahkan <script> block ini TEPAT SEBELUM </body> di file HTML utama.
+     Script ini override enterSplitView + exitSplitView dan tambah helper baru.
+     ============================================================ -->
+<script>
+// ============================================================
+// VARIABEL BARU — Split View Basemap
+// ============================================================
+var _splitBaseTile   = null;
+var _splitLabelTile  = null;
+var _splitJumpMarker = null;
+var _currentSplitBmap = 'satellite';
+
+// ============================================================
+// setSplitBasemap — ganti basemap di dalam Split View
+// type: 'satellite' | 'hybrid' | 'osm' | 'street'
+// ============================================================
+function setSplitBasemap(type) {
+  if (!_splitMap) return;
+  _currentSplitBmap = type;
+
+  // Hapus layer lama
+  if (_splitBaseTile)  { try { _splitMap.removeLayer(_splitBaseTile);  } catch(e){} _splitBaseTile  = null; }
+  if (_splitLabelTile) { try { _splitMap.removeLayer(_splitLabelTile); } catch(e){} _splitLabelTile = null; }
+
+  var SAT    = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  var LABELS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+  var STREET = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+  var OSM    = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+  switch (type) {
+    case 'satellite':
+      _splitBaseTile = L.tileLayer(SAT,    { attribution:'ESRI',  maxZoom:22, maxNativeZoom:19 });
+      break;
+    case 'hybrid':
+      _splitBaseTile  = L.tileLayer(SAT,    { attribution:'ESRI',  maxZoom:22, maxNativeZoom:19 });
+      _splitLabelTile = L.tileLayer(LABELS, { attribution:'ESRI',  maxZoom:22, maxNativeZoom:19 });
+      break;
+    case 'osm':
+      _splitBaseTile = L.tileLayer(OSM,    { attribution:'© OpenStreetMap contributors', maxZoom:22, maxNativeZoom:19 });
+      break;
+    case 'street':
+      _splitBaseTile = L.tileLayer(STREET, { attribution:'ESRI',  maxZoom:22, maxNativeZoom:19 });
+      break;
+    default:
+      _splitBaseTile = L.tileLayer(SAT,    { attribution:'ESRI',  maxZoom:22, maxNativeZoom:19 });
+  }
+
+  if (_splitBaseTile)  _splitBaseTile.addTo(_splitMap);
+  if (_splitLabelTile) _splitLabelTile.addTo(_splitMap);
+
+  // Update tombol aktif
+  document.querySelectorAll('.split-bmap-btn').forEach(function(b) {
+    var isActive = (b.getAttribute('data-bmap') === type);
+    b.style.background   = isActive ? 'rgba(90,158,53,.28)' : 'rgba(13,17,23,.88)';
+    b.style.borderColor  = isActive ? 'var(--saw)'          : 'rgba(48,54,61,.85)';
+    b.style.color        = isActive ? 'var(--saw2)'         : '#8b9099';
+    b.style.fontWeight   = isActive ? '700'                 : '400';
+  });
+}
+
+// ============================================================
+// splitJumpToCoord — zoom peta split ke koordinat yang diisi
+// Mendukung paste format "lat, lng" di field Lat sekaligus
+// ============================================================
+function splitJumpToCoord() {
+  if (!_splitMap) return;
+  var latEl = document.getElementById('splitJumpLat');
+  var lngEl = document.getElementById('splitJumpLng');
+  if (!latEl || !lngEl) return;
+
+  var rawLat = latEl.value.trim();
+  var rawLng = lngEl.value.trim();
+
+  // Auto-parse "lat, lng" kalau user paste sekaligus di field Lat
+  if (!rawLng && rawLat.indexOf(',') !== -1) {
+    var parts = rawLat.split(',');
+    rawLat = parts[0].trim();
+    rawLng = parts[1] ? parts[1].trim() : '';
+    latEl.value = rawLat;
+    lngEl.value = rawLng;
+  }
+  // Juga coba format "lat lng" (spasi)
+  if (!rawLng && /\s/.test(rawLat)) {
+    var sp = rawLat.trim().split(/\s+/);
+    rawLat = sp[0];
+    rawLng = sp[1] || '';
+    latEl.value = rawLat;
+    lngEl.value = rawLng;
+  }
+
+  var lat = parseFloat(rawLat);
+  var lng = parseFloat(rawLng);
+  var err = false;
+  if (isNaN(lat) || lat < -90  || lat > 90)  { latEl.style.borderColor = '#f85149'; err = true; } else latEl.style.borderColor = 'var(--ok)';
+  if (isNaN(lng) || lng < -180 || lng > 180) { lngEl.style.borderColor = '#f85149'; err = true; } else lngEl.style.borderColor = 'var(--ok)';
+  if (err) { showToast('⚠ Koordinat tidak valid.\nContoh: Lat -0.507534  Lng 101.447820'); return; }
+
+  _splitMap.setView([lat, lng], 18);
+
+  // Marker sementara — orange, mencolok
+  if (_splitJumpMarker) { try { _splitMap.removeLayer(_splitJumpMarker); } catch(e){} _splitJumpMarker = null; }
+  _splitJumpMarker = L.circleMarker([lat, lng], {
+    radius: 13, fillColor: '#f0a500', color: '#fff', weight: 3, fillOpacity: 0.88
+  }).addTo(_splitMap)
+    .bindPopup(
+      '<div style="font-family:monospace;font-size:10px;line-height:1.7">'
+      + '<b style="color:var(--saw2)">📍 Lompat ke:</b><br>'
+      + '<span style="color:#58a6ff">' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '</span><br>'
+      + '<span style="font-size:8px;color:#7d8590">Klik peta untuk pasang GCP</span>'
+      + '</div>'
+    ).openPopup();
+
+  showToast('📍 Peta dipindah ke:\n' + lat.toFixed(6) + ', ' + lng.toFixed(6));
+}
+
+// ============================================================
+// splitFillFromExif — baca GPS dari EXIF foto aktif, isi form
+// ============================================================
+function splitFillFromExif() {
+  var p = getPhoto(currentPhotoId);
+  if (!p || !p.src) { showToast('⚠ Pilih foto terlebih dahulu'); return; }
+
+  var b64 = p.src.split(',')[1];
+  if (!b64) { showToast('⚠ Format foto tidak didukung'); return; }
+
+  try {
+    var bin = atob(b64.substring(0, Math.min(b64.length, 131072))); // Hanya baca 96KB pertama
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+    var gps = _parseExifGps(bytes);
+    if (gps) {
+      var latEl = document.getElementById('splitJumpLat');
+      var lngEl = document.getElementById('splitJumpLng');
+      if (latEl) { latEl.value = gps.lat.toFixed(6); latEl.style.borderColor = 'var(--ok)'; }
+      if (lngEl) { lngEl.value = gps.lng.toFixed(6); lngEl.style.borderColor = 'var(--ok)'; }
+      splitJumpToCoord();
+      showToast('✓ GPS dari EXIF foto:\nLat ' + gps.lat.toFixed(5) + '  Lng ' + gps.lng.toFixed(5));
+    } else {
+      showToast('⚠ GPS tidak ditemukan di EXIF foto.\nMasukkan koordinat manual.\n\nTips: cek metadata foto via Windows Explorer\n→ klik kanan → Properties → Details → GPS');
+    }
+  } catch (e) {
+    showToast('⚠ Gagal baca EXIF: ' + e.message);
+  }
+}
+
+// ── Minimal EXIF GPS parser ──────────────────────────────────
+function _parseExifGps(data) {
+  var i = 2;
+  while (i < data.length - 4) {
+    if (data[i] === 0xFF) {
+      var marker = data[i + 1];
+      if (marker === 0xE1) { // APP1
+        var exifStart = i + 4;
+        if (exifStart + 6 < data.length &&
+            data[exifStart]   === 0x45 && data[exifStart+1] === 0x78 &&
+            data[exifStart+2] === 0x69 && data[exifStart+3] === 0x66) {
+          var tiffStart = exifStart + 6;
+          return _parseTiffGps(data, tiffStart);
+        }
+      }
+      if (marker === 0xD9 || marker === 0xDA) break; // EOI / SOS
+      var segLen = (data[i + 2] << 8) | data[i + 3];
+      if (segLen < 2) break;
+      i += 2 + segLen;
+    } else {
+      i++;
+    }
+  }
+  return null;
+}
+
+function _parseTiffGps(data, ts) {
+  try {
+    var le = (data[ts] === 0x49); // II = little-endian
+
+    function r16(off) {
+      return le ? (data[off] | (data[off+1] << 8))
+                : ((data[off] << 8) | data[off+1]);
+    }
+    function r32(off) {
+      return le ? (data[off] | (data[off+1] << 8) | (data[off+2] << 16) | (data[off+3] * 16777216))
+                : ((data[off] * 16777216) | (data[off+1] << 16) | (data[off+2] << 8) | data[off+3]);
+    }
+    function rat(off) {
+      var n = r32(off), d = r32(off + 4);
+      return d ? n / d : 0;
+    }
+
+    // IFD0
+    var ifd0 = ts + r32(ts + 4);
+    var cnt  = r16(ifd0);
+    var gpsOff = null;
+
+    for (var e = 0; e < Math.min(cnt, 64); e++) {
+      var ep = ifd0 + 2 + e * 12;
+      if (r16(ep) === 0x8825) { gpsOff = ts + r32(ep + 8); break; }
+    }
+    if (!gpsOff) return null;
+
+    var gcnt = r16(gpsOff);
+    var lat = null, lng = null, latRef = 'N', lngRef = 'E';
+
+    for (var g = 0; g < Math.min(gcnt, 32); g++) {
+      var gp = gpsOff + 2 + g * 12;
+      var tag = r16(gp);
+      var vOff = r32(gp + 8); // offset relative to tiffStart for > 4 byte values
+
+      switch (tag) {
+        case 0x0001: latRef = String.fromCharCode(data[gp + 8]); break;
+        case 0x0002:
+          var a = ts + vOff;
+          lat = rat(a) + rat(a+8)/60 + rat(a+16)/3600;
+          break;
+        case 0x0003: lngRef = String.fromCharCode(data[gp + 8]); break;
+        case 0x0004:
+          var b = ts + vOff;
+          lng = rat(b) + rat(b+8)/60 + rat(b+16)/3600;
+          break;
+      }
+    }
+
+    if (lat === null || lng === null) return null;
+    if (latRef === 'S') lat = -lat;
+    if (lngRef === 'W') lng = -lng;
+    return { lat: lat, lng: lng };
+  } catch(e) {
+    return null;
+  }
+}
+
+// ============================================================
+// enterSplitView — OVERRIDE lengkap dengan fitur baru
+// ============================================================
+function enterSplitView(){
+  var p = getPhoto(currentPhotoId);
+  if (!p || !p.src) return;
+  if (typeof L === 'undefined') { setStatus('Library belum siap...','amber'); onReady(enterSplitView); return; }
+
+  var content = document.querySelector('.content');
+  var oldMap  = map;
+
+  content.innerHTML =
+    '<div class="split-wrap" id="splitWrap">'
+    + '<div class="split-photo" id="splitPhotoPane">'
+    +   '<span class="split-label">1→ Klik titik di FOTO</span>'
+    +   '<div class="split-step" id="splitStepMsg"><strong>Langkah 1:</strong> Klik objek yang kamu kenali di foto</div>'
+    + '</div>'
+    + '<div class="split-map" id="splitMapPane">'
+    +   '<span class="split-label" style="border-color:var(--in);color:var(--in)">2→ Klik lokasi yang sama di PETA</span>'
+    + '</div>'
+    + '</div>';
+
+  if (oldMap) { try { oldMap.remove(); } catch(ex){} map = null; }
+
+  // ── PHOTO PANE ──────────────────────────────────────────────
+  var photoPane = document.getElementById('splitPhotoPane');
+  var img = document.createElement('img');
+  img.src = p.src;
+  img.style.cssText = 'position:absolute;transform-origin:0 0;max-width:none;user-select:none;';
+  img.draggable = false;
+  var sScale = 1, sOffX = 0, sOffY = 0;
+  img.onload = function(){
+    var pw = photoPane.clientWidth, ph2 = photoPane.clientHeight;
+    sScale = Math.min(pw/p.w, ph2/p.h) * 0.92;
+    sOffX  = (pw - p.w*sScale)/2;
+    sOffY  = (ph2 - p.h*sScale)/2;
+    img.style.transform = 'translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
+  };
+  photoPane.appendChild(img);
+
+  var sDrag = false, sDragStart = {x:0,y:0};
+  photoPane.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var r = photoPane.getBoundingClientRect();
+    var mx = e.clientX-r.left, my = e.clientY-r.top;
+    var f  = e.deltaY < 0 ? 1.13 : 0.885;
+    var ns = Math.max(0.04, Math.min(sScale*f, 24));
+    sOffX  = mx-(mx-sOffX)*(ns/sScale);
+    sOffY  = my-(my-sOffY)*(ns/sScale);
+    sScale = ns;
+    img.style.transform = 'translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
+  }, {passive:false});
+  photoPane.addEventListener('mousedown', function(e){
+    if (e.button===0){ sDrag=true; sDragStart={x:e.clientX-sOffX,y:e.clientY-sOffY}; }
+  });
+  photoPane.addEventListener('mousemove', function(e){
+    if (sDrag){
+      sOffX = e.clientX-sDragStart.x;
+      sOffY = e.clientY-sDragStart.y;
+      img.style.transform = 'translate('+sOffX+'px,'+sOffY+'px) scale('+sScale+')';
+    }
+  });
+  photoPane.addEventListener('mouseup', function(){ sDrag = false; });
+  photoPane.addEventListener('click', function(e){
+    if (_splitStep !== 'photo') return;
+    var r  = photoPane.getBoundingClientRect();
+    var px = (e.clientX-r.left-sOffX)/sScale;
+    var py = (e.clientY-r.top -sOffY)/sScale;
+    if (px<0||px>p.w||py<0||py>p.h) return;
+    _splitPhotoClick = {px:px, py:py, screenX:e.clientX-r.left, screenY:e.clientY-r.top};
+    var mk = document.createElement('div');
+    mk.className = 'split-photo-marker';
+    mk.textContent = _splitGcpNum;
+    mk.style.left  = _splitPhotoClick.screenX+'px';
+    mk.style.top   = _splitPhotoClick.screenY+'px';
+    mk.id = 'splitMk'+_splitGcpNum;
+    photoPane.appendChild(mk);
+    _splitStep = 'map';
+    document.getElementById('splitStepMsg').innerHTML =
+      '<strong>Langkah 2:</strong> Klik lokasi yang <strong style="color:var(--in)">SAMA</strong> di peta';
+    if (_splitMap) _splitMap.getContainer().style.cursor = 'crosshair';
+  });
+
+  // ── MAP PANE ────────────────────────────────────────────────
+  var mapPane = document.getElementById('splitMapPane');
+  var initLat = p.gcps.length>0 ? p.gcps[0].lat : 0.5275;
+  var initLng = p.gcps.length>0 ? p.gcps[0].lng : 101.4713;
+  var gp = photos.find(function(ph){ return ph.georef && ph.bounds; });
+  if (gp){ initLat=(gp.bounds[0][0]+gp.bounds[1][0])/2; initLng=(gp.bounds[0][1]+gp.bounds[1][1])/2; }
+
+  _splitMap = L.map(mapPane, {zoomControl:true}).setView([initLat, initLng], 18);
+
+  // ★ Gunakan setSplitBasemap (bukan hardcode tileLayer)
+  _splitBaseTile = null; _splitLabelTile = null;
+  setSplitBasemap('satellite');
+
+  if (p.gcps.length > 0){
+    p.gcps.forEach(function(g,i){
+      L.circleMarker([g.lat,g.lng],{radius:6,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1})
+       .addTo(_splitMap).bindPopup('GCP '+(i+1));
+    });
+    _splitMap.setView([p.gcps[0].lat, p.gcps[0].lng], 18);
+  }
+
+  _splitMap.on('click', function(e){
+    if (_splitStep !== 'map' || !_splitPhotoClick) return;
+    var lat = e.latlng.lat, lng = e.latlng.lng;
+    p.gcps.push({px:_splitPhotoClick.px, py:_splitPhotoClick.py, lat:lat, lng:lng, id:Date.now()});
+    renderGCPList(); updateGCPStatus(); renderPhotoList(); updateStats();
+    L.circleMarker([lat,lng],{radius:7,fillColor:'#58a6ff',color:'#000',weight:2,fillOpacity:1})
+     .addTo(_splitMap).bindPopup('GCP '+_splitGcpNum);
+    var mk = document.getElementById('splitMk'+_splitGcpNum);
+    if (mk) mk.style.background = 'var(--ok)';
+    _splitGcpNum++;
+    _splitStep = 'photo';
+    _splitPhotoClick = null;
+    if (_splitMap) _splitMap.getContainer().style.cursor = '';
+    var n = p.gcps.length;
+    var badge = document.getElementById('splitGcpBadge');
+    if (badge) badge.textContent = n+' GCP';
+    var applyBtn = document.getElementById('btnSplitApply');
+    if (applyBtn) applyBtn.disabled = n < 3;
+    document.getElementById('splitStepMsg').innerHTML =
+      '<strong>GCP '+n+' tersimpan!</strong> '
+      + (n>=3 ? '<span style="color:var(--ok)">Siap georeference ✓</span>' : 'Klik titik berikutnya di foto');
+  });
+
+  // ★ PANEL BARU: Basemap Switcher + Lompat ke Koordinat
+  var jumpPanel = document.createElement('div');
+  jumpPanel.id = 'splitJumpPanel';
+  jumpPanel.style.cssText = [
+    'position:absolute','top:50px','left:50%','transform:translateX(-50%)',
+    'z-index:500','display:flex','flex-direction:column','gap:5px',
+    'pointer-events:auto','min-width:460px'
+  ].join(';');
+
+  // Row 1 — Basemap switcher
+  var bmapCfg = [
+    {key:'satellite', icon:'🛰', label:'Satelit',  title:'ESRI World Imagery — Citra satelit resolusi tinggi'},
+    {key:'hybrid',    icon:'🌐', label:'Hybrid',   title:'Satelit + Label jalan, nama tempat, gedung'},
+    {key:'osm',       icon:'🗺', label:'OSM',       title:'OpenStreetMap — Peta lengkap dengan jalan & nama lokasi'},
+    {key:'street',    icon:'🏙', label:'Street',   title:'ESRI World Street Map — Mirip Google Maps'}
+  ];
+
+  var bmapRow = document.createElement('div');
+  bmapRow.style.cssText = 'display:flex;gap:3px;justify-content:center';
+  bmapCfg.forEach(function(cfg){
+    var btn = document.createElement('button');
+    btn.className = 'split-bmap-btn';
+    btn.setAttribute('data-bmap', cfg.key);
+    btn.title = cfg.title;
+    btn.innerHTML = cfg.icon + ' ' + cfg.label;
+    btn.style.cssText = [
+      'padding:5px 12px','font-size:9px','border-radius:5px','cursor:pointer',
+      'border:1px solid rgba(48,54,61,.85)',
+      'background:rgba(13,17,23,.88)',
+      'color:#8b9099',
+      'font-family:\'Space Mono\',monospace',
+      'transition:all .15s','white-space:nowrap',
+      'backdrop-filter:blur(6px)',
+      'box-shadow:0 1px 4px rgba(0,0,0,.4)'
+    ].join(';');
+    btn.onclick = function(){ setSplitBasemap(cfg.key); };
+    bmapRow.appendChild(btn);
+  });
+  jumpPanel.appendChild(bmapRow);
+
+  // Row 2 — Koordinat + EXIF
+  var jumpRow = document.createElement('div');
+  jumpRow.style.cssText = [
+    'display:flex','align-items:center','gap:5px',
+    'background:rgba(13,17,23,.93)',
+    'border:1px solid rgba(48,54,61,.85)',
+    'border-radius:8px','padding:6px 10px',
+    'backdrop-filter:blur(8px)',
+    'box-shadow:0 2px 8px rgba(0,0,0,.5)'
+  ].join(';');
+
+  jumpRow.innerHTML =
+    // Icon + label
+    '<span style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace;white-space:nowrap;flex-shrink:0">📍 Lompat ke:</span>'
+    // Lat
+    + '<input id="splitJumpLat" type="number" placeholder="Lat  (-90 ~ 90)" step="0.000001"'
+    +   ' title="Masukkan Latitude — atau paste \'lat, lng\' di sini sekaligus"'
+    +   ' style="width:140px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-family:\'Space Mono\',monospace;font-size:9px;padding:4px 7px;outline:none;flex-shrink:0">'
+    // Lng
+    + '<input id="splitJumpLng" type="number" placeholder="Lng  (Bujur Timur)" step="0.000001"'
+    +   ' title="Masukkan Longitude (Bujur Timur)"'
+    +   ' style="width:150px;background:var(--s2);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-family:\'Space Mono\',monospace;font-size:9px;padding:4px 7px;outline:none;flex-shrink:0">'
+    // Go button
+    + '<button onclick="splitJumpToCoord()"'
+    +   ' title="Lompat ke koordinat (Enter)"'
+    +   ' style="padding:4px 12px;font-size:9px;border-radius:4px;border:1px solid var(--saw);background:rgba(90,158,53,.22);color:var(--saw2);cursor:pointer;font-family:\'Space Mono\',monospace;white-space:nowrap;font-weight:700;flex-shrink:0">➤ Go</button>'
+    // EXIF button
+    + '<button onclick="splitFillFromExif()"'
+    +   ' title="Baca GPS otomatis dari metadata EXIF foto DJI"'
+    +   ' style="padding:4px 10px;font-size:9px;border-radius:4px;border:1px solid rgba(88,166,255,.45);background:rgba(88,166,255,.12);color:var(--in);cursor:pointer;font-family:\'Space Mono\',monospace;white-space:nowrap;flex-shrink:0">⚙ EXIF Auto</button>';
+
+  // Enter → jump
+  jumpRow.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); splitJumpToCoord(); }
+  });
+  jumpPanel.appendChild(jumpRow);
+
+  // Row 3 — hint kecil
+  var hintRow = document.createElement('div');
+  hintRow.style.cssText = 'text-align:center;font-size:8px;font-family:\'Space Mono\',monospace;color:rgba(125,133,144,.7);line-height:1.5';
+  hintRow.innerHTML = '💡 Bisa paste <b style="color:rgba(125,133,144,.9)">lat, lng</b> langsung di kolom Lat &nbsp;|&nbsp; Hybrid = Satelit + nama jalan &amp; lokasi';
+  jumpPanel.appendChild(hintRow);
+
+  mapPane.appendChild(jumpPanel);
+
+  // Aktifkan tombol satellite (default)
+  setTimeout(function(){
+    document.querySelectorAll('.split-bmap-btn').forEach(function(b){
+      if (b.getAttribute('data-bmap') === 'satellite'){
+        b.style.background = 'rgba(90,158,53,.28)';
+        b.style.borderColor = 'var(--saw)';
+        b.style.color = 'var(--saw2)';
+        b.style.fontWeight = '700';
+      }
+    });
+  }, 60);
+
+  // ── TOOLBAR BAWAH ─────────────────────────────────────────
+  var toolbar = document.createElement('div');
+  toolbar.style.cssText = [
+    'position:absolute','bottom:0','left:0','right:0',
+    'background:rgba(13,17,23,.96)',
+    'border-top:1px solid var(--bd)',
+    'padding:7px 12px',
+    'display:flex','gap:7px','align-items:center',
+    'z-index:9999','flex-wrap:wrap'
+  ].join(';');
+
+  toolbar.innerHTML =
+    '<span style="font-size:10px;color:var(--mu);font-family:monospace">'
+    + '<span id="splitGcpBadge" style="color:var(--saw2)">' + p.gcps.length + ' GCP</span>'
+    + '</span>'
+    + '<div style="flex:1"></div>'
+    + '<button class="btn btn-sc btn-sm" onclick="resetSplitStep()">↺ Ulangi</button>'
+    + '<button class="btn btn-sc btn-sm" onclick="clearSplitGCPs()">🗑 Reset GCP</button>'
+    + '<button class="btn btn-pr btn-sm" id="btnSplitApply" onclick="applySplitGeoref()" '
+    +   (p.gcps.length < 3 ? 'disabled' : '') + '>🗺 Georeference</button>'
+    + '<button class="btn btn-sc btn-sm" onclick="exitSplitView()">✕ Tutup</button>';
+
+  document.getElementById('splitWrap').appendChild(toolbar);
+}
+
+// ============================================================
+// exitSplitView — OVERRIDE: cleanup _splitBaseTile & _splitLabelTile
+// ============================================================
+function exitSplitView(){
+  if (_splitMap){ try{_splitMap.remove();}catch(ex){} } _splitMap=null;
+  _splitBaseTile=null; _splitLabelTile=null;
+  if (_splitJumpMarker){ try{_splitJumpMarker=null;}catch(e){} }
+  _splitStep='photo'; _splitPhotoClick=null; _splitGcpNum=1;
+
+  // Simpan layer yang sudah digambar
+  var savedDrawnLayers=[];
+  if(drawnItems){drawnItems.eachLayer(function(l){savedDrawnLayers.push(l);});}
+
+  var content=document.querySelector('.content');
+  content.innerHTML='<div id="mapPanel"></div>'
+    +'<div id="imagePanel" style="position:absolute;top:0;left:0;width:100%;height:100%;'
+    +'background:#060a10;overflow:hidden;cursor:crosshair;z-index:10;">'
+    +'<div class="welcome" id="welcomeMsg">'
+    +'<div class="welcome-icon">🌴</div>'
+    +'<h2>DroneMap v3 Pro</h2>'
+    +'<p>Upload foto drone, tandai GCP di objek yang kamu kenali, lakukan georeferencing.</p>'
+    +'</div></div>';
+
+  map=null;
+  var hasGeoref=photos.some(function(ph){return ph.georef;});
+  if(hasGeoref){
+    var firstGeoref=photos.find(function(ph){return ph.georef&&ph.bounds;});
+    if(firstGeoref){
+      var toGeo=buildAffine(firstGeoref.gcps);
+      var c=toGeo(firstGeoref.w/2,firstGeoref.h/2);
+      map=L.map('mapPanel',{zoomControl:true}).setView([c.lat,c.lng],17);
+      baseTile=L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}
+      ).addTo(map);
+      drawnItems=new L.FeatureGroup().addTo(map);
+      _treeLayer=L.featureGroup().addTo(map);
+      savedDrawnLayers.forEach(function(l){try{drawnItems.addLayer(l);}catch(ex){}});
+      map.createPane('gcpPane');
+      map.getPane('gcpPane').style.zIndex=650;
+      map.getPane('gcpPane').style.pointerEvents='none';
+      var drawCtrl=new L.Control.Draw({
+        position:'topright',edit:{featureGroup:drawnItems,remove:true},
+        draw:{
+          polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},
+          polyline:{shapeOptions:{color:'#58a6ff',weight:3}},
+          rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
+          circle:false,circlemarker:false,
+          marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}
+        }
+      });
+      map.addControl(drawCtrl);
+      map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
+      map.on(L.Draw.Event.EDITED,refreshMeasures);
+      map.on(L.Draw.Event.DELETED,function(e){
+        e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid;});});
+        renderMeasures();updateStats();
+      });
+      map.on(L.Draw.Event.DRAWSTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.DRAWSTOP,function(){_drawActive=false;});
+      map.on(L.Draw.Event.EDITSTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.EDITSTOP,function(){_drawActive=false;});
+      map.on(L.Draw.Event.DELETESTART,function(){_drawActive=true;});
+      map.on(L.Draw.Event.DELETESTOP,function(){_drawActive=false;});
+      map.on('mousemove',function(e){
+        document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);
+      });
+      map.on('click',function(e){if(_treeMode!=='add'||_drawActive)return;addTree(e.latlng.lat,e.latlng.lng);});
+      photos.forEach(function(ph){
+        if(ph.georef&&ph.gcps.length>=3){
+          var tg=buildAffine(ph.gcps);
+          ph.overlay=createRotatedOverlay(ph,tg);
+          if(ph.visible){ph.overlay.addTo(map);ph.overlay._buildOfc();}
+          ph.gcpLayer=L.featureGroup();
+          ph.gcps.forEach(function(g,i){
+            L.circleMarker([g.lat,g.lng],{radius:7,fillColor:'#f0a500',color:'#000',weight:2,fillOpacity:1,pane:'gcpPane'})
+             .addTo(ph.gcpLayer).bindPopup('<b>'+ph.name+'</b><br>GCP '+(i+1));
+          });
+          var togGCP=document.getElementById('togGCP');
+          if(togGCP&&togGCP.checked)ph.gcpLayer.addTo(map);
+        }
+      });
+      trees.forEach(function(t){addTreeMarker(t);});
+      var allBounds=photos.filter(function(p){return p.georef&&p.bounds;}).map(function(p){return p.bounds;});
+      if(allBounds.length>0){
+        var aLats=[],aLngs=[];
+        allBounds.forEach(function(b){aLats.push(b[0][0],b[1][0]);aLngs.push(b[0][1],b[1][1]);});
+        map.fitBounds([
+          [Math.min.apply(null,aLats),Math.min.apply(null,aLngs)],
+          [Math.max.apply(null,aLats),Math.max.apply(null,aLngs)]
+        ],{padding:[20,20]});
+      }
+      updateGcpCoverageBox();
+      if(_batasKebunIds.size>0){_rebuildBatasKebunPolygons();_updateBatasKebunInfoPanel();}
+    }
+  }
+  var ph2=getPhoto(currentPhotoId);
+  if(ph2&&ph2.src){showImagePanel();buildImagePanel(ph2);}else hideImagePanel();
+  renderGCPList();updateGCPStatus();
+}
+// ============================================================
+// END PATCH
+// ============================================================
+</script>
 </body>
