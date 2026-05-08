@@ -5884,4 +5884,111 @@ function exitSplitView(){
 // END PATCH
 // ============================================================
 </script>
+
+<!-- ============================================================
+     DRONEMAP v3 Pro — FIX PATCH: Toggle Foto Hilang
+     Versi: FINAL (CSS-based toggle, bukan removeLayer/addTo)
+     
+     ROOT CAUSE:
+     togglePhotoLayer() menggunakan map.removeLayer() untuk menyembunyikan foto.
+     map.removeLayer() memicu onRemove() yang MENGHANCURKAN _ofc (canvas data foto).
+     Ketika addTo(map) dipanggil lagi, _ofc sudah null → _update() langsung return
+     → foto tidak pernah muncul lagi sampai page di-refresh.
+
+     FIX STRATEGY:
+     Ganti pendekatan dari "remove/add layer" menjadi "toggle CSS display/opacity".
+     Canvas tetap ada di DOM, hanya disembunyikan secara visual.
+     _ofc TIDAK pernah dihancurkan saat toggle, sehingga bisa langsung re-render.
+
+     CARA PASANG:
+     Paste seluruh block <script> ini TEPAT SEBELUM </body> di file DroneMap.html
+     ============================================================ -->
+<script>
+// ============================================================
+// FIX: togglePhotoLayer — CSS-based visibility (bukan removeLayer)
+// ============================================================
+function togglePhotoLayer(pid, on) {
+  var p = getPhoto(pid);
+  if (!p) return;
+  p.visible = on;
+
+  if (!p.overlay) {
+    // Foto belum pernah di-georeference — tidak ada overlay, tidak ada aksi
+    return;
+  }
+
+  if (on) {
+    // ── TAMPILKAN ──────────────────────────────────────────────
+    if (p.overlay._canvas) {
+      // Canvas masih ada di DOM (hanya disembunyikan CSS) → restore
+      p.overlay._canvas.style.display = '';
+      p.overlay._canvas.style.opacity = p.opacity;
+      // Paksa re-render jika viewport berubah saat tersembunyi
+      if (p.overlay._ofc) {
+        p.overlay._update();
+      } else {
+        // _ofc hilang (mungkin karena refresh/session load), rebuild
+        p.overlay._buildOfc();
+      }
+    } else {
+      // Canvas tidak ada sama sekali → overlay belum pernah addTo
+      // atau sudah di-removeLayer sebelumnya (fallback aman)
+      p.overlay.addTo(map);
+      p.overlay._buildOfc();
+    }
+  } else {
+    // ── SEMBUNYIKAN ────────────────────────────────────────────
+    if (p.overlay._canvas) {
+      // Cukup sembunyikan canvas via CSS — JANGAN removeLayer
+      // Ini mencegah onRemove() menghancurkan _ofc
+      p.overlay._canvas.style.display = 'none';
+    } else {
+      // Canvas tidak ada — berarti layer belum di-add, tidak ada aksi
+    }
+  }
+}
+
+// ============================================================
+// FIX: setPhotoOpacity — pastikan opacity sync dengan visibility
+// ============================================================
+function setPhotoOpacity(pid, val, inputEl) {
+  var p = getPhoto(pid);
+  if (!p) return;
+  p.opacity = val / 100;
+  // Gunakan setOpacityVal jika tersedia
+  if (p.overlay && p.overlay.setOpacityVal) {
+    p.overlay.setOpacityVal(p.opacity);
+  } else if (p.overlay && p.overlay._canvas && p.visible) {
+    p.overlay._canvas.style.opacity = p.opacity;
+  }
+  if (inputEl) {
+    var sv = inputEl.parentNode.querySelector('.slider-val');
+    if (sv) sv.textContent = val + '%';
+  }
+}
+
+// ============================================================
+// FIX: setOpacityVal di dalam RotatedLayer juga perlu di-patch
+// agar tidak mengubah opacity canvas yang sedang hidden
+// ============================================================
+// Kita patch photos array setelah georef selesai — hook ke georefPhoto
+var _origGeorefPhoto = georefPhoto;
+georefPhoto = function(photo) {
+  _origGeorefPhoto(photo);
+
+  // Setelah georef, patch setOpacityVal pada overlay baru
+  if (photo && photo.overlay) {
+    var overlay = photo.overlay;
+    overlay.setOpacityVal = function(op) {
+      photo.opacity = op;
+      // Hanya update opacity jika canvas sedang visible (display != 'none')
+      if (this._canvas && this._canvas.style.display !== 'none') {
+        this._canvas.style.opacity = op;
+      }
+    };
+  }
+};
+
+console.log('[DroneMap Fix v2] CSS-based toggle patch dimuat. Bug foto hilang sudah diperbaiki.');
+</script>
 </body>
