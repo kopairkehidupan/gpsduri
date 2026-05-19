@@ -5991,4 +5991,435 @@ georefPhoto = function(photo) {
 
 console.log('[DroneMap Fix v2] CSS-based toggle patch dimuat. Bug foto hilang sudah diperbaiki.');
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     DroneMap v3 Pro — PATCH v2.0
+     Tambahkan tepat sebelum </body> di file dronemap.html
+
+     Perbaikan:
+     (1) FIX: Toggle foto di tab Layer nonaktif setelah load .dmsession
+     (2) TAMBAH: Import CSV / GeoJSON koordinat sensus pokok di tab Sensus
+     (3) TAMBAH: Tab baru "📥 Import" sebagai pintu masuk semua import
+     ════════════════════════════════════════════════════════════════ -->
+<script>
+// ════════════════════════════════════════════════════════════════
+// PATCH 1 — FIX TOGGLE VISIBLE SETELAH LOAD .dmsession
+// ════════════════════════════════════════════════════════════════
+// Root cause: p.visible hanya disimpan jika false. Saat load, nilai true
+// tidak ada di JSON → Object.assign() menghasilkan visible=undefined →
+// undefined falsy → checkbox tidak tercentang walaupun foto tampil di peta.
+// Fix: normalisasi p.visible sebelum renderLayerList menulis HTML.
+;(function(){
+  var _orig = renderLayerList;
+  renderLayerList = function(){
+    photos.forEach(function(p){
+      if(p.visible === undefined) p.visible = true;
+    });
+    _orig();
+  };
+})();
+
+// ════════════════════════════════════════════════════════════════
+// PATCH 2a — IMPORT POKOK SAWIT DARI CSV
+// Format utama : no_pokok, blok, status, catatan, latitude, longitude
+// Format ringkas: latitude, longitude  (2 kolom)
+// ════════════════════════════════════════════════════════════════
+function importTreesFromCSV(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var lines  = ev.target.result.split(/\r?\n/);
+    var added  = 0, skipped = 0;
+    var validSt = {normal:1, sakit:1, mati:1, kosong:1};
+    lines.forEach(function(line, idx){
+      line = line.trim(); if(!line) return;
+      var parts = line.split(',').map(function(s){
+        return s.replace(/^["']|["']$/g,'').trim();
+      });
+      // Lewati baris header jika ada (kolom lat bukan angka)
+      if(idx===0 && isNaN(parseFloat(parts[4])) && isNaN(parseFloat(parts[1]))) return;
+
+      // Format panjang: no_pokok, blok, status, catatan, lat, lng
+      if(parts.length >= 6){
+        var lat = parseFloat(parts[4]), lng = parseFloat(parts[5]);
+        if(!isNaN(lat) && !isNaN(lng) && Math.abs(lat)<=90 && Math.abs(lng)<=180){
+          treeId++;
+          var st = validSt[parts[2]] ? parts[2] : 'normal';
+          var tree = {
+            id:treeId, lat:lat, lng:lng,
+            no:   parts[0] || 'P-'+String(treeId).padStart(3,'0'),
+            block:parts[1] || '',
+            status:st,
+            note: parts[3] || '',
+            marker:null
+          };
+          trees.push(tree); addTreeMarker(tree); added++; return;
+        }
+      }
+      // Format ringkas: lat, lng
+      if(parts.length >= 2){
+        var lat2 = parseFloat(parts[0]), lng2 = parseFloat(parts[1]);
+        if(!isNaN(lat2) && !isNaN(lng2) && Math.abs(lat2)<=90 && Math.abs(lng2)<=180){
+          treeId++;
+          var t2 = {
+            id:treeId, lat:lat2, lng:lng2,
+            no:'P-'+String(treeId).padStart(3,'0'),
+            block:'', status:'normal', note:'', marker:null
+          };
+          trees.push(t2); addTreeMarker(t2); added++; return;
+        }
+      }
+      if(idx > 0) skipped++;
+    });
+    renderTreeList(); updateSensusStats(); updateStats();
+    document.getElementById('hdrTreeCount').textContent = '🌴 '+trees.length+' pokok';
+    showToast(
+      '✅ Import CSV selesai\n'+
+      '🌴 '+added+' pokok ditambahkan'+
+      (skipped ? '\n⚠ '+skipped+' baris dilewati (format salah)' : '')
+    );
+  };
+  reader.onerror = function(){ showToast('❌ Gagal membaca file CSV'); };
+  reader.readAsText(file, 'utf-8');
+}
+
+// ════════════════════════════════════════════════════════════════
+// PATCH 2b — IMPORT POKOK SAWIT DARI GEOJSON
+// FeatureCollection berisi Point features
+// Properties: no_pokok, blok, status, catatan (semua opsional)
+// ════════════════════════════════════════════════════════════════
+function importTreesFromGeoJSON(file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var added = 0, skipped = 0;
+    try{
+      var gj       = JSON.parse(ev.target.result);
+      var features = gj.features || (gj.type==='Feature' ? [gj] : []);
+      var validSt  = {normal:1, sakit:1, mati:1, kosong:1};
+      features.forEach(function(f){
+        if(!f.geometry || f.geometry.type !== 'Point'){ skipped++; return; }
+        var c = f.geometry.coordinates;
+        var lng = parseFloat(c[0]), lat = parseFloat(c[1]);
+        if(isNaN(lat) || isNaN(lng)){ skipped++; return; }
+        var p2  = f.properties || {};
+        var st  = p2.status || p2.STATUS || 'normal';
+        if(!validSt[st]) st = 'normal';
+        treeId++;
+        var tree = {
+          id:    treeId,
+          lat:   lat, lng: lng,
+          no:    p2.no_pokok || p2.NO_POKOK || p2.id || 'P-'+String(treeId).padStart(3,'0'),
+          block: p2.blok     || p2.BLOK     || p2.block || '',
+          status:st,
+          note:  p2.catatan  || p2.CATATAN  || p2.note || '',
+          marker:null
+        };
+        trees.push(tree); addTreeMarker(tree); added++;
+      });
+      renderTreeList(); updateSensusStats(); updateStats();
+      document.getElementById('hdrTreeCount').textContent = '🌴 '+trees.length+' pokok';
+      showToast(
+        '✅ Import GeoJSON selesai\n'+
+        '🌴 '+added+' pokok ditambahkan'+
+        (skipped ? '\n⚠ '+skipped+' feature dilewati' : '')
+      );
+    }catch(e){
+      showToast('❌ Gagal parse GeoJSON:\n'+e.message);
+    }
+  };
+  reader.onerror = function(){ showToast('❌ Gagal membaca file'); };
+  reader.readAsText(file, 'utf-8');
+}
+
+// ════════════════════════════════════════════════════════════════
+// PATCH 2c — IMPORT POLYGON / POLYLINE PENGUKURAN DARI GEOJSON
+// Mendukung Polygon dan LineString. Diimpor ke tab Ukur (drawnItems).
+// ════════════════════════════════════════════════════════════════
+function importMeasuresFromGeoJSON(file){
+  if(!file) return;
+  if(!map || !drawnItems || typeof turf === 'undefined'){
+    showToast('⚠ Peta belum siap.\nLakukan georeference foto dahulu, lalu coba lagi.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var added = 0;
+    try{
+      var gj       = JSON.parse(ev.target.result);
+      var features = gj.features || (gj.type==='Feature' ? [gj] : []);
+      features.forEach(function(f){
+        if(!f.geometry) return;
+        var type  = f.geometry.type;
+        var props = f.properties || {};
+        // Skip entri non-pengukuran dari export DroneMap
+        if(props.feature_type==='gcp' || props.feature_type==='palm_tree') return;
+        shapeId++;
+        var id    = shapeId;
+        var layer = null, m = null;
+
+        if(type === 'Polygon' && f.geometry.coordinates && f.geometry.coordinates[0]){
+          var lls   = f.geometry.coordinates[0].map(function(c){ return [c[1],c[0]]; });
+          var isBK  = (props.feature_type === 'batas_kebun');
+          var col   = isBK ? '#e74c3c' : '#5a9e35';
+          layer     = L.polygon(lls, {color:col, fillColor:col, weight:2, fillOpacity:0.14});
+          var area  = 0, perim = 0;
+          try{ area=turf.area(f); perim=turf.length(turf.polygonToLine(f),{units:'meters'}); }catch(e){}
+          var gjCoords = f.geometry.coordinates[0].slice(0,-1);
+          m = {
+            id:id, type:'polygon', area:area, perim:perim, coords:gjCoords,
+            label:      props.label || props.name || props.LABEL || 'Import #'+id,
+            treesInside:0, density:'-', isBatasKebun:isBK
+          };
+          layer.bindPopup('<b>'+m.label+'</b><br>Luas: '+fmtArea(area)+'<br>Keliling: '+fmtLen(perim));
+          if(isBK){ _batasKebunIds.add(id); m.isBatasKebun = true; }
+        }
+        else if(type === 'LineString' && f.geometry.coordinates){
+          var lls2 = f.geometry.coordinates.map(function(c){ return [c[1],c[0]]; });
+          layer    = L.polyline(lls2, {color:'#58a6ff', weight:3});
+          var len  = 0;
+          try{ len = turf.length(f, {units:'meters'}); }catch(e){}
+          m = {
+            id:id, type:'line', len:len,
+            coords:f.geometry.coordinates,
+            label: props.label || props.name || 'Line #'+id
+          };
+          layer.bindPopup('<b>'+m.label+'</b><br>Panjang: '+fmtLen(len));
+        }
+
+        if(layer && m){
+          layer._mid = id;
+          drawnItems.addLayer(layer);
+          _measureLayerType[id] = m.type==='polygon' ? 'blok' : 'jalan';
+          measures.push(m); added++;
+        }
+      });
+
+      // Rebuild Batas Kebun jika ada polygon batas yang diimport
+      if(_batasKebunIds.size > 0){ _rebuildBatasKebunPolygons(); _updateBatasKebunInfoPanel(); }
+      renderMeasures(); updateStats(); updateGcpCoverageBox();
+      showToast('✅ Import GeoJSON Pengukuran\n📐 '+added+' layer ditambahkan ke peta');
+    }catch(e){
+      showToast('❌ Gagal parse GeoJSON:\n'+e.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// ════════════════════════════════════════════════════════════════
+// PATCH 3 — INJECT UI: Tab baru "📥 Import" + seksi import di Sensus
+// ════════════════════════════════════════════════════════════════
+function _injectImportUI(){
+
+  // ── 3a. Tambah seksi Import di Sensus tab ────────────────────
+  var sensusSbody = document.querySelector('#tab-sensus .sbody');
+  if(sensusSbody && !document.getElementById('_sensusImportSec')){
+    var importSec = document.createElement('div');
+    importSec.className = 's-sec';
+    importSec.id = '_sensusImportSec';
+    importSec.innerHTML =
+      '<div class="s-ttl" style="color:var(--in)">📥 Import Data Pokok</div>'+
+      '<div class="ibox" style="margin-bottom:8px">'+
+        'Import koordinat pokok sawit dari file CSV atau GeoJSON yang sudah ada sebelumnya.'+
+      '</div>'+
+      '<div class="btn-row">'+
+        '<button class="btn btn-sc" style="flex:1;border-color:var(--in);color:var(--in)"'+
+          ' onclick="document.getElementById(\'_sTreeCSV\').click()">📄 CSV Sensus</button>'+
+        '<button class="btn btn-sc" style="flex:1;border-color:var(--pu);color:var(--pu)"'+
+          ' onclick="document.getElementById(\'_sTreeGJ\').click()">🗺 GeoJSON Sensus</button>'+
+      '</div>'+
+      '<input type="file" id="_sTreeCSV" accept=".csv,.txt" style="display:none">'+
+      '<input type="file" id="_sTreeGJ" accept=".geojson,.json" style="display:none">'+
+      '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:5px;'+
+           'padding:5px 7px;background:var(--s2);border-radius:4px;line-height:1.8">'+
+        '<b style="color:var(--in)">CSV:</b> no_pokok, blok, status, catatan, <b>latitude</b>, <b>longitude</b><br>'+
+        '<b style="color:var(--pu)">GeoJSON:</b> FeatureCollection · Point · properties.status = normal/sakit/mati/kosong'+
+      '</div>';
+
+    // Sisipkan sebelum seksi "Daftar Pokok" (seksi terakhir di sbody)
+    var allSecs = sensusSbody.querySelectorAll(':scope > .s-sec');
+    var lastSec = allSecs[allSecs.length - 1];
+    if(lastSec) sensusSbody.insertBefore(importSec, lastSec);
+    else        sensusSbody.appendChild(importSec);
+
+    document.getElementById('_sTreeCSV').addEventListener('change', function(e){
+      if(e.target.files[0]){ importTreesFromCSV(e.target.files[0]); e.target.value=''; }
+    });
+    document.getElementById('_sTreeGJ').addEventListener('change', function(e){
+      if(e.target.files[0]){ importTreesFromGeoJSON(e.target.files[0]); e.target.value=''; }
+    });
+  }
+
+  // ── 3b. Tambah tab button dan tab pane "Import" ───────────────
+  if(document.getElementById('tab-import')) return; // sudah ada, skip
+
+  var stabs   = document.querySelector('.stabs');
+  var sidebar = document.querySelector('.sidebar');
+  if(!stabs || !sidebar) return;
+
+  // Tab button
+  var tabBtn = document.createElement('div');
+  tabBtn.className = 'stab';
+  tabBtn.innerHTML = '📥 Import';
+  tabBtn.onclick = function(){ switchTab('import', this); };
+  stabs.appendChild(tabBtn);
+
+  // Tab pane — pintu masuk tunggal untuk semua import
+  var pane = document.createElement('div');
+  pane.className = 'tabpane';
+  pane.id = 'tab-import';
+  pane.innerHTML = [
+    '<div class="sbody">',
+
+    /* ── Foto Drone ── */
+    '<div class="s-sec">',
+      '<div class="s-ttl">📷 Foto Drone (untuk GCP)</div>',
+      '<div class="ibox" style="margin-bottom:8px">',
+        'Upload foto drone UAV untuk proses georeferencing dan pembuatan mosaic peta aerial.',
+      '</div>',
+      '<button class="btn btn-pr btn-full"',
+        ' onclick="document.getElementById(\'fileInputMulti\').click()">',
+        '+ Upload Foto Drone (.jpg / .png / .webp)',
+      '</button>',
+      '<div id="_impPhotoStat"',
+        ' style="margin-top:6px;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu)">',
+        '0 foto termuat · 0 georef',
+      '</div>',
+    '</div>',
+
+    /* ── Sesi ── */
+    '<div class="s-sec" style="background:rgba(88,166,255,.04);border-top:2px solid rgba(88,166,255,.3)">',
+      '<div class="s-ttl" style="color:var(--in)">💾 Sesi Kerja (.dmsession)</div>',
+      '<div class="ibox" style="margin-bottom:9px;border-left-color:var(--in)">',
+        'Pulihkan sesi sebelumnya: foto georef, GCP, polygon ukur, sensus pokok sawit.',
+      '</div>',
+      '<button class="btn btn-full"',
+        ' onclick="document.getElementById(\'sessionFileInput\').click()"',
+        ' style="border:1px solid var(--in);color:var(--in);background:rgba(88,166,255,.1);margin-bottom:6px">',
+        '📂 Muat Sesi dari File .dmsession',
+      '</button>',
+      '<button class="btn btn-full" onclick="saveSession()"',
+        ' style="background:linear-gradient(135deg,#1565C0,#1976D2);color:#fff;border:none">',
+        '💾 Simpan Sesi Sekarang',
+      '</button>',
+      '<div id="_impSessStatus"',
+        ' style="display:none;margin-top:7px;font-size:9px;font-family:\'Space Mono\',monospace;',
+               'padding:5px 8px;border-radius:4px;line-height:1.8">',
+      '</div>',
+      '<div style="font-size:9px;color:var(--mu);margin-top:5px;font-family:\'Space Mono\',monospace;line-height:1.6">',
+        '⚠ File .dmsession berisi foto (base64). Ukuran file = total ukuran foto.',
+      '</div>',
+    '</div>',
+
+    /* ── GCP CSV ── */
+    '<div class="s-sec">',
+      '<div class="s-ttl" style="color:var(--ac)">📌 GCP Titik Kontrol (CSV)</div>',
+      '<div class="ibox" style="margin-bottom:8px">',
+        'Import titik GCP untuk foto yang sedang aktif.<br>',
+        '<b>Format CSV:</b> px, py, latitude, longitude',
+      '</div>',
+      '<button class="btn btn-full"',
+        ' onclick="document.getElementById(\'csvInput\').click()"',
+        ' style="border:1px solid var(--ac);color:var(--ac);background:rgba(240,165,0,.1)">',
+        '📁 Import CSV GCP (untuk Foto Aktif)',
+      '</button>',
+    '</div>',
+
+    /* ── Sensus Pokok ── */
+    '<div class="s-sec">',
+      '<div class="s-ttl" style="color:var(--saw2)">🌴 Data Sensus Pokok Sawit</div>',
+      '<div class="ibox" style="margin-bottom:8px">',
+        'Import koordinat pokok sawit yang sudah ada sebelumnya.',
+      '</div>',
+      '<button class="btn btn-saw btn-full"',
+        ' onclick="document.getElementById(\'_iTreeCSV\').click()"',
+        ' style="margin-bottom:5px">',
+        '📄 Import CSV Sensus Pokok',
+      '</button>',
+      '<input type="file" id="_iTreeCSV" accept=".csv,.txt" style="display:none">',
+      '<button class="btn btn-sc btn-full"',
+        ' onclick="document.getElementById(\'_iTreeGJ\').click()"',
+        ' style="border-color:var(--pu);color:var(--pu);margin-bottom:5px">',
+        '🗺 Import GeoJSON Sensus Pokok',
+      '</button>',
+      '<input type="file" id="_iTreeGJ" accept=".geojson,.json" style="display:none">',
+      '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;',
+           'padding:5px 7px;background:var(--s2);border-radius:4px;line-height:1.8;margin-top:4px">',
+        '<b style="color:var(--saw2)">CSV:</b> no_pokok, blok, status, catatan, latitude, longitude<br>',
+        '<b style="color:var(--pu)">GeoJSON:</b> FeatureCollection · Point features<br>',
+        '<b>Status valid:</b> normal · sakit · mati · kosong',
+      '</div>',
+    '</div>',
+
+    /* ── Pengukuran GeoJSON ── */
+    '<div class="s-sec">',
+      '<div class="s-ttl">📐 Polygon / Polyline Pengukuran (GeoJSON)</div>',
+      '<div class="ibox" style="margin-bottom:8px">',
+        'Import polygon atau polyline dari GeoJSON (DroneMap export, QGIS, ArcGIS, dll).<br>',
+        'Hasil import ditambahkan ke tab <b>Ukur</b>.',
+      '</div>',
+      '<button class="btn btn-sc btn-full"',
+        ' onclick="document.getElementById(\'_iMeasGJ\').click()">',
+        '🗺 Import GeoJSON Pengukuran',
+      '</button>',
+      '<input type="file" id="_iMeasGJ" accept=".geojson,.json" style="display:none">',
+      '<div style="font-size:9px;color:var(--mu);margin-top:5px;font-family:\'Space Mono\',monospace;line-height:1.6">',
+        'Polygon ← masuk tab Ukur sebagai layer blok<br>',
+        'LineString ← masuk tab Ukur sebagai layer jalan/sungai',
+      '</div>',
+    '</div>',
+
+    '</div>' /* .sbody */
+  ].join('');
+
+  sidebar.appendChild(pane);
+
+  // Event listeners untuk Import tab
+  document.getElementById('_iTreeCSV').addEventListener('change', function(e){
+    if(e.target.files[0]){ importTreesFromCSV(e.target.files[0]); e.target.value=''; }
+  });
+  document.getElementById('_iTreeGJ').addEventListener('change', function(e){
+    if(e.target.files[0]){ importTreesFromGeoJSON(e.target.files[0]); e.target.value=''; }
+  });
+  document.getElementById('_iMeasGJ').addEventListener('change', function(e){
+    if(e.target.files[0]){ importMeasuresFromGeoJSON(e.target.files[0]); e.target.value=''; }
+  });
+
+  // ── Sync session load status ke Import tab ────────────────────
+  var srcEl = document.getElementById('sessionLoadStatus');
+  var dstEl = document.getElementById('_impSessStatus');
+  if(srcEl && dstEl){
+    var obs = new MutationObserver(function(){
+      dstEl.style.display    = srcEl.style.display;
+      dstEl.style.background = srcEl.style.background;
+      dstEl.style.color      = srcEl.style.color;
+      dstEl.style.border     = srcEl.style.border;
+      dstEl.innerHTML        = srcEl.innerHTML;
+    });
+    obs.observe(srcEl, {attributes:true, childList:true, subtree:true, characterData:true});
+  }
+
+  // ── Live counter foto di Import tab ──────────────────────────
+  var _rlOrig2 = renderPhotoList;
+  renderPhotoList = function(){
+    _rlOrig2();
+    var statEl = document.getElementById('_impPhotoStat');
+    if(statEl){
+      var total   = photos.length;
+      var georef  = photos.filter(function(p){ return p.georef; }).length;
+      statEl.textContent = total+' foto termuat · '+georef+' georef';
+      statEl.style.color = total > 0 ? 'var(--saw2)' : 'var(--mu)';
+    }
+  };
+}
+
+// Jalankan inject (DOM sudah siap karena script di bawah body)
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _injectImportUI);
+} else {
+  _injectImportUI();
+}
+
+console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import — OK');
+</script>
 </body>
