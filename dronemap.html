@@ -6422,4 +6422,101 @@ if(document.readyState === 'loading'){
 
 console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import — OK');
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DroneMap v3 Pro — CLEANUP PATCH
+     Pasang tepat SETELAH semua patch sebelumnya, sebelum </body>
+     
+     Yang dibersihkan:
+     ① Tab Foto   : hapus tombol "+ Tambah Foto" (sudah di tab Import)
+     ② Tab GCP    : hapus tombol "Import CSV" (sudah di tab Import)
+     ③ Tab Export : hapus seksi "Simpan & Pulihkan Sesi" (sudah di tab Import)
+     
+     Strategi: display:none (bukan remove) → listener & ID tetap hidup
+     Elemen hidden input dipindah ke body agar tetap bisa diakses JS
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+;(function _cleanupDuplicates(){
+
+  // ════════════════════════════════════════════════════════
+  // ① TAB FOTO — Hapus tombol "+ Tambah Foto" dan deskripsinya
+  //   Tetap pertahankan: fileInputMulti (hidden), btnGeorefAll
+  //   Ganti judul seksi agar tidak membingungkan
+  // ════════════════════════════════════════════════════════
+  var fotoFirstSec = document.querySelector('#tab-photos .sbody .s-sec:first-child');
+  if(fotoFirstSec){
+    // Sembunyikan tombol hijau "+ Tambah Foto"
+    var addBtn = fotoFirstSec.querySelector('.btn-pr');
+    if(addBtn) addBtn.style.display = 'none';
+
+    // Sembunyikan ibox deskripsi GCP (hanya relevan saat upload)
+    var ibox = fotoFirstSec.querySelector('.ibox');
+    if(ibox) ibox.style.display = 'none';
+
+    // Ganti judul seksi
+    var ttl = fotoFirstSec.querySelector('.s-ttl');
+    if(ttl){
+      ttl.innerHTML =
+        'Georef Foto &nbsp;'+
+        '<span style="font-size:8px;font-family:\'DM Sans\',sans-serif;text-transform:none;'+
+        'color:var(--mu);letter-spacing:0;font-weight:400">'+
+        '— upload baru? buka tab <b style="color:var(--in)">📥 Import</b></span>';
+    }
+
+    // Tambah baris "Georef Semua" yang lebih menonjol
+    var btnRow = fotoFirstSec.querySelector('.btn-row');
+    if(btnRow){
+      // Jadikan btnGeorefAll full-width agar tidak kehilangan tampilan
+      var gBtn = btnRow.querySelector('#btnGeorefAll');
+      if(gBtn) gBtn.style.width = '100%';
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ② TAB GCP — Hapus tombol "Import CSV" dari baris aksi GCP
+  //   (csvInput tetap hidden di DOM, masih dipakai tab Import)
+  // ════════════════════════════════════════════════════════
+  var gcpBtnRow = document.querySelector('#gcpPhotoActions .btn-row');
+  if(gcpBtnRow){
+    gcpBtnRow.querySelectorAll('button').forEach(function(btn){
+      if(btn.textContent.indexOf('Import CSV') !== -1){
+        btn.style.display = 'none';
+      }
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ③ TAB EXPORT — Hapus seksi "Simpan & Pulihkan Sesi"
+  //   PENTING: pindah sessionFileInput & sessionLoadStatus ke body
+  //   sebelum seksi disembunyikan, agar:
+  //   - event listener sessionFileInput.change tetap hidup
+  //   - MutationObserver (sync status ke Import tab) tetap berjalan
+  // ════════════════════════════════════════════════════════
+  var exportSbody = document.querySelector('#tab-export .sbody');
+  if(exportSbody){
+    exportSbody.querySelectorAll('.s-sec').forEach(function(sec){
+      var ttl2 = sec.querySelector('.s-ttl');
+      // Deteksi seksi Simpan & Pulihkan berdasarkan teks judul
+      if(!ttl2) return;
+      var txt = ttl2.textContent || '';
+      if(txt.indexOf('Simpan') === -1 && txt.indexOf('Pulihkan') === -1) return;
+
+      // Pindahkan hidden inputs & status div ke body SEBELUM hide
+      // (appendChild memindah elemen tanpa merusak event listener)
+      var toMove = ['sessionFileInput', 'sessionLoadStatus'];
+      toMove.forEach(function(id){
+        var el = sec.querySelector('#'+id) || document.getElementById(id);
+        if(el && el.parentNode !== document.body){
+          document.body.appendChild(el);
+        }
+      });
+
+      // Sembunyikan seluruh seksi
+      sec.style.display = 'none';
+    });
+  }
+
+  console.log('[DroneMap Cleanup] ① Tab Foto · ② Tab GCP · ③ Tab Export — duplikat selesai dibersihkan.');
+})();
+</script>
 </body>
