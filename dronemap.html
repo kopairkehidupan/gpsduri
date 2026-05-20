@@ -6922,72 +6922,64 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
 </script>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-// STATE — GLOBAL (bukan di dalam IIFE agar onclick bisa akses)
-// ═══════════════════════════════════════════════════════════════
-var _gpxWptLayer   = null;
-var _gpxWaypoints  = [];
-var _gpxWptId      = 0;
-var _gpxWptPage    = 0;
-var _gpxWptPageSz  = 25;
+// ══════════════════════════════════════════════════════════════
+// STATE GLOBAL — var top-level <script> = window.xxx otomatis
+// TIDAK pakai IIFE, TIDAK pakai Object.defineProperty
+// ══════════════════════════════════════════════════════════════
+var _gpxWaypoints   = [];
+var _gpxWptLayer    = null;
+var _gpxWptId       = 0;
+var _gpxWptPage     = 0;
+var _gpxWptPageSz   = 25;
+var _gpxTrackLayers = {};   // {shapeId_str:{layer,name,color,width,dash,opacity,points,isRoute}}
 
-// Track layers yang diimport dari GPX — untuk style editor
-// {id: {layer, name, color, width, dash, isRoute, points}}
-var _gpxTrackLayers = {};
-
-// ═══════════════════════════════════════════════════════════════
-// DEFINISI SIMBOL GARMIN MONTANA 680
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// SIMBOL GARMIN MONTANA
+// ══════════════════════════════════════════════════════════════
 var _garminDefs = {
-  'Flag, Green':      { bg:'#2da44e', bd:'#1a7431', shape:'flag'    },
-  'Flag, Blue':       { bg:'#388bfd', bd:'#1a56b8', shape:'flag'    },
-  'Flag, Red':        { bg:'#f85149', bd:'#b91c1c', shape:'flag'    },
-  'Flag, White':      { bg:'#e6edf3', bd:'#7d8590', shape:'flag'    },
-  'Flag, Black':      { bg:'#1c1c1e', bd:'#444444', shape:'flag'    },
-  'Dot, Red':         { bg:'#f85149', bd:'#b91c1c', shape:'dot'     },
-  'Dot, Green':       { bg:'#2da44e', bd:'#1a7431', shape:'dot'     },
-  'Dot, Blue':        { bg:'#388bfd', bd:'#1a56b8', shape:'dot'     },
-  'Dot, Yellow':      { bg:'#ffd166', bd:'#b45309', shape:'dot'     },
-  'Dot, Magenta':     { bg:'#bc8cff', bd:'#7c3aed', shape:'dot'     },
-  'Dot, White':       { bg:'#e6edf3', bd:'#7d8590', shape:'dot'     },
-  'Diamond, Green':   { bg:'#2da44e', bd:'#1a7431', shape:'diamond' },
-  'Diamond, Red':     { bg:'#f85149', bd:'#b91c1c', shape:'diamond' },
-  'Diamond, Blue':    { bg:'#388bfd', bd:'#1a56b8', shape:'diamond' },
-  'Diamond, Yellow':  { bg:'#ffd166', bd:'#b45309', shape:'diamond' },
-  'Diamond, Magenta': { bg:'#bc8cff', bd:'#7c3aed', shape:'diamond' },
-  'Circle, Red':      { bg:'#f85149', bd:'#b91c1c', shape:'circle'  },
-  'Circle, Green':    { bg:'#2da44e', bd:'#1a7431', shape:'circle'  },
-  'Circle, Blue':     { bg:'#388bfd', bd:'#1a56b8', shape:'circle'  },
-  'Square, Red':      { bg:'#f85149', bd:'#b91c1c', shape:'square'  },
-  'Square, Green':    { bg:'#2da44e', bd:'#1a7431', shape:'square'  },
-  'Square, Blue':     { bg:'#388bfd', bd:'#1a56b8', shape:'square'  },
-  'Pin, Red':         { bg:'#f85149', bd:'#b91c1c', shape:'pin'     },
-  'Pin, Green':       { bg:'#2da44e', bd:'#1a7431', shape:'pin'     },
-  'Pin, Blue':        { bg:'#388bfd', bd:'#1a56b8', shape:'pin'     },
-  'Waypoint':         { bg:'#7d8590', bd:'#484f58', shape:'dot'     },
-  'Trail Head':       { bg:'#bc8cff', bd:'#7c3aed', shape:'triangle'},
-  'Campsite':         { bg:'#5a9e35', bd:'#2e5c1e', shape:'tent'    },
-  'Summit':           { bg:'#ffd166', bd:'#b45309', shape:'peak'    },
-  'Residence':        { bg:'#f0a500', bd:'#92400e', shape:'house'   },
-  'Parking Area':     { bg:'#1d4ed8', bd:'#1e3a8a', shape:'square', label:'P' },
-  'Restaurant':       { bg:'#dc2626', bd:'#991b1b', shape:'circle'  },
-  'Medical Facility': { bg:'#ef4444', bd:'#b91c1c', shape:'cross'   },
-  'Gas Station':      { bg:'#f59e0b', bd:'#92400e', shape:'square', label:'G' },
-  'Marina':           { bg:'#0ea5e9', bd:'#075985', shape:'anchor'  },
-  'Airport':          { bg:'#64748b', bd:'#334155', shape:'plane'   },
-  'Fishing Spot':     { bg:'#0ea5e9', bd:'#075985', shape:'fish'    },
-  'Hunting Area':     { bg:'#713f12', bd:'#451a03', shape:'diamond' },
-  'Bridge':           { bg:'#6b7280', bd:'#374151', shape:'bridge'  },
-  'Building':         { bg:'#6b7280', bd:'#374151', shape:'house'   },
-  'Church':           { bg:'#e2e8f0', bd:'#94a3b8', shape:'cross'   },
-  'Cemetery':         { bg:'#9ca3af', bd:'#6b7280', shape:'cross'   },
-  'Picnic Area':      { bg:'#22c55e', bd:'#15803d', shape:'triangle'},
-  '_default':         { bg:'#7d8590', bd:'#484f58', shape:'dot'     }
+  'Flag, Green':{bg:'#2da44e',bd:'#1a7431',shape:'flag'},
+  'Flag, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'flag'},
+  'Flag, Red':{bg:'#f85149',bd:'#b91c1c',shape:'flag'},
+  'Flag, White':{bg:'#e6edf3',bd:'#7d8590',shape:'flag'},
+  'Flag, Black':{bg:'#1c1c1e',bd:'#444444',shape:'flag'},
+  'Dot, Red':{bg:'#f85149',bd:'#b91c1c',shape:'dot'},
+  'Dot, Green':{bg:'#2da44e',bd:'#1a7431',shape:'dot'},
+  'Dot, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'dot'},
+  'Dot, Yellow':{bg:'#ffd166',bd:'#b45309',shape:'dot'},
+  'Dot, Magenta':{bg:'#bc8cff',bd:'#7c3aed',shape:'dot'},
+  'Dot, White':{bg:'#e6edf3',bd:'#7d8590',shape:'dot'},
+  'Diamond, Green':{bg:'#2da44e',bd:'#1a7431',shape:'diamond'},
+  'Diamond, Red':{bg:'#f85149',bd:'#b91c1c',shape:'diamond'},
+  'Diamond, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'diamond'},
+  'Diamond, Yellow':{bg:'#ffd166',bd:'#b45309',shape:'diamond'},
+  'Diamond, Magenta':{bg:'#bc8cff',bd:'#7c3aed',shape:'diamond'},
+  'Circle, Red':{bg:'#f85149',bd:'#b91c1c',shape:'circle'},
+  'Circle, Green':{bg:'#2da44e',bd:'#1a7431',shape:'circle'},
+  'Circle, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'circle'},
+  'Square, Red':{bg:'#f85149',bd:'#b91c1c',shape:'square'},
+  'Square, Green':{bg:'#2da44e',bd:'#1a7431',shape:'square'},
+  'Square, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'square'},
+  'Pin, Red':{bg:'#f85149',bd:'#b91c1c',shape:'pin'},
+  'Pin, Green':{bg:'#2da44e',bd:'#1a7431',shape:'pin'},
+  'Pin, Blue':{bg:'#388bfd',bd:'#1a56b8',shape:'pin'},
+  'Waypoint':{bg:'#7d8590',bd:'#484f58',shape:'dot'},
+  'Trail Head':{bg:'#bc8cff',bd:'#7c3aed',shape:'triangle'},
+  'Campsite':{bg:'#5a9e35',bd:'#2e5c1e',shape:'tent'},
+  'Summit':{bg:'#ffd166',bd:'#b45309',shape:'peak'},
+  'Residence':{bg:'#f0a500',bd:'#92400e',shape:'house'},
+  'Parking Area':{bg:'#1d4ed8',bd:'#1e3a8a',shape:'square',label:'P'},
+  'Medical Facility':{bg:'#ef4444',bd:'#b91c1c',shape:'cross'},
+  'Marina':{bg:'#0ea5e9',bd:'#075985',shape:'anchor'},
+  'Airport':{bg:'#64748b',bd:'#334155',shape:'plane'},
+  'Fishing Spot':{bg:'#0ea5e9',bd:'#075985',shape:'fish'},
+  'Bridge':{bg:'#6b7280',bd:'#374151',shape:'bridge'},
+  'Building':{bg:'#6b7280',bd:'#374151',shape:'house'},
+  'Church':{bg:'#e2e8f0',bd:'#94a3b8',shape:'cross'},
+  'Cemetery':{bg:'#9ca3af',bd:'#6b7280',shape:'cross'},
+  'Picnic Area':{bg:'#22c55e',bd:'#15803d',shape:'triangle'},
+  '_default':{bg:'#7d8590',bd:'#484f58',shape:'dot'}
 };
-
-// Semua nama simbol untuk dropdown editor
-var _garminSymList = Object.keys(_garminDefs).filter(function(k){ return k !== '_default'; });
-
+var _garminSymList = Object.keys(_garminDefs).filter(function(k){return k!=='_default';});
 var _garminColors = {
   'Black':'#161b22','DarkRed':'#7f1d1d','DarkGreen':'#14532d',
   'DarkYellow':'#78350f','DarkBlue':'#1e3a5f','DarkMagenta':'#581c87',
@@ -6997,1025 +6989,827 @@ var _garminColors = {
   'White':'#e6edf3','Transparent':'#7d8590','_default':'#58a6ff'
 };
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // SVG ICON FACTORY
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 function _buildGpxIcon(symName, sz) {
-  sz = sz || 26;
-  var d  = _garminDefs[symName] || _garminDefs['_default'];
-  var bg = d.bg, bd = d.bd, sh = d.shape;
-  var svg;
-
-  if (sh === 'flag') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">'
-        + '<line x1="4" y1="2" x2="4" y2="31" stroke="'+bd+'" stroke-width="2.5" stroke-linecap="round"/>'
-        + '<polygon points="4,2 22,9 4,18" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
-        + '<circle cx="4" cy="31" r="2.5" fill="'+bd+'"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[24,32], iconAnchor:[4,31] });
+  sz = sz || 24;
+  var d = _garminDefs[symName] || _garminDefs['_default'];
+  var bg=d.bg, bd=d.bd, sh=d.shape, q=sz/2, svg;
+  if(sh==='flag'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+Math.round(sz*.9)+'" height="'+sz+'" viewBox="0 0 24 32">'
+      +'<line x1="4" y1="2" x2="4" y2="31" stroke="'+bd+'" stroke-width="2.5" stroke-linecap="round"/>'
+      +'<polygon points="4,2 22,9 4,18" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
+      +'<circle cx="4" cy="31" r="2.5" fill="'+bd+'"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[Math.round(sz*.9),sz],iconAnchor:[4,sz]});
   }
-  if (sh === 'dot') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+(sz/2-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="2.2"/>'
-        + '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+(sz/4)+'" fill="'+bd+'" opacity="0.4"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='dot'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<circle cx="'+q+'" cy="'+q+'" r="'+(q-1)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="2"/>'
+      +'<circle cx="'+q+'" cy="'+q+'" r="'+(q/2)+'" fill="'+bd+'" opacity=".4"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'diamond') {
-    var q = sz/2;
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<polygon points="'+q+',2 '+(sz-2)+','+q+' '+q+','+(sz-2)+' 2,'+q+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[q,q] });
+  if(sh==='diamond'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<polygon points="'+q+',2 '+(sz-2)+','+q+' '+q+','+(sz-2)+' 2,'+q+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'circle') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+(sz/2-2)+'" fill="'+bg+'" fill-opacity="0.3" stroke="'+bg+'" stroke-width="3.5"/>'
-        + '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+(sz/2-7)+'" fill="'+bg+'"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='circle'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<circle cx="'+q+'" cy="'+q+'" r="'+(q-2)+'" fill="'+bg+'" fill-opacity=".3" stroke="'+bg+'" stroke-width="3.5"/>'
+      +'<circle cx="'+q+'" cy="'+q+'" r="'+(q-7)+'" fill="'+bg+'"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'square') {
-    var lbl = d.label || '';
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<rect x="2" y="2" width="'+(sz-4)+'" height="'+(sz-4)+'" rx="3" fill="'+bg+'" stroke="'+bd+'" stroke-width="2"/>'
-        + (lbl ? '<text x="'+(sz/2)+'" y="'+(sz/2+4)+'" text-anchor="middle" font-size="11" font-weight="bold" font-family="monospace" fill="#fff">'+lbl+'</text>' : '')
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='square'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<rect x="2" y="2" width="'+(sz-4)+'" height="'+(sz-4)+'" rx="3" fill="'+bg+'" stroke="'+bd+'" stroke-width="2"/>'
+      +(d.label?'<text x="'+q+'" y="'+(q+4)+'" text-anchor="middle" font-size="'+(sz*.45)+'" font-weight="bold" font-family="monospace" fill="#fff">'+d.label+'</text>':'')
+      +'</svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'triangle') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<polygon points="'+(sz/2)+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz-2] });
+  if(sh==='triangle'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<polygon points="'+q+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,sz-2]});
   }
-  if (sh === 'pin') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="32" viewBox="0 0 22 32">'
-        + '<path d="M11,2 C6,2 2,6 2,11 C2,19 11,30 11,30 C11,30 20,19 20,11 C20,6 16,2 11,2 Z" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
-        + '<circle cx="11" cy="11" r="4.5" fill="'+bd+'" opacity="0.6"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[22,32], iconAnchor:[11,30] });
+  if(sh==='pin'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+(sz*.8)+'" height="'+sz+'" viewBox="0 0 22 32">'
+      +'<path d="M11,2 C6,2 2,6 2,11 C2,19 11,30 11,30 C11,30 20,19 20,11 C20,6 16,2 11,2 Z" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
+      +'<circle cx="11" cy="11" r="4.5" fill="'+bd+'" opacity=".6"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[Math.round(sz*.8),sz],iconAnchor:[Math.round(sz*.4),sz]});
   }
-  if (sh === 'peak') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<polygon points="'+(sz/2)+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
-        + '<polygon points="'+(sz/2)+',2 '+(sz*0.62)+','+(sz*0.55)+' '+(sz/2)+','+(sz*0.58)+' '+(sz*0.38)+','+(sz*0.55)+'" fill="#fff" opacity="0.6"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz-2] });
+  if(sh==='peak'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<polygon points="'+q+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
+      +'<polygon points="'+q+',2 '+(sz*.62)+','+(sz*.55)+' '+q+','+(sz*.58)+' '+(sz*.38)+','+(sz*.55)+'" fill="#fff" opacity=".6"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,sz-2]});
   }
-  if (sh === 'house') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<polygon points="'+(sz/2)+',3 '+(sz-2)+','+(sz*0.45)+' 2,'+(sz*0.45)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
-        + '<rect x="5" y="'+(sz*0.43)+'" width="'+(sz-10)+'" height="'+(sz*0.48)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
-        + '<rect x="'+(sz*0.38)+'" y="'+(sz*0.6)+'" width="'+(sz*0.24)+'" height="'+(sz*0.31)+'" fill="'+bd+'" opacity="0.5"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz-2] });
+  if(sh==='house'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<polygon points="'+q+',3 '+(sz-2)+','+(sz*.45)+' 2,'+(sz*.45)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
+      +'<rect x="5" y="'+(sz*.43)+'" width="'+(sz-10)+'" height="'+(sz*.48)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
+      +'<rect x="'+(sz*.38)+'" y="'+(sz*.6)+'" width="'+(sz*.24)+'" height="'+(sz*.31)+'" fill="'+bd+'" opacity=".5"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,sz-2]});
   }
-  if (sh === 'tent') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<polygon points="'+(sz/2)+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
-        + '<polygon points="'+(sz/2)+',2 '+(sz*0.65)+','+(sz*0.7)+' '+(sz/2)+','+(sz*0.72)+' '+(sz*0.35)+','+(sz*0.7)+'" fill="'+bd+'" opacity="0.5"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz-2] });
+  if(sh==='tent'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<polygon points="'+q+',2 '+(sz-2)+','+(sz-2)+' 2,'+(sz-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.8"/>'
+      +'<polygon points="'+q+',2 '+(sz*.65)+','+(sz*.7)+' '+q+','+(sz*.72)+' '+(sz*.35)+','+(sz*.7)+'" fill="'+bd+'" opacity=".5"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,sz-2]});
   }
-  if (sh === 'cross') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-        + '<rect x="'+(sz*0.4)+'" y="2" width="'+(sz*0.2)+'" height="'+(sz-4)+'" rx="2" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
-        + '<rect x="2" y="'+(sz*0.3)+'" width="'+(sz-4)+'" height="'+(sz*0.2)+'" rx="2" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='cross'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+      +'<rect x="'+(sz*.4)+'" y="2" width="'+(sz*.2)+'" height="'+(sz-4)+'" rx="2" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
+      +'<rect x="2" y="'+(sz*.3)+'" width="'+(sz-4)+'" height="'+(sz*.2)+'" rx="2" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'anchor') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
-        + '<circle cx="14" cy="5" r="3.5" fill="none" stroke="'+bg+'" stroke-width="2.5"/>'
-        + '<line x1="14" y1="8" x2="14" y2="25" stroke="'+bg+'" stroke-width="2.5" stroke-linecap="round"/>'
-        + '<line x1="5" y1="12" x2="23" y2="12" stroke="'+bg+'" stroke-width="2" stroke-linecap="round"/>'
-        + '<path d="M5,12 Q5,24 14,25 Q23,24 23,12" fill="none" stroke="'+bg+'" stroke-width="2"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz-3] });
+  if(sh==='anchor'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
+      +'<circle cx="14" cy="5" r="3.5" fill="none" stroke="'+bg+'" stroke-width="2.5"/>'
+      +'<line x1="14" y1="8" x2="14" y2="25" stroke="'+bg+'" stroke-width="2.5" stroke-linecap="round"/>'
+      +'<line x1="5" y1="12" x2="23" y2="12" stroke="'+bg+'" stroke-width="2" stroke-linecap="round"/>'
+      +'<path d="M5,12 Q5,24 14,25 Q23,24 23,12" fill="none" stroke="'+bg+'" stroke-width="2"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,sz-3]});
   }
-  if (sh === 'fish') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
-        + '<ellipse cx="13" cy="14" rx="9" ry="6" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
-        + '<polygon points="22,14 27,9 27,19" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
-        + '<circle cx="7" cy="12" r="2" fill="'+bd+'"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='fish'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
+      +'<ellipse cx="13" cy="14" rx="9" ry="6" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.5"/>'
+      +'<polygon points="22,14 27,9 27,19" fill="'+bg+'" stroke="'+bd+'" stroke-width="1.2"/>'
+      +'<circle cx="7" cy="12" r="2" fill="'+bd+'"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  if (sh === 'bridge') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
-        + '<line x1="2" y1="14" x2="26" y2="14" stroke="'+bg+'" stroke-width="3" stroke-linecap="round"/>'
-        + '<path d="M2,14 Q14,4 26,14" fill="none" stroke="'+bg+'" stroke-width="2.5"/>'
-        + '<line x1="8" y1="14" x2="8" y2="10" stroke="'+bg+'" stroke-width="1.8"/>'
-        + '<line x1="20" y1="14" x2="20" y2="10" stroke="'+bg+'" stroke-width="1.8"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,14] });
+  if(sh==='bridge'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
+      +'<line x1="2" y1="14" x2="26" y2="14" stroke="'+bg+'" stroke-width="3" stroke-linecap="round"/>'
+      +'<path d="M2,14 Q14,4 26,14" fill="none" stroke="'+bg+'" stroke-width="2.5"/>'
+      +'<line x1="8" y1="14" x2="8" y2="10" stroke="'+bg+'" stroke-width="1.8"/>'
+      +'<line x1="20" y1="14" x2="20" y2="10" stroke="'+bg+'" stroke-width="1.8"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,14]});
   }
-  if (sh === 'plane') {
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
-        + '<path d="M14,2 L17,14 L26,16 L26,18 L17,17 L16,25 L18,26 L18,27 L14,26 L10,27 L10,26 L12,25 L11,17 L2,18 L2,16 L11,14 Z" fill="'+bg+'" stroke="'+bd+'" stroke-width="1"/>'
-        + '</svg>';
-    return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  if(sh==='plane'){
+    svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'" viewBox="0 0 28 28">'
+      +'<path d="M14,2 L17,14 L26,16 L26,18 L17,17 L16,25 L18,26 L18,27 L14,26 L10,27 L10,26 L12,25 L11,17 L2,18 L2,16 L11,14 Z" fill="'+bg+'" stroke="'+bd+'" stroke-width="1"/></svg>';
+    return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
   }
-  // default
-  svg = '<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
-      + '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+(sz/2-2)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="2"/>'
-      + '</svg>';
-  return L.divIcon({ className:'', html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2] });
+  svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sz+'" height="'+sz+'">'
+    +'<circle cx="'+q+'" cy="'+q+'" r="'+(q-1)+'" fill="'+bg+'" stroke="'+bd+'" stroke-width="2"/></svg>';
+  return L.divIcon({className:'',html:svg,iconSize:[sz,sz],iconAnchor:[q,q]});
 }
 
-// CSS representasi simbol untuk list UI
-function _symCSS(sym) {
-  var d = _garminDefs[sym] || _garminDefs['_default'];
-  var bg = d.bg, sh = d.shape;
-  if (sh === 'flag')     return 'background:'+bg+';clip-path:polygon(15% 5%,85% 30%,15% 55%,15% 95%,25% 95%,25% 5%)';
-  if (sh === 'diamond')  return 'background:'+bg+';transform:rotate(45deg) scale(0.75)';
-  if (sh === 'triangle') return 'background:transparent;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid '+bg+';border-radius:0;height:0!important;margin-top:1px';
-  if (sh === 'pin')      return 'background:'+bg+';border-radius:50% 50% 50% 0;transform:rotate(-45deg) scale(0.85)';
-  if (sh === 'square')   return 'background:'+bg+';border-radius:3px';
+function _gpxSymCSS(sym){
+  var d=_garminDefs[sym]||_garminDefs['_default'],bg=d.bg,sh=d.shape;
+  if(sh==='flag')    return 'background:'+bg+';clip-path:polygon(15% 5%,85% 30%,15% 55%,15% 95%,25% 95%,25% 5%)';
+  if(sh==='diamond') return 'background:'+bg+';transform:rotate(45deg) scale(.75)';
+  if(sh==='triangle')return 'background:transparent;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid '+bg+';border-radius:0;height:0!important;margin-top:1px';
+  if(sh==='pin')     return 'background:'+bg+';border-radius:50% 50% 50% 0;transform:rotate(-45deg) scale(.85)';
+  if(sh==='square')  return 'background:'+bg+';border-radius:3px';
   return 'background:'+bg+';border-radius:50%';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// GPX PARSER
-// ═══════════════════════════════════════════════════════════════
-function parseGPX(xmlStr) {
-  var parser = new DOMParser();
-  var doc    = parser.parseFromString(xmlStr, 'application/xml');
-  var result = { waypoints:[], tracks:[], fileName:'' };
-
-  doc.querySelectorAll('wpt').forEach(function(el) {
-    var lat = parseFloat(el.getAttribute('lat'));
-    var lon = parseFloat(el.getAttribute('lon'));
-    if (isNaN(lat) || isNaN(lon)) return;
-    var q = function(tag) { var n = el.querySelector(tag); return n ? n.textContent.trim() : ''; };
-    result.waypoints.push({
-      lat:lat, lon:lon,
-      name: q('name') || 'WPT',
-      sym:  q('sym')  || 'Waypoint',
-      ele:  parseFloat(q('ele')) || null,
-      time: q('time'), desc: q('desc'), cmt: q('cmt')
-    });
-  });
-
-  doc.querySelectorAll('trk').forEach(function(trk) {
-    var q       = function(tag) { var n = trk.querySelector(tag); return n ? n.textContent.trim() : ''; };
-    var name    = q('name') || 'Track';
-    var dispCol = q('DisplayColor') || '_default';
-    var points  = [];
-    trk.querySelectorAll('trkpt').forEach(function(tp) {
-      var la = parseFloat(tp.getAttribute('lat'));
-      var lo = parseFloat(tp.getAttribute('lon'));
-      if (!isNaN(la) && !isNaN(lo)) {
-        var ne = tp.querySelector('ele');
-        points.push({ lat:la, lon:lo, ele:ne?parseFloat(ne.textContent):null });
-      }
-    });
-    if (points.length > 1)
-      result.tracks.push({ name:name, color:_garminColors[dispCol]||_garminColors['_default'], dispColor:dispCol, points:points, isRoute:false });
-  });
-
-  doc.querySelectorAll('rte').forEach(function(rte) {
-    var n = rte.querySelector('name');
-    var name = n ? n.textContent.trim() : 'Route';
-    var points = [];
-    rte.querySelectorAll('rtept').forEach(function(rp) {
-      var la = parseFloat(rp.getAttribute('lat'));
-      var lo = parseFloat(rp.getAttribute('lon'));
-      if (!isNaN(la) && !isNaN(lo)) points.push({lat:la,lon:lo,ele:null});
-    });
-    if (points.length > 1)
-      result.tracks.push({ name:name, color:'#f0a500', dispColor:'Yellow', points:points, isRoute:true });
-  });
-
-  return result;
+function _gpxSymToStatus(sym){
+  var bg=(_garminDefs[sym]||_garminDefs['_default']).bg;
+  if(/#(2da44e|3fb9|5a9e|22c5|14532|1a74)/i.test(bg))return 'normal';
+  if(/#(f0a5|ffd1|f59e|78350|b453|e67e)/i.test(bg))  return 'sakit';
+  if(/#(f851|dc26|ef44|b91c|c628)/i.test(bg))         return 'mati';
+  return 'kosong';
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MAP AUTO-INIT
-// ═══════════════════════════════════════════════════════════════
-function _gpxEnsureMap(lat, lng) {
-  if (map) return;
-  map = L.map('mapPanel', {zoomControl:true}).setView([lat, lng], 17);
-  baseTile = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Design By Erik Simarmata', maxZoom:22, maxNativeZoom:19}
-  ).addTo(map);
-  map.createPane('gcpPane');
-  map.getPane('gcpPane').style.zIndex = 650;
-  map.getPane('gcpPane').style.pointerEvents = 'none';
-  drawnItems = new L.FeatureGroup().addTo(map);
-  _treeLayer = L.featureGroup().addTo(map);
-  var dc = new L.Control.Draw({
-    position:'topright', edit:{featureGroup:drawnItems,remove:true},
-    draw:{
-      polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},
-      polyline:{shapeOptions:{color:'#58a6ff',weight:3}},
-      rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
-      circle:false,circlemarker:false,
-      marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}
-    }
+// ══════════════════════════════════════════════════════════════
+// GPX PARSER
+// ══════════════════════════════════════════════════════════════
+function _parseGPXxml(xmlStr){
+  var doc=new DOMParser().parseFromString(xmlStr,'application/xml');
+  var r={waypoints:[],tracks:[]};
+  doc.querySelectorAll('wpt').forEach(function(el){
+    var la=parseFloat(el.getAttribute('lat')),lo=parseFloat(el.getAttribute('lon'));
+    if(isNaN(la)||isNaN(lo))return;
+    var q=function(t){var n=el.querySelector(t);return n?n.textContent.trim():'';};
+    r.waypoints.push({lat:la,lon:lo,name:q('name')||'WPT',sym:q('sym')||'Waypoint',
+      ele:parseFloat(q('ele'))||null,time:q('time'),desc:q('desc'),cmt:q('cmt')});
   });
+  doc.querySelectorAll('trk').forEach(function(trk){
+    var q=function(t){var n=trk.querySelector(t);return n?n.textContent.trim():'';};
+    var pts=[];
+    trk.querySelectorAll('trkpt').forEach(function(tp){
+      var la=parseFloat(tp.getAttribute('lat')),lo=parseFloat(tp.getAttribute('lon'));
+      if(!isNaN(la)&&!isNaN(lo)){var ne=tp.querySelector('ele');pts.push({lat:la,lon:lo,ele:ne?parseFloat(ne.textContent):null});}
+    });
+    if(pts.length>1){var dc=q('DisplayColor')||'_default';r.tracks.push({name:q('name')||'Track',color:_garminColors[dc]||_garminColors['_default'],dispColor:dc,points:pts,isRoute:false});}
+  });
+  doc.querySelectorAll('rte').forEach(function(rte){
+    var n=rte.querySelector('name'),pts=[];
+    rte.querySelectorAll('rtept').forEach(function(rp){
+      var la=parseFloat(rp.getAttribute('lat')),lo=parseFloat(rp.getAttribute('lon'));
+      if(!isNaN(la)&&!isNaN(lo))pts.push({lat:la,lon:lo,ele:null});
+    });
+    if(pts.length>1)r.tracks.push({name:n?n.textContent.trim():'Route',color:'#f0a500',dispColor:'Yellow',points:pts,isRoute:true});
+  });
+  return r;
+}
+
+// ══════════════════════════════════════════════════════════════
+// MAP AUTO-INIT
+// ══════════════════════════════════════════════════════════════
+function _gpxEnsureMap(lat,lng){
+  if(map)return;
+  map=L.map('mapPanel',{zoomControl:true}).setView([lat,lng],17);
+  baseTile=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Design By Erik Simarmata',maxZoom:22,maxNativeZoom:19}).addTo(map);
+  map.createPane('gcpPane');map.getPane('gcpPane').style.zIndex=650;map.getPane('gcpPane').style.pointerEvents='none';
+  drawnItems=new L.FeatureGroup().addTo(map);_treeLayer=L.featureGroup().addTo(map);
+  var dc=new L.Control.Draw({position:'topright',edit:{featureGroup:drawnItems,remove:true},draw:{
+    polygon:{showArea:true,shapeOptions:{color:'#5a9e35',weight:2,fillOpacity:.14}},
+    polyline:{shapeOptions:{color:'#58a6ff',weight:3}},rectangle:{shapeOptions:{color:'#3fb950',weight:2,fillOpacity:.12}},
+    circle:false,circlemarker:false,marker:{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'})}
+  }});
   map.addControl(dc);
   map.on(L.Draw.Event.CREATED,function(e){onDrawCreated(e);_lastPolygonLayer=e.layer;});
   map.on(L.Draw.Event.EDITED,refreshMeasures);
-  map.on(L.Draw.Event.DELETED,function(e){
-    e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid;});});
-    renderMeasures();updateStats();
-  });
-  ['DRAWSTART','DRAWSTOP','EDITSTART','EDITSTOP','DELETESTART','DELETESTOP'].forEach(function(ev){
-    map.on(L.Draw.Event[ev], function(){_drawActive = ev.endsWith('START');});
-  });
+  map.on(L.Draw.Event.DELETED,function(e){e.layers.eachLayer(function(l){if(l._mid)measures=measures.filter(function(m){return m.id!==l._mid;});});renderMeasures();updateStats();});
+  ['DRAWSTART','DRAWSTOP','EDITSTART','EDITSTOP','DELETESTART','DELETESTOP'].forEach(function(ev){map.on(L.Draw.Event[ev],function(){_drawActive=ev.endsWith('START');});});
   map.on('mousemove',function(e){document.getElementById('cursorCoord').textContent=e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);});
   map.on('click',function(e){if(_treeMode!=='add'||_drawActive)return;addTree(e.latlng.lat,e.latlng.lng);});
   hideImagePanel();
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // WAYPOINT MARKER
-// ═══════════════════════════════════════════════════════════════
-function _initGpxLayer() {
-  if (_gpxWptLayer || !map) return;
-  _gpxWptLayer = L.featureGroup().addTo(map);
-}
+// ══════════════════════════════════════════════════════════════
+function _gpxInitLayer(){if(_gpxWptLayer||!map)return;_gpxWptLayer=L.featureGroup().addTo(map);}
 
-function _addGpxWptMarker(wpt) {
-  if (!map) return;
-  _initGpxLayer();
-  if (wpt.marker) { try { _gpxWptLayer.removeLayer(wpt.marker); } catch(e){} }
-  var icon = _buildGpxIcon(wpt.sym);
-  var def  = _garminDefs[wpt.sym] || _garminDefs['_default'];
-  var marker = L.marker([wpt.lat, wpt.lng], {icon:icon, zIndexOffset:300});
-  marker.bindPopup(
-    '<div style="font-family:\'Space Mono\',monospace;font-size:10px;min-width:160px;line-height:1.8">'
-    + '<b style="font-size:12px;color:'+def.bg+'">'+wpt.name+'</b><br>'
-    + '<span style="font-size:9px;color:#7d8590">'+wpt.sym+'</span><br>'
-    + (wpt.ele!==null?'Elev: <b>'+wpt.ele.toFixed(1)+' m</b><br>':'')
-    + '<span style="font-size:8px;color:#7d8590">'+wpt.lat.toFixed(7)+', '+wpt.lng.toFixed(7)+'</span>'
-    + (wpt.desc?'<br><span style="font-size:9px">'+wpt.desc+'</span>':'')
-    + (wpt.time?'<br><span style="font-size:8px;color:#484f58">'+wpt.time.replace('T',' ').replace('Z','')+'</span>':'')
-    + '<br><button onclick="openGpxWptEditor('+wpt.id+')" style="margin-top:5px;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">✏ Ganti Simbol</button>'
-    + '</div>'
+function _gpxAddMarker(wpt){
+  if(!map)return;_gpxInitLayer();
+  if(wpt.marker){try{_gpxWptLayer.removeLayer(wpt.marker);}catch(e){}}
+  var def=_garminDefs[wpt.sym]||_garminDefs['_default'];
+  var icon=_buildGpxIcon(wpt.sym,wpt.size||24);
+  var mk=L.marker([wpt.lat,wpt.lng],{icon:icon,zIndexOffset:300});
+  mk.bindPopup(
+    '<div style="font-family:\'Space Mono\',monospace;font-size:10px;min-width:155px;line-height:1.8">'
+    +'<b style="font-size:11px;color:'+def.bg+'">'+wpt.name+'</b><br>'
+    +'<span style="font-size:8px;color:#7d8590">'+wpt.sym+'  '+( wpt.size||24)+'px</span><br>'
+    +(wpt.ele!==null?'Elev: <b>'+wpt.ele.toFixed(1)+' m</b><br>':'')
+    +'<span style="font-size:8px;color:#7d8590">'+wpt.lat.toFixed(6)+', '+wpt.lng.toFixed(6)+'</span>'
+    +(wpt.desc?'<br><span style="font-size:9px">'+wpt.desc+'</span>':'')
+    +'<br><div style="display:flex;gap:4px;margin-top:5px">'
+      +'<button onclick="openGpxWptEditor('+wpt.id+')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">✏ Simbol</button>'
+      +'<button onclick="openGpxSizeEditor('+wpt.id+')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">⊡ Ukuran</button>'
+    +'</div>'
+    +(wpt.showInPdf?'<div style="font-size:8px;color:var(--saw2);margin-top:3px">✓ Masuk PDF Sensus</div>':'')
+    +'</div>'
   );
-  marker.addTo(_gpxWptLayer);
-  wpt.marker = marker;
+  mk.addTo(_gpxWptLayer);wpt.marker=mk;
 }
 
-function addGpxWaypoint(wptData) {
+function addGpxWaypoint(wd){
   _gpxWptId++;
-  var wpt = {
-    id: _gpxWptId, lat: wptData.lat, lng: wptData.lon,
-    name: wptData.name || 'WPT-'+String(_gpxWptId).padStart(3,'0'),
-    sym:  wptData.sym  || 'Waypoint',
-    ele:  wptData.ele !== undefined ? wptData.ele : null,
-    time: wptData.time || '', desc: wptData.desc || '', cmt: wptData.cmt || '',
-    marker: null
-  };
-  _gpxWaypoints.push(wpt);
-  _addGpxWptMarker(wpt);
-  return wpt;
+  var wpt={id:_gpxWptId,lat:wd.lat,lng:wd.lon,
+    name:wd.name||'WPT-'+String(_gpxWptId).padStart(3,'0'),
+    sym:wd.sym||'Waypoint',size:24,ele:wd.ele!==undefined?wd.ele:null,
+    time:wd.time||'',desc:wd.desc||'',cmt:wd.cmt||'',showInPdf:false,marker:null};
+  _gpxWaypoints.push(wpt);_gpxAddMarker(wpt);return wpt;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SYMBOL EDITOR — single waypoint
-// ═══════════════════════════════════════════════════════════════
-function openGpxWptEditor(id) {
-  var wpt = _gpxWaypoints.find(function(w){return w.id===id;});
-  if (!wpt) return;
-
-  // Tutup popup yang mungkin terbuka
-  if (map) map.closePopup();
-
-  var existing = document.getElementById('_gpxWptEditorModal');
-  if (existing) existing.remove();
-
-  var groups = {};
-  _garminSymList.forEach(function(sym){
-    var d = _garminDefs[sym]||_garminDefs['_default'];
-    var g = d.shape;
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(sym);
-  });
-
-  var groupOrder = ['flag','pin','dot','diamond','circle','square','triangle','peak','tent','house','cross','anchor','fish','bridge','plane'];
-  var groupLabels = {
-    flag:'⚑ Flag', pin:'📍 Pin', dot:'● Dot', diamond:'◆ Diamond', circle:'○ Circle',
-    square:'■ Square', triangle:'▲ Triangle', peak:'⛰ Summit', tent:'⛺ Campsite',
-    house:'⌂ House', cross:'✚ Cross', anchor:'⚓ Anchor', fish:'🐟 Fish',
-    bridge:'🌉 Bridge', plane:'✈ Plane'
-  };
-
-  var symHtml = groupOrder.map(function(grp){
-    if (!groups[grp] || groups[grp].length === 0) return '';
-    var items = groups[grp].map(function(sym){
-      var d = _garminDefs[sym]||_garminDefs['_default'];
-      var css = _symCSS(sym);
-      var isCur = sym === wpt.sym;
-      return '<div onclick="applyGpxSymSingle('+id+',\''+sym.replace(/'/g,"\\'")+'\')" title="'+sym+'"'
-        + ' style="display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:5px;cursor:pointer;'
-        + 'background:'+(isCur?'rgba(90,158,53,.18)':'transparent')+';border:1.5px solid '+(isCur?'var(--saw)':'transparent')+';'
-        + 'transition:.12s;white-space:nowrap;overflow:hidden"'
-        + ' onmouseover="this.style.background=\'var(--s3)\'" onmouseout="this.style.background=\''+(isCur?'rgba(90,158,53,.18)':'transparent')+'\'">'
-        + '<span style="display:inline-block;width:13px;height:13px;flex-shrink:0;'+css+'"></span>'
-        + '<span style="font-size:9px;color:var(--tx);overflow:hidden;text-overflow:ellipsis">'+sym+'</span>'
-        + '</div>';
-    }).join('');
-    return '<div style="margin-bottom:8px">'
-      + '<div style="font-size:7.5px;font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:4px;padding:0 3px">'+groupLabels[grp]+'</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px">'+items+'</div>'
-      + '</div>';
-  }).join('');
-
-  var modal = document.createElement('div');
-  modal.id = '_gpxWptEditorModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
-  modal.innerHTML =
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:320px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
-    + '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0">'
-      + '<div style="flex:1">'
-        + '<div style="font-size:12px;font-weight:700;color:var(--tx)">✏ Ganti Simbol</div>'
-        + '<div style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+wpt.name+'</div>'
-      + '</div>'
-      + '<button onclick="document.getElementById(\'_gpxWptEditorModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px;padding:2px 6px">✕</button>'
-    + '</div>'
-    + '<div style="overflow-y:auto;flex:1;padding:10px 12px">'+symHtml+'</div>'
-    + '</div>';
-  document.body.appendChild(modal);
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
-}
-
-function applyGpxSymSingle(id, sym) {
-  var wpt = _gpxWaypoints.find(function(w){return w.id===id;});
-  if (!wpt) return;
-  wpt.sym = sym;
-  _addGpxWptMarker(wpt);
-  renderGpxWaypointList();
-  _gpxUpdateStats();
-  var modal = document.getElementById('_gpxWptEditorModal');
-  if (modal) modal.remove();
-  showToast('✅ Simbol "'+wpt.name+'" → '+sym);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SYMBOL EDITOR — batch (semua waypoint dengan sym tertentu)
-// ═══════════════════════════════════════════════════════════════
-function openGpxBatchSymEditor() {
-  if (_gpxWaypoints.length === 0) { showToast('Belum ada waypoint GPX.'); return; }
-
-  var existing = document.getElementById('_gpxBatchSymModal');
-  if (existing) existing.remove();
-
-  // Hitung grup unik
-  var groups = {};
-  _gpxWaypoints.forEach(function(w){
-    if (!groups[w.sym]) groups[w.sym] = 0;
-    groups[w.sym]++;
-  });
-
-  var rowsHtml = Object.keys(groups).map(function(sym){
-    var d = _garminDefs[sym]||_garminDefs['_default'];
-    var css = _symCSS(sym);
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--s2);border-radius:5px;border:1px solid var(--bd);margin-bottom:4px">'
-      + '<span style="display:inline-block;width:14px;height:14px;flex-shrink:0;'+css+'"></span>'
-      + '<span style="flex:1;font-size:10px;color:var(--tx)">'+sym+'</span>'
-      + '<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-right:6px">'+groups[sym]+' titik</span>'
-      + '<button onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\')" '
-        + 'style="padding:3px 9px;font-size:9px;border-radius:4px;border:1px solid rgba(188,140,255,.35);'
-        + 'background:rgba(188,140,255,.12);color:var(--pu);cursor:pointer">Ganti →</button>'
-      + '</div>';
-  }).join('');
-
-  var modal = document.createElement('div');
-  modal.id = '_gpxBatchSymModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
-  modal.innerHTML =
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:340px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
-    + '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0">'
-      + '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">🔄 Ganti Simbol — Batch</div>'
-        + '<div style="font-size:9px;color:var(--mu);margin-top:1px">Ganti semua waypoint per jenis simbol</div></div>'
-      + '<button onclick="document.getElementById(\'_gpxBatchSymModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px;padding:2px 6px">✕</button>'
-    + '</div>'
-    + '<div style="overflow-y:auto;flex:1;padding:12px">'+rowsHtml+'</div>'
-    + '</div>';
-  document.body.appendChild(modal);
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
-}
-
-// Pilih target simbol untuk batch replace
-function openGpxBatchReplaceFor(fromSym) {
-  var existing = document.getElementById('_gpxBatchTargetModal');
-  if (existing) existing.remove();
-
-  var groups = {};
-  _garminSymList.forEach(function(sym){
-    var d = _garminDefs[sym]||_garminDefs['_default'];
-    var g = d.shape;
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(sym);
-  });
-  var groupOrder = ['flag','pin','dot','diamond','circle','square','triangle','peak','tent','house','cross','anchor','fish','bridge','plane'];
-  var groupLabels = {
-    flag:'⚑ Flag',pin:'📍 Pin',dot:'● Dot',diamond:'◆ Diamond',circle:'○ Circle',
+// ══════════════════════════════════════════════════════════════
+// SYMBOL EDITOR — single
+// ══════════════════════════════════════════════════════════════
+function openGpxWptEditor(id){
+  var wpt=_gpxWaypoints.find(function(w){return w.id===id;});if(!wpt)return;
+  if(map)map.closePopup();
+  var ex=document.getElementById('_gpxSymEdModal');if(ex)ex.remove();
+  var byShape={};
+  _garminSymList.forEach(function(s){var g=(_garminDefs[s]||_garminDefs['_default']).shape;if(!byShape[g])byShape[g]=[];byShape[g].push(s);});
+  var grpOrder=['flag','pin','dot','diamond','circle','square','triangle','peak','tent','house','cross','anchor','fish','bridge','plane'];
+  var grpLbl={flag:'⚑ Flag',pin:'📍 Pin',dot:'● Dot',diamond:'◆ Diamond',circle:'○ Circle',
     square:'■ Square',triangle:'▲ Triangle',peak:'⛰ Summit',tent:'⛺ Campsite',
-    house:'⌂ House',cross:'✚ Cross',anchor:'⚓ Anchor',fish:'🐟 Fish',bridge:'🌉 Bridge',plane:'✈ Plane'
-  };
-
-  var count = _gpxWaypoints.filter(function(w){return w.sym===fromSym;}).length;
-
-  var symHtml = groupOrder.map(function(grp){
-    if (!groups[grp] || groups[grp].length === 0) return '';
-    var items = groups[grp].map(function(sym){
-      var d = _garminDefs[sym]||_garminDefs['_default'];
-      var css = _symCSS(sym);
-      var isCur = sym === fromSym;
-      return '<div onclick="applyGpxSymBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\''+sym.replace(/'/g,"\\'")+'\', event)" title="'+sym+'"'
-        + ' style="display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:5px;cursor:pointer;'
-        + 'background:'+(isCur?'rgba(90,158,53,.18)':'transparent')+';border:1.5px solid '+(isCur?'var(--saw)':'transparent')+';transition:.12s"'
-        + ' onmouseover="this.style.background=\'var(--s3)\'" onmouseout="this.style.background=\''+(isCur?'rgba(90,158,53,.18)':'transparent')+'\'">'
-        + '<span style="display:inline-block;width:13px;height:13px;flex-shrink:0;'+css+'"></span>'
-        + '<span style="font-size:9px;color:var(--tx)">'+sym+'</span>'
-        + '</div>';
-    }).join('');
-    return '<div style="margin-bottom:7px">'
-      + '<div style="font-size:7.5px;font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:3px;padding:0 3px">'+groupLabels[grp]+'</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px">'+items+'</div>'
-      + '</div>';
+    house:'⌂ House',cross:'✚ Cross',anchor:'⚓ Anchor',fish:'🐟 Fish',bridge:'🌉 Bridge',plane:'✈ Plane'};
+  var body=grpOrder.map(function(g){
+    if(!byShape[g]||!byShape[g].length)return'';
+    return'<div style="margin-bottom:7px">'
+      +'<div style="font-size:7px;font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:3px">'+grpLbl[g]+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px">'
+      +byShape[g].map(function(sym){
+        var css=_gpxSymCSS(sym),cur=sym===wpt.sym;
+        return'<div onclick="applyGpxSymSingle('+id+',\''+sym.replace(/'/g,"\\'")+'\',event)" title="'+sym+'"'
+          +' style="display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;cursor:pointer;'
+          +'background:'+(cur?'rgba(90,158,53,.18)':'transparent')+';border:1.5px solid '+(cur?'var(--saw)':'transparent')+';"'
+          +' onmouseover="this.style.background=\'var(--s3)\'" onmouseout="this.style.background=\''+(cur?'rgba(90,158,53,.18)':'transparent')+'\'">'
+          +'<span style="display:inline-block;width:12px;height:12px;flex-shrink:0;'+css+'"></span>'
+          +'<span style="font-size:9px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+sym+'</span></div>';
+      }).join('')+'</div></div>';
   }).join('');
-
-  var fromDef = _garminDefs[fromSym]||_garminDefs['_default'];
-  var fromCss = _symCSS(fromSym);
-
-  var modal = document.createElement('div');
-  modal.id = '_gpxBatchTargetModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(6px)';
-  modal.innerHTML =
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:320px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
-    + '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0">'
-      + '<div style="flex:1">'
-        + '<div style="font-size:12px;font-weight:700;color:var(--tx)">Ganti ke simbol baru</div>'
-        + '<div style="display:flex;align-items:center;gap:5px;margin-top:3px">'
-          + '<span style="display:inline-block;width:12px;height:12px;flex-shrink:0;'+fromCss+'"></span>'
-          + '<span style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace">'+fromSym+' &nbsp;('+count+' titik)</span>'
-        + '</div>'
-      + '</div>'
-      + '<button onclick="document.getElementById(\'_gpxBatchTargetModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px;padding:2px 6px">✕</button>'
-    + '</div>'
-    + '<div style="overflow-y:auto;flex:1;padding:10px 12px">'+symHtml+'</div>'
-    + '</div>';
+  var modal=document.createElement('div');modal.id='_gpxSymEdModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:310px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-shrink:0">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">✏ Ganti Simbol</div>'
+        +'<div style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+wpt.name+'</div></div>'
+      +'<button onclick="document.getElementById(\'_gpxSymEdModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:10px 12px">'+body+'</div></div>';
   document.body.appendChild(modal);
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+}
+function applyGpxSymSingle(id,sym,event){
+  if(event)event.stopPropagation();
+  var wpt=_gpxWaypoints.find(function(w){return w.id===id;});if(!wpt)return;
+  wpt.sym=sym;_gpxAddMarker(wpt);renderGpxWaypointList();_gpxUpdateStats();
+  var m=document.getElementById('_gpxSymEdModal');if(m)m.remove();
+  showToast('Simbol "'+wpt.name+'" → '+sym);
 }
 
-function applyGpxSymBatch(fromSym, toSym, event) {
-  if (event) event.stopPropagation();
-  var count = 0;
+// ══════════════════════════════════════════════════════════════
+// SIZE EDITOR — single
+// ══════════════════════════════════════════════════════════════
+function openGpxSizeEditor(id){
+  var wpt=_gpxWaypoints.find(function(w){return w.id===id;});if(!wpt)return;
+  if(map)map.closePopup();
+  var ex=document.getElementById('_gpxSzEdModal');if(ex)ex.remove();
+  var curSz=wpt.size||24;
+  var presets=[{v:12,l:'XS 12px'},{v:18,l:'S 18px'},{v:24,l:'M 24px★'},{v:32,l:'L 32px'},{v:40,l:'XL 40px'},{v:48,l:'XXL 48px'}];
+  var modal=document.createElement('div');modal.id='_gpxSzEdModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:290px;max-width:95vw;overflow:hidden">'
+    +'<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">⊡ Ukuran Simbol</div>'
+        +'<div style="font-size:9px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-top:1px">'+wpt.name+' · saat ini '+curSz+'px</div></div>'
+      +'<button onclick="document.getElementById(\'_gpxSzEdModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+    +'</div>'
+    +'<div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<label style="font-size:9px;color:var(--mu);min-width:44px">Custom</label>'
+        +'<input type="range" id="_gpxSzSlider_'+id+'" min="10" max="48" step="2" value="'+curSz+'" '
+          +'oninput="document.getElementById(\'_gpxSzVal_'+id+'\').textContent=this.value+\'px\'" '
+          +'style="flex:1;accent-color:var(--saw)">'
+        +'<span id="_gpxSzVal_'+id+'" style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--saw2);min-width:30px">'+curSz+'px</span>'
+      +'</div>'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap">'
+        +presets.map(function(p){
+          return'<button onclick="document.getElementById(\'_gpxSzSlider_'+id+'\').value='+p.v+';document.getElementById(\'_gpxSzVal_'+id+'\').textContent=\''+p.v+'px\'" '
+            +' style="flex:1;min-width:62px;padding:4px 2px;font-size:8px;border-radius:4px;cursor:pointer;'
+            +'border:1px solid '+(curSz===p.v?'var(--saw)':'var(--bd)')+';background:'+(curSz===p.v?'rgba(90,158,53,.15)':'var(--s2)')+';color:'+(curSz===p.v?'var(--saw2)':'var(--mu)')+'">'+p.l+'</button>';
+        }).join('')
+      +'</div>'
+      +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:2px">'
+        +'<button onclick="document.getElementById(\'_gpxSzEdModal\').remove()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Batal</button>'
+        +'<button onclick="applyGpxSizeSingle('+id+',parseInt(document.getElementById(\'_gpxSzSlider_'+id+'\').value))" style="padding:6px 16px;border-radius:6px;border:none;background:var(--saw);color:#fff;cursor:pointer;font-size:11px;font-weight:700">Terapkan</button>'
+      +'</div>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+}
+function applyGpxSizeSingle(id,sz){
+  var wpt=_gpxWaypoints.find(function(w){return w.id===id;});if(!wpt)return;
+  wpt.size=sz;_gpxAddMarker(wpt);renderGpxWaypointList();
+  var m=document.getElementById('_gpxSzEdModal');if(m)m.remove();
+  showToast('Ukuran "'+wpt.name+'" → '+sz+'px');
+}
+
+// ══════════════════════════════════════════════════════════════
+// BATCH EDITOR — per jenis simbol
+// ══════════════════════════════════════════════════════════════
+function openGpxBatchSymEditor(){
+  if(!_gpxWaypoints.length){showToast('Belum ada waypoint GPX.');return;}
+  var ex=document.getElementById('_gpxBatchModal');if(ex)ex.remove();
+  var grps={};
   _gpxWaypoints.forEach(function(w){
-    if (w.sym === fromSym) {
-      w.sym = toSym;
-      _addGpxWptMarker(w);
-      count++;
-    }
+    if(!grps[w.sym])grps[w.sym]={count:0,sizes:[]};
+    grps[w.sym].count++;grps[w.sym].sizes.push(w.size||24);
   });
-  renderGpxWaypointList();
-  _gpxUpdateStats();
-  var m1 = document.getElementById('_gpxBatchTargetModal');
-  var m2 = document.getElementById('_gpxBatchSymModal');
-  if (m1) m1.remove();
-  if (m2) m2.remove();
-  showToast('✅ '+count+' waypoint diubah:\n'+fromSym+' → '+toSym);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// TRACK STYLE EDITOR
-// ═══════════════════════════════════════════════════════════════
-function openGpxTrackStyleEditor() {
-  var trackIds = Object.keys(_gpxTrackLayers);
-  if (trackIds.length === 0) { showToast('Belum ada track GPX di tab Ukur.'); return; }
-
-  var existing = document.getElementById('_gpxTrackStyleModal');
-  if (existing) existing.remove();
-
-  var rowsHtml = trackIds.map(function(id){
-    var t = _gpxTrackLayers[id];
-    var dashOpts = ['solid','dashed','dotted'].map(function(d){
-      var lbl = d==='solid'?'—':d==='dashed'?'- -':'·····';
-      var ac  = (t.dash||'solid')===d;
-      return '<button onclick="setGpxTrackStyle(\''+id+'\',\'dash\',\''+d+'\')" '
-        + 'style="flex:1;padding:2px 0;font-size:9px;border-radius:3px;cursor:pointer;'
-        + 'border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.18)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+'">'+lbl+'</button>';
-    }).join('');
-    return '<div id="_gpxTrkRow_'+id+'" style="background:var(--s2);border:1px solid var(--bd);border-left:4px solid '+t.color+';border-radius:6px;padding:9px 11px;margin-bottom:8px">'
-      + '<div style="font-size:10px;font-weight:600;color:var(--tx);margin-bottom:7px;display:flex;align-items:center;gap:6px">'
-        + '<span style="display:inline-block;width:20px;height:3px;background:'+t.color+';border-radius:2px;flex-shrink:0"></span>'
-        + t.name
-        + '<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-left:auto">'+t.points.length+' titik</span>'
-      + '</div>'
-      // Warna
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
-        + '<span style="font-size:8px;color:var(--mu);min-width:52px">Warna</span>'
-        + '<input type="color" id="_gpxTrkCol_'+id+'" value="'+t.color+'" '
-          + 'oninput="setGpxTrackStyle(\''+id+'\',\'color\',this.value)" '
-          + 'style="width:28px;height:22px;border:none;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0">'
-        + '<div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">'
-          + ['#58a6ff','#3fb950','#f85149','#f0a500','#bc8cff','#22d3ee','#ffd166','#e6edf3','#ff7043','#ec407a'].map(function(c){
-            return '<div onclick="setGpxTrackStyle(\''+id+'\',\'color\',\''+c+'\')" '
-              + 'style="width:13px;height:13px;border-radius:2px;background:'+c+';cursor:pointer;border:1.5px solid rgba(255,255,255,.15);flex-shrink:0"></div>';
-          }).join('')
-        + '</div>'
-      + '</div>'
-      // Ketebalan
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
-        + '<span style="font-size:8px;color:var(--mu);min-width:52px">Tebal</span>'
-        + '<input type="range" id="_gpxTrkW_'+id+'" min="1" max="9" step="0.5" value="'+(t.width||3.5)+'" '
-          + 'oninput="setGpxTrackStyle(\''+id+'\',\'width\',parseFloat(this.value));this.nextElementSibling.textContent=this.value+\'px\'" '
-          + 'style="flex:1;accent-color:'+t.color+'">'
-        + '<span id="_gpxTrkWlbl_'+id+'" style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--saw2);min-width:28px">'+(t.width||3.5)+'px</span>'
-      + '</div>'
-      // Pola garis
-      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">'
-        + '<span style="font-size:8px;color:var(--mu);min-width:52px">Pola</span>'
-        + '<div style="display:flex;gap:3px;flex:1">'+dashOpts+'</div>'
-      + '</div>'
-      // Opacity
-      + '<div style="display:flex;align-items:center;gap:7px">'
-        + '<span style="font-size:8px;color:var(--mu);min-width:52px">Opacity</span>'
-        + '<input type="range" id="_gpxTrkOp_'+id+'" min="10" max="100" step="5" value="'+Math.round((t.opacity||0.9)*100)+'" '
-          + 'oninput="setGpxTrackStyle(\''+id+'\',\'opacity\',this.value/100);this.nextElementSibling.textContent=this.value+\'%\'" '
-          + 'style="flex:1;accent-color:var(--mu)">'
-        + '<span style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--mu);min-width:28px">'+Math.round((t.opacity||0.9)*100)+'%</span>'
-      + '</div>'
-    + '</div>';
+  var rows=Object.keys(grps).map(function(sym){
+    var g=grps[sym],avgSz=Math.round(g.sizes.reduce(function(s,v){return s+v;},0)/g.sizes.length);
+    var d=_garminDefs[sym]||_garminDefs['_default'],css=_gpxSymCSS(sym);
+    var nPdf=_gpxWaypoints.filter(function(w){return w.sym===sym&&w.showInPdf;}).length;
+    return'<div style="background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:7px 9px;margin-bottom:5px">'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">'
+        +'<span style="display:inline-block;width:14px;height:14px;flex-shrink:0;'+css+'"></span>'
+        +'<span style="flex:1;font-size:10px;color:var(--tx);font-weight:600">'+sym+'</span>'
+        +'<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace">'+g.count+' titik · '+avgSz+'px'+(nPdf?' · '+nPdf+' PDF':'')+'</span>'
+      +'</div>'
+      +'<div style="display:flex;gap:4px">'
+        +'<button onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\',\'sym\')" '
+          +' style="flex:1;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid rgba(188,140,255,.35);background:rgba(188,140,255,.1);color:var(--pu);cursor:pointer">🔄 Simbol</button>'
+        +'<button onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\',\'size\')" '
+          +' style="flex:1;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid rgba(88,166,255,.35);background:rgba(88,166,255,.1);color:var(--in);cursor:pointer">⊡ Ukuran</button>'
+        +'<button onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\',\'pdf\')" '
+          +' style="flex:1;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid rgba(90,158,53,.35);background:rgba(90,158,53,.1);color:var(--saw2);cursor:pointer">📄 PDF</button>'
+      +'</div></div>';
   }).join('');
-
-  var modal = document.createElement('div');
-  modal.id = '_gpxTrackStyleModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
-  modal.innerHTML =
-    '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:380px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
-    + '<div style="padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0">'
-      + '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">🎨 Style Track GPX</div>'
-        + '<div style="font-size:9px;color:var(--mu);margin-top:1px">'+trackIds.length+' track · ubah warna, ketebalan, pola</div></div>'
-      + '<button onclick="document.getElementById(\'_gpxTrackStyleModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px;padding:2px 6px">✕</button>'
-    + '</div>'
-    + '<div style="overflow-y:auto;flex:1;padding:12px">'+rowsHtml+'</div>'
-    + '<div style="padding:10px 12px;border-top:1px solid var(--bd);display:flex;gap:6px;flex-shrink:0">'
-      + '<button onclick="document.getElementById(\'_gpxTrackStyleModal\').remove()" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Tutup</button>'
-    + '</div>'
-    + '</div>';
+  var modal=document.createElement('div');modal.id='_gpxBatchModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:350px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-shrink:0">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">🔄 Batch Editor — Per Jenis</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:1px">Ganti simbol, ukuran, atau toggle PDF sekaligus</div></div>'
+      +'<button onclick="document.getElementById(\'_gpxBatchModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:10px 12px">'+rows+'</div></div>';
   document.body.appendChild(modal);
-  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
 }
 
-// Apply style perubahan ke track Leaflet
-function setGpxTrackStyle(id, prop, val) {
-  var t = _gpxTrackLayers[id];
-  if (!t) return;
-  t[prop] = val;
-  // Update style di Leaflet layer dan di drawnItems
-  var dashArr = t.dash==='dashed'?'10 5':t.dash==='dotted'?'2 5':null;
-  var opts = { color: t.color, weight: t.width||3.5, opacity: t.opacity||0.9 };
-  if (dashArr) opts.dashArray = dashArr; else opts.dashArray = null;
-  if (t.layer) t.layer.setStyle(opts);
-
-  // Update border-left warna di row editor (live preview tanpa rebuild modal)
-  var row = document.getElementById('_gpxTrkRow_'+id);
-  if (row) row.style.borderLeftColor = t.color;
-  // Update color input value
-  if (prop === 'color') {
-    var colInp = document.getElementById('_gpxTrkCol_'+id);
-    if (colInp) colInp.value = val;
-    // Update range slider accent
-    var wInp = document.getElementById('_gpxTrkW_'+id);
-    if (wInp) wInp.style.accentColor = val;
-    // Update track dot di tab ukur measures list (jika ada)
-    renderMeasures();
+function openGpxBatchReplaceFor(fromSym,mode){
+  var ex=document.getElementById('_gpxBatchTargetModal');if(ex)ex.remove();
+  var count=_gpxWaypoints.filter(function(w){return w.sym===fromSym;}).length;
+  var body='';
+  if(mode==='sym'){
+    var byShape={};
+    _garminSymList.forEach(function(s){var g=(_garminDefs[s]||_garminDefs['_default']).shape;if(!byShape[g])byShape[g]=[];byShape[g].push(s);});
+    var grpOrder=['flag','pin','dot','diamond','circle','square','triangle','peak','tent','house','cross','anchor','fish','bridge','plane'];
+    var grpLbl={flag:'⚑ Flag',pin:'📍 Pin',dot:'● Dot',diamond:'◆ Diamond',circle:'○ Circle',square:'■ Square',triangle:'▲ Triangle',peak:'⛰ Summit',tent:'⛺ Campsite',house:'⌂ House',cross:'✚ Cross',anchor:'⚓ Anchor',fish:'🐟 Fish',bridge:'🌉 Bridge',plane:'✈ Plane'};
+    body=grpOrder.map(function(g){
+      if(!byShape[g]||!byShape[g].length)return'';
+      return'<div style="margin-bottom:6px"><div style="font-size:7px;font-family:\'Space Mono\',monospace;text-transform:uppercase;color:var(--mu);margin-bottom:2px">'+grpLbl[g]+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px">'
+        +byShape[g].map(function(sym){
+          var css=_gpxSymCSS(sym),cur=sym===fromSym;
+          return'<div onclick="applyGpxBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\'sym\',\''+sym.replace(/'/g,"\\'")+'\',event)" title="'+sym+'"'
+            +' style="display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;cursor:pointer;'
+            +'background:'+(cur?'rgba(90,158,53,.18)':'transparent')+';border:1.5px solid '+(cur?'var(--saw)':'transparent')+';"'
+            +' onmouseover="this.style.background=\'var(--s3)\'" onmouseout="this.style.background=\''+(cur?'rgba(90,158,53,.18)':'transparent')+'\'">'
+            +'<span style="display:inline-block;width:12px;height:12px;flex-shrink:0;'+css+'"></span>'
+            +'<span style="font-size:9px;color:var(--tx)">'+sym+'</span></div>';
+        }).join('')+'</div></div>';
+    }).join('');
+  } else if(mode==='size'){
+    var presets=[{v:12,l:'XS 12px'},{v:18,l:'S 18px'},{v:24,l:'M 24px★'},{v:32,l:'L 32px'},{v:40,l:'XL 40px'},{v:48,l:'XXL 48px'}];
+    body='<div style="margin-bottom:8px;font-size:9px;color:var(--mu)">Ukuran baru untuk <b style="color:var(--tx)">'+count+'</b> waypoint bertipe <b style="color:var(--tx)">'+fromSym+'</b>:</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px">'
+      +presets.map(function(p){return'<button onclick="applyGpxBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\'size\','+p.v+',event)" '
+        +' style="padding:10px 5px;font-size:10px;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid var(--bd);background:var(--s2);color:var(--tx)">'+p.l+'</button>';}).join('')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:7px;padding:8px;background:var(--s2);border-radius:6px;border:1px solid var(--bd)">'
+        +'<label style="font-size:9px;color:var(--mu)">Custom:</label>'
+        +'<input type="range" id="_gpxBatchSzSlider" min="10" max="48" step="2" value="24" oninput="document.getElementById(\'_gpxBatchSzVal\').textContent=this.value+\'px\'" style="flex:1;accent-color:var(--saw)">'
+        +'<span id="_gpxBatchSzVal" style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--saw2);min-width:30px">24px</span>'
+        +'<button onclick="applyGpxBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\'size\',parseInt(document.getElementById(\'_gpxBatchSzSlider\').value),event)" '
+          +' style="padding:4px 10px;font-size:9px;border-radius:4px;border:none;background:var(--saw);color:#fff;cursor:pointer">OK</button>'
+      +'</div>';
+  } else if(mode==='pdf'){
+    var nPdf2=_gpxWaypoints.filter(function(w){return w.sym===fromSym&&w.showInPdf;}).length;
+    body='<div style="margin-bottom:8px;font-size:9px;color:var(--mu);line-height:1.7">'
+      +'<b style="color:var(--tx)">'+fromSym+'</b> ('+count+' titik, saat ini '+nPdf2+' masuk PDF)<br>'
+      +'Waypoint yang masuk PDF akan tampil di peta sebagai titik sensus.</div>'
+      +'<div style="background:rgba(90,158,53,.07);border:1px solid rgba(90,158,53,.3);border-radius:7px;padding:8px;font-size:9px;color:var(--saw2);line-height:1.7;margin-bottom:8px">'
+        +'Status di PDF: 🟢 hijau = normal · 🟡 kuning = sakit · 🔴 merah = mati · ⬜ abu = kosong<br>(otomatis dari warna simbol)</div>'
+      +'<div style="display:flex;gap:5px">'
+        +'<button onclick="applyGpxBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\'pdf\',true,event)" '
+          +' style="flex:1;padding:9px;font-size:11px;font-weight:700;border-radius:6px;border:1px solid var(--saw);background:rgba(90,158,53,.15);color:var(--saw2);cursor:pointer">✓ Masuk PDF</button>'
+        +'<button onclick="applyGpxBatch(\''+fromSym.replace(/'/g,"\\'")+'\',\'pdf\',false,event)" '
+          +' style="flex:1;padding:9px;font-size:11px;border-radius:6px;border:1px solid var(--bd);background:var(--s2);color:var(--mu);cursor:pointer">✕ Tidak masuk</button>'
+      +'</div>';
   }
-  // Update dash buttons
-  if (prop === 'dash') {
-    var row2 = document.getElementById('_gpxTrkRow_'+id);
-    if (row2) {
-      var btns = row2.querySelectorAll('button[onclick*="setGpxTrackStyle"]');
-      btns.forEach(function(btn){
-        var btnDash = btn.textContent.trim() === '—' ? 'solid' : btn.textContent.trim() === '- -' ? 'dashed' : 'dotted';
-        var ac = btnDash === val;
-        btn.style.border = '1px solid '+(ac?'var(--saw)':'var(--bd)');
-        btn.style.background = ac?'rgba(90,158,53,.18)':'var(--s3)';
-        btn.style.color = ac?'var(--saw2)':'var(--mu)';
-      });
-    }
+  var modeTitle={sym:'🔄 Ganti Simbol Batch',size:'⊡ Ganti Ukuran Batch',pdf:'📄 Toggle PDF Sensus'};
+  var fromCss=_gpxSymCSS(fromSym);
+  var modal=document.createElement('div');modal.id='_gpxBatchTargetModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:999999;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:330px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-shrink:0">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">'+modeTitle[mode]+'</div>'
+        +'<div style="display:flex;align-items:center;gap:5px;margin-top:2px">'
+          +'<span style="display:inline-block;width:11px;height:11px;'+fromCss+'"></span>'
+          +'<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace">'+fromSym+' · '+count+' titik</span>'
+        +'</div></div>'
+      +'<button onclick="document.getElementById(\'_gpxBatchTargetModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:12px">'+body+'</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+}
+
+function applyGpxBatch(fromSym,mode,val,event){
+  if(event)event.stopPropagation();
+  var count=0;
+  _gpxWaypoints.forEach(function(w){
+    if(w.sym!==fromSym)return;
+    if(mode==='sym'){w.sym=val;_gpxAddMarker(w);}
+    else if(mode==='size'){w.size=parseInt(val);_gpxAddMarker(w);}
+    else if(mode==='pdf'){w.showInPdf=!!val;}
+    count++;
+  });
+  renderGpxWaypointList();_gpxUpdateStats();
+  var m1=document.getElementById('_gpxBatchTargetModal');if(m1)m1.remove();
+  var m2=document.getElementById('_gpxBatchModal');if(m2)m2.remove();
+  var msgs={sym:count+' waypoint simbol → '+val,size:count+' waypoint ukuran → '+val+'px',pdf:count+' waypoint '+(val?'✓ masuk PDF':'✕ tidak masuk PDF')};
+  showToast('✅ '+msgs[mode]);
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRACK STYLE EDITOR
+// ══════════════════════════════════════════════════════════════
+function openGpxTrackStyleEditor(){
+  var ids=Object.keys(_gpxTrackLayers);
+  if(!ids.length){showToast('Belum ada track GPX di tab Ukur.');return;}
+  var ex=document.getElementById('_gpxTrkStyleModal');if(ex)ex.remove();
+  var rows=ids.map(function(id){
+    var t=_gpxTrackLayers[id];
+    var dashBtns=['solid','dashed','dotted'].map(function(d){
+      var lbl=d==='solid'?'——':d==='dashed'?'- -':'·····';
+      var ac=(t.dash||'solid')===d;
+      return'<button onclick="setGpxTrackStyle(\''+id+'\',\'dash\',\''+d+'\')" '
+        +' style="flex:1;padding:2px 0;font-size:9px;border-radius:3px;cursor:pointer;'
+        +'border:1px solid '+(ac?'var(--saw)':'var(--bd)')+';background:'+(ac?'rgba(90,158,53,.18)':'var(--s3)')+';color:'+(ac?'var(--saw2)':'var(--mu)')+'">'+lbl+'</button>';
+    }).join('');
+    var swatches=['#58a6ff','#3fb950','#f85149','#f0a500','#bc8cff','#22d3ee','#ffd166','#ff7043','#ec407a','#e6edf3'].map(function(c){
+      return'<div onclick="setGpxTrackStyle(\''+id+'\',\'color\',\''+c+'\')" style="width:13px;height:13px;border-radius:2px;background:'+c+';cursor:pointer;border:1.5px solid rgba(255,255,255,.15);flex-shrink:0"></div>';
+    }).join('');
+    return'<div id="_gpxTrkRow_'+id+'" style="background:var(--s2);border:1px solid var(--bd);border-left:4px solid '+t.color+';border-radius:6px;padding:9px 11px;margin-bottom:8px">'
+      +'<div style="font-size:10px;font-weight:600;color:var(--tx);margin-bottom:7px;display:flex;align-items:center;gap:6px">'
+        +'<span style="display:inline-block;width:20px;height:3px;background:'+t.color+';border-radius:2px;flex-shrink:0"></span>'+t.name
+        +'<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-left:auto">'+t.points.length+' titik</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+        +'<span style="font-size:8px;color:var(--mu);min-width:50px">Warna</span>'
+        +'<input type="color" id="_gpxTrkCol_'+id+'" value="'+t.color+'" oninput="setGpxTrackStyle(\''+id+'\',\'color\',this.value)" style="width:26px;height:20px;border:none;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0">'
+        +'<div style="display:flex;gap:3px;flex-wrap:wrap;flex:1">'+swatches+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+        +'<span style="font-size:8px;color:var(--mu);min-width:50px">Tebal</span>'
+        +'<input type="range" id="_gpxTrkW_'+id+'" min="0.5" max="10" step="0.5" value="'+(t.width||3.5)+'" '
+          +'oninput="setGpxTrackStyle(\''+id+'\',\'width\',parseFloat(this.value));this.nextElementSibling.textContent=this.value+\'px\'" '
+          +'style="flex:1;accent-color:'+t.color+'">'
+        +'<span style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--saw2);min-width:28px">'+(t.width||3.5)+'px</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+        +'<span style="font-size:8px;color:var(--mu);min-width:50px">Pola</span>'
+        +'<div style="display:flex;gap:3px;flex:1">'+dashBtns+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:7px">'
+        +'<span style="font-size:8px;color:var(--mu);min-width:50px">Opacity</span>'
+        +'<input type="range" id="_gpxTrkOp_'+id+'" min="10" max="100" step="5" value="'+Math.round((t.opacity||0.92)*100)+'" '
+          +'oninput="setGpxTrackStyle(\''+id+'\',\'opacity\',this.value/100);this.nextElementSibling.textContent=this.value+\'%\'" '
+          +'style="flex:1;accent-color:var(--mu)">'
+        +'<span style="font-size:8px;font-family:\'Space Mono\',monospace;color:var(--mu);min-width:28px">'+Math.round((t.opacity||0.92)*100)+'%</span>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+  var modal=document.createElement('div');modal.id='_gpxTrkStyleModal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
+  modal.innerHTML='<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:380px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+    +'<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-shrink:0">'
+      +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">🎨 Style Track GPX</div>'
+        +'<div style="font-size:9px;color:var(--mu);margin-top:1px">'+ids.length+' track — warna, tebal, pola, opacity</div></div>'
+      +'<button onclick="document.getElementById(\'_gpxTrkStyleModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:12px">'+rows+'</div>'
+    +'<div style="padding:8px 12px;border-top:1px solid var(--bd);flex-shrink:0">'
+      +'<button onclick="document.getElementById(\'_gpxTrkStyleModal\').remove()" style="width:100%;padding:7px;border-radius:7px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:11px">Tutup</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+}
+
+function setGpxTrackStyle(id,prop,val){
+  var t=_gpxTrackLayers[id];if(!t)return;
+  t[prop]=val;
+  var dashArr=t.dash==='dashed'?'10 5':t.dash==='dotted'?'2 5':null;
+  var opts={color:t.color,weight:t.width||3.5,opacity:t.opacity||0.92};
+  if(dashArr)opts.dashArray=dashArr;else opts.dashArray=null;
+  if(t.layer)t.layer.setStyle(opts);
+  var row=document.getElementById('_gpxTrkRow_'+id);
+  if(row){
+    row.style.borderLeftColor=t.color;
+    if(prop==='color'){var ci=document.getElementById('_gpxTrkCol_'+id);if(ci)ci.value=val;var wi=document.getElementById('_gpxTrkW_'+id);if(wi)wi.style.accentColor=val;}
+    if(prop==='dash'){row.querySelectorAll('button').forEach(function(b){var bd2=b.textContent.trim()==='——'?'solid':b.textContent.trim()==='- -'?'dashed':'dotted';var ac2=bd2===val;b.style.border='1px solid '+(ac2?'var(--saw)':'var(--bd)');b.style.background=ac2?'rgba(90,158,53,.18)':'var(--s3)';b.style.color=ac2?'var(--saw2)':'var(--mu)';});}
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // ADD TRACK
-// ═══════════════════════════════════════════════════════════════
-function addGpxTrack(trkData) {
-  if (!map || !drawnItems) return;
-  if (trkData.points.length < 2) return;
-  shapeId++;
-  var id   = shapeId;
-  var lls  = trkData.points.map(function(p){ return [p.lat, p.lon]; });
-  var col  = trkData.color || '#58a6ff';
-  var dash = trkData.isRoute ? [10,5] : null;
-  var layer = L.polyline(lls, {color:col, weight:3.5, opacity:0.92, dashArray:dash});
-  var len   = 0;
-  if (typeof turf !== 'undefined') {
-    try {
-      len = turf.length({type:'Feature',geometry:{type:'LineString',coordinates:trkData.points.map(function(p){return[p.lon,p.lat];})}},{units:'meters'});
-    } catch(e){}
-  }
-  layer.bindPopup(
-    '<b style="color:'+col+'">'+trkData.name+'</b><br>'
-    + (trkData.isRoute?'〰 Route':'〰 GPX Track')+'  '+fmtLen(len)+'<br>'
-    + '<span style="font-size:8px;color:'+col+'">■ '+trkData.dispColor+'</span>'
-    + '  <span style="font-size:8px;color:#7d8590">'+trkData.points.length+' titik</span>'
-    + '<br><button onclick="openGpxTrackStyleEditor()" style="margin-top:5px;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">🎨 Edit Style</button>'
-  );
-  var m = {
-    id:id, type:'line', len:len,
-    coords: trkData.points.map(function(p){return[p.lon,p.lat];}),
-    label: trkData.name || 'GPX Track'
-  };
-  layer._mid = id;
-  drawnItems.addLayer(layer);
-  _measureLayerType[id] = 'jalan';
-  measures.push(m);
-
-  // Simpan referensi untuk style editor
-  _gpxTrackLayers[String(id)] = {
-    id: String(id), layer: layer, name: trkData.name,
-    color: col, width: 3.5, dash: trkData.isRoute?'dashed':'solid',
-    opacity: 0.92, points: trkData.points, isRoute: trkData.isRoute
-  };
-
-  renderMeasures();
-  updateStats();
+// ══════════════════════════════════════════════════════════════
+function addGpxTrack(trkData){
+  if(!map||!drawnItems||trkData.points.length<2)return;
+  shapeId++;var id=shapeId;
+  var lls=trkData.points.map(function(p){return[p.lat,p.lon];});
+  var col=trkData.color||'#58a6ff';
+  var layer=L.polyline(lls,{color:col,weight:3.5,opacity:0.92,dashArray:trkData.isRoute?[10,5]:null});
+  var len=0;
+  if(typeof turf!=='undefined'){try{len=turf.length({type:'Feature',geometry:{type:'LineString',coordinates:trkData.points.map(function(p){return[p.lon,p.lat];})}},{units:'meters'});}catch(e){}}
+  layer.bindPopup('<b style="color:'+col+'">'+trkData.name+'</b><br>'+(trkData.isRoute?'〰 Route':'〰 Track')+' '+fmtLen(len)
+    +'<br><button onclick="openGpxTrackStyleEditor()" style="margin-top:5px;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">🎨 Edit Style</button>');
+  var m={id:id,type:'line',len:len,coords:trkData.points.map(function(p){return[p.lon,p.lat];}),label:trkData.name||'GPX Track'};
+  layer._mid=id;drawnItems.addLayer(layer);_measureLayerType[id]='jalan';measures.push(m);
+  _gpxTrackLayers[String(id)]={id:String(id),layer:layer,name:trkData.name,color:col,width:3.5,dash:trkData.isRoute?'dashed':'solid',opacity:0.92,points:trkData.points,isRoute:trkData.isRoute||false};
+  renderMeasures();updateStats();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MAIN IMPORT — support multi-file
-// ═══════════════════════════════════════════════════════════════
-function importGPXFile(file) {
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var parsed;
-    try { parsed = parseGPX(ev.target.result); }
-    catch(e) { showToast('❌ Gagal parse GPX ['+file.name+']:\n'+e.message); return; }
-
-    var nWpt = 0, nTrk = 0;
-
-    if (parsed.waypoints.length > 0) {
-      var fw = parsed.waypoints[0];
-      _gpxEnsureMap(fw.lat, fw.lon);
-      _initGpxLayer();
-      parsed.waypoints.forEach(function(w){ addGpxWaypoint(w); nWpt++; });
-      var lats = parsed.waypoints.map(function(w){return w.lat;});
-      var lngs = parsed.waypoints.map(function(w){return w.lon;});
-      if (map && lats.length > 0) {
-        var mlt=Math.min.apply(null,lats),mxt=Math.max.apply(null,lats);
-        var mlg=Math.min.apply(null,lngs),mxg=Math.max.apply(null,lngs);
-        (mlt===mxt&&mlg===mxg)?map.setView([mlt,mlg],17):map.fitBounds([[mlt,mlg],[mxt,mxg]],{padding:[50,50]});
-      }
-      renderGpxWaypointList();
-      _gpxUpdateStats();
+// ══════════════════════════════════════════════════════════════
+// IMPORT
+// ══════════════════════════════════════════════════════════════
+function importGPXFile(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var p;try{p=_parseGPXxml(ev.target.result);}catch(e){showToast('❌ Gagal parse ['+file.name+']:\n'+e.message);return;}
+    var nW=0,nT=0;
+    if(p.waypoints.length){
+      var fw=p.waypoints[0];_gpxEnsureMap(fw.lat,fw.lon);_gpxInitLayer();
+      p.waypoints.forEach(function(w){addGpxWaypoint(w);nW++;});
+      var lats=p.waypoints.map(function(w){return w.lat;}),lngs=p.waypoints.map(function(w){return w.lon;});
+      if(map){var mlt=Math.min.apply(null,lats),mxt=Math.max.apply(null,lats),mlg=Math.min.apply(null,lngs),mxg=Math.max.apply(null,lngs);
+        (mlt===mxt&&mlg===mxg)?map.setView([mlt,mlg],17):map.fitBounds([[mlt,mlg],[mxt,mxg]],{padding:[50,50]});}
+      renderGpxWaypointList();_gpxUpdateStats();
     }
-
-    if (parsed.tracks.length > 0) {
-      if (!map && parsed.tracks[0].points.length > 0) {
-        var fp = parsed.tracks[0].points[0];
-        _gpxEnsureMap(fp.lat, fp.lon);
-      }
-      parsed.tracks.forEach(function(t){ addGpxTrack(t); nTrk++; });
-      // Fit ke semua track
-      if (map && nTrk > 0 && nWpt === 0) {
-        var allLats = [], allLngs = [];
-        parsed.tracks.forEach(function(t){
-          t.points.forEach(function(p){ allLats.push(p.lat); allLngs.push(p.lon); });
-        });
-        if (allLats.length > 0) {
-          var mlt2=Math.min.apply(null,allLats),mxt2=Math.max.apply(null,allLats);
-          var mlg2=Math.min.apply(null,allLngs),mxg2=Math.max.apply(null,allLngs);
-          map.fitBounds([[mlt2,mlg2],[mxt2,mxg2]],{padding:[40,40]});
-        }
+    if(p.tracks.length){
+      if(!map){var fp=p.tracks[0].points[0];_gpxEnsureMap(fp.lat,fp.lon);}
+      p.tracks.forEach(function(t){addGpxTrack(t);nT++;});
+      if(map&&nT>0&&!nW){
+        var al=[],ag=[];p.tracks.forEach(function(t){t.points.forEach(function(pt){al.push(pt.lat);ag.push(pt.lon);});});
+        if(al.length)map.fitBounds([[Math.min.apply(null,al),Math.min.apply(null,ag)],[Math.max.apply(null,al),Math.max.apply(null,ag)]],{padding:[40,40]});
       }
     }
-
     hideImagePanel();
-    showToast(
-      '✅ '+file.name+'\n'
-      + (nWpt>0?'📍 '+nWpt+' waypoint → Tab Sensus\n':'')
-      + (nTrk>0?'〰 '+nTrk+' track → Tab Ukur':'')
-    );
+    showToast('✅ '+file.name+(nW?'\n📍 '+nW+' waypoint → Sensus':'')+(nT?'\n〰 '+nT+' track → Ukur':''));
   };
-  reader.onerror = function(){ showToast('❌ Gagal baca file: '+file.name); };
-  reader.readAsText(file, 'utf-8');
+  reader.onerror=function(){showToast('❌ Gagal baca: '+file.name);};
+  reader.readAsText(file,'utf-8');
 }
 
-// Import banyak file sekaligus
-function importGPXFiles(files) {
-  if (!files || files.length === 0) return;
-  var total = files.length;
-  if (total === 1) { importGPXFile(files[0]); return; }
-  showToast('⏳ Memuat '+total+' file GPX...');
-  var i = 0;
-  function next() {
-    if (i >= files.length) {
-      showToast('✅ '+total+' file GPX selesai diimport');
-      return;
-    }
-    importGPXFile(files[i]);
-    i++;
-    setTimeout(next, 150); // sedikit jeda agar UI tidak freeze
-  }
+function importGPXFiles(files){
+  if(!files||!files.length)return;
+  if(files.length===1){importGPXFile(files[0]);return;}
+  showToast('⏳ Memuat '+files.length+' file GPX...');
+  var i=0;function next(){if(i>=files.length){showToast('✅ '+files.length+' file GPX selesai diimport');return;}importGPXFile(files[i++]);setTimeout(next,180);}
   next();
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// PDF INTEGRATION — wrap generateDroneMapPDF
+// ══════════════════════════════════════════════════════════════
+function _gpxAddTempTrees(){
+  var added=[];
+  _gpxWaypoints.forEach(function(wpt){
+    if(!wpt.showInPdf)return;
+    var t={id:'gpx_'+wpt.id,lat:wpt.lat,lng:wpt.lng,no:wpt.name,block:'GPX',
+      status:_gpxSymToStatus(wpt.sym),note:wpt.sym,marker:null,_fromGpx:true};
+    trees.push(t);added.push(t.id);
+  });
+  return added;
+}
+function _gpxRemoveTempTrees(addedIds){
+  if(!addedIds||!addedIds.length)return;
+  var s=new Set(addedIds);trees=trees.filter(function(t){return !s.has(t.id);});
+}
+
+;(function _gpxPatchPdf(){
+  if(typeof generateDroneMapPDF!=='function'){setTimeout(_gpxPatchPdf,200);return;}
+  var _orig=generateDroneMapPDF;
+  generateDroneMapPDF=async function(){
+    var added=_gpxAddTempTrees();
+    try{await _orig.apply(this,arguments);}finally{_gpxRemoveTempTrees(added);}
+  };
+})();
+
+// ══════════════════════════════════════════════════════════════
 // DELETE + CLEAR
-// ═══════════════════════════════════════════════════════════════
-function deleteGpxWaypoint(id) {
-  var wpt = _gpxWaypoints.find(function(w){return w.id===id;});
-  if (wpt && wpt.marker && _gpxWptLayer) _gpxWptLayer.removeLayer(wpt.marker);
-  _gpxWaypoints = _gpxWaypoints.filter(function(w){return w.id!==id;});
-  renderGpxWaypointList();
-  _gpxUpdateStats();
+// ══════════════════════════════════════════════════════════════
+function deleteGpxWaypoint(id){
+  var wpt=_gpxWaypoints.find(function(w){return w.id===id;});
+  if(wpt&&wpt.marker&&_gpxWptLayer)_gpxWptLayer.removeLayer(wpt.marker);
+  _gpxWaypoints=_gpxWaypoints.filter(function(w){return w.id!==id;});
+  renderGpxWaypointList();_gpxUpdateStats();
 }
-
-function clearAllGpxWaypoints() {
-  if (_gpxWaypoints.length === 0) return;
-  showConfirm('Hapus semua '+_gpxWaypoints.length+' waypoint GPX?', function(){
-    _gpxWaypoints.forEach(function(w){ if(w.marker&&_gpxWptLayer) _gpxWptLayer.removeLayer(w.marker); });
-    _gpxWaypoints = [];
-    renderGpxWaypointList();
-    _gpxUpdateStats();
-    showToast('Semua waypoint GPX dihapus');
+function clearAllGpxWaypoints(){
+  if(!_gpxWaypoints.length)return;
+  showConfirm('Hapus semua '+_gpxWaypoints.length+' waypoint GPX?',function(){
+    _gpxWaypoints.forEach(function(w){if(w.marker&&_gpxWptLayer)_gpxWptLayer.removeLayer(w.marker);});
+    _gpxWaypoints=[];renderGpxWaypointList();_gpxUpdateStats();showToast('Semua waypoint GPX dihapus');
   });
 }
 
-// ═══════════════════════════════════════════════════════════════
-// RENDER LIST Waypoint
-// ═══════════════════════════════════════════════════════════════
-function renderGpxWaypointList() {
-  var el    = document.getElementById('_gpxWptListEl');
-  var badge = document.getElementById('_gpxWptBadge');
-  if (!el) return;
-  if (badge) badge.textContent = _gpxWaypoints.length;
-
-  if (_gpxWaypoints.length === 0) {
-    el.innerHTML = '<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">'
-      + 'Belum ada waypoint GPX.<br>Import dari tab <span style="color:var(--pu)">📥 Import</span>.</div>';
-    return;
+// ══════════════════════════════════════════════════════════════
+// RENDER LIST
+// ══════════════════════════════════════════════════════════════
+function renderGpxWaypointList(){
+  var el=document.getElementById('_gpxWptListEl');
+  var badge=document.getElementById('_gpxWptBadge');
+  if(!el)return;
+  if(badge)badge.textContent=_gpxWaypoints.length;
+  if(!_gpxWaypoints.length){
+    el.innerHTML='<div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">Belum ada waypoint GPX.<br>Import dari tab 📥 Import.</div>';
+    _gpxRefreshExportStat();return;
   }
-
-  var totalPg = Math.ceil(_gpxWaypoints.length / _gpxWptPageSz);
-  if (_gpxWptPage >= totalPg) _gpxWptPage = totalPg-1;
-  if (_gpxWptPage < 0) _gpxWptPage = 0;
-  var start = _gpxWptPage * _gpxWptPageSz;
-  var end   = Math.min(start + _gpxWptPageSz, _gpxWaypoints.length);
-
-  var paging = totalPg > 1
-    ? '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:8px;font-family:\'Space Mono\',monospace;color:var(--mu)">'
-      + '<button onclick="gpxWptPageGo(-1)" '+(_gpxWptPage===0?'disabled style="opacity:.3"':'')
-      + ' style="padding:1px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:8px">‹</button>'
-      + '<span>'+(_gpxWptPage+1)+'/'+totalPg+' ('+_gpxWaypoints.length+' titik)</span>'
-      + '<button onclick="gpxWptPageGo(1)" '+(_gpxWptPage>=totalPg-1?'disabled style="opacity:.3"':'')
-      + ' style="padding:1px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:8px">›</button>'
-      + '</div>'
-    : '';
-
-  var items = _gpxWaypoints.slice(start, end).map(function(wpt) {
-    var d   = _garminDefs[wpt.sym] || _garminDefs['_default'];
-    var css = _symCSS(wpt.sym);
-    // Zoom ke titik onclick
-    var onclickZoom = 'if(window.map){window.map.setView(['+wpt.lat+','+wpt.lng+'],18);'
-      + 'var _w=_gpxWaypoints.find(function(w){return w.id==='+wpt.id+';});'
-      + 'if(_w&&_w.marker)_w.marker.openPopup();}';
-    return '<div style="display:flex;align-items:center;gap:7px;padding:6px 8px;'
-      + 'border:1px solid var(--bd);border-left:3px solid '+d.bg+';border-radius:5px;'
-      + 'margin-bottom:3px;background:var(--s2);cursor:pointer;transition:.12s"'
-      + ' onclick="'+onclickZoom+'"'
-      + ' onmouseover="this.style.borderColor=\''+d.bg+'\'"'
-      + ' onmouseout="this.style.borderColor=\'var(--bd)\'">'
-      + '<div style="width:14px;height:14px;flex-shrink:0;'+css+'"></div>'
-      + '<div style="flex:1;min-width:0">'
-        + '<div style="font-size:10px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+wpt.name+'</div>'
-        + '<div style="font-size:8px;color:'+d.bg+';font-family:\'Space Mono\',monospace">'+wpt.sym+'</div>'
-        + '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace">'
-          + wpt.lat.toFixed(6)+', '+wpt.lng.toFixed(6)
-          + (wpt.ele!==null?' · '+wpt.ele.toFixed(0)+'m':'')
-        + '</div>'
-      + '</div>'
-      + '<button onclick="event.stopPropagation();openGpxWptEditor('+wpt.id+')" '
-        + 'title="Ganti simbol" '
-        + 'style="background:none;border:1px solid var(--bd);border-radius:4px;color:var(--mu);cursor:pointer;font-size:9px;padding:2px 5px;flex-shrink:0">✏</button>'
-      + '<button onclick="event.stopPropagation();deleteGpxWaypoint('+wpt.id+')" '
-        + 'title="Hapus waypoint ini" '
-        + 'style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0">✕</button>'
-      + '</div>';
+  var totalPg=Math.ceil(_gpxWaypoints.length/_gpxWptPageSz);
+  if(_gpxWptPage>=totalPg)_gpxWptPage=totalPg-1;
+  if(_gpxWptPage<0)_gpxWptPage=0;
+  var start=_gpxWptPage*_gpxWptPageSz,end=Math.min(start+_gpxWptPageSz,_gpxWaypoints.length);
+  var paging=totalPg>1?'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;font-size:8px;font-family:\'Space Mono\',monospace;color:var(--mu)">'
+    +'<button onclick="gpxWptPageGo(-1)" '+(_gpxWptPage===0?'disabled style="opacity:.3"':'')+' style="padding:1px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:8px">‹</button>'
+    +'<span>'+(_gpxWptPage+1)+'/'+totalPg+' ('+_gpxWaypoints.length+')</span>'
+    +'<button onclick="gpxWptPageGo(1)" '+(_gpxWptPage>=totalPg-1?'disabled style="opacity:.3"':'')+' style="padding:1px 8px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer;font-size:8px">›</button>'
+    +'</div>':'';
+  var items=_gpxWaypoints.slice(start,end).map(function(wpt){
+    var d=_garminDefs[wpt.sym]||_garminDefs['_default'],css=_gpxSymCSS(wpt.sym),sz=wpt.size||24;
+    var oz='if(window.map){map.setView(['+wpt.lat+','+wpt.lng+'],18);var _w=_gpxWaypoints.find(function(w){return w.id==='+wpt.id+';});if(_w&&_w.marker)_w.marker.openPopup();}';
+    return'<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--bd);border-left:3px solid '+d.bg+';border-radius:5px;margin-bottom:3px;background:var(--s2);cursor:pointer;transition:.12s"'
+      +' onclick="'+oz+'" onmouseover="this.style.borderColor=\''+d.bg+'\'" onmouseout="this.style.borderColor=\'var(--bd)\'">'
+      +'<div style="width:14px;height:14px;flex-shrink:0;'+css+'"></div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:10px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+          +wpt.name+(wpt.showInPdf?' <span style="font-size:7px;color:var(--saw2)">✓PDF</span>':'')
+        +'</div>'
+        +'<div style="font-size:8px;color:'+d.bg+';font-family:\'Space Mono\',monospace">'+wpt.sym+' &nbsp;'+sz+'px</div>'
+        +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace">'+wpt.lat.toFixed(6)+', '+wpt.lng.toFixed(6)+(wpt.ele!==null?' · '+wpt.ele.toFixed(0)+'m':'')+'</div>'
+      +'</div>'
+      +'<button onclick="event.stopPropagation();openGpxWptEditor('+wpt.id+')" title="Simbol" style="background:none;border:1px solid var(--bd);border-radius:4px;color:var(--mu);cursor:pointer;font-size:9px;padding:2px 4px;flex-shrink:0">✏</button>'
+      +'<button onclick="event.stopPropagation();openGpxSizeEditor('+wpt.id+')" title="Ukuran" style="background:none;border:1px solid var(--bd);border-radius:4px;color:var(--mu);cursor:pointer;font-size:9px;padding:2px 4px;flex-shrink:0">⊡</button>'
+      +'<button onclick="event.stopPropagation();deleteGpxWaypoint('+wpt.id+')" title="Hapus" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0">✕</button>'
+    +'</div>';
   }).join('');
-
-  el.innerHTML = paging + items;
+  el.innerHTML=paging+items;
+  _gpxRefreshExportStat();
 }
 
-function gpxWptPageGo(dir) {
-  _gpxWptPage += dir;
-  renderGpxWaypointList();
-}
+function gpxWptPageGo(dir){_gpxWptPage+=dir;renderGpxWaypointList();}
 
-function _gpxUpdateStats() {
-  var el = document.getElementById('_gpxWptStats');
-  if (!el) return;
-  if (_gpxWaypoints.length === 0) { el.style.display='none'; return; }
-  el.style.display = '';
-  var groups = {};
-  _gpxWaypoints.forEach(function(w){ groups[w.sym] = (groups[w.sym]||0)+1; });
-  var rows = Object.keys(groups).map(function(sym){
-    var d   = _garminDefs[sym] || _garminDefs['_default'];
-    var css = _symCSS(sym);
-    return '<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;margin-bottom:2px;cursor:pointer" '
-      + 'onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\')" title="Klik untuk ganti semua '+sym+'">'
-      + '<span style="display:inline-block;width:10px;height:10px;flex-shrink:0;'+css+'"></span>'
-      + '<b style="color:var(--tx)">'+groups[sym]+'</b>'
-      + '<span style="color:var(--mu);font-size:8px">'+sym+'</span>'
-      + '</span>';
+function _gpxUpdateStats(){
+  var el=document.getElementById('_gpxWptStats');if(!el)return;
+  if(!_gpxWaypoints.length){el.style.display='none';return;}
+  el.style.display='';
+  var grps={};_gpxWaypoints.forEach(function(w){grps[w.sym]=(grps[w.sym]||0)+1;});
+  var nPdf=_gpxWaypoints.filter(function(w){return w.showInPdf;}).length;
+  var rows=Object.keys(grps).map(function(sym){
+    var css=_gpxSymCSS(sym),d=_garminDefs[sym]||_garminDefs['_default'];
+    return'<span style="display:inline-flex;align-items:center;gap:3px;margin-right:7px;margin-bottom:2px;cursor:pointer" '
+      +'onclick="openGpxBatchReplaceFor(\''+sym.replace(/'/g,"\\'")+'\',\'sym\')" title="Klik → batch edit">'
+      +'<span style="display:inline-block;width:10px;height:10px;'+css+'"></span>'
+      +'<b style="color:var(--tx)">'+grps[sym]+'</b>'
+      +'<span style="color:'+d.bg+';font-size:8px">'+sym+'</span></span>';
   }).join('');
-  el.innerHTML =
-    '<div style="margin-bottom:3px">Total: <b style="color:var(--saw2)">'+_gpxWaypoints.length+'</b> waypoint'
-    + ' &nbsp;<span style="font-size:8px;color:var(--mu)">(klik tipe → ganti batch)</span></div>'
-    + '<div style="line-height:2">'+rows+'</div>';
+  el.innerHTML='<div style="margin-bottom:2px">Total: <b style="color:var(--saw2)">'+_gpxWaypoints.length+'</b>'
+    +(nPdf?' &nbsp;· <b style="color:var(--saw)">'+nPdf+' masuk PDF</b>':'')
+    +' <span style="font-size:8px;color:var(--mu)">(klik tipe → batch)</span></div>'
+    +'<div style="line-height:2">'+rows+'</div>';
+  _gpxRefreshExportStat();
 }
 
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
 // EXPORT
-// ═══════════════════════════════════════════════════════════════
-function exportGpxWaypointsCSV() {
-  if (_gpxWaypoints.length===0){showToast('Belum ada waypoint GPX.');return;}
-  var rows = ['name,sym,latitude,longitude,elevation,time,desc'];
-  _gpxWaypoints.forEach(function(w){
-    rows.push('"'+w.name+'","'+w.sym+'",'+w.lat.toFixed(8)+','+w.lng.toFixed(8)+','+(w.ele!=null?w.ele.toFixed(2):'')+','+(w.time||'')+','+(w.desc||''));
-  });
+// ══════════════════════════════════════════════════════════════
+function exportGpxWaypointsCSV(){
+  if(!_gpxWaypoints.length){showToast('Belum ada waypoint GPX.');return;}
+  var rows=['name,sym,size_px,show_in_pdf,status,latitude,longitude,elevation,time,desc'];
+  _gpxWaypoints.forEach(function(w){rows.push('"'+w.name+'","'+w.sym+'",'+(w.size||24)+','+(w.showInPdf?1:0)+',"'+_gpxSymToStatus(w.sym)+'",'+w.lat.toFixed(8)+','+w.lng.toFixed(8)+','+(w.ele!=null?w.ele.toFixed(2):'')+','+(w.time||'')+','+(w.desc||''));});
   safeDownload(rows.join('\n'),'text/csv','gpx_waypoints.csv');
 }
-
-function exportGpxWaypointsGeoJSON() {
-  if (_gpxWaypoints.length===0){showToast('Belum ada waypoint GPX.');return;}
-  var feats = _gpxWaypoints.map(function(w){
-    return {type:'Feature',geometry:{type:'Point',coordinates:[w.lng,w.lat]},
-      properties:{name:w.name,sym:w.sym,elevation:w.ele,time:w.time,desc:w.desc}};
-  });
-  safeDownload(JSON.stringify({type:'FeatureCollection',features:feats,
-    properties:{source:'GPX Import',tool:'DroneMap v3 Pro',count:feats.length}},null,2),
-    'application/geo+json','gpx_waypoints.geojson');
+function exportGpxWaypointsGeoJSON(){
+  if(!_gpxWaypoints.length){showToast('Belum ada waypoint GPX.');return;}
+  var feats=_gpxWaypoints.map(function(w){var d=_garminDefs[w.sym]||_garminDefs['_default'];
+    return{type:'Feature',geometry:{type:'Point',coordinates:[w.lng,w.lat]},
+      properties:{name:w.name,sym:w.sym,size_px:w.size||24,color:d.bg,status:_gpxSymToStatus(w.sym),show_in_pdf:w.showInPdf,elevation:w.ele,time:w.time,desc:w.desc}};});
+  safeDownload(JSON.stringify({type:'FeatureCollection',features:feats,properties:{source:'GPX Garmin',tool:'DroneMap v3 Pro',count:feats.length}},null,2),'application/geo+json','gpx_waypoints.geojson');
+}
+function exportGpxTracksCSV(){
+  var ids=Object.keys(_gpxTrackLayers);if(!ids.length){showToast('Belum ada track GPX.');return;}
+  var rows=['track_name,color,thickness_px,dash,point_no,latitude,longitude,elevation'];
+  ids.forEach(function(id){var t=_gpxTrackLayers[id];t.points.forEach(function(p,i){rows.push('"'+t.name+'","'+t.color+'",'+(t.width||3.5)+',"'+(t.dash||'solid')+'",'+(i+1)+','+p.lat.toFixed(8)+','+p.lon.toFixed(8)+','+(p.ele!=null?p.ele.toFixed(2):''));});});
+  safeDownload(rows.join('\n'),'text/csv','gpx_tracks.csv');
+}
+function exportGpxTracksGeoJSON(){
+  var ids=Object.keys(_gpxTrackLayers);if(!ids.length){showToast('Belum ada track GPX.');return;}
+  var feats=ids.map(function(id){var t=_gpxTrackLayers[id];
+    return{type:'Feature',geometry:{type:'LineString',coordinates:t.points.map(function(p){return[p.lon,p.lat,p.ele||0];})},
+      properties:{name:t.name,color:t.color,thickness:t.width||3.5,dash:t.dash||'solid',opacity:t.opacity||0.92,point_count:t.points.length,is_route:t.isRoute||false}};});
+  safeDownload(JSON.stringify({type:'FeatureCollection',features:feats,properties:{source:'GPX Garmin',tool:'DroneMap v3 Pro',track_count:feats.length}},null,2),'application/geo+json','gpx_tracks.geojson');
 }
 
-// ═══════════════════════════════════════════════════════════════
+function _gpxRefreshExportStat(){
+  var el=document.getElementById('_gpxExportStatTxt');if(!el)return;
+  var nW=_gpxWaypoints.length,nT=Object.keys(_gpxTrackLayers).length;
+  var nPdf=_gpxWaypoints.filter(function(w){return w.showInPdf;}).length;
+  if(!nW&&!nT){el.textContent='Belum ada data GPX.';return;}
+  el.innerHTML=(nW?'<span style="color:var(--pu)">📍 '+nW+' waypoint</span>'+(nPdf?' ('+nPdf+' masuk PDF)':''):'')
+    +(nW&&nT?' &nbsp;·&nbsp; ':'')
+    +(nT?'<span style="color:var(--in)">〰 '+nT+' track</span>':'');
+}
+
+// ══════════════════════════════════════════════════════════════
 // UI INJECTION
-// ═══════════════════════════════════════════════════════════════
-function _injectGpxUI() {
+// ══════════════════════════════════════════════════════════════
+function _injectGpxUI(){
 
-  // ── A. Seksi Waypoint GPX di Tab Sensus ─────────────────────
-  var sensSbody = document.querySelector('#tab-sensus .sbody');
-  if (sensSbody && !document.getElementById('_gpxSensusSec')) {
-    var sec = document.createElement('div');
-    sec.className = 's-sec';
-    sec.id = '_gpxSensusSec';
-    sec.innerHTML =
-      '<div class="s-ttl" style="color:var(--pu)">📡 Waypoint GPX'
-      + ' <span class="tag" id="_gpxWptBadge" style="background:rgba(188,140,255,.18);color:var(--pu);font-family:\'Space Mono\',monospace;margin-left:4px">0</span>'
-      + '</div>'
-      + '<div id="_gpxWptStats" style="display:none;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu);'
-      +   'margin-bottom:7px;padding:6px 8px;background:var(--s2);border-radius:5px;border:1px solid var(--bd);line-height:1.6"></div>'
-      + '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px">'
-        + '<button class="btn btn-sc btn-sm" onclick="clearAllGpxWaypoints()">🗑 Hapus</button>'
-        + '<button class="btn btn-sc btn-sm" onclick="exportGpxWaypointsCSV()">📄 CSV</button>'
-        + '<button class="btn btn-sc btn-sm" onclick="exportGpxWaypointsGeoJSON()">🗺 GeoJSON</button>'
-        + '<button class="btn btn-sc btn-sm" onclick="openGpxBatchSymEditor()">🔄 Ganti Simbol</button>'
-        + '<button class="btn btn-sc btn-sm" onclick="if(_gpxWptLayer){if(map.hasLayer(_gpxWptLayer)){map.removeLayer(_gpxWptLayer);this.textContent=\'👁 Tampilkan\';}else{_gpxWptLayer.addTo(map);this.textContent=\'🙈 Sembunyikan\';}}" style="min-width:100px">🙈 Sembunyikan</button>'
-      + '</div>'
-      + '<div id="_gpxWptListEl"><div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">'
-        + 'Belum ada waypoint GPX.<br>Import dari tab <b>📥 Import</b>.</div></div>';
-    var firstSec = sensSbody.querySelector('.s-sec');
-    if (firstSec) sensSbody.insertBefore(sec, firstSec);
-    else           sensSbody.appendChild(sec);
+  // A. Tab Sensus — waypoint list
+  var ss=document.querySelector('#tab-sensus .sbody');
+  if(ss&&!document.getElementById('_gpxSensusSec')){
+    var sec=document.createElement('div');sec.className='s-sec';sec.id='_gpxSensusSec';
+    sec.innerHTML='<div class="s-ttl" style="color:var(--pu)">📡 Waypoint GPX'
+      +' <span class="tag" id="_gpxWptBadge" style="background:rgba(188,140,255,.18);color:var(--pu);font-family:\'Space Mono\',monospace;margin-left:4px">0</span></div>'
+      +'<div id="_gpxWptStats" style="display:none;font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu);margin-bottom:7px;padding:6px 8px;background:var(--s2);border-radius:5px;border:1px solid var(--bd);line-height:1.6"></div>'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px">'
+        +'<button class="btn btn-sc btn-sm" onclick="clearAllGpxWaypoints()">🗑 Hapus</button>'
+        +'<button class="btn btn-sc btn-sm" onclick="exportGpxWaypointsCSV()">📄 CSV</button>'
+        +'<button class="btn btn-sc btn-sm" onclick="exportGpxWaypointsGeoJSON()">🗺 GeoJSON</button>'
+        +'<button class="btn btn-sc btn-sm" onclick="openGpxBatchSymEditor()" style="border-color:rgba(188,140,255,.5);color:var(--pu)">🔄 Batch</button>'
+        +'<button class="btn btn-sc btn-sm" onclick="if(_gpxWptLayer){if(map.hasLayer(_gpxWptLayer)){map.removeLayer(_gpxWptLayer);this.textContent=\'👁 Tampilkan\';}else{_gpxWptLayer.addTo(map);this.textContent=\'🙈 Sembunyikan\';}}" style="min-width:108px">🙈 Sembunyikan</button>'
+      +'</div>'
+      +'<div id="_gpxWptListEl"><div style="padding:12px 0;text-align:center;color:var(--mu);font-size:10px;line-height:1.8">Belum ada waypoint GPX.<br>Import dari tab 📥 Import.</div></div>';
+    var fs=ss.querySelector('.s-sec');if(fs)ss.insertBefore(sec,fs);else ss.appendChild(sec);
   }
 
-  // ── B. Seksi Track Style di Tab Ukur ────────────────────────
-  var ukurSbody = document.querySelector('#tab-measure .sbody');
-  if (ukurSbody && !document.getElementById('_gpxTrackStyleSec')) {
-    var trkSec = document.createElement('div');
-    trkSec.id = '_gpxTrackStyleSec';
-    trkSec.style.cssText = 'padding:8px 13px;border-bottom:1px solid var(--bd)';
-    trkSec.innerHTML =
-      '<button onclick="openGpxTrackStyleEditor()" '
-      + 'style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.08);'
-      + 'color:var(--in);cursor:pointer;font-size:10px;font-family:\'DM Sans\',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px">'
-      + '🎨 Edit Warna & Style Track GPX</button>';
-    // Sisipkan sebelum hasil pengukuran
-    var measureDiv = ukurSbody.querySelector('#measureResults');
-    if (measureDiv && measureDiv.parentNode) measureDiv.parentNode.insertBefore(trkSec, measureDiv);
-    else ukurSbody.prepend(trkSec);
+  // B. Tab Ukur — tombol track style
+  var us=document.querySelector('#tab-measure .sbody');
+  if(us&&!document.getElementById('_gpxTrkBtn')){
+    var btn=document.createElement('div');btn.id='_gpxTrkBtn';btn.style.cssText='padding:7px 13px;border-bottom:1px solid var(--bd)';
+    btn.innerHTML='<button onclick="openGpxTrackStyleEditor()" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(88,166,255,.3);background:rgba(88,166,255,.08);color:var(--in);cursor:pointer;font-size:10px">🎨 Edit Warna &amp; Style Track GPX</button>';
+    var mr=us.querySelector('#measureResults');if(mr&&mr.parentNode)mr.parentNode.insertBefore(btn,mr);else us.prepend(btn);
   }
 
-  // ── C. Seksi GPX di Tab Import ──────────────────────────────
-  var impSbody = document.querySelector('#tab-import .sbody');
-  if (impSbody && !document.getElementById('_gpxImportSec')) {
-
-    var legendSyms = [
-      ['Flag, Green','Flag, Blue','Flag, Red'],
-      ['Dot, Green','Dot, Blue','Dot, Red','Dot, Yellow'],
-      ['Diamond, Green','Diamond, Blue'],
-      ['Pin, Green','Pin, Red'],
-      ['Waypoint','Trail Head','Summit','Campsite']
-    ];
-    var legendHtml = legendSyms.map(function(row){
-      return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:3px">'
-        + row.map(function(sym){
-          var d = _garminDefs[sym]||_garminDefs['_default'];
-          var css = _symCSS(sym);
-          return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:7.5px;'
-            + 'color:var(--mu);background:var(--s3);border:1px solid var(--bd);border-radius:3px;padding:2px 5px">'
-            + '<span style="display:inline-block;width:10px;height:10px;flex-shrink:0;'+css+'"></span>'
-            + sym+'</span>';
-        }).join('')
-        + '</div>';
-    }).join('');
-
-    var gpxSec = document.createElement('div');
-    gpxSec.className = 's-sec';
-    gpxSec.id = '_gpxImportSec';
-    gpxSec.innerHTML =
-      '<div class="s-ttl" style="color:var(--pu)">📡 GPX — Garmin / Perangkat GPS</div>'
-      + '<div class="ibox" style="margin-bottom:9px;border-left-color:var(--pu)">'
-        + 'Import file <b>.gpx</b> dari GPS Garmin Montana, eTrex, GPSMAP, dll.<br>'
-        + '<span style="color:var(--pu)">📍 Waypoint (wpt)</span> → Tab Sensus + simbol asli Garmin<br>'
-        + '<span style="color:var(--in)">〰 Track/Route</span> → Tab Ukur · bisa edit warna &amp; ketebalan'
-      + '</div>'
-      + '<details style="margin-bottom:9px">'
-        + '<summary style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;padding:4px 0">▸ Simbol Garmin yang Didukung</summary>'
-        + '<div style="margin-top:5px;padding:7px 8px;background:var(--s2);border-radius:5px;border:1px solid var(--bd)">'+legendHtml+'</div>'
-      + '</details>'
-      // Tombol upload MULTI-FILE
-      + '<button onclick="document.getElementById(\'_gpxFileInput\').click()"'
-        + ' style="width:100%;padding:11px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;'
-        + 'background:linear-gradient(135deg,#6a1b9a,#9c27b0);color:#fff;display:flex;align-items:center;'
-        + 'justify-content:center;gap:7px;font-family:\'DM Sans\',sans-serif;margin-bottom:6px">'
-        + '📡 Import GPX (pilih banyak file)'
-      + '</button>'
-      + '<input type="file" id="_gpxFileInput" accept=".gpx,.xml" multiple style="display:none">'
-      + '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;line-height:1.7;text-align:center">'
-        + '✓ Multi-file · .gpx GPX 1.1 · Garmin Montana 680<br>'
-        + '<span style="color:rgba(188,140,255,.7)">Simbol bisa diganti di tab Sensus setelah import</span>'
-      + '</div>';
-
-    var allSecs = impSbody.querySelectorAll('.s-sec');
-    var sessSec = null;
-    allSecs.forEach(function(s){ if((s.textContent||'').indexOf('Sesi Kerja')!==-1) sessSec=s; });
-    var insertBefore = sessSec ? sessSec.nextElementSibling : (allSecs[1]||null);
-    if (insertBefore) impSbody.insertBefore(gpxSec, insertBefore);
-    else              impSbody.appendChild(gpxSec);
-
-    // Event listener multi-file
-    document.getElementById('_gpxFileInput').addEventListener('change', function(e){
-      if (e.target.files && e.target.files.length > 0) {
-        importGPXFiles(Array.from(e.target.files));
-        e.target.value = '';
-      }
+  // C. Tab Import — upload GPX
+  var is=document.querySelector('#tab-import .sbody');
+  if(is&&!document.getElementById('_gpxImportSec')){
+    var gs=document.createElement('div');gs.className='s-sec';gs.id='_gpxImportSec';
+    gs.innerHTML='<div class="s-ttl" style="color:var(--pu)">📡 GPX — Garmin / GPS</div>'
+      +'<div class="ibox" style="margin-bottom:9px;border-left-color:var(--pu)">'
+        +'Import <b>.gpx</b> dari Garmin Montana, eTrex, GPSMAP, dll. Pilih banyak file sekaligus.<br>'
+        +'<span style="color:var(--pu)">📍 Waypoint (wpt)</span> → Tab Sensus + simbol asli<br>'
+        +'<span style="color:var(--in)">〰 Track/Route</span> → Tab Ukur · edit style warna &amp; tebal'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'_gpxFileInput\').click()" style="width:100%;padding:11px;border-radius:7px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#6a1b9a,#9c27b0);color:#fff;margin-bottom:6px">'
+        +'📡 Import GPX (pilih banyak file sekaligus)'
+      +'</button>'
+      +'<input type="file" id="_gpxFileInput" accept=".gpx,.xml" multiple style="display:none">'
+      +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;line-height:1.7;text-align:center">'
+        +'✓ Multi-file · GPX 1.1 · Garmin Montana 680<br>'
+        +'<span style="color:rgba(188,140,255,.7)">Simbol &amp; ukuran dapat diubah setelah import via Batch Editor</span>'
+      +'</div>';
+    var allS=is.querySelectorAll('.s-sec'),sesS=null;
+    allS.forEach(function(s){if((s.textContent||'').indexOf('Sesi Kerja')!==-1)sesS=s;});
+    var ib=sesS?sesS.nextElementSibling:(allS[1]||null);
+    if(ib)is.insertBefore(gs,ib);else is.appendChild(gs);
+    document.getElementById('_gpxFileInput').addEventListener('change',function(e){
+      if(e.target.files&&e.target.files.length){importGPXFiles(Array.from(e.target.files));e.target.value='';}
     });
   }
+
+  // D. Tab Export — seksi GPX
+  var es=document.querySelector('#tab-export .sbody');
+  if(es&&!document.getElementById('_gpxExportSec')){
+    var esec=document.createElement('div');esec.className='s-sec';esec.id='_gpxExportSec';
+    esec.innerHTML='<div class="s-ttl" style="color:var(--pu)">📡 Export Data GPX</div>'
+      +'<p style="font-size:10px;color:var(--mu);margin-bottom:8px;line-height:1.6">'
+        +'Export GPX yang sudah diimport, menyertakan <b style="color:var(--tx)">pengaturan simbol, ukuran, warna track terakhir</b>.'
+      +'</p>'
+      +'<div style="background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:7px 9px;margin-bottom:8px">'
+        +'<div style="font-size:9px;font-family:\'Space Mono\',monospace;color:var(--mu)" id="_gpxExportStatTxt">Belum ada data GPX.</div>'
+      +'</div>'
+      +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Waypoint</div>'
+      +'<div class="btn-row" style="margin-bottom:9px">'
+        +'<button class="btn btn-sc" onclick="exportGpxWaypointsCSV()" style="flex:1;border-color:rgba(188,140,255,.4);color:var(--pu)">📄 CSV</button>'
+        +'<button class="btn btn-sc" onclick="exportGpxWaypointsGeoJSON()" style="flex:1;border-color:rgba(188,140,255,.4);color:var(--pu)">🗺 GeoJSON</button>'
+      +'</div>'
+      +'<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Track</div>'
+      +'<div class="btn-row">'
+        +'<button class="btn btn-sc" onclick="exportGpxTracksCSV()" style="flex:1;border-color:rgba(88,166,255,.4);color:var(--in)">📄 CSV</button>'
+        +'<button class="btn btn-sc" onclick="exportGpxTracksGeoJSON()" style="flex:1;border-color:rgba(88,166,255,.4);color:var(--in)">🗺 GeoJSON</button>'
+      +'</div>';
+    var epf=es.querySelector('#exportPerPhoto');
+    if(epf&&epf.closest('.s-sec'))es.insertBefore(esec,epf.closest('.s-sec'));
+    else es.appendChild(esec);
+  }
 }
 
-// Jalankan inject setelah semua patch lain
-setTimeout(_injectGpxUI, 350);
+setTimeout(_injectGpxUI,400);
+setTimeout(function(){_injectGpxUI();_gpxRefreshExportStat();},900);
 
-// Expose semua ke window agar onclick inline bisa akses
-window._gpxWaypoints              = _gpxWaypoints;
-window._gpxTrackLayers            = _gpxTrackLayers;
-window.importGPXFile              = importGPXFile;
-window.importGPXFiles             = importGPXFiles;
-window.renderGpxWaypointList      = renderGpxWaypointList;
-window.gpxWptPageGo               = gpxWptPageGo;
-window.deleteGpxWaypoint          = deleteGpxWaypoint;
-window.clearAllGpxWaypoints       = clearAllGpxWaypoints;
-window.exportGpxWaypointsCSV      = exportGpxWaypointsCSV;
-window.exportGpxWaypointsGeoJSON  = exportGpxWaypointsGeoJSON;
-window.openGpxWptEditor           = openGpxWptEditor;
-window.applyGpxSymSingle          = applyGpxSymSingle;
-window.openGpxBatchSymEditor      = openGpxBatchSymEditor;
-window.openGpxBatchReplaceFor     = openGpxBatchReplaceFor;
-window.applyGpxSymBatch           = applyGpxSymBatch;
-window.openGpxTrackStyleEditor    = openGpxTrackStyleEditor;
-window.setGpxTrackStyle           = setGpxTrackStyle;
-
-// Patch: _gpxWaypoints harus selalu sync ke window karena array bisa di-reassign
-// Intercept push agar window._gpxWaypoints selalu fresh
-Object.defineProperty(window, '_gpxWaypoints', {
-  get: function() { return _gpxWaypoints; },
-  set: function(v) { _gpxWaypoints = v; },
-  configurable: true
-});
-
-console.log('[DroneMap GPX v2] OK — multi-file, symbol editor, track style editor. Symbols:', Object.keys(_garminDefs).length-1);
+console.log('[DroneMap GPX v3] OK — no IIFE, no defineProperty. Symbols:',Object.keys(_garminDefs).length-1);
 </script>
 
 </body>
