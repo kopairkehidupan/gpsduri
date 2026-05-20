@@ -6630,9 +6630,49 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
   apply();
 })();
 </script>
-<!-- ════════════════════════════════════════════════════
-     DroneMap v3 Pro — REMOVE LEAFLET ATTRIBUTION PATCH
+
+<!-- ════════════════════════════════════════════════
+     DroneMap v3 Pro — DEFAULT TAB: IMPORT
      Pasang paling terakhir sebelum </body>
-     Menghilangkan logo Leaflet & teks attribution di peta
-════════════════════════════════════════════════════ -->
+     (setelah dronemap_tab_redesign.html)
+════════════════════════════════════════════════ -->
+<script>
+;(function _setDefaultTabImport() {
+  function apply() {
+    // Cari tab button yang mengandung teks "Import"
+    var importTab = null;
+    document.querySelectorAll('.stab').forEach(function(stab) {
+      if ((stab.textContent || '').trim().indexOf('Import') !== -1) {
+        importTab = stab;
+      }
+    });
+
+    if (!importTab) {
+      // Tab Import belum ter-inject — coba lagi sebentar
+      setTimeout(apply, 80);
+      return;
+    }
+
+    // Nonaktifkan semua tab dulu
+    document.querySelectorAll('.stab').forEach(function(t) {
+      t.classList.remove('active');
+    });
+    document.querySelectorAll('.tabpane').forEach(function(p) {
+      p.classList.remove('active');
+    });
+
+    // Aktifkan tab Import
+    importTab.classList.add('active');
+    var pane = document.getElementById('tab-import');
+    if (pane) pane.classList.add('active');
+  }
+
+  // Jalankan setelah DOM + semua patch selesai
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    setTimeout(apply, 120); // sedikit delay agar _injectImportUI selesai dulu
+  }
+})();
+</script>
 </body>
