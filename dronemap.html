@@ -208,6 +208,83 @@ input[type=range]{flex:1;accent-color:var(--saw);height:3px}
 /* === GCP HULL LEGEND === */
 .hull-legend{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mu);font-family:'Space Mono',monospace;margin-top:5px;padding:4px 8px;background:var(--s2);border-radius:4px;border:1px solid var(--bd)}
 .hull-legend-line{width:22px;height:2px;background:var(--saw);opacity:.6;border-radius:1px;border:1px dashed var(--saw)}
+
+.stabs {
+  display: flex;
+  flex-wrap: wrap;        
+  align-items: flex-end;
+  background: var(--bg);
+  border-bottom: 2px solid var(--bd);
+  padding: 6px 6px 0;
+  gap: 3px;
+}
+
+.stab {
+  flex: 1 1 calc(25% - 4px);
+  min-width: 0;
+  padding: 8px 5px 8px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  color: var(--mu);
+  background: var(--s2);
+
+  border: 1px solid var(--bd);
+  border-bottom: 2.5px solid transparent;
+  border-radius: 6px 6px 0 0;
+
+
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+  position: relative;
+  z-index: 1;
+}
+
+.stab:hover:not(.active) {
+  background: var(--s3);
+  color: var(--tx);
+  border-color: rgba(48,54,61,.9);
+  box-shadow: 0 -1px 4px rgba(0,0,0,.12);
+}
+
+.stab.active {
+  background: var(--sf);   
+  color: var(--saw2);
+  border-color: var(--bd);
+  border-bottom-color: var(--saw2);   
+  margin-bottom: -2px;      
+  padding-bottom: 10px;    
+  z-index: 3;
+  box-shadow: 0 -2px 6px rgba(0,0,0,.1);
+}
+.stab._tab-import {
+  order: -100;                          
+  color: var(--in);
+  background: rgba(88,166,255,.07);
+  border-color: rgba(88,166,255,.22);
+}
+.stab._tab-import:hover:not(.active) {
+  background: rgba(88,166,255,.14);
+  color: var(--in);
+  border-color: rgba(88,166,255,.4);
+  box-shadow: 0 -1px 4px rgba(88,166,255,.12);
+}
+.stab._tab-import.active {
+  color: var(--in);
+  background: var(--sf);
+  border-color: rgba(88,166,255,.3);
+  border-bottom-color: var(--in);      /
+}
+.leaflet-control-attribution {
+  display: none !important;
+}
 </style>
 </head>
 <body>
@@ -6520,121 +6597,6 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
 })();
 </script>
 
-<!-- ════════════════════════════════════════════════════════════
-     DroneMap v3 Pro — TAB BAR REDESIGN PATCH
-     Posisi: PALING TERAKHIR, sebelum </body>
-     
-     ① Tab "📥 Import" tampil pertama (CSS order, DOM tidak berubah
-        → semua index-based JS tetap aman / tidak perlu diubah)
-     ② Layout 2 baris (4 tab baris-1 + 3 tab baris-2) — tidak mepet
-     ③ Desain kartu berlapis, indicator aktif berwarna, hover halus
-════════════════════════════════════════════════════════════ -->
-<style>
-/* ══════════════════════════════════════
-   CONTAINER — background sedikit lebih gelap
-   ══════════════════════════════════════ */
-.stabs {
-  display: flex;
-  flex-wrap: wrap;         /* ← kunci: tabs bungkus ke baris berikutnya */
-  align-items: flex-end;
-  background: var(--bg);
-  border-bottom: 2px solid var(--bd);
-  padding: 6px 6px 0;
-  gap: 3px;
-}
-
-/* ══════════════════════════════════════
-   TAB BUTTON — kartu dengan radius atas
-   ══════════════════════════════════════ */
-.stab {
-  /* Lebar: maks 4 tab per baris.
-     flex-basis ≈ 25% → 4 × 25% = 100% → pas, tab ke-5 wrap ke baris berikutnya.
-     flex-grow: 1 → tab baris-2 (3 tab) otomatis melebar isi ruang kosong. */
-  flex: 1 1 calc(25% - 4px);
-  min-width: 0;           /* izinkan shrink di bawah content size */
-
-  /* Sizing & typography */
-  padding: 8px 5px 8px;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  text-align: center;
-  line-height: 1.3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  /* Warna default */
-  color: var(--mu);
-  background: var(--s2);
-
-  /* Border: radius atas saja, bawah transparan (diganti saat active) */
-  border: 1px solid var(--bd);
-  border-bottom: 2.5px solid transparent;
-  border-radius: 6px 6px 0 0;
-
-  /* Interaksi */
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
-  position: relative;
-  z-index: 1;
-}
-
-/* ── Hover ── */
-.stab:hover:not(.active) {
-  background: var(--s3);
-  color: var(--tx);
-  border-color: rgba(48,54,61,.9);
-  box-shadow: 0 -1px 4px rgba(0,0,0,.12);
-}
-
-/* ── Aktif ── */
-.stab.active {
-  background: var(--sf);   /* sama dengan warna panel → terlihat "tersambung" */
-  color: var(--saw2);
-  border-color: var(--bd);
-  border-bottom-color: var(--saw2);   /* indikator hijau di bawah tab */
-  margin-bottom: -2px;      /* tutup border bawah container → efek "tab menyatu" */
-  padding-bottom: 10px;     /* kompensasi margin agar teks tidak turun */
-  z-index: 3;
-  box-shadow: 0 -2px 6px rgba(0,0,0,.1);
-}
-
-/* ══════════════════════════════════════
-   TAB IMPORT — aksen biru, tampil PERTAMA
-   via CSS 'order' → DOM tidak berubah
-   → index-based JS (.stab[N]) tetap aman
-   ══════════════════════════════════════ */
-.stab._tab-import {
-  order: -100;                          /* visual: pertama; DOM: tetap terakhir */
-  color: var(--in);
-  background: rgba(88,166,255,.07);
-  border-color: rgba(88,166,255,.22);
-}
-.stab._tab-import:hover:not(.active) {
-  background: rgba(88,166,255,.14);
-  color: var(--in);
-  border-color: rgba(88,166,255,.4);
-  box-shadow: 0 -1px 4px rgba(88,166,255,.12);
-}
-.stab._tab-import.active {
-  color: var(--in);
-  background: var(--sf);
-  border-color: rgba(88,166,255,.3);
-  border-bottom-color: var(--in);      /* indikator biru untuk Import */
-}
-
-/* ══════════════════════════════════════
-   BARIS 2 — tab yang ke-5 s/d ke-7
-   Secara otomatis jadi lebih lebar karena
-   flex-grow: 1 mengisi sisa 25% kosong
-   ══════════════════════════════════════ */
-
-/* Opsional: divider tipis antara baris 1 dan baris 2 */
-/* (tidak perlu CSS tambahan — gap:3px sudah cukup) */
-</style>
-
 <script>
 /* ════════════════════════════════════════════════════
    Tandai tab Import dengan class _tab-import
@@ -6668,4 +6630,9 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
   apply();
 })();
 </script>
+<!-- ════════════════════════════════════════════════════
+     DroneMap v3 Pro — REMOVE LEAFLET ATTRIBUTION PATCH
+     Pasang paling terakhir sebelum </body>
+     Menghilangkan logo Leaflet & teks attribution di peta
+════════════════════════════════════════════════════ -->
 </body>
