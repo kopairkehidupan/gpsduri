@@ -7812,4 +7812,349 @@ setTimeout(function(){_injectGpxUI();_gpxRefreshExportStat();},900);
 console.log('[DroneMap GPX v3] OK — no IIFE, no defineProperty. Symbols:',Object.keys(_garminDefs).length-1);
 </script>
 
+<script>
+;(function _gpxFixPdfPerf() {
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 2 — PERFORMA: Canvas renderer singleton
+  // L.canvas() → semua circleMarker digambar di 1 canvas element
+  // vs L.divIcon → 1 DOM element per marker (sangat lambat)
+  // ══════════════════════════════════════════════════════════════
+  var _gpxRenderer = null;
+ 
+  function _getGpxRenderer() {
+    if (!_gpxRenderer && typeof L !== 'undefined') {
+      _gpxRenderer = L.canvas({ padding: 0.5, tolerance: 5 });
+    }
+    return _gpxRenderer;
+  }
+ 
+  // Konversi icon size (px) → circle radius
+  // Size 24px → radius 7 | size 12px → radius 4 | size 48px → radius 15
+  function _szToRadius(sz) {
+    return Math.max(4, Math.min(15, Math.round((sz || 24) / 3.2)));
+  }
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 2 — OVERRIDE _gpxAddMarker
+  // Ganti SVG divIcon → circleMarker + canvas renderer
+  // ══════════════════════════════════════════════════════════════
+  _gpxAddMarker = function (wpt) {
+    if (!map) return;
+    _gpxInitLayer();
+ 
+    // Hapus marker lama
+    if (wpt.marker) {
+      try { _gpxWptLayer.removeLayer(wpt.marker); } catch (e) {}
+      wpt.marker = null;
+    }
+ 
+    var def = _garminDefs[wpt.sym] || _garminDefs['_default'];
+    var sz  = wpt.size || 24;
+    var r   = _szToRadius(sz);
+ 
+    // L.circleMarker dengan canvas renderer
+    // Zero DOM overhead — semua marker di 1 canvas
+    var mk = L.circleMarker([wpt.lat, wpt.lng], {
+      renderer:    _getGpxRenderer(),
+      radius:      r,
+      fillColor:   def.bg,
+      fillOpacity: 0.88,
+      color:       def.bd,
+      weight:      Math.max(1.5, sz / 16),
+      interactive: true
+    });
+ 
+    mk.bindPopup(
+      '<div style="font-family:\'Space Mono\',monospace;font-size:10px;min-width:160px;line-height:1.8">'
+      + '<b style="font-size:11px;color:' + def.bg + '">' + wpt.name + '</b><br>'
+      + '<span style="font-size:8px;color:#7d8590">' + wpt.sym + ' &nbsp; r=' + r + 'px</span><br>'
+      + (wpt.ele !== null ? 'Elev: <b>' + wpt.ele.toFixed(1) + ' m</b><br>' : '')
+      + '<span style="font-size:8px;color:#7d8590">' + wpt.lat.toFixed(6) + ', ' + wpt.lng.toFixed(6) + '</span>'
+      + (wpt.desc ? '<br><span style="font-size:9px">' + wpt.desc + '</span>' : '')
+      + '<br><div style="display:flex;gap:4px;margin-top:5px">'
+        + '<button onclick="openGpxWptEditor(' + wpt.id + ')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">✏ Simbol</button>'
+        + '<button onclick="openGpxSizeEditor(' + wpt.id + ')" style="font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);cursor:pointer">⊡ Ukuran</button>'
+      + '</div>'
+      + '<div style="font-size:8px;color:var(--saw2);margin-top:3px">✓ Auto masuk PDF sensus</div>'
+      + '</div>',
+      { maxWidth: 220 }
+    );
+ 
+    mk.addTo(_gpxWptLayer);
+    wpt.marker = mk;
+  };
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 1 — OVERRIDE _gpxAddTempTrees
+  // HAPUS filter showInPdf — SEMUA waypoint otomatis masuk PDF
+  // Status warna dari simbol Garmin → normal/sakit/mati/kosong
+  // ══════════════════════════════════════════════════════════════
+  _gpxAddTempTrees = function () {
+    var added = [];
+    _gpxWaypoints.forEach(function (wpt) {
+      // SEMUA waypoint — tidak ada filter showInPdf
+      var t = {
+        id:       'gpx_' + wpt.id,
+        lat:      wpt.lat,
+        lng:      wpt.lng,
+        no:       wpt.name,
+        block:    'GPX',
+        status:   _gpxSymToStatus(wpt.sym),   // auto dari warna simbol
+        note:     wpt.sym,
+        marker:   null,
+        _fromGpx: true
+      };
+      trees.push(t);
+      added.push(t.id);
+    });
+    return added;
+  };
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 2b — Re-apply canvas renderer ke waypoint yang sudah ada
+  // (jika waypoint sudah di-import sebelum patch ini aktif)
+  // Chunked via requestAnimationFrame agar UI tidak freeze
+  // ══════════════════════════════════════════════════════════════
+  function _reapplyCanvasRenderer() {
+    if (!_gpxWaypoints.length) return;
+    var i = 0;
+    var CHUNK = 50; // proses 50 marker per frame
+ 
+    function doChunk() {
+      var end = Math.min(i + CHUNK, _gpxWaypoints.length);
+      for (; i < end; i++) {
+        _gpxAddMarker(_gpxWaypoints[i]);
+      }
+      if (i < _gpxWaypoints.length) {
+        requestAnimationFrame(doChunk);
+      } else {
+        showToast('⚡ ' + _gpxWaypoints.length + ' marker → canvas renderer (performa optimal)');
+        _gpxUpdateStats();
+      }
+    }
+ 
+    requestAnimationFrame(doChunk);
+  }
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 2c — Override importGPXFile: batch marker creation
+  // Tambah semua waypoint ke array dulu, baru buat marker sekaligus
+  // Jauh lebih efisien daripada addGpxWaypoint() satu per satu
+  // ══════════════════════════════════════════════════════════════
+  var _origImportGPX = importGPXFile;
+  importGPXFile = function (file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      var parsed;
+      try { parsed = _parseGPXxml(ev.target.result); }
+      catch (e) { showToast('❌ Gagal parse [' + file.name + ']:\n' + e.message); return; }
+ 
+      var nW = 0, nT = 0;
+ 
+      if (parsed.waypoints.length) {
+        var fw = parsed.waypoints[0];
+        _gpxEnsureMap(fw.lat, fw.lon);
+        _gpxInitLayer();
+ 
+        // Step 1: Tambah semua waypoint ke array (tanpa render marker dulu)
+        var newWpts = [];
+        parsed.waypoints.forEach(function (wd) {
+          _gpxWptId++;
+          var wpt = {
+            id:        _gpxWptId,
+            lat:       wd.lat,
+            lng:       wd.lon,
+            name:      wd.name || 'WPT-' + String(_gpxWptId).padStart(3, '0'),
+            sym:       wd.sym  || 'Waypoint',
+            size:      24,
+            ele:       wd.ele !== undefined ? wd.ele : null,
+            time:      wd.time || '',
+            desc:      wd.desc || '',
+            cmt:       wd.cmt  || '',
+            showInPdf: true,   // default TRUE — semua otomatis masuk PDF
+            marker:    null
+          };
+          _gpxWaypoints.push(wpt);
+          newWpts.push(wpt);
+          nW++;
+        });
+ 
+        // Step 2: Fit bounds dulu
+        var lats = parsed.waypoints.map(function (w) { return w.lat; });
+        var lngs = parsed.waypoints.map(function (w) { return w.lon; });
+        if (map) {
+          var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
+          var minLng = Math.min.apply(null, lngs), maxLng = Math.max.apply(null, lngs);
+          (minLat === maxLat && minLng === maxLng)
+            ? map.setView([minLat, minLng], 17)
+            : map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [50, 50] });
+        }
+ 
+        // Step 3: Buat marker dalam chunk via rAF
+        showToast('⏳ Membuat ' + nW + ' marker...');
+        var i = 0;
+        var CHUNK = 80;
+        function addChunk() {
+          var end = Math.min(i + CHUNK, newWpts.length);
+          for (; i < end; i++) {
+            _gpxAddMarker(newWpts[i]);
+          }
+          if (i < newWpts.length) {
+            requestAnimationFrame(addChunk);
+          } else {
+            renderGpxWaypointList();
+            _gpxUpdateStats();
+            updateStats();
+            showToast('✅ ' + file.name + '\n📍 ' + nW + ' waypoint → Sensus + PDF otomatis\n⚡ Canvas renderer aktif');
+          }
+        }
+        requestAnimationFrame(addChunk);
+      }
+ 
+      if (parsed.tracks.length) {
+        if (!map) { var fp2 = parsed.tracks[0].points[0]; _gpxEnsureMap(fp2.lat, fp2.lon); }
+        parsed.tracks.forEach(function (t) { addGpxTrack(t); nT++; });
+        if (map && nT > 0 && !nW) {
+          var al = [], ag = [];
+          parsed.tracks.forEach(function (t) {
+            t.points.forEach(function (pt) { al.push(pt.lat); ag.push(pt.lon); });
+          });
+          if (al.length) map.fitBounds([
+            [Math.min.apply(null, al), Math.min.apply(null, ag)],
+            [Math.max.apply(null, al), Math.max.apply(null, ag)]
+          ], { padding: [40, 40] });
+          showToast('✅ ' + file.name + '\n〰 ' + nT + ' track → Tab Ukur');
+        }
+      }
+ 
+      hideImagePanel();
+    };
+    reader.onerror = function () { showToast('❌ Gagal baca: ' + file.name); };
+    reader.readAsText(file, 'utf-8');
+  };
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 1b — Update UI: Batch Editor tidak perlu tombol PDF lagi
+  // Ganti tombol "📄 PDF" → badge "✓ Auto PDF" (informasi saja)
+  // ══════════════════════════════════════════════════════════════
+  var _origBatchEditor = openGpxBatchSymEditor;
+  openGpxBatchSymEditor = function () {
+    if (!_gpxWaypoints.length) { showToast('Belum ada waypoint GPX.'); return; }
+    var ex = document.getElementById('_gpxBatchModal');
+    if (ex) ex.remove();
+ 
+    var grps = {};
+    _gpxWaypoints.forEach(function (w) {
+      if (!grps[w.sym]) grps[w.sym] = { count: 0, sizes: [] };
+      grps[w.sym].count++;
+      grps[w.sym].sizes.push(w.size || 24);
+    });
+ 
+    var rows = Object.keys(grps).map(function (sym) {
+      var g = grps[sym];
+      var avgSz = Math.round(g.sizes.reduce(function (s, v) { return s + v; }, 0) / g.sizes.length);
+      var d = _garminDefs[sym] || _garminDefs['_default'];
+      var css = _gpxSymCSS(sym);
+      return (
+        '<div style="background:var(--s2);border:1px solid var(--bd);border-left:3px solid ' + d.bg + ';border-radius:5px;padding:7px 9px;margin-bottom:5px">'
+        + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">'
+          + '<span style="display:inline-block;width:14px;height:14px;flex-shrink:0;' + css + '"></span>'
+          + '<span style="flex:1;font-size:10px;color:var(--tx);font-weight:600">' + sym + '</span>'
+          + '<span style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace">' + g.count + ' titik · ' + avgSz + 'px</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px">'
+          + '<button onclick="openGpxBatchReplaceFor(\'' + sym.replace(/'/g, "\\'") + '\',\'sym\')" '
+            + ' style="flex:1;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid rgba(188,140,255,.35);background:rgba(188,140,255,.1);color:var(--pu);cursor:pointer">🔄 Simbol</button>'
+          + '<button onclick="openGpxBatchReplaceFor(\'' + sym.replace(/'/g, "\\'") + '\',\'size\')" '
+            + ' style="flex:1;padding:4px 0;font-size:9px;border-radius:4px;border:1px solid rgba(88,166,255,.35);background:rgba(88,166,255,.1);color:var(--in);cursor:pointer">⊡ Ukuran</button>'
+          // Badge "Auto PDF" mengganti tombol toggle PDF
+          + '<div style="flex:1;padding:4px 0;font-size:8px;border-radius:4px;border:1px solid rgba(90,158,53,.35);background:rgba(90,158,53,.1);color:var(--saw2);text-align:center;display:flex;align-items:center;justify-content:center;font-family:\'Space Mono\',monospace">✓ Auto PDF</div>'
+        + '</div>'
+        + '</div>'
+      );
+    }).join('');
+ 
+    var modal = document.createElement('div');
+    modal.id = '_gpxBatchModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(6px)';
+    modal.innerHTML = (
+      '<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;width:350px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">'
+      + '<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-shrink:0">'
+        + '<div style="flex:1">'
+          + '<div style="font-size:12px;font-weight:700;color:var(--tx)">🔄 Batch Editor — Per Jenis</div>'
+          + '<div style="font-size:9px;color:var(--mu);margin-top:1px">⚡ Canvas renderer · Semua waypoint masuk PDF otomatis</div>'
+        + '</div>'
+        + '<button onclick="document.getElementById(\'_gpxBatchModal\').remove()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:16px">✕</button>'
+      + '</div>'
+      + '<div style="overflow-y:auto;flex:1;padding:10px 12px">'
+        + '<div style="background:rgba(90,158,53,.07);border:1px solid rgba(90,158,53,.25);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:9px;color:var(--saw2);font-family:\'Space Mono\',monospace;line-height:1.7">'
+          + '📄 <b>SEMUA waypoint otomatis masuk PDF</b><br>'
+          + 'Warna di PDF = dari warna simbol Garmin → status sensus<br>'
+          + '⚡ Renderer: Canvas (semua marker di 1 canvas element)'
+        + '</div>'
+        + rows
+      + '</div>'
+      + '</div>'
+    );
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+  };
+ 
+  // ══════════════════════════════════════════════════════════════
+  // FIX 1c — Update _gpxUpdateStats: info PDF otomatis
+  // ══════════════════════════════════════════════════════════════
+  _gpxUpdateStats = function () {
+    var el = document.getElementById('_gpxWptStats');
+    if (!el) return;
+    if (!_gpxWaypoints.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+ 
+    var grps = {};
+    _gpxWaypoints.forEach(function (w) { grps[w.sym] = (grps[w.sym] || 0) + 1; });
+ 
+    var rows = Object.keys(grps).map(function (sym) {
+      var css = _gpxSymCSS(sym);
+      var d   = _garminDefs[sym] || _garminDefs['_default'];
+      return (
+        '<span style="display:inline-flex;align-items:center;gap:3px;margin-right:7px;margin-bottom:2px;cursor:pointer" '
+        + 'onclick="openGpxBatchReplaceFor(\'' + sym.replace(/'/g, "\\'") + '\',\'sym\')" title="Klik → batch edit">'
+        + '<span style="display:inline-block;width:10px;height:10px;' + css + '"></span>'
+        + '<b style="color:var(--tx)">' + grps[sym] + '</b>'
+        + '<span style="color:' + d.bg + ';font-size:8px">' + sym + '</span></span>'
+      );
+    }).join('');
+ 
+    el.innerHTML = (
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">'
+        + '<span>Total: <b style="color:var(--saw2)">' + _gpxWaypoints.length + '</b></span>'
+        + '<span style="font-size:8px;padding:1px 7px;border-radius:8px;background:rgba(90,158,53,.15);color:var(--saw2);font-family:\'Space Mono\',monospace;border:1px solid rgba(90,158,53,.3)">✓ Semua masuk PDF</span>'
+        + '<span style="font-size:8px;padding:1px 7px;border-radius:8px;background:rgba(88,166,255,.1);color:var(--in);font-family:\'Space Mono\',monospace;border:1px solid rgba(88,166,255,.25)">⚡ Canvas</span>'
+      + '</div>'
+      + '<div style="font-size:8px;color:var(--mu);margin-bottom:4px;font-family:\'Space Mono\',monospace">'
+        + 'Klik tipe simbol → batch edit'
+      + '</div>'
+      + '<div style="line-height:2">' + rows + '</div>'
+    );
+ 
+    _gpxRefreshExportStat();
+  };
+ 
+  // ══════════════════════════════════════════════════════════════
+  // Jalankan re-apply jika sudah ada waypoint sebelum patch aktif
+  // ══════════════════════════════════════════════════════════════
+  setTimeout(function () {
+    if (_gpxWaypoints.length > 0) {
+      showToast('⏳ Mengoptimalkan ' + _gpxWaypoints.length + ' marker...');
+      _reapplyCanvasRenderer();
+    }
+    _gpxUpdateStats();
+  }, 500);
+ 
+  console.log('[GPX Fix PDF+Perf] ✅ FIX 1: Semua waypoint → PDF otomatis | FIX 2: Canvas renderer aktif');
+ 
+})();
+</script>
+
 </body>
