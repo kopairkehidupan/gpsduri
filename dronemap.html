@@ -6675,4 +6675,249 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
   }
 })();
 </script>
+
+<!-- ════════════════════════════════════════════════════════
+     DroneMap v3 Pro — PATCH: Auto-init Map saat Import Pokok
+     Pasang setelah patch v2.0, sebelum </body>
+
+     Fix: map di-inisialisasi otomatis dari koordinat pohon
+     pertama jika belum ada foto yang di-georeference.
+     ════════════════════════════════════════════════════════ -->
+<script>
+;(function _patchImportTreeAutoMap() {
+
+  // ── Helper: inisialisasi peta minimal tanpa foto ─────────────
+  function _initMapAtLatLng(lat, lng) {
+    if (map) return; // sudah ada peta, skip
+
+    map = L.map('mapPanel', { zoomControl: true }).setView([lat, lng], 17);
+
+    baseTile = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Design By Erik Simarmata', maxZoom: 22, maxNativeZoom: 19 }
+    ).addTo(map);
+
+    map.createPane('gcpPane');
+    map.getPane('gcpPane').style.zIndex = 650;
+    map.getPane('gcpPane').style.pointerEvents = 'none';
+
+    drawnItems = new L.FeatureGroup().addTo(map);
+    _treeLayer = L.featureGroup().addTo(map);
+
+    var drawCtrl = new L.Control.Draw({
+      position: 'topright',
+      edit: { featureGroup: drawnItems, remove: true },
+      draw: {
+        polygon:    { showArea: true, shapeOptions: { color: '#5a9e35', weight: 2, fillOpacity: .14 } },
+        polyline:   { shapeOptions: { color: '#58a6ff', weight: 3 } },
+        rectangle:  { shapeOptions: { color: '#3fb950', weight: 2, fillOpacity: .12 } },
+        circle:     false, circlemarker: false,
+        marker:     { icon: L.divIcon({ className: '', html:
+          '<div style="width:10px;height:10px;background:#5a9e35;border:2px solid #000;border-radius:50%;margin-top:-4px;margin-left:-4px"></div>'
+        }) }
+      }
+    });
+    map.addControl(drawCtrl);
+
+    map.on(L.Draw.Event.CREATED,    function(e) { onDrawCreated(e); _lastPolygonLayer = e.layer; });
+    map.on(L.Draw.Event.EDITED,     refreshMeasures);
+    map.on(L.Draw.Event.DELETED,    function(e) {
+      e.layers.eachLayer(function(l) { if (l._mid) measures = measures.filter(function(m) { return m.id !== l._mid; }); });
+      renderMeasures(); updateStats();
+    });
+    map.on(L.Draw.Event.DRAWSTART,  function() { _drawActive = true;  });
+    map.on(L.Draw.Event.DRAWSTOP,   function() { _drawActive = false; });
+    map.on(L.Draw.Event.EDITSTART,  function() { _drawActive = true;  });
+    map.on(L.Draw.Event.EDITSTOP,   function() { _drawActive = false; });
+    map.on(L.Draw.Event.DELETESTART,function() { _drawActive = true;  });
+    map.on(L.Draw.Event.DELETESTOP, function() { _drawActive = false; });
+
+    map.on('mousemove', function(e) {
+      document.getElementById('cursorCoord').textContent =
+        e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6);
+    });
+    map.on('click', function(e) {
+      if (_treeMode !== 'add' || _drawActive) return;
+      addTree(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Sembunyikan image panel, tampilkan peta
+    hideImagePanel();
+    setStatus('Peta diinisialisasi dari koordinat import — tambah foto untuk georeferencing', 'info');
+  }
+
+  // ── Auto-fitBounds setelah import ───────────────────────────
+  function _fitBoundsToTrees(newTrees) {
+    if (!map || newTrees.length === 0) return;
+    var lats = newTrees.map(function(t) { return t.lat; });
+    var lngs = newTrees.map(function(t) { return t.lng; });
+    var minLat = Math.min.apply(null, lats), maxLat = Math.max.apply(null, lats);
+    var minLng = Math.min.apply(null, lngs), maxLng = Math.max.apply(null, lngs);
+    if (minLat === maxLat && minLng === maxLng) {
+      // Hanya 1 titik — cukup setView
+      map.setView([minLat, minLng], 17);
+    } else {
+      map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [40, 40] });
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // OVERRIDE importTreesFromCSV — tambah auto-init map
+  // ════════════════════════════════════════════════════════════
+  var _origImportCSV = importTreesFromCSV;
+  importTreesFromCSV = function(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var lines   = ev.target.result.split(/\r?\n/);
+      var added   = 0, skipped = 0;
+      var validSt = { normal:1, sakit:1, mati:1, kosong:1 };
+      var newTrees = [];
+
+      lines.forEach(function(line, idx) {
+        line = line.trim(); if (!line) return;
+        var parts = line.split(',').map(function(s) {
+          return s.replace(/^["']|["']$/g, '').trim();
+        });
+        if (idx === 0 && isNaN(parseFloat(parts[4])) && isNaN(parseFloat(parts[1]))) return;
+
+        // Format panjang: no_pokok, blok, status, catatan, lat, lng
+        if (parts.length >= 6) {
+          var lat = parseFloat(parts[4]), lng = parseFloat(parts[5]);
+          if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+            treeId++;
+            var st = validSt[parts[2]] ? parts[2] : 'normal';
+            var tree = {
+              id: treeId, lat: lat, lng: lng,
+              no:    parts[0] || 'P-' + String(treeId).padStart(3, '0'),
+              block: parts[1] || '',
+              status: st,
+              note:  parts[3] || '',
+              marker: null
+            };
+            trees.push(tree);
+            newTrees.push(tree);
+            added++;
+            return;
+          }
+        }
+        // Format ringkas: lat, lng
+        if (parts.length >= 2) {
+          var lat2 = parseFloat(parts[0]), lng2 = parseFloat(parts[1]);
+          if (!isNaN(lat2) && !isNaN(lng2) && Math.abs(lat2) <= 90 && Math.abs(lng2) <= 180) {
+            treeId++;
+            var t2 = {
+              id: treeId, lat: lat2, lng: lng2,
+              no: 'P-' + String(treeId).padStart(3, '0'),
+              block: '', status: 'normal', note: '', marker: null
+            };
+            trees.push(t2);
+            newTrees.push(t2);
+            added++;
+            return;
+          }
+        }
+        if (idx > 0) skipped++;
+      });
+
+      if (newTrees.length === 0) {
+        showToast('⚠ Tidak ada data valid di CSV.\nPeriksa format: lat & lng harus angka.');
+        return;
+      }
+
+      // ★ AUTO-INIT MAP jika belum ada
+      if (!map) _initMapAtLatLng(newTrees[0].lat, newTrees[0].lng);
+
+      // Tambahkan marker SETELAH map siap
+      newTrees.forEach(function(t) { addTreeMarker(t); });
+
+      // Fit bounds ke semua pohon baru
+      _fitBoundsToTrees(newTrees);
+
+      renderTreeList(); updateSensusStats(); updateStats();
+      document.getElementById('hdrTreeCount').textContent = '🌴 ' + trees.length + ' pokok';
+
+      showToast(
+        '✅ Import CSV selesai\n' +
+        '🌴 ' + added + ' pokok ditambahkan ke peta' +
+        (skipped ? '\n⚠ ' + skipped + ' baris dilewati (format salah)' : '')
+      );
+    };
+    reader.onerror = function() { showToast('❌ Gagal membaca file CSV'); };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  // ════════════════════════════════════════════════════════════
+  // OVERRIDE importTreesFromGeoJSON — tambah auto-init map
+  // ════════════════════════════════════════════════════════════
+  var _origImportGJ = importTreesFromGeoJSON;
+  importTreesFromGeoJSON = function(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var added = 0, skipped = 0;
+      var newTrees = [];
+      try {
+        var gj       = JSON.parse(ev.target.result);
+        var features = gj.features || (gj.type === 'Feature' ? [gj] : []);
+        var validSt  = { normal:1, sakit:1, mati:1, kosong:1 };
+
+        features.forEach(function(f) {
+          if (!f.geometry || f.geometry.type !== 'Point') { skipped++; return; }
+          var c   = f.geometry.coordinates;
+          var lng = parseFloat(c[0]), lat = parseFloat(c[1]);
+          if (isNaN(lat) || isNaN(lng)) { skipped++; return; }
+
+          var p2 = f.properties || {};
+          var st = p2.status || p2.STATUS || 'normal';
+          if (!validSt[st]) st = 'normal';
+
+          treeId++;
+          var tree = {
+            id:     treeId,
+            lat:    lat, lng: lng,
+            no:     p2.no_pokok || p2.NO_POKOK || p2.id || 'P-' + String(treeId).padStart(3, '0'),
+            block:  p2.blok    || p2.BLOK     || p2.block  || '',
+            status: st,
+            note:   p2.catatan || p2.CATATAN  || p2.note   || '',
+            marker: null
+          };
+          trees.push(tree);
+          newTrees.push(tree);
+          added++;
+        });
+
+        if (newTrees.length === 0) {
+          showToast('⚠ Tidak ada Point feature valid di GeoJSON.');
+          return;
+        }
+
+        // ★ AUTO-INIT MAP jika belum ada
+        if (!map) _initMapAtLatLng(newTrees[0].lat, newTrees[0].lng);
+
+        // Tambahkan marker SETELAH map siap
+        newTrees.forEach(function(t) { addTreeMarker(t); });
+
+        // Fit bounds ke semua pohon baru
+        _fitBoundsToTrees(newTrees);
+
+        renderTreeList(); updateSensusStats(); updateStats();
+        document.getElementById('hdrTreeCount').textContent = '🌴 ' + trees.length + ' pokok';
+
+        showToast(
+          '✅ Import GeoJSON selesai\n' +
+          '🌴 ' + added + ' pokok ditambahkan ke peta' +
+          (skipped ? '\n⚠ ' + skipped + ' feature dilewati' : '')
+        );
+      } catch(e) {
+        showToast('❌ Gagal parse GeoJSON:\n' + e.message);
+      }
+    };
+    reader.onerror = function() { showToast('❌ Gagal membaca file'); };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  console.log('[DroneMap] Auto-init map patch OK — import pokok tanpa foto georef siap.');
+})();
+</script>
 </body>
