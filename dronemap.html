@@ -6921,6 +6921,140 @@ console.log('[DroneMap Patch v2.0] Fix visible toggle + Tree import + Tab Import
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     GPX PDF Color Sync — PART 1
+     PLACEMENT: Sebelum blok <script> yang berisi var _gpxWaypoints
+     (sebelum GPX System script) agar patch aktif sebelum wrapper
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+;(function _patchGpxPdfPart1() {
+  'use strict';
+
+  if (typeof generateDroneMapPDF !== 'function') {
+    console.error('[GPX PDF Patch Pt1] generateDroneMapPDF belum ada — cek urutan script.');
+    return;
+  }
+
+  // ── Helper hex → normalized {r,g,b} ─────────────────────────
+  function _h2r(hex) {
+    var m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '#888888');
+    return m
+      ? { r: parseInt(m[1],16)/255, g: parseInt(m[2],16)/255, b: parseInt(m[3],16)/255 }
+      : { r: 0.5, g: 0.5, b: 0.5 };
+  }
+  window._gpxH2r = _h2r;
+
+  // ── State: nama kustom simbol untuk PDF ─────────────────────
+  window._gpxSymLegend = window._gpxSymLegend || {};
+
+  // ── Helper: rebuild statRows dengan GPX symbol groups ───────
+  // Dipanggil dari dalam generateDroneMapPDF setelah patch
+  window._pdfAdjustStatRows = function(origRows, allTrees, rgb) {
+    var gpxTrees = allTrees.filter(function(t) { return t._fromGpx; });
+    if (!gpxTrees.length) return origRows; // Tidak ada GPX → tidak berubah
+
+    var regTrees = allTrees.filter(function(t) { return !t._fromGpx; });
+    var rows = [['Total Pokok', allTrees.length, rgb(0, 0, 0)]];
+
+    // Regular trees: kelompok by status seperti semula
+    var sCols = {
+      normal: rgb(0.1,0.45,0.15), sakit: rgb(0.65,0.38,0),
+      mati:   rgb(0.65,0.1,0.1),  kosong: rgb(0.45,0.45,0.45)
+    };
+    var sLbls = { normal:'Normal', sakit:'Sakit', mati:'Mati', kosong:'Kosong' };
+    ['normal','sakit','mati','kosong'].forEach(function(s) {
+      var n = regTrees.filter(function(t) { return t.status === s; }).length;
+      if (n) rows.push([sLbls[s], n, sCols[s]]);
+    });
+
+    // GPX trees: kelompok by sym name dengan warna asli + nama kustom
+    var grps = {};
+    gpxTrees.forEach(function(t) {
+      var k = t._gpxSym || 'Waypoint';
+      if (!grps[k]) {
+        var c = _h2r(t._gpxColor || '#888888');
+        var lbl = (window._gpxSymLegend[k] && window._gpxSymLegend[k].trim())
+                  ? window._gpxSymLegend[k] : k;
+        grps[k] = { n: 0, c: c, lbl: lbl };
+      }
+      grps[k].n++;
+    });
+
+    // Max 5 GPX groups agar sidebar tidak overflow
+    var gKeys = Object.keys(grps);
+    if (gKeys.length > 5) gKeys = gKeys.slice(0, 5);
+    gKeys.forEach(function(k) {
+      var g = grps[k];
+      var safe = typeof _pdfSafeStr === 'function' ? _pdfSafeStr(g.lbl) : String(g.lbl);
+      if (safe.length > 16) safe = safe.substring(0, 14) + '..';
+      rows.push([safe, g.n, rgb(g.c.r, g.c.g, g.c.b)]);
+    });
+
+    return rows;
+  };
+
+  // ── Apply toString patch ke generateDroneMapPDF ─────────────
+  // Harus dijalankan SEBELUM _gpxPatchPdf IIFE membungkus fungsi ini.
+  // Setelah patch, wrapper akan membungkus versi yang sudah dipatch.
+  var src = generateDroneMapPDF.toString();
+  var out = src;
+
+  // PATCH A — Warna dot: pakai _gpxColor asli Garmin (bukan status-based)
+  out = out.replace(
+    'var col=treeColors[t.status]||treeColors.normal;',
+    'var col=t._fromGpx&&t._gpxColor' +
+      '?window._gpxH2r(t._gpxColor)' +
+      ':(treeColors[t.status]||treeColors.normal);'
+  );
+
+  // PATCH B — Ukuran dot: skala proporsional dari ukuran simbol px
+  out = out.replace(
+    'page.drawCircle({x:pt[0],y:pt[1],size:1.5,color:rgb(col.r,col.g,col.b)});',
+    'page.drawCircle({x:pt[0],y:pt[1],' +
+      'size:t._fromGpx&&t._gpxSize?Math.max(1.5,Math.min(3.5,t._gpxSize/8)):1.5,' +
+      'color:rgb(col.r,col.g,col.b)});'
+  );
+
+  // PATCH C — Statistik: inject GPX symbol groups SEBELUM hitung tinggi box
+  out = out.replace(
+    'var rowH=12,hdrH2=13,box3H2=hdrH2+statRows.length*rowH+3;',
+    'statRows=window._pdfAdjustStatRows(statRows,trees,rgb);' +
+    'var rowH=12,hdrH2=13,box3H2=hdrH2+statRows.length*rowH+3;'
+  );
+
+  // PATCH D — Tabel sensus (hal.2+): label → nama kustom GPX
+  out = out.replace(
+    "var tRow=[t2.no,t2.block||'--',labels3[t2.status]||t2.status,",
+    "var _gL=t2._fromGpx&&t2._gpxLabel" +
+      "?t2._gpxLabel:(labels3[t2.status]||t2.status);" +
+    "var tRow=[t2.no,t2.block||'--',_gL,"
+  );
+
+  // PATCH E — Tabel sensus (hal.2+): warna kolom status → warna GPX asli
+  out = out.replace(
+    'var col3=j===2?(sColors3[t2.status]||rgb(0,0,0)):rgb(0.1,0.1,0.1);',
+    'var col3=j===2' +
+      '?(t2._fromGpx&&t2._gpxColor' +
+        '?(function(){var _c=window._gpxH2r(t2._gpxColor);return rgb(_c.r,_c.g,_c.b);}())' +
+        ':(sColors3[t2.status]||rgb(0,0,0)))' +
+      ':rgb(0.1,0.1,0.1);'
+  );
+
+  // Verifikasi
+  var applied = ['_gpxH2r(t._gpxColor)','t._gpxSize/8','_pdfAdjustStatRows','_gL=','_gpxH2r(t2._gpxColor)']
+    .filter(function(s){ return out.indexOf(s) >= 0; }).length;
+  console.log('[GPX PDF Patch Pt1] ' + applied + '/5 replacements applied');
+  if (applied < 5) console.warn('[GPX PDF Patch Pt1] ⚠ Cek penempatan script — harus SEBELUM GPX script');
+
+  try {
+    generateDroneMapPDF = new Function('return ' + out)();
+    console.log('[GPX PDF Patch Pt1] ✅ generateDroneMapPDF dipatch (sebelum wrapper)');
+  } catch(e) {
+    console.error('[GPX PDF Patch Pt1] ❌ Gagal eval:', e.message);
+  }
+})();
+</script>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // STATE GLOBAL — var top-level <script> = window.xxx otomatis
@@ -8157,4 +8291,190 @@ console.log('[DroneMap GPX v3] OK — no IIFE, no defineProperty. Symbols:',Obje
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     GPX PDF Color Sync — PART 2
+     PLACEMENT: Setelah semua script, sebelum </body>
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+;(function _patchGpxPdfPart2() {
+  'use strict';
+  if (!window._gpxSymLegend) window._gpxSymLegend = {};
+
+  // ── Override _gpxAddTempTrees ─────────────────────────────────
+  // Simpan warna, ukuran, dan nama kustom di setiap tree sementara.
+  // Versi ini menggantikan versi dari _gpxFixPdfPerf.
+  _gpxAddTempTrees = function() {
+    var added = [];
+    (_gpxWaypoints || []).forEach(function(wpt) {
+      var def = _garminDefs[wpt.sym] || _garminDefs['_default'];
+      var customName = (window._gpxSymLegend[wpt.sym] || '').trim();
+      var t = {
+        id:    'gpx_' + wpt.id,
+        lat:   wpt.lat,
+        lng:   wpt.lng,
+        no:    wpt.name,
+        block: customName || wpt.sym,
+        status: _gpxSymToStatus(wpt.sym),
+        note:  wpt.sym,
+        marker: null,
+        _fromGpx:  true,
+        _gpxSym:   wpt.sym,
+        _gpxColor: def.bg,              // ← warna hex Garmin asli
+        _gpxSize:  wpt.size || 24,      // ← ukuran marker px asli
+        _gpxLabel: customName || wpt.sym // ← nama kustom / fallback sym
+      };
+      trees.push(t);
+      added.push(t.id);
+    });
+    return added;
+  };
+
+  // ── UI: Render editor nama simbol ───────────────────────────
+  window._renderGpxSymNames = function() {
+    var el = document.getElementById('_gpxSymNameList');
+    if (!el) return;
+
+    // Kumpulkan simbol unik dari _gpxWaypoints
+    var syms = {};
+    (_gpxWaypoints || []).forEach(function(w) {
+      if (!syms[w.sym]) {
+        var def = _garminDefs[w.sym] || _garminDefs['_default'];
+        syms[w.sym] = { n: 0, color: def.bg, bd: def.bd };
+      }
+      syms[w.sym].n++;
+    });
+    var keys = Object.keys(syms);
+
+    if (!keys.length) {
+      el.innerHTML =
+        '<div style="padding:12px 0;text-align:center;font-size:9px;color:var(--mu);line-height:1.9">' +
+        'Belum ada waypoint GPX.<br>' +
+        '<span style="font-size:8px;font-family:\'Space Mono\',monospace">Import .gpx dari tab 📥 Import.</span>' +
+        '</div>';
+      return;
+    }
+
+    el.innerHTML = keys.map(function(sym) {
+      var s   = syms[sym];
+      var cur = window._gpxSymLegend[sym] || '';
+      var css = typeof _gpxSymCSS === 'function'
+                ? _gpxSymCSS(sym)
+                : 'background:' + s.color + ';border-radius:50%';
+
+      // ID unik berbasis hash sym (hindari karakter spesial)
+      var uid = '_gn' + Math.abs(
+        sym.split('').reduce(function(h,c){return(h<<5)-h+c.charCodeAt(0)|0;},0)
+      );
+      var jsSym = JSON.stringify(sym); // safe JS string literal untuk oninput
+
+      return (
+        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;' +
+        'padding:6px 9px;background:var(--s2);border:1px solid var(--bd);' +
+        'border-left:3px solid '+s.color+';border-radius:6px">' +
+
+        // Icon simbol
+        '<span style="display:inline-block;width:13px;height:13px;flex-shrink:0;' +
+          'border:1.5px solid '+s.bd+';'+css+'" title="'+sym+'"></span>' +
+
+        // Input area
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-bottom:2px">' +
+            sym + ' <span style="color:'+s.color+'">× '+s.n+'</span>' +
+          '</div>' +
+          '<input id="'+uid+'" type="text"' +
+            ' placeholder="'+sym+'"' +
+            ' value="'+cur.replace(/"/g,'&quot;')+'"' +
+            ' oninput="window._gpxSymLegend['+jsSym+']=this.value;' +
+              'var _p=document.getElementById(\''+uid+'_p\');' +
+              'if(_p)_p.textContent=this.value||'+jsSym+'"' +
+            ' style="width:100%;background:var(--sf);border:1px solid var(--bd);' +
+              'border-radius:4px;color:var(--tx);font-size:10px;padding:3px 7px;' +
+              'outline:none;box-sizing:border-box;transition:border-color .15s"' +
+            ' onfocus="this.style.borderColor=\'var(--saw)\'"' +
+            ' onblur="this.style.borderColor=\'var(--bd)\'">' +
+        '</div>' +
+
+        // Preview badge — update live via oninput
+        '<div id="'+uid+'_p" style="font-size:8px;font-family:\'Space Mono\',monospace;' +
+          'color:'+s.color+';background:'+s.color+'22;padding:1px 8px;border-radius:8px;' +
+          'border:1px solid '+s.color+'44;white-space:nowrap;max-width:88px;' +
+          'overflow:hidden;text-overflow:ellipsis;flex-shrink:0">' +
+          (cur || sym) +
+        '</div>' +
+
+        '</div>'
+      );
+    }).join('');
+  };
+
+  // ── Inject section ke PDF modal ──────────────────────────────
+  function _injectGpxNameSection() {
+    // Jika section sudah ada, refresh saja
+    if (document.getElementById('_gpxSymNameSec')) {
+      window._renderGpxSymNames(); return;
+    }
+    // Cari div scrollable di dalam modal PDF
+    var scrollDiv = document.querySelector('#pdfModal [style*="overflow-y:auto"]');
+    if (!scrollDiv) return;
+
+    var sec = document.createElement('div');
+    sec.id = '_gpxSymNameSec';
+    sec.style.cssText = 'margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--bd)';
+    sec.innerHTML =
+      // Header
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">' +
+        '<span style="font-size:9px;font-weight:700;color:var(--pu);text-transform:uppercase;letter-spacing:.07em">' +
+          '📡 Nama Simbol GPX di PDF' +
+        '</span>' +
+        '<span style="font-size:7px;color:var(--mu);font-family:\'Space Mono\',monospace;' +
+          'background:rgba(188,140,255,.1);border:1px solid rgba(188,140,255,.25);' +
+          'padding:1px 7px;border-radius:8px">' +
+          'Statistik + Tabel Sensus' +
+        '</span>' +
+      '</div>' +
+
+      // Info box
+      '<div style="font-size:9px;color:var(--mu);line-height:1.65;margin-bottom:7px;' +
+        'padding:6px 9px;background:rgba(188,140,255,.05);border:1px solid rgba(188,140,255,.2);border-radius:6px">' +
+        'Ketik nama kustom untuk setiap jenis simbol Garmin.<br>' +
+        '💡 Contoh: <b style="color:var(--pu)">Flag, Green</b> → <b style="color:var(--saw2)">Tanaman Normal</b>' +
+      '</div>' +
+
+      // List editor
+      '<div id="_gpxSymNameList" style="max-height:190px;overflow-y:auto;' +
+        'background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:8px 9px"></div>' +
+
+      // Reset button
+      '<div style="margin-top:5px;display:flex;gap:5px">' +
+        '<button onclick="window._gpxSymLegend={};window._renderGpxSymNames()" ' +
+          'style="flex:1;padding:4px 0;font-size:8px;border-radius:4px;border:1px solid var(--bd);' +
+          'background:var(--s2);color:var(--mu);cursor:pointer;font-family:\'Space Mono\',monospace">' +
+          '↺ Reset Semua Nama' +
+        '</button>' +
+        '<button onclick="window._renderGpxSymNames()" ' +
+          'style="flex:1;padding:4px 0;font-size:8px;border-radius:4px;' +
+          'border:1px solid rgba(188,140,255,.4);background:rgba(188,140,255,.08);' +
+          'color:var(--pu);cursor:pointer;font-family:\'Space Mono\',monospace">' +
+          '↻ Refresh' +
+        '</button>' +
+      '</div>';
+
+    // Sisipkan sebagai elemen PERTAMA di scrollable area (sebelum Judul Peta)
+    scrollDiv.insertBefore(sec, scrollDiv.firstChild);
+    window._renderGpxSymNames();
+  }
+
+  // ── Hook openPdfModal ─────────────────────────────────────────
+  if (typeof openPdfModal === 'function') {
+    var _origOpen = openPdfModal;
+    openPdfModal = function() {
+      _origOpen.apply(this, arguments);
+      setTimeout(_injectGpxNameSection, 40);
+    };
+  }
+
+  console.log('[GPX PDF Patch Pt2] ✅ _gpxAddTempTrees + UI legend names loaded');
+})();
+</script>
+  
 </body>
