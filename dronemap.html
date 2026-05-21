@@ -8476,5 +8476,231 @@ console.log('[DroneMap GPX v3] OK — no IIFE, no defineProperty. Symbols:',Obje
   console.log('[GPX PDF Patch Pt2] ✅ _gpxAddTempTrees + UI legend names loaded');
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     GPX PDF Color Sync — PART 2  (FIXED v2)
+     PLACEMENT: Setelah semua script, sebelum </body>
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+;(function _patchGpxPdfPart2() {
+  'use strict';
+  if (!window._gpxSymLegend) window._gpxSymLegend = {};
+
+  // ── Override _gpxAddTempTrees ──────────────────────────────────
+  // Simpan warna, ukuran, dan nama kustom di setiap tree sementara.
+  _gpxAddTempTrees = function() {
+    var added = [];
+    (_gpxWaypoints || []).forEach(function(wpt) {
+      var def = _garminDefs[wpt.sym] || _garminDefs['_default'];
+      var customName = (window._gpxSymLegend[wpt.sym] || '').trim();
+      var t = {
+        id:    'gpx_' + wpt.id,
+        lat:   wpt.lat,
+        lng:   wpt.lng,
+        no:    wpt.name,
+        block: customName || wpt.sym,
+        status: _gpxSymToStatus(wpt.sym),
+        note:  wpt.sym,
+        marker: null,
+        _fromGpx:  true,
+        _gpxSym:   wpt.sym,
+        _gpxColor: def.bg,
+        _gpxSize:  wpt.size || 24,
+        _gpxLabel: customName || wpt.sym
+      };
+      trees.push(t);
+      added.push(t.id);
+    });
+    return added;
+  };
+
+  // ── FIX #1: Global handler untuk oninput ──────────────────────
+  // Menghindari HTML-escaping hell dengan inline event handler.
+  // Input memanggil fungsi global ini, meneruskan dirinya sendiri.
+  window._gpxSymInput = function(el) {
+    var sym = el.dataset.sym;
+    if (!sym) return;
+    window._gpxSymLegend[sym] = el.value;
+    var uid  = el.dataset.uid;
+    var prev = document.getElementById(uid + '_p');
+    if (prev) prev.textContent = el.value || sym;
+  };
+
+  // ── UI: Render editor nama simbol ─────────────────────────────
+  window._renderGpxSymNames = function() {
+    var el = document.getElementById('_gpxSymNameList');
+    if (!el) return;
+
+    var syms = {};
+    (_gpxWaypoints || []).forEach(function(w) {
+      if (!syms[w.sym]) {
+        var def = _garminDefs[w.sym] || _garminDefs['_default'];
+        syms[w.sym] = { n: 0, color: def.bg, bd: def.bd };
+      }
+      syms[w.sym].n++;
+    });
+    var keys = Object.keys(syms);
+
+    if (!keys.length) {
+      el.innerHTML =
+        '<div style="padding:12px 0;text-align:center;font-size:9px;color:var(--mu);line-height:1.9">' +
+        'Belum ada waypoint GPX.<br>' +
+        '<span style="font-size:8px;font-family:\'Space Mono\',monospace">Import .gpx dari tab 📥 Import.</span>' +
+        '</div>';
+      return;
+    }
+
+    el.innerHTML = keys.map(function(sym) {
+      var s   = syms[sym];
+      var cur = window._gpxSymLegend[sym] || '';
+
+      // UID pendek berbasis hash sym (huruf+angka saja, aman untuk id HTML)
+      var hash = Math.abs(
+        sym.split('').reduce(function(h,c){ return (h<<5)-h+c.charCodeAt(0)|0; }, 0)
+      );
+      var uid = '_gn' + hash;
+
+      // FIX: nilai sym disimpan di data-attribute, bukan di-embed langsung ke JS string
+      var symSafe = sym.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      var curSafe = cur.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+
+      var css = typeof _gpxSymCSS === 'function'
+                ? _gpxSymCSS(sym)
+                : 'background:' + s.color + ';border-radius:50%';
+
+      return (
+        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;' +
+        'padding:6px 9px;background:var(--s2);border:1px solid var(--bd);' +
+        'border-left:3px solid ' + s.color + ';border-radius:6px">' +
+
+        // Icon simbol
+        '<span style="display:inline-block;width:13px;height:13px;flex-shrink:0;' +
+          'border:1.5px solid ' + s.bd + ';' + css + '" title="' + symSafe + '"></span>' +
+
+        // Input area
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:8px;color:var(--mu);font-family:\'Space Mono\',monospace;margin-bottom:2px">' +
+            symSafe + ' <span style="color:' + s.color + '">× ' + s.n + '</span>' +
+          '</div>' +
+          // FIX: oninput memakai window._gpxSymInput(this) — tidak ada string sym di dalam JS
+          '<input id="' + uid + '"' +
+            ' type="text"' +
+            ' data-sym="' + symSafe + '"' +    // ← sym ada di data-attribute, aman!
+            ' data-uid="' + uid + '"' +
+            ' placeholder="' + symSafe + '"' +
+            ' value="' + curSafe + '"' +
+            ' oninput="window._gpxSymInput(this)"' +   // ← tidak ada escape hell
+            ' style="width:100%;background:var(--sf);border:1px solid var(--bd);' +
+              'border-radius:4px;color:var(--tx);font-size:10px;padding:3px 7px;' +
+              'outline:none;box-sizing:border-box;transition:border-color .15s"' +
+            ' onfocus="this.style.borderColor=\'var(--saw)\'"' +
+            ' onblur="this.style.borderColor=\'var(--bd)\'">' +
+        '</div>' +
+
+        // Preview badge — update live via _gpxSymInput
+        '<div id="' + uid + '_p" style="font-size:8px;font-family:\'Space Mono\',monospace;' +
+          'color:' + s.color + ';background:' + s.color + '22;padding:1px 8px;border-radius:8px;' +
+          'border:1px solid ' + s.color + '44;white-space:nowrap;max-width:88px;' +
+          'overflow:hidden;text-overflow:ellipsis;flex-shrink:0">' +
+          (cur || sym).replace(/</g,'&lt;') +
+        '</div>' +
+
+        '</div>'
+      );
+    }).join('');
+  };
+
+  // ── FIX #2: Inject section SETELAH pengaturan Inset Peta ──────
+  function _injectGpxNameSection() {
+    // Jika section sudah ada, refresh saja
+    var existing = document.getElementById('_gpxSymNameSec');
+    if (existing) { window._renderGpxSymNames(); return; }
+
+    var scrollDiv = document.querySelector('#pdfModal [style*="overflow-y:auto"]');
+    if (!scrollDiv) return;
+
+    var sec = document.createElement('div');
+    sec.id = '_gpxSymNameSec';
+    sec.style.cssText = 'margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--bd)';
+    sec.innerHTML =
+      // Header
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">' +
+        '<span style="font-size:9px;font-weight:700;color:var(--pu);text-transform:uppercase;letter-spacing:.07em">' +
+          '📡 Nama Simbol GPX di PDF' +
+        '</span>' +
+        '<span style="font-size:7px;color:var(--mu);font-family:\'Space Mono\',monospace;' +
+          'background:rgba(188,140,255,.1);border:1px solid rgba(188,140,255,.25);' +
+          'padding:1px 7px;border-radius:8px">' +
+          'Statistik + Tabel Sensus' +
+        '</span>' +
+      '</div>' +
+
+      // Info box
+      '<div style="font-size:9px;color:var(--mu);line-height:1.65;margin-bottom:7px;' +
+        'padding:6px 9px;background:rgba(188,140,255,.05);border:1px solid rgba(188,140,255,.2);border-radius:6px">' +
+        'Ketik nama kustom untuk setiap jenis simbol Garmin.<br>' +
+        '💡 Contoh: <b style="color:var(--pu)">Flag, Green</b> → <b style="color:var(--saw2)">Tanaman Normal</b>' +
+      '</div>' +
+
+      // List editor
+      '<div id="_gpxSymNameList" style="max-height:190px;overflow-y:auto;' +
+        'background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:8px 9px"></div>' +
+
+      // Tombol Reset + Refresh
+      '<div style="margin-top:5px;display:flex;gap:5px">' +
+        '<button onclick="window._gpxSymLegend={};window._renderGpxSymNames()"' +
+          ' style="flex:1;padding:4px 0;font-size:8px;border-radius:4px;border:1px solid var(--bd);' +
+          'background:var(--s2);color:var(--mu);cursor:pointer;font-family:\'Space Mono\',monospace">' +
+          '↺ Reset Semua Nama' +
+        '</button>' +
+        '<button onclick="window._renderGpxSymNames()"' +
+          ' style="flex:1;padding:4px 0;font-size:8px;border-radius:4px;' +
+          'border:1px solid rgba(188,140,255,.4);background:rgba(188,140,255,.08);' +
+          'color:var(--pu);cursor:pointer;font-family:\'Space Mono\',monospace">' +
+          '↻ Refresh' +
+        '</button>' +
+      '</div>';
+
+    // FIX #2: Cari elemen Inset Peta lalu sisipkan SETELAH-nya.
+    // Strategi: cari div/label yang textContent mengandung "inset" (case-insensitive),
+    // ambil parent container-nya, sisipkan sec setelah container itu.
+    var insertAfter = null;
+    var allChildren = Array.prototype.slice.call(scrollDiv.children);
+
+    for (var i = 0; i < allChildren.length; i++) {
+      var child = allChildren[i];
+      var txt = (child.textContent || '').toLowerCase();
+      if (txt.indexOf('inset') !== -1) {
+        insertAfter = child;
+        // tidak break — ambil yang paling bawah jika ada beberapa
+      }
+    }
+
+    if (insertAfter && insertAfter.nextSibling) {
+      // Sisipkan tepat setelah blok Inset Peta
+      scrollDiv.insertBefore(sec, insertAfter.nextSibling);
+    } else if (insertAfter) {
+      // Inset Peta adalah anak terakhir — append setelahnya
+      scrollDiv.appendChild(sec);
+    } else {
+      // Fallback: Inset Peta tidak ditemukan → append di akhir
+      scrollDiv.appendChild(sec);
+    }
+
+    window._renderGpxSymNames();
+  }
+
+  // ── Hook openPdfModal ──────────────────────────────────────────
+  if (typeof openPdfModal === 'function') {
+    var _origOpen = openPdfModal;
+    openPdfModal = function() {
+      _origOpen.apply(this, arguments);
+      setTimeout(_injectGpxNameSection, 40);
+    };
+  }
+
+  console.log('[GPX PDF Patch Pt2 v2] ✅ _gpxAddTempTrees + UI legend names loaded (fixed)');
+})();
+</script>
   
 </body>
